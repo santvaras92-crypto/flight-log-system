@@ -29,8 +29,12 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-      <form onSubmit={handleSubmit} className="bg-white shadow rounded p-6 w-full max-w-sm space-y-4">
-        <h1 className="text-xl font-semibold text-gray-700">Ingreso</h1>
+      <div className="w-full max-w-sm space-y-6">
+        <div className="flex justify-center">
+          <img src="/logo-blue.png" alt="CC-AQI" className="h-28 w-auto" />
+        </div>
+        <form onSubmit={handleSubmit} className="bg-white shadow rounded p-6 space-y-4">
+          <h1 className="text-xl font-semibold text-gray-700">Ingreso</h1>
         <div className="space-y-2">
           <label className="block text-sm font-medium">Email</label>
           <input
@@ -61,6 +65,7 @@ export default function LoginPage() {
         </button>
         <p className="text-xs text-gray-500">Usa admin@aeroclub.com / admin123 para pruebas.</p>
       </form>
+      </div>
     </div>
   );
 }
