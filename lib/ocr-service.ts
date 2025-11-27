@@ -23,13 +23,15 @@ async function callOpenAIWithContent(
 
 INSTRUCCIONES CRÍTICAS:
 1. Extrae ÚNICAMENTE el valor numérico que se muestra en el contador
-2. El contador puede tener formato decimal (ejemplo: 1234.5 o 1234.56)
-3. Ignora cualquier otra información en la imagen
-4. Si el valor no es claro, indica tu nivel de confianza (0-100)
+2. IMPORTANTE: Los contadores ${meterType === "TACH" ? "TACH tienen UN decimal (ejemplo: 563.9, 1234.5)" : "HOBBS no tienen decimales (ejemplo: 1234, 5678)"}
+3. Busca el punto decimal en la lectura - es crítico para la precisión
+4. Si ves números como "5639" en TACH, probablemente sea "563.9" (con punto decimal)
+5. Ignora cualquier otra información en la imagen
+6. Si el valor no es claro, indica tu nivel de confianza (0-100)
 
 RESPONDE SOLO EN ESTE FORMATO JSON (sin markdown, sin \`\`\`):
 {
-  "value": 1234.5,
+  "value": ${meterType === "TACH" ? "563.9" : "1234"},
   "confidence": 95,
   "reasoning": "Breve explicación de lo que viste"
 }`,
