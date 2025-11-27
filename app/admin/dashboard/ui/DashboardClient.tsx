@@ -319,18 +319,18 @@ function FlightsTable({ flights, users }: { flights: any[]; users: any[] }) {
           <thead className="bg-slate-50">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Date</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Tach I</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Tach F</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Δ Tach</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Hobbs I</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Hobbs F</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Δ Hobbs</th>
+              <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Tach I</th>
+              <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Tach F</th>
+              <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Δ Tach</th>
+              <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Hobbs I</th>
+              <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Hobbs F</th>
+              <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Δ Hobbs</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Pilot</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Copilot/Instructor</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Client</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Rate</th>
+              <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Rate</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Instructor/SP</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Total</th>
+              <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Total</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Details</th>
             </tr>
           </thead>
@@ -340,18 +340,18 @@ function FlightsTable({ flights, users }: { flights: any[]; users: any[] }) {
               return (
                 <tr key={f.id} className="hover:bg-blue-50 transition-colors">
                   <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600 font-medium">{new Date(f.fecha).toLocaleDateString("es-CL")}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600 font-mono">{Number(f.tach_inicio).toFixed(1)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600 font-mono">{Number(f.tach_fin).toFixed(1)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-xs font-semibold text-blue-600 font-mono">{Number(f.diff_tach).toFixed(1)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600 font-mono">{Number(f.hobbs_inicio).toFixed(1)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600 font-mono">{Number(f.hobbs_fin).toFixed(1)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-xs font-semibold text-blue-600 font-mono">{Number(f.diff_hobbs).toFixed(1)}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">{Number(f.tach_inicio).toFixed(1)}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">{Number(f.tach_fin).toFixed(1)}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-xs font-semibold text-blue-600 font-mono text-right">{Number(f.diff_tach).toFixed(1)} hrs</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">{Number(f.hobbs_inicio).toFixed(1)}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">{Number(f.hobbs_fin).toFixed(1)}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-xs font-semibold text-blue-600 font-mono text-right">{Number(f.diff_hobbs).toFixed(1)} hrs</td>
                   <td className="px-4 py-3 whitespace-nowrap text-xs font-semibold text-slate-900">{u?.nombre || "N/A"}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600">{f.copiloto || "-"}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600">{f.cliente || "-"}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600 font-mono">{u ? `$${Number(u.tarifa_hora).toLocaleString("es-CL")}` : "-"}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">{u ? `$${Number(u.tarifa_hora).toLocaleString("es-CL")}` : "-"}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600">{f.instructor || "-"}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-xs font-bold text-green-600">${Number(f.costo).toLocaleString("es-CL")}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-xs font-bold text-green-600 text-right">${Number(f.costo).toLocaleString("es-CL")}</td>
                   <td className="px-4 py-3 text-xs text-slate-600 max-w-xs truncate" title={f.detalle || ""}>{f.detalle || "-"}</td>
                 </tr>
               );
