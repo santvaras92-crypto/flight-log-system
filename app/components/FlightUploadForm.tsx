@@ -173,7 +173,7 @@ export default function FlightUploadForm({ pilots = [] as PilotOption[] }: { pil
                 ) : (
                   <div className="p-4 bg-yellow-50 border-2 border-yellow-200 rounded-lg text-slate-800">
                     <p className="text-sm font-semibold mb-2">No hay pilotos aún.</p>
-                    <a href="/admin/pilots/new" className="inline-block bg-[#003D82] hover:bg-[#0A2F5F] text-white px-4 py-2 rounded-md font-bold">Crear nuevo piloto</a>
+                    <a href="/pilots/new" className="inline-block bg-[#003D82] hover:bg-[#0A2F5F] text-white px-4 py-2 rounded-md font-bold">Crear nuevo piloto</a>
                   </div>
                 )}
               </div>
