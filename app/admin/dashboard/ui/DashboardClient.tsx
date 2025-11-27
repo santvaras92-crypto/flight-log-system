@@ -83,6 +83,7 @@ export default function DashboardClient({ initialData, pagination }: { initialDa
                 src={theme === 'dark' ? '/logo-white.png' : '/logo-blue.png'} 
                 alt="CC-AQI" 
                 className="h-20 w-auto"
+                style={{ filter: 'drop-shadow(0 0 20px rgba(0, 61, 130, 0.3))', mixBlendMode: 'multiply' }}
               />
               <div>
                 <h1 className="text-4xl font-bold text-white tracking-tight">Operations Dashboard</h1>
