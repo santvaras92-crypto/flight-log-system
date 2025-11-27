@@ -25,10 +25,17 @@ export async function processOCR(submissionId: number) {
     // Procesar cada imagen con GPT-4o Vision OCR
     for (const imageLog of submission.imageLogs) {
       try {
-        const ocrResult = await extractMeterValue(
-          imageLog.imageUrl,
-          imageLog.tipo
-        );
+        const tipo: "HOBBS" | "TACH" | null =
+          imageLog.tipo === "HOBBS" || imageLog.tipo === "TACH"
+            ? (imageLog.tipo as "HOBBS" | "TACH")
+            : null;
+
+        if (!tipo) {
+          console.warn(`Tipo de imagen no válido: ${imageLog.tipo}. Se omite.`);
+          continue;
+        }
+
+        const ocrResult = await extractMeterValue(imageLog.imageUrl, tipo);
 
         await prisma.imageLog.update({
           where: { id: imageLog.id },
@@ -57,7 +64,7 @@ export async function processOCR(submissionId: number) {
 
     const minConfidence = 85;
     const allHighConfidence = updatedSubmission!.imageLogs.every(
-      (img) => 
+      (img: any) => 
         img.confianza && 
         img.confianza.toNumber() >= minConfidence &&
         img.valorExtraido !== null
@@ -92,7 +99,7 @@ export async function processOCR(submissionId: number) {
  * Registra automáticamente el vuelo si el OCR tiene alta confianza
  */
 async function autoRegisterFlight(submissionId: number) {
-  return await prisma.$transaction(async (tx) => {
+  return await prisma.$transaction(async (tx: any) => {
     const submission = await tx.flightSubmission.findUnique({
       where: { id: submissionId },
       include: {
@@ -106,8 +113,8 @@ async function autoRegisterFlight(submissionId: number) {
       throw new Error("Submission no encontrada");
     }
 
-    const hobbsLog = submission.imageLogs.find((img) => img.tipo === "HOBBS");
-    const tachLog = submission.imageLogs.find((img) => img.tipo === "TACH");
+    const hobbsLog = submission.imageLogs.find((img: any) => img.tipo === "HOBBS");
+    const tachLog = submission.imageLogs.find((img: any) => img.tipo === "TACH");
 
     if (!hobbsLog?.valorExtraido || !tachLog?.valorExtraido) {
       throw new Error("Valores de OCR no disponibles");
