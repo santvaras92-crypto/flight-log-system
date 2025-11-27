@@ -24,8 +24,8 @@ export async function GET(req: NextRequest) {
     prisma.flightSubmission.findMany({
       select: {
         id: true, pilotoId: true, aircraftId: true, estado: true, errorMessage: true, createdAt: true, updatedAt: true,
-        imageLogs: { select: { id: true, tipo: true, valorExtraido: true, confianza: true, validadoManual: true, createdAt: true } },
-        flight: { select: { id: true, diff_hobbs: true, diff_tach: true, costo: true } },
+        ImageLog: { select: { id: true, tipo: true, valorExtraido: true, confianza: true, validadoManual: true, createdAt: true } },
+        Flight: { select: { id: true, diff_hobbs: true, diff_tach: true, costo: true } },
       },
       orderBy: { createdAt: "desc" },
     }),
@@ -54,13 +54,13 @@ export async function GET(req: NextRequest) {
       ...s,
       createdAt: s.createdAt.toISOString(),
       updatedAt: s.updatedAt.toISOString(),
-      imageLogs: s.imageLogs.map((img: any) => ({
+      ImageLog: s.ImageLog.map((img: any) => ({
         ...img,
         valorExtraido: img.valorExtraido ? Number(img.valorExtraido) : null,
         confianza: img.confianza ? Number(img.confianza) : null,
         createdAt: img.createdAt.toISOString(),
       })),
-      flight: s.flight ? { ...s.flight, diff_hobbs: Number(s.flight.diff_hobbs), diff_tach: Number(s.flight.diff_tach), costo: Number(s.flight.costo) } : null,
+      Flight: s.Flight ? { ...s.flight, diff_hobbs: Number(s.flight.diff_hobbs), diff_tach: Number(s.flight.diff_tach), costo: Number(s.flight.costo) } : null,
     })),
     components: components.map((c: any) => ({
       ...c,
@@ -265,8 +265,8 @@ function generateOfflineHTML(data: any) {
           <tbody>
             \${data.map(s => {
               const user = DATA.users.find(u => u.id === s.pilotoId);
-              const hobbsImg = s.imageLogs.find(img => img.tipo === 'HOBBS');
-              const tachImg = s.imageLogs.find(img => img.tipo === 'TACH');
+              const hobbsImg = s.ImageLog.find(img => img.tipo === 'HOBBS');
+              const tachImg = s.ImageLog.find(img => img.tipo === 'TACH');
               return \`
                 <tr>
                   <td>#\${s.id}</td>
@@ -394,8 +394,8 @@ function generateOfflineHTML(data: any) {
         csv = 'ID,Piloto,Aeronave,Estado,Hobbs,Tach,Confianza,Costo,Fecha\\n';
         (filteredData.submissions || DATA.submissions).forEach(s => {
           const user = DATA.users.find(u => u.id === s.pilotoId);
-          const hobbsImg = s.imageLogs.find(img => img.tipo === 'HOBBS');
-          const tachImg = s.imageLogs.find(img => img.tipo === 'TACH');
+          const hobbsImg = s.ImageLog.find(img => img.tipo === 'HOBBS');
+          const tachImg = s.ImageLog.find(img => img.tipo === 'TACH');
           csv += \`\${s.id},"\${user?.nombre}",\${s.aircraftId},\${s.estado},\${hobbsImg?.valorExtraido || ''},\${tachImg?.valorExtraido || ''},\${hobbsImg?.confianza || ''},\${s.flight?.costo || ''},\${new Date(s.createdAt).toISOString()}\\n\`;
         });
         filename = 'submissions.csv';

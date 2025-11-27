@@ -20,7 +20,7 @@ export async function submitFlightImages(
         pilotoId,
         aircraftId: matricula,
         estado: "PENDIENTE",
-        imageLogs: {
+        ImageLog: {
           create: [
             {
               tipo: "HOBBS",
