@@ -16,6 +16,12 @@ export default async function AdminSubmissionsPage() {
     take: 50,
   });
 
+  // Serializar fechas y evitar tipos no serializables para el cliente
+  const submissionsDto = submissions.map((s) => ({
+    ...s,
+    createdAt: s.createdAt.toISOString(),
+  }));
+
   return (
     <div className="max-w-7xl mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
@@ -28,7 +34,7 @@ export default async function AdminSubmissionsPage() {
           <DownloadDashboardButton />
         </div>
       </div>
-      <AdminSubmissions initialData={submissions} />
+      <AdminSubmissions initialData={submissionsDto as any} />
     </div>
   );
 }
