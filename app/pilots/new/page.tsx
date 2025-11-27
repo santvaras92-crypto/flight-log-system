@@ -104,7 +104,7 @@ export default function NewPilotPublicPage() {
               </div>
               <div className="space-y-2">
                 <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">Número de licencia</label>
-                <input className="w-full px-4 py-3 border-2 rounded-xl" placeholder="PPL-123456" value={form.licencia} onChange={e=>setForm({ ...form, licencia: e.target.value })} />
+                <input className="w-full px-4 py-3 border-2 rounded-xl" type="number" placeholder="123456" value={form.licencia} onChange={e=>setForm({ ...form, licencia: e.target.value })} />
               </div>
             </div>
             <div className="flex items-center gap-3">
