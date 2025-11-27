@@ -146,6 +146,9 @@ async function main() {
   
   let imported = 0;
   let skipped = 0;
+  const BATCH_SIZE = 50;
+  const flightBatch: any[] = [];
+  const transactionBatch: any[] = [];
   
   // Saltar header
   for (let i = 1; i < lines.length; i++) {
@@ -292,50 +295,58 @@ async function main() {
     const tarifa = parseNumber(tarifaStr) || 0;
     const costo = diff_h * tarifa;
     
-    try {
-      await prisma.$transaction(async (tx: any) => {
-        const flight = await tx.flight.create({
-          data: {
-            fecha,
-            hobbs_inicio,
-            hobbs_fin,
-            tach_inicio,
-            tach_fin,
-            diff_hobbs: diff_h,
-            diff_tach: diff_t,
-            costo: costoCalc,
-            pilotoId: piloto.id,
-            aircraftId: MATRICULA,
-            copiloto: copilotoStr,
-            cliente: clienteStr,
-            instructor: instructorStr,
-            detalle: detalleStr,
-          },
-        });
-        
-        await tx.transaction.create({
-          data: {
-            userId: piloto.id,
-            tipo: 'CARGO_VUELO',
-            monto: costoCalc,
-          },
-        });
-        
-        const componentes = await tx.component.findMany({ where: { aircraftId: MATRICULA } });
-        for (const c of componentes) {
-          await tx.component.update({
-            where: { id: c.id },
-            data: { horas_acumuladas: { increment: diff_t } }
-          });
-        }
-      });
-      
-      imported++;
-      if (imported % 100 === 0) {
-        console.log(`Importados: ${imported}...`);
+    // Preparar datos para batch
+    flightBatch.push({
+      fecha,
+      hobbs_inicio,
+      hobbs_fin,
+      tach_inicio,
+      tach_fin,
+      diff_hobbs: diff_h,
+      diff_tach: diff_t,
+      costo: costoCalc,
+      pilotoId: piloto.id,
+      aircraftId: MATRICULA,
+      copiloto: copilotoStr,
+      cliente: clienteStr,
+      instructor: instructorStr,
+      detalle: detalleStr,
+    });
+    
+    transactionBatch.push({
+      userId: piloto.id,
+      tipo: 'CARGO_VUELO',
+      monto: costoCalc,
+    });
+    
+    imported++;
+    
+    // Insertar en batch cada BATCH_SIZE registros
+    if (flightBatch.length >= BATCH_SIZE) {
+      try {
+        await prisma.flight.createMany({ data: flightBatch });
+        await prisma.transaction.createMany({ data: transactionBatch });
+        console.log(`✅ Importados: ${imported} (batch de ${flightBatch.length})`);
+        flightBatch.length = 0;
+        transactionBatch.length = 0;
+      } catch (error) {
+        console.error(`❌ Error en batch: ${error}`);
+        flightBatch.length = 0;
+        transactionBatch.length = 0;
+        skipped += BATCH_SIZE;
       }
+    }
+  }
+  
+  // Insertar registros restantes
+  if (flightBatch.length > 0) {
+    try {
+      await prisma.flight.createMany({ data: flightBatch });
+      await prisma.transaction.createMany({ data: transactionBatch });
+      console.log(`✅ Importados: ${imported} (batch final de ${flightBatch.length})`);
     } catch (error) {
-      skipped++;
+      console.error(`❌ Error en batch final: ${error}`);
+      skipped += flightBatch.length;
     }
   }
   
