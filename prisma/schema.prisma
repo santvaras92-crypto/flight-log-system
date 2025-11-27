@@ -1,0 +1,154 @@
+// Prisma schema file for the flight management system with OCR automation
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// User model
+model User {
+  id           Int                @id @default(autoincrement())
+  nombre       String
+  codigo       String?            @unique
+  email        String             @unique
+  emailVerified DateTime?
+  rol          String             // "PILOTO" o "ADMIN"
+  saldo_cuenta Decimal            @default(0.0)
+  tarifa_hora  Decimal
+  password     String             // hash bcrypt
+  flights      Flight[]
+  transactions Transaction[]
+  submissions  FlightSubmission[]
+  accounts     Account[]
+  sessions     Session[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+}
+
+// Aircraft model
+model Aircraft {
+  matricula    String             @id
+  modelo       String?
+  hobbs_actual Decimal            @default(0.0)
+  tach_actual  Decimal            @default(0.0)
+  flights      Flight[]
+  components   Component[]
+  submissions  FlightSubmission[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+}
+
+// Component model
+model Component {
+  id               Int            @id @default(autoincrement())
+  tipo             String         // "AIRFRAME", "ENGINE", o "PROPELLER"
+  horas_acumuladas Decimal        @default(0.0)
+  limite_tbo       Decimal
+  aircraftId       String
+  aircraft         Aircraft       @relation(fields: [aircraftId], references: [matricula])
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+// FlightSubmission: Almacena las fotos enviadas y el estado del procesamiento
+model FlightSubmission {
+  id              Int                    @id @default(autoincrement())
+  pilotoId        Int
+  piloto          User                   @relation(fields: [pilotoId], references: [id])
+  aircraftId      String
+  aircraft        Aircraft               @relation(fields: [aircraftId], references: [matricula])
+  estado          String                 @default("PENDIENTE") // "PENDIENTE", "PROCESANDO", "REVISION", "COMPLETADO", "ERROR"
+  imageLogs       ImageLog[]
+  flight          Flight?
+  errorMessage    String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+}
+
+// ImageLog: Almacena las imágenes y los valores extraídos por OCR
+model ImageLog {
+  id              Int              @id @default(autoincrement())
+  submissionId    Int
+  submission      FlightSubmission @relation(fields: [submissionId], references: [id])
+  tipo            String           // "HOBBS" o "TACH"
+  imageUrl        String           // URL donde se almacena la imagen
+  valorExtraido   Decimal?         // Valor extraído por OCR
+  confianza       Decimal?         // Nivel de confianza del OCR (0-100)
+  validadoManual  Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+}
+
+// Flight model (modificado para incluir relación con submission)
+model Flight {
+  id           Int               @id @default(autoincrement())
+  submissionId Int?              @unique
+  submission   FlightSubmission? @relation(fields: [submissionId], references: [id])
+  fecha        DateTime          @default(now())
+  hobbs_inicio Decimal
+  hobbs_fin    Decimal
+  tach_inicio  Decimal
+  tach_fin     Decimal
+  diff_hobbs   Decimal
+  diff_tach    Decimal
+  costo        Decimal
+  pilotoId     Int
+  piloto       User              @relation(fields: [pilotoId], references: [id])
+  aircraftId   String
+  aircraft     Aircraft          @relation(fields: [aircraftId], references: [matricula])
+  transaction  Transaction?
+  createdAt    DateTime          @default(now())
+}
+
+// Transaction model
+model Transaction {
+  id        Int             @id @default(autoincrement())
+  monto     Decimal
+  tipo      String          // "CARGO_VUELO", "ABONO", o "GASTO"
+  userId    Int
+  user      User            @relation(fields: [userId], references: [id])
+  flightId  Int?            @unique
+  flight    Flight?         @relation(fields: [flightId], references: [id])
+  createdAt DateTime        @default(now())
+}
+
+// NextAuth required models (Prisma Adapter)
+model Account {
+  id                Int      @id @default(autoincrement())
+  userId            Int
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           Int      @id @default(autoincrement())
+  sessionToken String   @unique
+  userId       Int
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Nota: SQLite no soporta enums nativos, por lo que usamos Strings
+// Los valores válidos están documentados en los comentarios de cada campo
