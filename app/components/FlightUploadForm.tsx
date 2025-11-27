@@ -106,212 +106,346 @@ export default function FlightUploadForm() {
 
   const getEstadoBadge = (estado: string) => {
     const styles: Record<string, string> = {
-      PENDIENTE: "bg-yellow-100 text-yellow-800",
-      PROCESANDO: "bg-blue-100 text-blue-800",
-      REVISION: "bg-orange-100 text-orange-800",
-      COMPLETADO: "bg-green-100 text-green-800",
-      ERROR: "bg-red-100 text-red-800",
+      PENDIENTE: "bg-yellow-500 text-white",
+      PROCESANDO: "bg-blue-500 text-white",
+      REVISION: "bg-orange-500 text-white",
+      COMPLETADO: "bg-green-500 text-white",
+      ERROR: "bg-red-500 text-white",
     };
 
     return (
-      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${styles[estado] || "bg-gray-100 text-gray-800"}`}>
+      <span className={`px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wide shadow-lg ${styles[estado] || "bg-gray-500 text-white"}`}>
         {estado}
       </span>
     );
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">Registrar Vuelo - Sistema OCR</h1>
-
-      <form onSubmit={handleSubmit} className="bg-white shadow-md rounded-lg p-6 mb-6">
-        <div className="mb-4">
-          <label className="block text-gray-700 font-semibold mb-2">
-            Piloto
-          </label>
-          <select
-            value={pilotoId}
-            onChange={(e) => setPilotoId(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            required
-          >
-            <option value="2">Juan Pérez</option>
-            <option value="3">María González</option>
-          </select>
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-gray-700 font-semibold mb-2">
-            Matrícula de Aeronave
-          </label>
-          <input
-            type="text"
-            value={matricula}
-            onChange={(e) => setMatricula(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            placeholder="CC-AQI"
-            required
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div>
-            <label className="block text-gray-700 font-semibold mb-2">
-              Foto del Contador Hobbs
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setHobbsImage(e.target.files?.[0] || null)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-              required
-            />
-            {hobbsImage && (
-              <p className="text-sm text-gray-600 mt-1">
-                {hobbsImage.name} ({(hobbsImage.size / 1024).toFixed(0)} KB)
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-gray-700 font-semibold mb-2">
-              Foto del Contador Tach
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setTachImage(e.target.files?.[0] || null)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-              required
-            />
-            {tachImage && (
-              <p className="text-sm text-gray-600 mt-1">
-                {tachImage.name} ({(tachImage.size / 1024).toFixed(0)} KB)
-              </p>
-            )}
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
-        >
-          {loading ? "Enviando..." : "Enviar Fotos y Procesar OCR"}
-        </button>
-      </form>
-
-      {result && (
-        <div className={`rounded-lg p-6 mb-6 ${result.success ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"}`}>
-          <h3 className="font-bold text-lg mb-2">
-            {result.success ? "✅ Imágenes Enviadas" : "❌ Error"}
-          </h3>
-          <p className="text-gray-700">
-            {result.message || result.error}
-          </p>
-          {result.submissionId && (
-            <p className="text-sm text-gray-600 mt-2">
-              ID de Submission: {result.submissionId}
-            </p>
-          )}
-        </div>
-      )}
-
-      {checkingStatus && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <p className="text-blue-800">🔄 Consultando estado del OCR...</p>
-        </div>
-      )}
-
-      {status && (
-        <div className="bg-white shadow-md rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold">Estado del Procesamiento</h2>
-            {getEstadoBadge(status.estado)}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <p className="text-sm text-gray-600">Piloto</p>
-              <p className="font-semibold">{status.piloto.nombre}</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+      {/* Header estilo Jeppesen */}
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 shadow-xl">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="flex items-center gap-4">
+            <div className="bg-white/10 backdrop-blur-sm p-3 rounded-lg">
+              <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Aeronave</p>
-              <p className="font-semibold">
-                {status.aircraft.matricula} {status.aircraft.modelo && `(${status.aircraft.modelo})`}
-              </p>
+              <h1 className="text-3xl font-bold text-white tracking-tight">Flight Log Entry</h1>
+              <p className="text-blue-100 text-sm font-medium mt-1">OCR-Assisted Recording System</p>
             </div>
           </div>
+        </div>
+      </div>
 
-          <h3 className="font-bold text-lg mb-3">Resultados del OCR</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            {status.images.map((img, idx) => (
-              <div key={idx} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-semibold">{img.tipo}</h4>
-                  {img.validadoManual && (
-                    <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
-                      Validado Manualmente
-                    </span>
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Main Form - Estilo ForeFlight */}
+        <form onSubmit={handleSubmit} className="bg-white/95 backdrop-blur-sm shadow-2xl rounded-2xl overflow-hidden mb-8">
+          {/* Form Header */}
+          <div className="bg-gradient-to-r from-slate-50 to-blue-50 px-8 py-6 border-b-2 border-blue-200">
+            <h2 className="text-xl font-bold text-slate-800 uppercase tracking-wide">Aircraft & Pilot Information</h2>
+          </div>
+
+          <div className="p-8">
+            {/* Grid Layout estilo Jeppesen */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              {/* Pilot Selection */}
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">
+                  Pilot in Command
+                </label>
+                <select
+                  value={pilotoId}
+                  onChange={(e) => setPilotoId(e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-lg font-semibold text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all shadow-sm"
+                  required
+                >
+                  <option value="2">Juan Pérez</option>
+                  <option value="3">María González</option>
+                </select>
+              </div>
+
+              {/* Aircraft Registration */}
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">
+                  Aircraft Registration
+                </label>
+                <input
+                  type="text"
+                  value={matricula}
+                  onChange={(e) => setMatricula(e.target.value.toUpperCase())}
+                  className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-lg font-mono font-bold text-slate-900 text-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all shadow-sm uppercase"
+                  placeholder="CC-AQI"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Image Upload Section - Estilo ForeFlight */}
+            <div className="bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl p-6 mb-6">
+              <h3 className="text-lg font-bold text-slate-800 mb-4 uppercase tracking-wide flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Meter Photos
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Hobbs Upload */}
+                <div className="bg-white rounded-xl p-6 border-2 border-dashed border-blue-300 hover:border-blue-500 transition-all">
+                  <div className="text-center mb-3">
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-3">
+                      <span className="text-2xl font-bold text-blue-600">H</span>
+                    </div>
+                    <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">
+                      Hobbs Meter
+                    </label>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setHobbsImage(e.target.files?.[0] || null)}
+                    className="w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+                    required
+                  />
+                  {hobbsImage && (
+                    <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                      <p className="text-xs font-semibold text-green-800">✓ {hobbsImage.name}</p>
+                      <p className="text-xs text-green-600">{(hobbsImage.size / 1024).toFixed(0)} KB</p>
+                    </div>
                   )}
                 </div>
-                <img src={img.imageUrl} alt={img.tipo} className="w-full h-48 object-cover rounded mb-2" />
-                <div className="space-y-1">
-                  <p className="text-sm">
-                    <span className="text-gray-600">Valor extraído:</span>{" "}
-                    <span className="font-semibold">
-                      {img.valorExtraido !== null ? img.valorExtraido : "Pendiente"}
-                    </span>
-                  </p>
-                  <p className="text-sm">
-                    <span className="text-gray-600">Confianza:</span>{" "}
-                    <span className="font-semibold">
-                      {img.confianza !== null ? `${img.confianza}%` : "N/A"}
-                    </span>
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
 
-          {status.flight && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
-              <h3 className="font-bold text-lg mb-2">✅ Vuelo Registrado</h3>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm text-gray-600">Horas Hobbs</p>
-                  <p className="text-xl font-bold">{status.flight.diff_hobbs.toFixed(1)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Horas Tach</p>
-                  <p className="text-xl font-bold">{status.flight.diff_tach.toFixed(1)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Costo</p>
-                  <p className="text-xl font-bold">${status.flight.costo.toLocaleString()}</p>
+                {/* Tach Upload */}
+                <div className="bg-white rounded-xl p-6 border-2 border-dashed border-indigo-300 hover:border-indigo-500 transition-all">
+                  <div className="text-center mb-3">
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-full mb-3">
+                      <span className="text-2xl font-bold text-indigo-600">T</span>
+                    </div>
+                    <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">
+                      Tachometer
+                    </label>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setTachImage(e.target.files?.[0] || null)}
+                    className="w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
+                    required
+                  />
+                  {tachImage && (
+                    <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                      <p className="text-xs font-semibold text-green-800">✓ {tachImage.name}</p>
+                      <p className="text-xs text-green-600">{(tachImage.size / 1024).toFixed(0)} KB</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
-          )}
 
-          {status.errorMessage && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
-              <p className="text-red-800">
-                <strong>Error:</strong> {status.errorMessage}
-              </p>
-            </div>
-          )}
-
-          {result?.submissionId && (
+            {/* Submit Button - Estilo ForeFlight */}
             <button
-              onClick={() => checkStatus(result.submissionId!)}
-              className="mt-4 w-full bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300 transition"
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-4 px-8 rounded-xl font-bold text-lg uppercase tracking-wide shadow-xl hover:shadow-2xl disabled:from-slate-400 disabled:to-slate-500 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02] active:scale-[0.98]"
             >
-              🔄 Actualizar Estado
+              {loading ? (
+                <span className="flex items-center justify-center gap-3">
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Processing OCR...
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-3">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Submit Flight Log
+                </span>
+              )}
             </button>
-          )}
-        </div>
-      )}
+          </div>
+        </form>
+
+        </form>
+
+        {/* Result Messages - Estilo ForeFlight */}
+        {result && (
+          <div className={`rounded-2xl p-6 mb-8 shadow-lg ${result.success ? "bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300" : "bg-gradient-to-r from-red-50 to-rose-50 border-2 border-red-300"}`}>
+            <div className="flex items-center gap-3 mb-2">
+              {result.success ? (
+                <div className="flex-shrink-0 w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              ) : (
+                <div className="flex-shrink-0 w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </div>
+              )}
+              <h3 className="font-bold text-xl">
+                {result.success ? "Flight Photos Uploaded" : "Upload Failed"}
+              </h3>
+            </div>
+            <p className="text-slate-700 ml-13 font-medium">
+              {result.message || result.error}
+            </p>
+            {result.submissionId && (
+              <p className="text-sm text-slate-600 mt-2 ml-13 font-mono">
+                Submission ID: #{result.submissionId}
+              </p>
+            )}
+          </div>
+        )}
+
+        {checkingStatus && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-2xl p-6 mb-8 shadow-lg">
+            <div className="flex items-center gap-3">
+              <svg className="animate-spin h-6 w-6 text-blue-600" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <p className="text-blue-800 font-bold">Processing OCR Analysis...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Status Panel - Estilo Jeppesen */}
+        {status && (
+          <div className="bg-white/95 backdrop-blur-sm shadow-2xl rounded-2xl overflow-hidden">
+            {/* Status Header */}
+            <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6 text-white">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold uppercase tracking-wide">Flight Log Status</h2>
+                {getEstadoBadge(status.estado)}
+              </div>
+            </div>
+
+            <div className="p-8">
+              {/* Aircraft & Pilot Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 p-6 bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl">
+                <div>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Pilot</p>
+                  <p className="text-xl font-bold text-slate-900">{status.piloto.nombre}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Aircraft</p>
+                  <p className="text-xl font-bold text-slate-900 font-mono">
+                    {status.aircraft.matricula} {status.aircraft.modelo && `(${status.aircraft.modelo})`}
+                  </p>
+                </div>
+              </div>
+
+              {/* OCR Results */}
+              <h3 className="text-lg font-bold text-slate-800 mb-4 uppercase tracking-wide flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                OCR Analysis Results
+              </h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                {status.images.map((img, idx) => (
+                  <div key={idx} className="bg-white border-2 border-slate-200 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all">
+                    <div className={`px-6 py-4 ${img.tipo === "HOBBS" ? "bg-gradient-to-r from-blue-500 to-blue-600" : "bg-gradient-to-r from-indigo-500 to-indigo-600"} text-white`}>
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-bold text-lg uppercase tracking-wide">{img.tipo} Meter</h4>
+                        {img.validadoManual && (
+                          <span className="text-xs bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full font-semibold">
+                            Manual Override
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <img src={img.imageUrl} alt={img.tipo} className="w-full h-64 object-cover" />
+                    <div className="p-6 space-y-3">
+                      <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                        <span className="text-sm font-bold text-slate-600 uppercase">Reading:</span>
+                        <span className="text-2xl font-bold text-slate-900 font-mono">
+                          {img.valorExtraido !== null ? img.valorExtraido : "---"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                        <span className="text-sm font-bold text-slate-600 uppercase">Confidence:</span>
+                        <span className={`text-lg font-bold font-mono ${img.confianza && img.confianza >= 50 ? "text-green-600" : "text-orange-600"}`}>
+                          {img.confianza !== null ? `${img.confianza}%` : "N/A"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Flight Summary - Estilo ForeFlight */}
+              {status.flight && (
+                <div className="bg-gradient-to-br from-green-50 via-emerald-50 to-green-50 border-2 border-green-300 rounded-2xl p-8 shadow-xl">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                      <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-2xl font-bold text-green-900 uppercase tracking-wide">Flight Registered</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-white rounded-xl p-6 shadow-lg">
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Hobbs Time</p>
+                      <p className="text-4xl font-bold text-blue-600 font-mono">{status.flight.diff_hobbs.toFixed(1)}</p>
+                      <p className="text-sm text-slate-600 mt-1">hours</p>
+                    </div>
+                    <div className="bg-white rounded-xl p-6 shadow-lg">
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tach Time</p>
+                      <p className="text-4xl font-bold text-indigo-600 font-mono">{status.flight.diff_tach.toFixed(1)}</p>
+                      <p className="text-sm text-slate-600 mt-1">hours</p>
+                    </div>
+                    <div className="bg-white rounded-xl p-6 shadow-lg">
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Flight Cost</p>
+                      <p className="text-4xl font-bold text-green-600 font-mono">${status.flight.costo.toLocaleString()}</p>
+                      <p className="text-sm text-slate-600 mt-1">total</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Error Message */}
+              {status.errorMessage && (
+                <div className="bg-gradient-to-r from-red-50 to-rose-50 border-2 border-red-300 rounded-2xl p-6 mt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0 w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
+                      <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-bold text-red-900 text-lg">Processing Error</p>
+                      <p className="text-red-700">{status.errorMessage}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Refresh Button */}
+              {result?.submissionId && (
+                <button
+                  onClick={() => checkStatus(result.submissionId!)}
+                  className="mt-6 w-full bg-gradient-to-r from-slate-100 to-slate-200 hover:from-slate-200 hover:to-slate-300 text-slate-800 py-4 px-6 rounded-xl font-bold uppercase tracking-wide shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh Status
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
