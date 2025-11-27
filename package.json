@@ -5,12 +5,16 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
-    "start": "sh -c 'if [ -z \"$DATABASE_URL\" ]; then if [ -n \"$PG_URL\" ]; then export DATABASE_URL=\"$PG_URL\"; elif [ -n \"$DATABASE_PUBLIC_URL\" ]; then export DATABASE_URL=\"$DATABASE_PUBLIC_URL\"; fi; fi; prisma db push --accept-data-loss && next start'",
+    "start": "sh -c 'if [ -z \"$DATABASE_URL\" ]; then echo \"ERROR: DATABASE_URL is not set\"; exit 1; fi; case \"$DATABASE_URL\" in *sslmode=require*) ;; *) echo \"WARN: DATABASE_URL missing sslmode=require. Appending...\"; export DATABASE_URL=\"$DATABASE_URL?sslmode=require\" ;; esac; echo \"Using DATABASE_URL: $(echo $DATABASE_URL | sed -E \"s#(postgresql:\\/\\/[^:]+:)[^@]+@#\\1******@#\")\"; prisma db push --accept-data-loss || { echo \"Prisma migration failed. Check credentials and sslmode=require.\"; exit 1; }; next start -p \"${PORT:-3000}\"'",
     "lint": "next lint",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "deploy:migrate": "railway run npx prisma db push",
+    "deploy:seed": "railway run npm run db:seed",
+    "deploy:open": "railway open",
+    "deploy:logs": "railway logs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -21,6 +25,7 @@
     "autoprefixer": "^10.4.22",
     "bcrypt": "^6.0.0",
     "chart.js": "^4.5.1",
+    "decimal.js-light": "^2.5.1",
     "next": "^14.2.0",
     "next-auth": "^4.24.13",
     "openai": "^4.70.0",

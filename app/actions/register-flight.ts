@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import Decimal from "decimal.js-light";
 
 /**
  * Registra un vuelo y actualiza los contadores y transacciones asociadas.
@@ -16,7 +17,7 @@ export async function registerFlight(
   nuevoHobbs: number,
   nuevoTach: number
 ) {
-  return await prisma.$transaction(async (tx) => {
+  return await prisma.$transaction(async (tx: any) => {
     // 1. Obtener datos actuales del avión y del piloto
     const aircraft = await tx.aircraft.findUnique({
       where: { matricula },
@@ -34,28 +35,31 @@ export async function registerFlight(
       throw new Error("Piloto no encontrado");
     }
 
-    // 2. Validar que los nuevos contadores sean mayores a los actuales
-    const hobbsActual = aircraft.hobbs_actual.toNumber();
-    const tachActual = aircraft.tach_actual.toNumber();
-    
-    if (nuevoHobbs <= hobbsActual || nuevoTach <= tachActual) {
+    // 2. Validar que los nuevos contadores sean mayores a los actuales (Decimal)
+    const hobbsActual = aircraft.hobbs_actual; // Prisma.Decimal
+    const tachActual = aircraft.tach_actual; // Prisma.Decimal
+
+    const nuevoHobbsDec = new Decimal(nuevoHobbs);
+    const nuevoTachDec = new Decimal(nuevoTach);
+
+    if (nuevoHobbsDec.lte(hobbsActual) || nuevoTachDec.lte(tachActual)) {
       throw new Error("Los nuevos contadores deben ser mayores a los actuales");
     }
 
-    // 3. Calcular diferencias de contadores
-    const diffHobbs = nuevoHobbs - hobbsActual;
-    const diffTach = nuevoTach - tachActual;
+    // 3. Calcular diferencias de contadores (Decimal)
+    const diffHobbs = nuevoHobbsDec.minus(hobbsActual);
+    const diffTach = nuevoTachDec.minus(tachActual);
 
-    // 4. Calcular el costo del vuelo
-    const costo = diffHobbs * piloto.tarifa_hora.toNumber();
+    // 4. Calcular el costo del vuelo (Decimal)
+    const costo = diffHobbs.mul(piloto.tarifa_hora);
 
     // 5. Crear el registro del vuelo
     const flight = await tx.flight.create({
       data: {
         hobbs_inicio: hobbsActual,
-        hobbs_fin: nuevoHobbs,
+        hobbs_fin: nuevoHobbsDec,
         tach_inicio: tachActual,
-        tach_fin: nuevoTach,
+        tach_fin: nuevoTachDec,
         diff_hobbs: diffHobbs,
         diff_tach: diffTach,
         costo,
@@ -68,8 +72,8 @@ export async function registerFlight(
     await tx.aircraft.update({
       where: { matricula },
       data: {
-        hobbs_actual: nuevoHobbs,
-        tach_actual: nuevoTach,
+        hobbs_actual: nuevoHobbsDec,
+        tach_actual: nuevoTachDec,
       },
     });
 
@@ -86,7 +90,7 @@ export async function registerFlight(
     // 8. Crear la transacción de cobro
     await tx.transaction.create({
       data: {
-        monto: -costo,
+        monto: costo.negated(),
         tipo: "CARGO_VUELO",
         userId: pilotoId,
         flightId: flight.id,

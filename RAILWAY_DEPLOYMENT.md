@@ -20,14 +20,14 @@ railway init
 
 ### 3. Configurar variables de entorno en Railway Dashboard
 
-**Variables requeridas:**
+**Variables requeridas (producción con PostgreSQL):**
 
 ```env
 NODE_ENV=production
-DATABASE_URL=file:./prisma/dev.db
+DATABASE_URL=postgresql://<user>:<password>@shortline.proxy.rlwy.net:<port>/<db>?sslmode=require
 NEXTAUTH_URL=https://tu-app.railway.app
-NEXTAUTH_SECRET=tu-secret-key-segura-aqui
-OPENAI_API_KEY=tu-openai-api-key
+NEXTAUTH_SECRET=<generado-via-openssl>
+OPENAI_API_KEY=<tu-openai-api-key>
 ```
 
 Para generar NEXTAUTH_SECRET:
@@ -53,29 +53,14 @@ En Railway Dashboard:
 
 ### 6. Migrar base de datos
 
-**Opción A: SQLite (desarrollo/demo)**
-- Ya configurado con `file:./prisma/dev.db`
-- Límite: datos se pierden en cada deploy
-
-**Opción B: PostgreSQL (producción recomendada)**
+El proyecto está configurado para PostgreSQL (`prisma/schema.prisma`).
 
 1. En Railway, agrega PostgreSQL:
-   - Click "+ New" → Database → PostgreSQL
-   
-2. Actualiza `.env`:
-```env
-DATABASE_URL=${DATABASE_URL}
-```
+  - Click "+ New" → Database → PostgreSQL
 
-3. Actualiza `prisma/schema.prisma`:
-```prisma
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-```
+2. En Variables, copia el `DATABASE_URL` provisto por Railway.
 
-4. Migra el schema:
+3. Migrar el schema a la base:
 ```bash
 railway run npx prisma db push
 ```
@@ -119,7 +104,7 @@ railway variables
 ## Troubleshooting
 
 **Build falla:**
-- Verifica que `prisma generate` esté en build script
+- Verifica que `prisma generate` esté en el script `build` (ya configurado)
 - Revisa logs en Dashboard
 
 **Database connection error:**
@@ -127,5 +112,7 @@ railway variables
 - Confirma que PostgreSQL esté corriendo
 
 **App no carga:**
-- Revisa NEXTAUTH_URL apunte al dominio correcto
-- Verifica NEXTAUTH_SECRET esté configurado
+- Revisa `NEXTAUTH_URL` apunte al dominio correcto
+- Verifica `NEXTAUTH_SECRET` esté configurado
+- Railway expone `PORT`; el `startCommand` usa `next start -p $PORT`
+- Asegura que la app use el proxy público en `DATABASE_URL` (host `shortline.proxy.rlwy.net`) y no el host interno `postgres.railway.internal`
