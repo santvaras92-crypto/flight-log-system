@@ -14,6 +14,9 @@ export async function GET() {
     ]);
     const [userCount, aircraftCount, flightCount] = results;
 
+    const key = process.env.OPENAI_API_KEY || "";
+    const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+
     return NextResponse.json({
       status: "ok",
       timestamp: new Date().toISOString(),
@@ -26,6 +29,11 @@ export async function GET() {
         },
       },
       environment: process.env.NODE_ENV,
+      ocr: {
+        model,
+        keyPresent: Boolean(key),
+        keyPrefix: key ? key.slice(0, 8) + "…" : null,
+      },
     });
   } catch (error) {
     return NextResponse.json(

@@ -70,16 +70,19 @@ export async function POST(request: NextRequest) {
     await writeFile(hobbsPath, Buffer.from(hobbsBytes));
     await writeFile(tachPath, Buffer.from(tachBytes));
 
-    // URLs públicas de las imágenes
-    const hobbsUrl = `/uploads/${hobbsFileName}`;
-    const tachUrl = `/uploads/${tachFileName}`;
+    // URLs públicas de las imágenes (para display)
+    const baseUrl = process.env.NEXTAUTH_URL || `https://${request.headers.get("host")}`;
+    const hobbsUrl = `${baseUrl}/uploads/${hobbsFileName}`;
+    const tachUrl = `${baseUrl}/uploads/${tachFileName}`;
 
-    // Crear la submission en la base de datos
+    // Crear la submission en la base de datos con paths locales para OCR
     const result = await submitFlightImages(
       pilotoId,
       matricula,
       hobbsUrl,
-      tachUrl
+      tachUrl,
+      hobbsPath, // path local para OCR
+      tachPath   // path local para OCR
     );
 
     if (!result.success) {

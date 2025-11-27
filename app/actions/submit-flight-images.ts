@@ -10,7 +10,9 @@ export async function submitFlightImages(
   pilotoId: number,
   matricula: string,
   hobbsImageUrl: string,
-  tachImageUrl: string
+  tachImageUrl: string,
+  hobbsLocalPath?: string,
+  tachLocalPath?: string
 ) {
   try {
     const submission = await prisma.flightSubmission.create({
@@ -22,11 +24,11 @@ export async function submitFlightImages(
           create: [
             {
               tipo: "HOBBS",
-              imageUrl: hobbsImageUrl,
+              imageUrl: hobbsLocalPath || hobbsImageUrl,
             },
             {
               tipo: "TACH",
-              imageUrl: tachImageUrl,
+              imageUrl: tachLocalPath || tachImageUrl,
             },
           ],
         },
