@@ -31,7 +31,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="flex justify-center">
-          <img src="/logo.png" alt="CC-AQI" className="h-[7.14rem] w-auto" />
+          <img src="/logo.png" alt="CC-AQI" className="h-[7.28rem] w-auto" />
+          
         </div>
         <form onSubmit={handleSubmit} className="bg-white shadow rounded p-6 space-y-4">
           <h1 className="text-xl font-semibold text-gray-700">Ingreso</h1>
