@@ -62,7 +62,7 @@ export async function processOCR(submissionId: number) {
       include: { imageLogs: true },
     });
 
-    const minConfidence = 85;
+    const minConfidence = 50;
     const allHighConfidence = updatedSubmission!.imageLogs.every(
       (img: any) => 
         img.confianza && 
