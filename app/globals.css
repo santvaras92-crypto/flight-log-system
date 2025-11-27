@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Jeppesen/ForeFlight Professional Aviation Design System */
+
 @layer utilities {
   .bg-gradient-indigo-emerald {
     background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
