@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
-    "start": "prisma db push --accept-data-loss && next start",
+    "start": "sh -c 'if [ -z \"$DATABASE_URL\" ]; then if [ -n \"$PG_URL\" ]; then export DATABASE_URL=\"$PG_URL\"; elif [ -n \"$DATABASE_PUBLIC_URL\" ]; then export DATABASE_URL=\"$DATABASE_PUBLIC_URL\"; fi; fi; prisma db push --accept-data-loss && next start'",
     "lint": "next lint",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
