@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import { registerPilot } from "@/app/actions/register-pilot";
 
 export default function NewPilotPublicPage() {
   const [form, setForm] = useState({
@@ -18,19 +17,40 @@ export default function NewPilotPublicPage() {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
-    const res = await registerPilot({
-      nombre: form.nombre.trim(),
-      apellido: form.apellido.trim(),
-      fecha_nacimiento: form.fecha_nacimiento,
-      email: form.email.trim(),
-      telefono: form.telefono.trim(),
-      licencia: form.licencia.trim(),
-    });
-    setLoading(false);
-    if (res.ok) {
-      setMessage("Piloto creado correctamente. Gracias por registrarte.");
-    } else {
-      setMessage(res.error || "Error al crear piloto");
+    
+    try {
+      const response = await fetch('/api/register-pilot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: form.nombre.trim(),
+          apellido: form.apellido.trim(),
+          fecha_nacimiento: form.fecha_nacimiento,
+          email: form.email.trim(),
+          telefono: form.telefono.trim(),
+          licencia: form.licencia.trim(),
+        }),
+      });
+      
+      const res = await response.json();
+      
+      if (res.ok) {
+        setMessage("Piloto creado correctamente. Gracias por registrarte.");
+        setForm({
+          nombre: "",
+          apellido: "",
+          fecha_nacimiento: "",
+          email: "",
+          telefono: "",
+          licencia: "",
+        });
+      } else {
+        setMessage(res.error || "Error al crear piloto");
+      }
+    } catch (error) {
+      setMessage("Error al conectar con el servidor");
+    } finally {
+      setLoading(false);
     }
   }
 
