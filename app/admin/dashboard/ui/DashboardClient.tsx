@@ -82,7 +82,7 @@ export default function DashboardClient({ initialData, pagination }: { initialDa
               <img 
                 src={theme === 'dark' ? '/logo-white.png' : '/logo-blue.png'} 
                 alt="CC-AQI" 
-                className="h-20 w-auto"
+                className="h-22 w-auto"
               />
               <div>
                 <h1 className="text-4xl font-bold text-white tracking-tight">Operations Dashboard</h1>
