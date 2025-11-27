@@ -131,7 +131,7 @@ export default function FlightUploadForm({ pilots = [] as PilotOption[] }: { pil
             <img 
               src="/logo.png" 
               alt="CC-AQI" 
-              className="h-[4.16rem] w-auto"
+              className="h-[4.24rem] w-auto"
             />
             <div>
               <h1 className="text-3xl font-bold text-white tracking-tight">Flight Log Entry</h1>
