@@ -89,56 +89,66 @@ export default function DashboardClient({ initialData, pagination }: { initialDa
                 <p className="mt-1.5 text-blue-100 text-base font-medium">Flight Operations • Maintenance • Finance</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <input 
-                value={filterAircraft} 
-                onChange={e=>setFilterAircraft(e.target.value)} 
-                placeholder="Filter aircraft..." 
-                className="px-4 py-3 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl text-white placeholder-blue-200 font-medium focus:bg-white/20 focus:border-white/40 transition-all shadow-lg"
-              />
-              <input 
-                value={filterPilot} 
-                onChange={e=>setFilterPilot(e.target.value)} 
-                placeholder="Filter pilot..." 
-                className="px-4 py-3 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl text-white placeholder-blue-200 font-medium focus:bg-white/20 focus:border-white/40 transition-all shadow-lg"
-              />
-              <button 
-                className="px-5 py-3 bg-white/20 backdrop-blur-sm hover:bg-white/30 border-2 border-white/30 rounded-xl text-white font-bold transition-all shadow-lg flex items-center gap-2"
-                onClick={()=>setTheme(theme==='dark'?'light':'dark')}
-              >
-                {theme==='dark'?<>☀️ Light</>:<>🌙 Dark</>}
-              </button>
-              <select
-                value={yearFilter}
-                onChange={e=>setYearFilter(e.target.value)}
-                className="px-4 py-3 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl text-white placeholder-blue-200 font-medium focus:bg-white/20 focus:border-white/40 transition-all shadow-lg"
-              >
-                <option value="">All years</option>
-                {Array.from(new Set(initialData.flights.map(f=>new Date(f.fecha).getFullYear()).sort((a,b)=>b-a))).map(y=>
-                  <option key={y} value={y.toString()}>{y}</option>
-                )}
-              </select>
-              <input
-                type="date"
-                value={startDate}
-                onChange={e=>{ setStartDate(e.target.value); setCurrentPage(1); }}
-                className="px-4 py-3 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl text-white placeholder-blue-200 font-medium focus:bg-white/20 focus:border-white/40 transition-all shadow-lg"
-                title="Start date"
-              />
-              <input
-                type="date"
-                value={endDate}
-                onChange={e=>{ setEndDate(e.target.value); setCurrentPage(1); }}
-                className="px-4 py-3 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl text-white placeholder-blue-200 font-medium focus:bg-white/20 focus:border-white/40 transition-all shadow-lg"
-                title="End date"
-              />
-              <button
-                onClick={()=>setSortOrder(sortOrder==='desc'?'asc':'desc')}
-                className="px-5 py-3 bg-white/20 backdrop-blur-sm hover:bg-white/30 border-2 border-white/30 rounded-xl text-white font-bold transition-all shadow-lg"
-                title="Toggle sort order"
-              >
-                {sortOrder==='desc' ? 'Newest first' : 'Oldest first'}
-              </button>
+            {/* Controls: normalize size + allow wrap to avoid overflow */}
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              {/** shared control styles for consistent alignment */}
+              {(() => {
+                const controlClass = "h-12 px-4 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl text-white placeholder-blue-200 font-medium focus:bg-white/20 focus:border-white/40 transition-all shadow-lg py-0";
+                const buttonClass = "h-12 px-5 bg-white/20 backdrop-blur-sm hover:bg-white/30 border-2 border-white/30 rounded-xl text-white font-bold transition-all shadow-lg flex items-center gap-2";
+                return (
+                  <>
+                    <input 
+                      value={filterAircraft} 
+                      onChange={e=>setFilterAircraft(e.target.value)} 
+                      placeholder="Filter aircraft..." 
+                      className={`${controlClass} min-w-[220px]`}
+                    />
+                    <input 
+                      value={filterPilot} 
+                      onChange={e=>setFilterPilot(e.target.value)} 
+                      placeholder="Filter pilot..." 
+                      className={`${controlClass} min-w-[220px]`}
+                    />
+                    <button 
+                      className={buttonClass}
+                      onClick={()=>setTheme(theme==='dark'?'light':'dark')}
+                    >
+                      {theme==='dark'?<>☀️ Light</>:<>🌙 Dark</>}
+                    </button>
+                    <select
+                      value={yearFilter}
+                      onChange={e=>setYearFilter(e.target.value)}
+                      className={`${controlClass} min-w-[140px] appearance-none`}
+                    >
+                      <option value="">All years</option>
+                      {Array.from(new Set(initialData.flights.map(f=>new Date(f.fecha).getFullYear()).sort((a,b)=>b-a))).map(y=>
+                        <option key={y} value={y.toString()}>{y}</option>
+                      )}
+                    </select>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={e=>{ setStartDate(e.target.value); setCurrentPage(1); }}
+                      className={`${controlClass} min-w-[160px]`}
+                      title="Start date"
+                    />
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={e=>{ setEndDate(e.target.value); setCurrentPage(1); }}
+                      className={`${controlClass} min-w-[160px]`}
+                      title="End date"
+                    />
+                    <button
+                      onClick={()=>setSortOrder(sortOrder==='desc'?'asc':'desc')}
+                      className={buttonClass}
+                      title="Toggle sort order"
+                    >
+                      {sortOrder==='desc' ? 'Newest first' : 'Oldest first'}
+                    </button>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>
