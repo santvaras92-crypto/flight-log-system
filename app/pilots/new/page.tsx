@@ -78,16 +78,34 @@ export default function NewPilotPublicPage() {
           <h2 className="text-2xl font-bold text-slate-900 mb-6">Información del Piloto</h2>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input className="px-4 py-3 border-2 rounded-xl" placeholder="Nombre" value={form.nombre} onChange={e=>setForm({ ...form, nombre: e.target.value })} required />
-              <input className="px-4 py-3 border-2 rounded-xl" placeholder="Apellido" value={form.apellido} onChange={e=>setForm({ ...form, apellido: e.target.value })} />
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">Nombre *</label>
+                <input className="w-full px-4 py-3 border-2 rounded-xl" placeholder="Nombre" value={form.nombre} onChange={e=>setForm({ ...form, nombre: e.target.value })} required />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">Apellido</label>
+                <input className="w-full px-4 py-3 border-2 rounded-xl" placeholder="Apellido" value={form.apellido} onChange={e=>setForm({ ...form, apellido: e.target.value })} />
+              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input className="px-4 py-3 border-2 rounded-xl" type="date" placeholder="Fecha de nacimiento" value={form.fecha_nacimiento} onChange={e=>setForm({ ...form, fecha_nacimiento: e.target.value })} />
-              <input className="px-4 py-3 border-2 rounded-xl" type="email" placeholder="Correo" value={form.email} onChange={e=>setForm({ ...form, email: e.target.value })} required />
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">Fecha de nacimiento</label>
+                <input className="w-full px-4 py-3 border-2 rounded-xl" type="date" value={form.fecha_nacimiento} onChange={e=>setForm({ ...form, fecha_nacimiento: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">Correo</label>
+                <input className="w-full px-4 py-3 border-2 rounded-xl" type="email" placeholder="ejemplo@correo.com" value={form.email} onChange={e=>setForm({ ...form, email: e.target.value })} required />
+              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input className="px-4 py-3 border-2 rounded-xl" placeholder="Número de teléfono" value={form.telefono} onChange={e=>setForm({ ...form, telefono: e.target.value })} />
-              <input className="px-4 py-3 border-2 rounded-xl" placeholder="Número de licencia" value={form.licencia} onChange={e=>setForm({ ...form, licencia: e.target.value })} />
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">Número de teléfono</label>
+                <input className="w-full px-4 py-3 border-2 rounded-xl" placeholder="+56 9 1234 5678" value={form.telefono} onChange={e=>setForm({ ...form, telefono: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">Número de licencia</label>
+                <input className="w-full px-4 py-3 border-2 rounded-xl" placeholder="PPL-123456" value={form.licencia} onChange={e=>setForm({ ...form, licencia: e.target.value })} />
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <button disabled={loading} className="px-5 py-3 bg-[#003D82] hover:bg-[#0A2F5F] text-white rounded-xl disabled:opacity-40 transition-colors">{loading?"Creando...":"Crear piloto"}</button>
