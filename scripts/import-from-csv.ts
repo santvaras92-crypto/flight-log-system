@@ -159,7 +159,11 @@ async function main() {
     const hobbs_f = parseDecimal(fields[6]);
     const diff_hobbs = parseDecimal(fields[7]);
     const pilotoStr = fields[8];
+    const copilotoStr = fields[9] || null;
+    const clienteStr = fields[10] || null;
     const tarifaStr = fields[11];
+    const instructorStr = fields[12] || null;
+    const detalleStr = fields[17] || null;
     const yearStr = fields[18];
     const monthStr = fields[19];
     
@@ -186,16 +190,49 @@ async function main() {
       console.log(`Línea ${i}: fechaStr="${fechaStr}", year="${yearStr}", month="${monthStr}", fecha=${fecha.toISOString()}`);
     }
     
-    const codigoPiloto = extractPilotCode(pilotoStr);
+    // Obtener/crear código de piloto
+    let codigoPiloto = extractPilotCode(pilotoStr) || null;
     if (!codigoPiloto) {
-      skipped++;
-      continue;
+      // Fallback: tomar iniciales del nombre "X. Apellido" -> XA
+      const m = pilotoStr.match(/([A-ZÁÉÍÓÚÑ])[\.]\s*([A-Za-zÁÉÍÓÚÑáéíóúñ]+)/);
+      if (m) {
+        const initial = m[1].toUpperCase();
+        const apellido = m[2].normalize('NFD').replace(/[^A-Za-z]/g, '').substring(0,2).toUpperCase();
+        codigoPiloto = `${initial}${apellido}`;
+      }
     }
-    
-    const piloto = pilotosByCode.get(codigoPiloto);
+    if (!codigoPiloto) {
+      // Asignar código genérico para etiquetas no-persona o desconocidas
+      const label = (pilotoStr || '').trim();
+      const dictionary: Record<string,string> = {
+        'AEROMUNDO': 'AERO', 'AIRC': 'AIRC', 'RUN UP': 'RUN', 'RUIZ': 'RUI', 'MAYKOL J': 'MJ', 'JORGE M.': 'JM2'
+      };
+      const key = label.toUpperCase();
+      codigoPiloto = dictionary[key] || (key.replace(/[^A-Z0-9]/g,'').substring(0,4) || 'UNK');
+    }
+
+    // Buscar piloto por código; si no existe, crearlo on-the-fly
+    let piloto = pilotosByCode.get(codigoPiloto);
     if (!piloto) {
-      skipped++;
-      continue;
+      const nombrePiloto = pilotoStr.replace(/\s+/g,' ').trim();
+      try {
+        piloto = await prisma.user.create({
+          data: {
+            nombre: nombrePiloto,
+            codigo: codigoPiloto,
+            email: `${codigoPiloto}@piloto.local`,
+            rol: 'PILOTO',
+            saldo_cuenta: 0,
+            tarifa_hora: parseNumber(tarifaStr) || 0,
+            password: '',
+          }
+        });
+        pilotosByCode.set(codigoPiloto, piloto);
+      } catch (e) {
+        if (skipped < 10) console.log(`⚠️  Línea ${i}: No se pudo crear piloto ${codigoPiloto} - ${nombrePiloto}`);
+        skipped++;
+        continue;
+      }
     }
     
     // Usar valores de diferencia si los inicios/fines están vacíos
@@ -204,37 +241,53 @@ async function main() {
     let tach_inicio = tach_i;
     let tach_fin = tach_f;
     
-    // Si no hay valores directos, intentar calcular desde diferencias
-    if ((hobbs_inicio == null || hobbs_fin == null) && diff_hobbs != null) {
-      if (hobbs_inicio == null && tach_inicio != null) {
-        hobbs_inicio = tach_inicio;
-      }
-      if (hobbs_inicio != null) {
-        hobbs_fin = hobbs_inicio + diff_hobbs;
-      }
+    // Reconstrucción más flexible usando diferencias
+    if (diff_hobbs != null) {
+      if (hobbs_inicio == null && hobbs_fin != null) hobbs_inicio = hobbs_fin - diff_hobbs;
+      if (hobbs_fin == null && hobbs_inicio != null) hobbs_fin = hobbs_inicio + diff_hobbs;
+    }
+    if (diff_tach != null) {
+      if (tach_inicio == null && tach_fin != null) tach_inicio = tach_fin - diff_tach;
+      if (tach_fin == null && tach_inicio != null) tach_fin = tach_inicio + diff_tach;
+    }
+    // Si aún faltan, usar un proxy: preferir tach para inferir hobbs y viceversa
+    if ((hobbs_inicio == null || hobbs_fin == null) && tach_inicio != null && tach_fin != null) {
+      if (hobbs_inicio == null) hobbs_inicio = tach_inicio;
+      if (hobbs_fin == null) hobbs_fin = hobbs_inicio + (tach_fin - tach_inicio);
+    }
+    if ((tach_inicio == null || tach_fin == null) && hobbs_inicio != null && hobbs_fin != null) {
+      if (tach_inicio == null) tach_inicio = hobbs_inicio;
+      if (tach_fin == null) tach_fin = tach_inicio + (hobbs_fin - hobbs_inicio);
     }
     
-    if ((tach_inicio == null || tach_fin == null) && diff_tach != null) {
-      if (tach_inicio == null && hobbs_inicio != null) {
-        tach_inicio = hobbs_inicio;
-      }
-      if (tach_inicio != null) {
-        tach_fin = tach_inicio + diff_tach;
+    if (hobbs_inicio == null || hobbs_fin == null) {
+      // Solo tenemos diffs: sintetizar desde 0
+      if (diff_hobbs != null) {
+        hobbs_inicio = 0;
+        hobbs_fin = diff_hobbs;
       }
     }
-    
-    if (hobbs_inicio == null || hobbs_fin == null || tach_inicio == null || tach_fin == null) {
-      skipped++;
-      continue;
+    if (tach_inicio == null || tach_fin == null) {
+      if (diff_tach != null) {
+        tach_inicio = 0;
+        tach_fin = diff_tach;
+      }
     }
+    // Si aún faltan valores, último fallback: usar el que exista
+    if (hobbs_inicio == null) hobbs_inicio = tach_inicio ?? 0;
+    if (hobbs_fin == null) hobbs_fin = hobbs_inicio + (diff_hobbs ?? ((tach_fin ?? 0) - (tach_inicio ?? 0)));
+    if (tach_inicio == null) tach_inicio = hobbs_inicio ?? 0;
+    if (tach_fin == null) tach_fin = tach_inicio + (diff_tach ?? ((hobbs_fin ?? 0) - (hobbs_inicio ?? 0)));
     
     const diff_h = hobbs_fin - hobbs_inicio;
     const diff_t = tach_fin - tach_inicio;
     
-    if (diff_h <= 0 || diff_t <= 0) {
-      skipped++;
-      continue;
-    }
+    // Aceptar vuelos con difs no negativas; si alguna es negativa, normalizar a cero
+    if (!isFinite(diff_h) || diff_h < 0) hobbs_fin = hobbs_inicio;
+    if (!isFinite(diff_t) || diff_t < 0) tach_fin = tach_inicio;
+    
+    const tarifaCalc = parseNumber(tarifaStr) || 0;
+    const costoCalc = Math.max(0, diff_h) * tarifaCalc;
     
     const tarifa = parseNumber(tarifaStr) || 0;
     const costo = diff_h * tarifa;
@@ -250,9 +303,13 @@ async function main() {
             tach_fin,
             diff_hobbs: diff_h,
             diff_tach: diff_t,
-            costo,
+            costo: costoCalc,
             pilotoId: piloto.id,
             aircraftId: MATRICULA,
+            copiloto: copilotoStr,
+            cliente: clienteStr,
+            instructor: instructorStr,
+            detalle: detalleStr,
           },
         });
         
@@ -260,7 +317,7 @@ async function main() {
           data: {
             userId: piloto.id,
             tipo: 'CARGO_VUELO',
-            monto: costo,
+            monto: costoCalc,
           },
         });
         
@@ -287,8 +344,8 @@ async function main() {
   console.log(`   Omitidos: ${skipped}`);
   
   const years = await prisma.$queryRaw`
-    SELECT strftime('%Y', datetime(fecha/1000, 'unixepoch')) as año, COUNT(*) as cantidad 
-    FROM Flight 
+    SELECT EXTRACT(YEAR FROM fecha)::text as año, COUNT(*)::int as cantidad 
+    FROM "Flight" 
     GROUP BY año 
     ORDER BY año
   `;

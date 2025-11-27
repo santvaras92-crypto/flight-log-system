@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Chart, LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler } from "chart.js";
 import { useEffect, useRef } from "react";
 
@@ -13,8 +14,11 @@ type InitialData = {
   components: any[];
   transactions: any[];
 };
+type PaginationInfo = { page: number; pageSize: number; total: number };
 
-export default function DashboardClient({ initialData }: { initialData: InitialData }) {
+export default function DashboardClient({ initialData, pagination }: { initialData: InitialData; pagination?: PaginationInfo }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [tab, setTab] = useState("overview");
   const [filterAircraft, setFilterAircraft] = useState("");
   const [filterPilot, setFilterPilot] = useState("");
@@ -22,13 +26,40 @@ export default function DashboardClient({ initialData }: { initialData: InitialD
     if (typeof window === 'undefined') return 'light';
     return localStorage.getItem('dash-theme') || 'light';
   });
+  const [yearFilter, setYearFilter] = useState<string>("");
+  const [sortOrder, setSortOrder] = useState<"desc"|"asc">("desc");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState<number>(pagination?.page || 1);
+  const pageSize = pagination?.pageSize || 100;
   useEffect(() => { localStorage.setItem('dash-theme', theme); }, [theme]);
 
   const flights = useMemo(() => {
-    return initialData.flights.filter(f =>
-      (!filterAircraft || f.aircraftId.toLowerCase().includes(filterAircraft.toLowerCase()))
-    );
-  }, [initialData.flights, filterAircraft]);
+    const filtered = initialData.flights
+      .filter(f => (!filterAircraft || f.aircraftId.toLowerCase().includes(filterAircraft.toLowerCase())))
+      .filter(f => {
+        if (!yearFilter) return true;
+        const y = new Date(f.fecha).getFullYear().toString();
+        return y === yearFilter;
+      })
+      .filter(f => {
+        const d = new Date(f.fecha).getTime();
+        const after = startDate ? new Date(startDate).getTime() : -Infinity;
+        const before = endDate ? new Date(endDate).getTime() : Infinity;
+        return d >= after && d <= before;
+      })
+    const sorted = filtered.slice().sort((a,b)=>{
+      const da = new Date(a.fecha).getTime();
+      const db = new Date(b.fecha).getTime();
+      return sortOrder === 'desc' ? db - da : da - db;
+    });
+    // Client-side slice when no server pagination is provided; otherwise server already paginated.
+    if (!pagination) {
+      const start = (currentPage-1)*pageSize;
+      return sorted.slice(start, start+pageSize);
+    }
+    return sorted;
+  }, [initialData.flights, filterAircraft, yearFilter, sortOrder, startDate, endDate, currentPage]);
 
   const submissions = useMemo(() => {
     return initialData.submissions.filter(s => {
@@ -77,6 +108,37 @@ export default function DashboardClient({ initialData }: { initialData: InitialD
               >
                 {theme==='dark'?<>☀️ Light</>:<>🌙 Dark</>}
               </button>
+              <select
+                value={yearFilter}
+                onChange={e=>setYearFilter(e.target.value)}
+                className="px-4 py-3 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl text-white placeholder-blue-200 font-medium focus:bg-white/20 focus:border-white/40 transition-all shadow-lg"
+              >
+                <option value="">All years</option>
+                {Array.from(new Set(initialData.flights.map(f=>new Date(f.fecha).getFullYear()).sort((a,b)=>b-a))).map(y=>
+                  <option key={y} value={y.toString()}>{y}</option>
+                )}
+              </select>
+              <input
+                type="date"
+                value={startDate}
+                onChange={e=>{ setStartDate(e.target.value); setCurrentPage(1); }}
+                className="px-4 py-3 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl text-white placeholder-blue-200 font-medium focus:bg-white/20 focus:border-white/40 transition-all shadow-lg"
+                title="Start date"
+              />
+              <input
+                type="date"
+                value={endDate}
+                onChange={e=>{ setEndDate(e.target.value); setCurrentPage(1); }}
+                className="px-4 py-3 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl text-white placeholder-blue-200 font-medium focus:bg-white/20 focus:border-white/40 transition-all shadow-lg"
+                title="End date"
+              />
+              <button
+                onClick={()=>setSortOrder(sortOrder==='desc'?'asc':'desc')}
+                className="px-5 py-3 bg-white/20 backdrop-blur-sm hover:bg-white/30 border-2 border-white/30 rounded-xl text-white font-bold transition-all shadow-lg"
+                title="Toggle sort order"
+              >
+                {sortOrder==='desc' ? 'Newest first' : 'Oldest first'}
+              </button>
             </div>
           </div>
         </div>
@@ -109,7 +171,50 @@ export default function DashboardClient({ initialData }: { initialData: InitialD
       </nav>
 
       {tab === "overview" && <Overview data={initialData} flights={flights} palette={palette} />}
-      {tab === "flights" && <FlightsTable flights={flights} users={initialData.users} />}
+      {tab === "flights" && (
+        <>
+          <FlightsTable flights={flights} users={initialData.users} />
+          <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-2 border-slate-200 rounded-b-2xl mt-2">
+            <button
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-40"
+              onClick={()=>{
+                const prev = Math.max(1, currentPage-1);
+                setCurrentPage(prev);
+                if (pagination) {
+                  const params = new URLSearchParams(searchParams.toString());
+                  params.set('page', String(prev));
+                  params.set('pageSize', String(pageSize));
+                  router.push(`/admin/dashboard?${params.toString()}`);
+                }
+              }}
+              disabled={currentPage===1}
+            >
+              ← Prev
+            </button>
+            <span className="text-sm font-bold text-slate-600">Page {currentPage}</span>
+            <button
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-40"
+              onClick={()=>{
+                const next = currentPage+1;
+                if (pagination) {
+                  const maxPages = Math.ceil((pagination.total||0) / pageSize);
+                  if (next > maxPages) return;
+                }
+                setCurrentPage(next);
+                if (pagination) {
+                  const params = new URLSearchParams(searchParams.toString());
+                  params.set('page', String(next));
+                  params.set('pageSize', String(pageSize));
+                  router.push(`/admin/dashboard?${params.toString()}`);
+                }
+              }}
+              disabled={pagination ? currentPage >= Math.ceil((pagination.total||0)/pageSize) : flights.length < pageSize}
+            >
+              Next →
+            </button>
+          </div>
+        </>
+      )}
       {tab === "pilots" && <PilotsTable users={initialData.users} flights={initialData.flights} transactions={initialData.transactions} />}
       {tab === "maintenance" && <MaintenanceTable components={initialData.components} aircraft={initialData.aircraft} />}
       {tab === "finance" && <FinanceCharts flights={initialData.flights} transactions={initialData.transactions} palette={palette} />}
@@ -213,13 +318,20 @@ function FlightsTable({ flights, users }: { flights: any[]; users: any[] }) {
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
             <tr>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">ID</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Date</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Pilot</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Aircraft</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Δ Hobbs</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Δ Tach</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Cost</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Date</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Tach I</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Tach F</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Δ Tach</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Hobbs I</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Hobbs F</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Δ Hobbs</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Pilot</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Copilot/Instructor</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Client</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Rate</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Instructor/SP</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Total</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Details</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-slate-100">
@@ -227,13 +339,20 @@ function FlightsTable({ flights, users }: { flights: any[]; users: any[] }) {
               const u = users.find(u => u.id === f.pilotoId);
               return (
                 <tr key={f.id} className="hover:bg-blue-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-blue-600">#{f.id}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-medium">{new Date(f.fecha).toLocaleString("es-CL")}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">{u?.nombre || "N/A"}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-600 font-mono">{f.aircraftId}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{Number(f.diff_hobbs).toFixed(1)} hrs</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{Number(f.diff_tach).toFixed(1)} hrs</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">${Number(f.costo).toLocaleString("es-CL")}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600 font-medium">{new Date(f.fecha).toLocaleDateString("es-CL")}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600 font-mono">{Number(f.tach_inicio).toFixed(1)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600 font-mono">{Number(f.tach_fin).toFixed(1)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs font-semibold text-blue-600 font-mono">{Number(f.diff_tach).toFixed(1)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600 font-mono">{Number(f.hobbs_inicio).toFixed(1)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600 font-mono">{Number(f.hobbs_fin).toFixed(1)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs font-semibold text-blue-600 font-mono">{Number(f.diff_hobbs).toFixed(1)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs font-semibold text-slate-900">{u?.nombre || "N/A"}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600">{f.copiloto || "-"}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600">{f.cliente || "-"}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600 font-mono">{u ? `$${Number(u.tarifa_hora).toLocaleString("es-CL")}` : "-"}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600">{f.instructor || "-"}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs font-bold text-green-600">${Number(f.costo).toLocaleString("es-CL")}</td>
+                  <td className="px-4 py-3 text-xs text-slate-600 max-w-xs truncate" title={f.detalle || ""}>{f.detalle || "-"}</td>
                 </tr>
               );
             })}
@@ -243,7 +362,6 @@ function FlightsTable({ flights, users }: { flights: any[]; users: any[] }) {
     </div>
   );
 }
-
 function PilotsTable({ users, flights, transactions }: { users: any[]; flights: any[]; transactions: any[] }) {
   const data = users.filter(u=>u.rol==='PILOTO').map(u => {
     const f = flights.filter(f => f.pilotoId === u.id);

@@ -15,7 +15,7 @@ export async function processOCR(submissionId: number) {
 
     const submission = await prisma.flightSubmission.findUnique({
       where: { id: submissionId },
-      include: { imageLogs: true },
+      include: { ImageLog: true },
     });
 
     if (!submission) {
@@ -23,7 +23,7 @@ export async function processOCR(submissionId: number) {
     }
 
     // Procesar cada imagen con GPT-4o Vision OCR
-    for (const imageLog of submission.imageLogs) {
+    for (const imageLog of submission.ImageLog) {
       try {
         const tipo: "HOBBS" | "TACH" | null =
           imageLog.tipo === "HOBBS" || imageLog.tipo === "TACH"
@@ -59,11 +59,11 @@ export async function processOCR(submissionId: number) {
     // Verificar si la confianza es suficiente para auto-aprobar
     const updatedSubmission = await prisma.flightSubmission.findUnique({
       where: { id: submissionId },
-      include: { imageLogs: true },
+      include: { ImageLog: true },
     });
 
     const minConfidence = 50;
-    const allHighConfidence = updatedSubmission!.imageLogs.every(
+    const allHighConfidence = updatedSubmission!.ImageLog.every(
       (img: any) => 
         img.confianza && 
         img.confianza.toNumber() >= minConfidence &&
@@ -103,9 +103,9 @@ async function autoRegisterFlight(submissionId: number) {
     const submission = await tx.flightSubmission.findUnique({
       where: { id: submissionId },
       include: {
-        imageLogs: true,
-        piloto: true,
-        aircraft: true,
+        ImageLog: true,
+        User: true,
+        Aircraft: true,
       },
     });
 
@@ -113,8 +113,8 @@ async function autoRegisterFlight(submissionId: number) {
       throw new Error("Submission no encontrada");
     }
 
-    const hobbsLog = submission.imageLogs.find((img: any) => img.tipo === "HOBBS");
-    const tachLog = submission.imageLogs.find((img: any) => img.tipo === "TACH");
+    const hobbsLog = submission.ImageLog.find((img: any) => img.tipo === "HOBBS");
+    const tachLog = submission.ImageLog.find((img: any) => img.tipo === "TACH");
 
     if (!hobbsLog?.valorExtraido || !tachLog?.valorExtraido) {
       throw new Error("Valores de OCR no disponibles");
@@ -125,26 +125,26 @@ async function autoRegisterFlight(submissionId: number) {
 
     // Validar contadores
     if (
-      nuevoHobbs.lte(submission.aircraft.hobbs_actual) ||
-      nuevoTach.lte(submission.aircraft.tach_actual)
+      nuevoHobbs.lte(submission.Aircraft.hobbs_actual) ||
+      nuevoTach.lte(submission.Aircraft.tach_actual)
     ) {
       throw new Error("Los nuevos contadores deben ser mayores a los actuales");
     }
 
     // Calcular diferencias
-    const diffHobbs = nuevoHobbs.minus(submission.aircraft.hobbs_actual);
-    const diffTach = nuevoTach.minus(submission.aircraft.tach_actual);
+    const diffHobbs = nuevoHobbs.minus(submission.Aircraft.hobbs_actual);
+    const diffTach = nuevoTach.minus(submission.Aircraft.tach_actual);
 
     // Calcular costo
-    const costo = diffHobbs.mul(submission.piloto.tarifa_hora);
+    const costo = diffHobbs.mul(submission.User.tarifa_hora);
 
     // Crear el vuelo
     const flight = await tx.flight.create({
       data: {
         submissionId,
-        hobbs_inicio: submission.aircraft.hobbs_actual,
+        hobbs_inicio: submission.Aircraft.hobbs_actual,
         hobbs_fin: nuevoHobbs,
-        tach_inicio: submission.aircraft.tach_actual,
+        tach_inicio: submission.Aircraft.tach_actual,
         tach_fin: nuevoTach,
         diff_hobbs: diffHobbs,
         diff_tach: diffTach,

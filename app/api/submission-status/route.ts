@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const submissionId = searchParams.get("id");
+    const submissionId = request.nextUrl.searchParams.get("id");
 
     if (!submissionId) {
       return NextResponse.json(
@@ -16,15 +17,15 @@ export async function GET(request: NextRequest) {
     const submission = await prisma.flightSubmission.findUnique({
       where: { id: Number(submissionId) },
       include: {
-        imageLogs: true,
-        piloto: {
+        ImageLog: true,
+        User: {
           select: {
             id: true,
             nombre: true,
             email: true,
           },
         },
-        aircraft: {
+        Aircraft: {
           select: {
             matricula: true,
             modelo: true,
@@ -32,9 +33,9 @@ export async function GET(request: NextRequest) {
             tach_actual: true,
           },
         },
-        flight: {
+        Flight: {
           include: {
-            transaction: true,
+            Transaction: true,
           },
         },
       },
@@ -55,28 +56,28 @@ export async function GET(request: NextRequest) {
         errorMessage: submission.errorMessage,
         createdAt: submission.createdAt,
         updatedAt: submission.updatedAt,
-        piloto: submission.piloto,
-        aircraft: submission.aircraft,
-        images: submission.imageLogs.map((img) => ({
+        piloto: submission.User,
+        aircraft: submission.Aircraft,
+        images: submission.ImageLog.map((img) => ({
           tipo: img.tipo,
           imageUrl: img.imageUrl,
           valorExtraido: img.valorExtraido?.toNumber(),
           confianza: img.confianza?.toNumber(),
           validadoManual: img.validadoManual,
         })),
-        flight: submission.flight ? {
-          id: submission.flight.id,
-          fecha: submission.flight.fecha,
-          hobbs_inicio: submission.flight.hobbs_inicio.toNumber(),
-          hobbs_fin: submission.flight.hobbs_fin.toNumber(),
-          tach_inicio: submission.flight.tach_inicio.toNumber(),
-          tach_fin: submission.flight.tach_fin.toNumber(),
-          diff_hobbs: submission.flight.diff_hobbs.toNumber(),
-          diff_tach: submission.flight.diff_tach.toNumber(),
-          costo: submission.flight.costo.toNumber(),
-          transaction: submission.flight.transaction ? {
-            monto: submission.flight.transaction.monto.toNumber(),
-            tipo: submission.flight.transaction.tipo,
+        flight: submission.Flight ? {
+          id: submission.Flight.id,
+          fecha: submission.Flight.fecha,
+          hobbs_inicio: submission.Flight.hobbs_inicio.toNumber(),
+          hobbs_fin: submission.Flight.hobbs_fin.toNumber(),
+          tach_inicio: submission.Flight.tach_inicio.toNumber(),
+          tach_fin: submission.Flight.tach_fin.toNumber(),
+          diff_hobbs: submission.Flight.diff_hobbs.toNumber(),
+          diff_tach: submission.Flight.diff_tach.toNumber(),
+          costo: submission.Flight.costo.toNumber(),
+          transaction: submission.Flight.Transaction ? {
+            monto: submission.Flight.Transaction.monto.toNumber(),
+            tipo: submission.Flight.Transaction.tipo,
           } : null,
         } : null,
       },

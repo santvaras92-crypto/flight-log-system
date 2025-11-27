@@ -34,7 +34,7 @@ export async function submitFlightImages(
         },
       },
       include: {
-        imageLogs: true,
+        ImageLog: true,
       },
     });
 

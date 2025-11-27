@@ -39,8 +39,10 @@ interface SubmissionStatus {
   } | null;
 }
 
-export default function FlightUploadForm() {
-  const [pilotoId, setPilotoId] = useState("2"); // Juan Pérez por defecto
+type PilotOption = { id: number; nombre: string; email: string };
+
+export default function FlightUploadForm({ pilots = [] as PilotOption[] }: { pilots?: PilotOption[] }) {
+  const [pilotoId, setPilotoId] = useState(pilots.length ? String(pilots[0].id) : "");
   const [matricula, setMatricula] = useState("CC-AQI");
   const [hobbsImage, setHobbsImage] = useState<File | null>(null);
   const [tachImage, setTachImage] = useState<File | null>(null);
@@ -155,15 +157,25 @@ export default function FlightUploadForm() {
                 <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">
                   Pilot in Command
                 </label>
-                <select
-                  value={pilotoId}
-                  onChange={(e) => setPilotoId(e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-lg font-semibold text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all shadow-sm"
-                  required
-                >
-                  <option value="2">Juan Pérez</option>
-                  <option value="3">María González</option>
-                </select>
+                {pilots.length > 0 ? (
+                  <select
+                    value={pilotoId}
+                    onChange={(e) => setPilotoId(e.target.value)}
+                    className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-lg font-semibold text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all shadow-sm"
+                    required
+                  >
+                    {pilots.map((p) => (
+                      <option key={p.id} value={String(p.id)}>
+                        {p.nombre}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="p-4 bg-yellow-50 border-2 border-yellow-200 rounded-lg text-slate-800">
+                    <p className="text-sm font-semibold mb-2">No hay pilotos aún.</p>
+                    <a href="/admin/pilots/new" className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-bold">Crear nuevo piloto</a>
+                  </div>
+                )}
               </div>
 
               {/* Aircraft Registration */}

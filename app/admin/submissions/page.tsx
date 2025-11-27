@@ -7,10 +7,10 @@ export const revalidate = 0;
 export default async function AdminSubmissionsPage() {
   const submissions = await prisma.flightSubmission.findMany({
     include: {
-      imageLogs: true,
-      piloto: true,
-      aircraft: true,
-      flight: true,
+      ImageLog: true,
+      User: true,
+      Aircraft: true,
+      Flight: true,
     },
     orderBy: { createdAt: "desc" },
     take: 50,
@@ -19,6 +19,10 @@ export default async function AdminSubmissionsPage() {
   // Serializar fechas y evitar tipos no serializables para el cliente
   const submissionsDto = submissions.map((s) => ({
     ...s,
+    imageLogs: s.ImageLog,
+    piloto: s.User,
+    aircraft: s.Aircraft,
+    flight: s.Flight,
     createdAt: s.createdAt.toISOString(),
   }));
 

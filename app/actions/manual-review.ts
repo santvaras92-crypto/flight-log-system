@@ -22,15 +22,15 @@ export async function manualReviewAndApprove(
 
     const submission = await prisma.flightSubmission.findUnique({
       where: { id: submissionId },
-      include: { imageLogs: true },
+      include: { ImageLog: true },
     });
 
     if (!submission) {
       throw new Error("Submission no encontrada");
     }
 
-    const hobbsLog = submission.imageLogs.find((img) => img.tipo === "HOBBS");
-    const tachLog = submission.imageLogs.find((img) => img.tipo === "TACH");
+    const hobbsLog = submission.ImageLog.find((img) => img.tipo === "HOBBS");
+    const tachLog = submission.ImageLog.find((img) => img.tipo === "TACH");
 
     if (hobbsLog) {
       await prisma.imageLog.update({
@@ -71,16 +71,16 @@ async function autoRegisterFlightForReview(submissionId: number) {
     const submission = await tx.flightSubmission.findUnique({
       where: { id: submissionId },
       include: {
-        imageLogs: true,
-        piloto: true,
-        aircraft: true,
+        ImageLog: true,
+        User: true,
+        Aircraft: true,
       },
     });
 
     if (!submission) throw new Error("Submission no encontrada");
 
-    const hobbsLog = submission.imageLogs.find((img) => img.tipo === "HOBBS");
-    const tachLog = submission.imageLogs.find((img) => img.tipo === "TACH");
+    const hobbsLog = submission.ImageLog.find((img) => img.tipo === "HOBBS");
+    const tachLog = submission.ImageLog.find((img) => img.tipo === "TACH");
 
     if (!hobbsLog?.valorExtraido || !tachLog?.valorExtraido) {
       throw new Error("Valores de OCR no disponibles");
@@ -90,22 +90,22 @@ async function autoRegisterFlightForReview(submissionId: number) {
     const nuevoTach = tachLog.valorExtraido;
 
     if (
-      nuevoHobbs.lte(submission.aircraft.hobbs_actual) ||
-      nuevoTach.lte(submission.aircraft.tach_actual)
+      nuevoHobbs.lte(submission.Aircraft.hobbs_actual) ||
+      nuevoTach.lte(submission.Aircraft.tach_actual)
     ) {
       throw new Error("Los nuevos contadores deben ser mayores a los actuales");
     }
 
-    const diffHobbs = nuevoHobbs.minus(submission.aircraft.hobbs_actual);
-    const diffTach = nuevoTach.minus(submission.aircraft.tach_actual);
-    const costo = diffHobbs.mul(submission.piloto.tarifa_hora);
+    const diffHobbs = nuevoHobbs.minus(submission.Aircraft.hobbs_actual);
+    const diffTach = nuevoTach.minus(submission.Aircraft.tach_actual);
+    const costo = diffHobbs.mul(submission.User.tarifa_hora);
 
     const flight = await tx.flight.create({
       data: {
         submissionId,
-        hobbs_inicio: submission.aircraft.hobbs_actual,
+        hobbs_inicio: submission.Aircraft.hobbs_actual,
         hobbs_fin: nuevoHobbs,
-        tach_inicio: submission.aircraft.tach_actual,
+        tach_inicio: submission.Aircraft.tach_actual,
         tach_fin: nuevoTach,
         diff_hobbs: diffHobbs,
         diff_tach: diffTach,
