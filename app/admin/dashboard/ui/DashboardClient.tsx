@@ -80,7 +80,7 @@ export default function DashboardClient({ initialData, pagination }: { initialDa
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <img 
-                src={theme === 'dark' ? '/logo-white.png' : '/logo-blue.png'} 
+                src="/logo.png" 
                 alt="CC-AQI" 
                 className="h-[5.2rem] w-auto"
               />
