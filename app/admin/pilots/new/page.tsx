@@ -35,10 +35,28 @@ export default function NewPilotPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-slate-100 px-6 py-8">
-      <div className="max-w-2xl mx-auto bg-white/95 border-2 border-slate-200 rounded-2xl shadow-2xl p-6">
-        <h1 className="text-2xl font-bold text-slate-900 mb-4">Añadir nuevo piloto</h1>
-        <form onSubmit={onSubmit} className="space-y-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50">
+      {/* Header con logo */}
+      <div className="bg-gradient-to-r from-[#003D82] to-[#0A2F5F] shadow-xl">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="flex items-center gap-4">
+            <img 
+              src="/logo-white.png" 
+              alt="CC-AQI" 
+              className="h-16 w-auto"
+            />
+            <div>
+              <h1 className="text-3xl font-bold text-white tracking-tight">Pilot Registration</h1>
+              <p className="text-blue-50 text-sm font-medium mt-1">Add New Pilot to System</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-2xl mx-auto px-6 py-8">
+        <div className="bg-white/95 border-2 border-slate-200 rounded-2xl shadow-2xl p-8">
+          <h2 className="text-2xl font-bold text-slate-900 mb-6">Información del Piloto</h2>
+          <form onSubmit={onSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input className="px-4 py-3 border-2 rounded-xl" placeholder="Nombre" value={form.nombre} onChange={e=>setForm({ ...form, nombre: e.target.value })} required />
             <input className="px-4 py-3 border-2 rounded-xl" placeholder="Apellido" value={form.apellido} onChange={e=>setForm({ ...form, apellido: e.target.value })} />
@@ -53,13 +71,14 @@ export default function NewPilotPage() {
           </div>
           {/* Tarifa por hora se establece por defecto en el servidor */}
           <div className="flex items-center gap-3">
-            <button disabled={loading} className="px-5 py-3 bg-blue-600 text-white rounded-xl disabled:opacity-40">{loading?"Creando...":"Crear piloto"}</button>
+            <button disabled={loading} className="px-5 py-3 bg-[#003D82] hover:bg-[#0A2F5F] text-white rounded-xl disabled:opacity-40 transition-colors">{loading?"Creando...":"Crear piloto"}</button>
             {message && <span className="text-sm text-slate-700">{message}</span>}
           </div>
         </form>
-        <div className="mt-6">
-          <a href="/admin/dashboard" className="text-blue-700 font-semibold">← Volver al Dashboard</a>
+        <div className="mt-6 pt-6 border-t border-slate-200">
+          <a href="/admin/dashboard" className="text-[#003D82] hover:text-[#0A2F5F] font-semibold transition-colors">← Volver al Dashboard</a>
         </div>
+      </div>
       </div>
     </div>
   );

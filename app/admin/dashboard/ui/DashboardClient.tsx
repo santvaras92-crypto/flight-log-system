@@ -75,7 +75,7 @@ export default function DashboardClient({ initialData, pagination }: { initialDa
   return (
     <div className={`min-h-screen ${palette.bg} -mx-6 -my-8 px-6 py-8`}>
       {/* Header estilo Jeppesen */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 shadow-2xl rounded-2xl mb-8">
+      <div className="bg-gradient-to-r from-[#003D82] to-[#0A2F5F] shadow-2xl rounded-2xl mb-8">
         <div className="px-8 py-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -86,7 +86,7 @@ export default function DashboardClient({ initialData, pagination }: { initialDa
               />
               <div>
                 <h1 className="text-4xl font-bold text-white tracking-tight">Operations Dashboard</h1>
-                <p className="mt-1.5 text-blue-100 text-base font-medium">Flight Operations • Maintenance • Finance</p>
+                <p className="mt-1.5 text-blue-50 text-base font-medium">Flight Operations • Maintenance • Finance</p>
               </div>
             </div>
             {/* Controls: normalize size + allow wrap to avoid overflow */}

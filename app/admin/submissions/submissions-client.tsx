@@ -39,10 +39,10 @@ function safeNum(v: any): number | null {
 
 const estadoColors: Record<string, string> = {
   PENDIENTE: "bg-yellow-100 text-yellow-800",
-  PROCESANDO: "bg-blue-100 text-blue-800",
+  PROCESANDO: "bg-blue-50 text-[#003D82]",
   REVISION: "bg-orange-100 text-orange-800",
   COMPLETADO: "bg-green-100 text-green-800",
-  ERROR: "bg-red-100 text-red-800",
+  ERROR: "bg-red-50 text-[#D32F2F]",
 };
 
 export default function AdminSubmissions({ initialData }: { initialData: SubmissionDto[] }) {

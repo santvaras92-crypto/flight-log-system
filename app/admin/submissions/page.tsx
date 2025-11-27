@@ -34,7 +34,7 @@ export default async function AdminSubmissionsPage() {
           <p className="text-gray-600 mt-2">Últimas 50 submissions. Filtra y aprueba manualmente valores cuando la confianza fue baja.</p>
         </div>
         <div className="flex gap-2">
-          <a href="/admin/dashboard" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Ver Dashboard</a>
+          <a href="/admin/dashboard" className="bg-[#003D82] text-white px-4 py-2 rounded hover:bg-[#0A2F5F] transition">Ver Dashboard</a>
           <DownloadDashboardButton />
         </div>
       </div>

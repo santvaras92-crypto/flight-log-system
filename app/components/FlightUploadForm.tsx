@@ -109,10 +109,10 @@ export default function FlightUploadForm({ pilots = [] as PilotOption[] }: { pil
   const getEstadoBadge = (estado: string) => {
     const styles: Record<string, string> = {
       PENDIENTE: "bg-yellow-500 text-white",
-      PROCESANDO: "bg-blue-500 text-white",
+      PROCESANDO: "bg-[#003D82] text-white",
       REVISION: "bg-orange-500 text-white",
-      COMPLETADO: "bg-green-500 text-white",
-      ERROR: "bg-red-500 text-white",
+      COMPLETADO: "bg-green-600 text-white",
+      ERROR: "bg-[#D32F2F] text-white",
     };
 
     return (
@@ -125,7 +125,7 @@ export default function FlightUploadForm({ pilots = [] as PilotOption[] }: { pil
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
       {/* Header estilo Jeppesen */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 shadow-xl">
+      <div className="bg-gradient-to-r from-[#003D82] to-[#0A2F5F] shadow-xl">
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center gap-4">
             <img 
@@ -135,7 +135,7 @@ export default function FlightUploadForm({ pilots = [] as PilotOption[] }: { pil
             />
             <div>
               <h1 className="text-3xl font-bold text-white tracking-tight">Flight Log Entry</h1>
-              <p className="text-blue-100 text-sm font-medium mt-1">OCR-Assisted Recording System</p>
+              <p className="text-blue-50 text-sm font-medium mt-1">OCR-Assisted Recording System</p>
             </div>
           </div>
         </div>
@@ -173,7 +173,7 @@ export default function FlightUploadForm({ pilots = [] as PilotOption[] }: { pil
                 ) : (
                   <div className="p-4 bg-yellow-50 border-2 border-yellow-200 rounded-lg text-slate-800">
                     <p className="text-sm font-semibold mb-2">No hay pilotos aún.</p>
-                    <a href="/admin/pilots/new" className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-bold">Crear nuevo piloto</a>
+                    <a href="/admin/pilots/new" className="inline-block bg-[#003D82] hover:bg-[#0A2F5F] text-white px-4 py-2 rounded-md font-bold">Crear nuevo piloto</a>
                   </div>
                 )}
               </div>
@@ -208,8 +208,8 @@ export default function FlightUploadForm({ pilots = [] as PilotOption[] }: { pil
                 {/* Hobbs Upload */}
                 <div className="bg-white rounded-xl p-6 border-2 border-dashed border-blue-300 hover:border-blue-500 transition-all">
                   <div className="text-center mb-3">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-3">
-                      <span className="text-2xl font-bold text-blue-600">H</span>
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-50 rounded-full mb-3">
+                      <span className="text-2xl font-bold text-[#003D82]">H</span>
                     </div>
                     <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">
                       Hobbs Meter
@@ -219,7 +219,7 @@ export default function FlightUploadForm({ pilots = [] as PilotOption[] }: { pil
                     type="file"
                     accept="image/*"
                     onChange={(e) => setHobbsImage(e.target.files?.[0] || null)}
-                    className="w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+                    className="w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-[#003D82] hover:file:bg-blue-100 cursor-pointer"
                     required
                   />
                   {hobbsImage && (
@@ -231,10 +231,10 @@ export default function FlightUploadForm({ pilots = [] as PilotOption[] }: { pil
                 </div>
 
                 {/* Tach Upload */}
-                <div className="bg-white rounded-xl p-6 border-2 border-dashed border-indigo-300 hover:border-indigo-500 transition-all">
+                <div className="bg-white rounded-xl p-6 border-2 border-dashed border-slate-300 hover:border-[#003D82] transition-all">
                   <div className="text-center mb-3">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-full mb-3">
-                      <span className="text-2xl font-bold text-indigo-600">T</span>
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-50 rounded-full mb-3">
+                      <span className="text-2xl font-bold text-[#003D82]">T</span>
                     </div>
                     <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">
                       Tachometer
@@ -244,7 +244,7 @@ export default function FlightUploadForm({ pilots = [] as PilotOption[] }: { pil
                     type="file"
                     accept="image/*"
                     onChange={(e) => setTachImage(e.target.files?.[0] || null)}
-                    className="w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
+                    className="w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-[#003D82] hover:file:bg-blue-100 cursor-pointer"
                     required
                   />
                   {tachImage && (
@@ -261,7 +261,7 @@ export default function FlightUploadForm({ pilots = [] as PilotOption[] }: { pil
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-4 px-8 rounded-xl font-bold text-lg uppercase tracking-wide shadow-xl hover:shadow-2xl disabled:from-slate-400 disabled:to-slate-500 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+              className="w-full bg-gradient-to-r from-[#003D82] to-[#0A2F5F] hover:from-[#0A2F5F] hover:to-[#003D82] text-white py-4 px-8 rounded-xl font-bold text-lg uppercase tracking-wide shadow-xl hover:shadow-2xl disabled:from-slate-400 disabled:to-slate-500 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02] active:scale-[0.98]"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-3">
