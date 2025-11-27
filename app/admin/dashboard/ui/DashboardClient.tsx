@@ -176,7 +176,7 @@ export default function DashboardClient({ initialData, pagination }: { initialDa
           <FlightsTable flights={flights} users={initialData.users} />
           <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-2 border-slate-200 rounded-b-2xl mt-2">
             <button
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-40"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-40 hover:bg-blue-700 transition-colors"
               onClick={()=>{
                 const prev = Math.max(1, currentPage-1);
                 setCurrentPage(prev);
@@ -191,9 +191,66 @@ export default function DashboardClient({ initialData, pagination }: { initialDa
             >
               ← Prev
             </button>
-            <span className="text-sm font-bold text-slate-600">Page {currentPage}</span>
+            
+            <div className="flex items-center gap-2">
+              {(() => {
+                const totalPages = pagination ? Math.ceil((pagination.total || 0) / pageSize) : Math.ceil(initialData.flights.length / pageSize);
+                const pages: (number | string)[] = [];
+                
+                // Siempre mostrar primera página
+                pages.push(1);
+                
+                // Calcular rango alrededor de página actual
+                const rangeStart = Math.max(2, currentPage - 2);
+                const rangeEnd = Math.min(totalPages - 1, currentPage + 2);
+                
+                // Agregar ... si hay gap después de página 1
+                if (rangeStart > 2) pages.push('...');
+                
+                // Agregar páginas del rango
+                for (let i = rangeStart; i <= rangeEnd; i++) {
+                  pages.push(i);
+                }
+                
+                // Agregar ... si hay gap antes de última página
+                if (rangeEnd < totalPages - 1) pages.push('...');
+                
+                // Siempre mostrar última página
+                if (totalPages > 1) pages.push(totalPages);
+                
+                return pages.map((p, idx) => {
+                  if (p === '...') {
+                    return <span key={`ellipsis-${idx}`} className="px-2 text-slate-400">...</span>;
+                  }
+                  const pageNum = p as number;
+                  const isActive = pageNum === currentPage;
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => {
+                        setCurrentPage(pageNum);
+                        if (pagination) {
+                          const params = new URLSearchParams(searchParams.toString());
+                          params.set('page', String(pageNum));
+                          params.set('pageSize', String(pageSize));
+                          router.push(`/admin/dashboard?${params.toString()}`);
+                        }
+                      }}
+                      className={`min-w-[40px] px-3 py-2 rounded-lg font-semibold transition-all ${
+                        isActive 
+                          ? 'bg-blue-600 text-white shadow-lg' 
+                          : 'bg-white text-slate-600 hover:bg-blue-50 border border-slate-300'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                });
+              })()}
+            </div>
+            
             <button
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-40"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-40 hover:bg-blue-700 transition-colors"
               onClick={()=>{
                 const next = currentPage+1;
                 if (pagination) {
