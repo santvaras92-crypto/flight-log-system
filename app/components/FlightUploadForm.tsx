@@ -271,8 +271,6 @@ export default function FlightUploadForm() {
           </div>
         </form>
 
-        </form>
-
         {/* Result Messages - Estilo ForeFlight */}
         {result && (
           <div className={`rounded-2xl p-6 mb-8 shadow-lg ${result.success ? "bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300" : "bg-gradient-to-r from-red-50 to-rose-50 border-2 border-red-300"}`}>
