@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" width="640" height="480" role="img" aria-label="CC-AQI C172 Silhouette">
+  <title>CC-AQI C172 Silhouette</title>
+  <rect x="0" y="0" width="640" height="480" rx="72" ry="72" fill="#ffffff" />
+  <!-- Simplified front-view C172 silhouette matching reference -->
+  <!-- Wing: long with slightly rounded tips -->
+  <rect x="90" y="140" width="460" height="26" rx="13" fill="#0A2F66" />
+  <!-- Struts (thin) -->
+  <path d="M270 166 L320 250" stroke="#0A2F66" stroke-width="10" stroke-linecap="round" />
+  <path d="M370 166 L320 250" stroke="#0A2F66" stroke-width="10" stroke-linecap="round" />
+  <!-- Fuselage (narrow, slight taper) -->
+  <path d="M296 200 h48 c10 0 18 8 18 18 v70 c0 18 -12 30 -30 34 l-30 8 -30 -8 c-18 -4 -30 -16 -30 -34 v-70 c0 -10 8 -18 18 -18z" fill="#0A2F66" />
+  <!-- Vertical tail (centered) -->
+  <rect x="312" y="160" width="16" height="52" rx="6" fill="#0A2F66" />
+  <!-- Main landing gear (small wheels) -->
+  <circle cx="288" cy="312" r="14" fill="#0A2F66" />
+  <circle cx="352" cy="312" r="14" fill="#0A2F66" />
+  <!-- Nose wheel -->
+  <circle cx="320" cy="324" r="12" fill="#0A2F66" />
+  <!-- Gear legs -->
+  <path d="M288 300 L288 312" stroke="#0A2F66" stroke-width="10" stroke-linecap="round" />
+  <path d="M352 300 L352 312" stroke="#0A2F66" stroke-width="10" stroke-linecap="round" />
+  <path d="M320 304 L320 324" stroke="#0A2F66" stroke-width="10" stroke-linecap="round" />
+  <!-- Callsign text below -->
+  <text x="320" y="430" font-family="'Helvetica Neue', Arial, sans-serif" font-size="96" font-weight="700" text-anchor="middle" fill="#D80000" letter-spacing="4">CC-AQI</text>
+</svg>
