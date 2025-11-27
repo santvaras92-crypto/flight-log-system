@@ -40,11 +40,11 @@ export default function NewPilotPublicPage() {
       <div className="bg-gradient-to-r from-[#003D82] to-[#0A2F5F] shadow-xl">
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center gap-4">
-            <img 
-              src="/logo.png" 
-              alt="CC-AQI" 
-              className="h-[4.24rem] w-auto"
-            />
+              <img 
+                src="/logo.png" 
+                alt="CC-AQI" 
+                className="h-[4.664rem] w-auto"
+              />
             <div>
               <h1 className="text-3xl font-bold text-white tracking-tight">Pilot Registration</h1>
               <p className="text-blue-50 text-sm font-medium mt-1">Register your details to join the system</p>

@@ -82,7 +82,7 @@ export default function DashboardClient({ initialData, pagination }: { initialDa
               <img 
                 src="/logo.png" 
                 alt="CC-AQI" 
-                className="h-[5.4rem] w-auto"
+                  className="h-[6.48rem] w-auto"
               />
               <div>
                 <h1 className="text-4xl font-bold text-white tracking-tight">Operations Dashboard</h1>
