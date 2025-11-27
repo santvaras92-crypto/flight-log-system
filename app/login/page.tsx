@@ -31,12 +31,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="flex justify-center">
-          <img 
-            src="/logo-blue.png" 
-            alt="CC-AQI" 
-            className="h-28 w-auto"
-            style={{ filter: 'drop-shadow(0 0 20px rgba(0, 61, 130, 0.3))', mixBlendMode: 'multiply' }}
-          />
+          <img src="/logo-blue.png" alt="CC-AQI" className="h-28 w-auto" />
         </div>
         <form onSubmit={handleSubmit} className="bg-white shadow rounded p-6 space-y-4">
           <h1 className="text-xl font-semibold text-gray-700">Ingreso</h1>

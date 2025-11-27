@@ -44,7 +44,6 @@ export default function NewPilotPage() {
               src="/logo-white.png" 
               alt="CC-AQI" 
               className="h-16 w-auto"
-              style={{ filter: 'drop-shadow(0 0 20px rgba(0, 61, 130, 0.3))', mixBlendMode: 'screen' }}
             />
             <div>
               <h1 className="text-3xl font-bold text-white tracking-tight">Pilot Registration</h1>
