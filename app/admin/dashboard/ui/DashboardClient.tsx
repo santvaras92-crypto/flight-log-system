@@ -38,35 +38,73 @@ export default function DashboardClient({ initialData }: { initialData: InitialD
   }, [initialData.submissions, initialData.users, filterPilot]);
 
   const palette = theme === 'dark'
-    ? { bg: 'bg-slate-900', card: 'bg-slate-800/80 backdrop-blur-sm', text: 'text-slate-100', subtext: 'text-slate-400', border: 'border-slate-700/50', accent: '#60a5fa', accent2: '#34d399', grid: 'rgba(148,163,184,0.2)', shadow: 'shadow-xl shadow-slate-900/10' }
-    : { bg: 'bg-gradient-to-br from-indigo-50 via-white to-emerald-50', card: 'bg-white/90 backdrop-blur-sm', text: 'text-slate-900', subtext: 'text-slate-600', border: 'border-slate-200/60', accent: '#4f46e5', accent2: '#10b981', grid: 'rgba(100,116,139,0.15)', shadow: 'shadow-xl shadow-indigo-500/5' };
+    ? { bg: 'bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900', card: 'bg-slate-800/90 backdrop-blur-lg border-2 border-slate-700/50', text: 'text-white', subtext: 'text-slate-300', border: 'border-slate-600', accent: '#3b82f6', accent2: '#10b981', grid: 'rgba(148,163,184,0.15)', shadow: 'shadow-2xl' }
+    : { bg: 'bg-gradient-to-br from-slate-100 via-blue-50 to-slate-100', card: 'bg-white/95 backdrop-blur-lg border-2 border-slate-200', text: 'text-slate-900', subtext: 'text-slate-600', border: 'border-slate-300', accent: '#2563eb', accent2: '#059669', grid: 'rgba(100,116,139,0.1)', shadow: 'shadow-2xl' };
 
   return (
-    <div className="bg-gradient-indigo-emerald min-h-screen w-full -mx-6 -my-8 px-6 py-8">
-      <header className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-bold text-gradient-indigo-emerald tracking-tight">Dashboard Operacional</h1>
-          <p className="mt-1 text-slate-400 text-sm">Vuelos, pilotos, mantenimiento y finanzas.</p>
+    <div className={`min-h-screen ${palette.bg} -mx-6 -my-8 px-6 py-8`}>
+      {/* Header estilo Jeppesen */}
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 shadow-2xl rounded-2xl mb-8">
+        <div className="px-8 py-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl">
+                <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold text-white tracking-tight">Operations Dashboard</h1>
+                <p className="mt-1.5 text-blue-100 text-base font-medium">Flight Operations • Maintenance • Finance</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <input 
+                value={filterAircraft} 
+                onChange={e=>setFilterAircraft(e.target.value)} 
+                placeholder="Filter aircraft..." 
+                className="px-4 py-3 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl text-white placeholder-blue-200 font-medium focus:bg-white/20 focus:border-white/40 transition-all shadow-lg"
+              />
+              <input 
+                value={filterPilot} 
+                onChange={e=>setFilterPilot(e.target.value)} 
+                placeholder="Filter pilot..." 
+                className="px-4 py-3 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl text-white placeholder-blue-200 font-medium focus:bg-white/20 focus:border-white/40 transition-all shadow-lg"
+              />
+              <button 
+                className="px-5 py-3 bg-white/20 backdrop-blur-sm hover:bg-white/30 border-2 border-white/30 rounded-xl text-white font-bold transition-all shadow-lg flex items-center gap-2"
+                onClick={()=>setTheme(theme==='dark'?'light':'dark')}
+              >
+                {theme==='dark'?<>☀️ Light</>:<>🌙 Dark</>}
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <input value={filterAircraft} onChange={e=>setFilterAircraft(e.target.value)} placeholder="Filtrar aeronave" className="input-elegant px-4 py-2.5 text-sm" />
-          <input value={filterPilot} onChange={e=>setFilterPilot(e.target.value)} placeholder="Filtrar piloto" className="input-elegant px-4 py-2.5 text-sm" />
-          <button className="px-4 py-2.5 rounded-xl btn-gradient-indigo text-white hover:opacity-90 transition-all font-medium" onClick={()=>setTheme(theme==='dark'?'light':'dark')}>
-            {theme==='dark'?'☀️ Claro':'🌙 Oscuro'}
-          </button>
-        </div>
-      </header>
+      </div>
 
-      <nav className="mb-6 flex gap-2">
+      {/* Navigation Tabs - Estilo ForeFlight */}
+      <nav className="mb-8 flex gap-2 bg-white/5 backdrop-blur-sm p-2 rounded-2xl border-2 border-white/10">
         {[
-          { id: "overview", label: "Resumen" },
-          { id: "flights", label: "Vuelos" },
-          { id: "pilots", label: "Pilotos" },
-          { id: "maintenance", label: "Mantenimiento" },
-          { id: "finance", label: "Finanzas" },
+          { id: "overview", label: "Overview", icon: "M4 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 16a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1v-2zM14 16a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1v-2z" },
+          { id: "flights", label: "Flight Log", icon: "M12 19l9 2-9-18-9 18 9-2zm0 0v-8" },
+          { id: "pilots", label: "Pilots", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" },
+          { id: "maintenance", label: "Maintenance", icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" },
+          { id: "finance", label: "Finance", icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
         ].map(t => (
-          <button key={t.id} onClick={()=>setTab(t.id)}
-            className={`tab-elegant ${tab===t.id ? 'active' : 'hover:border-slate-500'}`}>{t.label}</button>
+          <button 
+            key={t.id} 
+            onClick={()=>setTab(t.id)}
+            className={`flex-1 px-6 py-4 rounded-xl font-bold uppercase tracking-wide text-sm transition-all flex items-center justify-center gap-2 ${
+              tab===t.id 
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl' 
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={t.icon} />
+            </svg>
+            {t.label}
+          </button>
         ))}
       </nav>
 
@@ -95,30 +133,44 @@ function Overview({ data, flights, palette }: { data: InitialData; flights: any[
   const totalRevenue = data.flights.reduce((a,b)=>a+Number(b.costo||0),0);
   return (
     <div className="space-y-6">
+      {/* Stats Grid - Estilo ForeFlight */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-        <StatCard title="Total Vuelos" value={data.flights.length} accent="#3b82f6" palette={palette} />
-        <StatCard title="Horas Hobbs" value={totalHours.toFixed(1)} accent="#10b981" palette={palette} />
-        <StatCard title="Pilotos activos" value={data.users.filter(u=>u.rol==='PILOTO').length} accent="#f59e0b" palette={palette} />
-        <StatCard title="Ingresos" value={`$${Number(totalRevenue).toLocaleString('es-CL')}`} accent="#ef4444" palette={palette} />
+        <StatCard title="Total Flights" value={data.flights.length} accent="#3b82f6" icon="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" palette={palette} />
+        <StatCard title="Hobbs Hours" value={totalHours.toFixed(1)} accent="#10b981" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" palette={palette} />
+        <StatCard title="Active Pilots" value={data.users.filter(u=>u.rol==='PILOTO').length} accent="#f59e0b" icon="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" palette={palette} />
+        <StatCard title="Revenue" value={`$${Number(totalRevenue).toLocaleString('es-CL')}`} accent="#ef4444" icon="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" palette={palette} />
       </div>
-      <div className="card-elegant p-6">
-        <h3 className="font-bold text-lg mb-4 text-slate-200">Horas por día</h3>
-        <LineChart labels={hoursByDay.labels} values={hoursByDay.values} palette={palette} />
+      {/* Chart Card - Estilo Jeppesen */}
+      <div className={`${palette.card} rounded-2xl ${palette.shadow} overflow-hidden`}>
+        <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
+          <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+            </svg>
+            Flight Hours Trend
+          </h3>
+        </div>
+        <div className="p-8">
+          <LineChart labels={hoursByDay.labels} values={hoursByDay.values} palette={palette} />
+        </div>
       </div>
     </div>
   );
 }
 
-function StatCard({ title, value, accent, palette }: { title: string; value: string | number; accent: string; palette: any }) {
+function StatCard({ title, value, accent, icon, palette }: { title: string; value: string | number; accent: string; icon: string; palette: any }) {
   return (
-    <div className="stat-card group">
-      <div className="absolute top-0 right-0 w-24 h-24 rounded-bl-full opacity-10" style={{ background: `linear-gradient(135deg, ${accent}, ${accent}dd)` }} />
+    <div className={`${palette.card} rounded-2xl p-6 ${palette.shadow} relative overflow-hidden group hover:scale-105 transition-transform duration-300`}>
+      <div className="absolute top-0 right-0 w-32 h-32 rounded-bl-full opacity-5" style={{ background: `linear-gradient(135deg, ${accent}, ${accent}dd)` }} />
+      <div className="absolute top-4 right-4 w-12 h-12 rounded-xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
+        <svg className="w-7 h-7" style={{ color: accent }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={icon} />
+        </svg>
+      </div>
       <div className="relative z-10">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-medium text-slate-400 uppercase tracking-wide">{title}</p>
-          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: accent, boxShadow: `0 0 12px ${accent}88` }} />
-        </div>
-        <p className="text-3xl font-bold text-slate-100 tracking-tight">{value}</p>
+        <p className={`text-xs font-bold ${palette.subtext} uppercase tracking-wider mb-3`}>{title}</p>
+        <p className={`text-4xl font-bold ${palette.text} tracking-tight`}>{value}</p>
+        <div className="mt-4 h-1 w-16 rounded-full" style={{ background: accent }} />
       </div>
     </div>
   );
@@ -148,36 +200,46 @@ function LineChart({ labels, values, palette }: { labels: string[]; values: numb
 
 function FlightsTable({ flights, users }: { flights: any[]; users: any[] }) {
   return (
-    <div className="table-elegant">
-      <table className="min-w-full">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Fecha</th>
-            <th>Piloto</th>
-            <th>Aeronave</th>
-            <th>Δ Hobbs</th>
-            <th>Δ Tach</th>
-            <th>Costo</th>
-          </tr>
-        </thead>
-        <tbody>
-          {flights.map(f => {
-            const u = users.find(u => u.id === f.pilotoId);
-            return (
-              <tr key={f.id}>
-                <td className="font-medium text-slate-300">#{f.id}</td>
-                <td className="text-slate-400">{new Date(f.fecha).toLocaleString("es-CL")}</td>
-                <td className="text-slate-300">{u?.nombre || "N/A"}</td>
-                <td className="font-semibold text-blue-400">{f.aircraftId}</td>
-                <td className="text-slate-400">{Number(f.diff_hobbs).toFixed(1)} hrs</td>
-                <td className="text-slate-400">{Number(f.diff_tach).toFixed(1)} hrs</td>
-                <td className="font-semibold text-emerald-400">${Number(f.costo).toLocaleString("es-CL")}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
+      <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
+        <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          Flight Log Entries
+        </h3>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200">
+          <thead className="bg-slate-50">
+            <tr>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">ID</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Date</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Pilot</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Aircraft</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Δ Hobbs</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Δ Tach</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Cost</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-slate-100">
+            {flights.map(f => {
+              const u = users.find(u => u.id === f.pilotoId);
+              return (
+                <tr key={f.id} className="hover:bg-blue-50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-blue-600">#{f.id}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-medium">{new Date(f.fecha).toLocaleString("es-CL")}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">{u?.nombre || "N/A"}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-600 font-mono">{f.aircraftId}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{Number(f.diff_hobbs).toFixed(1)} hrs</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{Number(f.diff_tach).toFixed(1)} hrs</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">${Number(f.costo).toLocaleString("es-CL")}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -190,71 +252,95 @@ function PilotsTable({ users, flights, transactions }: { users: any[]; flights: 
     return { ...u, flights: f.length, hours: f.reduce((a,b)=>a+Number(b.diff_hobbs),0), spent: spent, deposits: deposits };
   });
   return (
-    <div className="table-elegant">
-      <table className="min-w-full">
-        <thead>
-          <tr>
-            <th>Código</th>
-            <th>Piloto</th>
-            <th>Vuelos</th>
-            <th>Horas</th>
-            <th>Tarifa/Hora</th>
-            <th>Saldo</th>
-            <th>Gasto total</th>
-            <th>Abonos</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map(p => (
-            <tr key={p.id}>
-              <td className="font-semibold text-blue-400">{p.codigo || '-'}</td>
-              <td className="font-medium text-slate-200">{p.nombre}</td>
-              <td className="text-slate-400">{p.flights}</td>
-              <td className="text-slate-400">{p.hours.toFixed(1)} hrs</td>
-              <td className="text-slate-400">${Number(p.tarifa_hora).toLocaleString("es-CL")}</td>
-              <td className="font-semibold text-emerald-400">${Number(p.saldo_cuenta).toLocaleString("es-CL")}</td>
-              <td className="text-slate-400">${Number(-p.spent).toLocaleString("es-CL")}</td>
-              <td className="text-slate-400">${Number(p.deposits).toLocaleString("es-CL")}</td>
+    <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
+      <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
+        <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+          Pilot Accounts
+        </h3>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200">
+          <thead className="bg-slate-50">
+            <tr>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Code</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Pilot</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Flights</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Hours</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Rate/Hr</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Balance</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Total Spent</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Deposits</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="bg-white divide-y divide-slate-100">
+            {data.map(p => (
+              <tr key={p.id} className="hover:bg-blue-50 transition-colors">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-blue-600 font-mono">{p.codigo || '-'}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">{p.nombre}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{p.flights}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{p.hours.toFixed(1)} hrs</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">${Number(p.tarifa_hora).toLocaleString("es-CL")}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">${Number(p.saldo_cuenta).toLocaleString("es-CL")}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">${Number(-p.spent).toLocaleString("es-CL")}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">${Number(p.deposits).toLocaleString("es-CL")}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
 
 function MaintenanceTable({ components, aircraft }: { components: any[]; aircraft: any[] }) {
   return (
-    <div className="table-elegant">
-      <table className="min-w-full">
-        <thead>
-          <tr>
-            <th>Aeronave</th>
-            <th>Tipo</th>
-            <th>Horas</th>
-            <th>TBO</th>
-            <th>Restante</th>
-            <th>% Vida</th>
-          </tr>
-        </thead>
-        <tbody>
-          {components.map(c => {
-            const restante = Number(c.limite_tbo) - Number(c.horas_acumuladas);
-            const pct = (Number(c.horas_acumuladas)/Number(c.limite_tbo))*100;
-            const colorClass = pct > 80 ? 'text-red-400 font-bold' : pct > 60 ? 'text-orange-400 font-semibold' : 'text-emerald-400 font-semibold';
-            return (
-              <tr key={c.id}>
-                <td className="font-semibold text-blue-400">{c.aircraftId}</td>
-                <td className="text-slate-300">{c.tipo}</td>
-                <td className="text-slate-400">{Number(c.horas_acumuladas).toFixed(1)} hrs</td>
-                <td className="text-slate-400">{Number(c.limite_tbo).toFixed(0)} hrs</td>
-                <td className="text-slate-400">{restante.toFixed(1)} hrs</td>
-                <td className={colorClass}>{pct.toFixed(1)}%</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
+      <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
+        <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          Component Status
+        </h3>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200">
+          <thead className="bg-slate-50">
+            <tr>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Aircraft</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Type</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Hours</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">TBO</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Remaining</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Life %</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-slate-100">
+            {components.map(c => {
+              const restante = Number(c.limite_tbo) - Number(c.horas_acumuladas);
+              const pct = (Number(c.horas_acumuladas)/Number(c.limite_tbo))*100;
+              const colorClass = pct > 80 ? 'text-red-600 font-bold' : pct > 60 ? 'text-orange-500 font-bold' : 'text-green-600 font-bold';
+              return (
+                <tr key={c.id} className="hover:bg-blue-50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-600 font-mono">{c.aircraftId}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">{c.tipo}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{Number(c.horas_acumuladas).toFixed(1)} hrs</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{Number(c.limite_tbo).toFixed(0)} hrs</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{restante.toFixed(1)} hrs</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${colorClass}`}>
+                      {pct.toFixed(1)}%
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -279,30 +365,70 @@ function FinanceCharts({ flights, transactions, palette }: { flights: any[]; tra
     if (!barRef.current) return;
     const ctx = barRef.current.getContext("2d");
     if (!ctx) return;
-    const g1 = ctx.createLinearGradient(0, 0, 0, 180);
-    g1.addColorStop(0, `${palette.accent}66`);
-    g1.addColorStop(1, `${palette.accent}00`);
-    const g2 = ctx.createLinearGradient(0, 0, 0, 180);
-    g2.addColorStop(0, `${palette.accent2}66`);
-    g2.addColorStop(1, `${palette.accent2}00`);
+    const g1 = ctx.createLinearGradient(0, 0, 0, 220);
+    g1.addColorStop(0, `${palette.accent}88`);
+    g1.addColorStop(1, `${palette.accent}22`);
+    const g2 = ctx.createLinearGradient(0, 0, 0, 220);
+    g2.addColorStop(0, `${palette.accent2}88`);
+    g2.addColorStop(1, `${palette.accent2}22`);
     const chart = new Chart(ctx, {
       type: "bar",
       data: {
         labels: monthly.labels,
         datasets: [
-          { label: "Horas", data: monthly.hours, backgroundColor: g1, borderColor: palette.accent, borderRadius: 6, maxBarThickness: 18 },
-          { label: "Ingresos", data: monthly.revenue, backgroundColor: g2, borderColor: palette.accent2, borderRadius: 6, maxBarThickness: 18 },
+          { label: "Hours", data: monthly.hours, backgroundColor: g1, borderColor: palette.accent, borderRadius: 8, borderWidth: 2, maxBarThickness: 24 },
+          { label: "Revenue", data: monthly.revenue, backgroundColor: g2, borderColor: palette.accent2, borderRadius: 8, borderWidth: 2, maxBarThickness: 24 },
         ],
       },
-      options: { responsive: true, plugins: { legend: { position: "bottom" }, tooltip: { backgroundColor: '#0f172a', titleColor: '#fff', bodyColor: '#e2e8f0' } }, scales: { x: { grid: { color: palette.grid } }, y: { grid: { color: palette.grid } } } },
+      options: { 
+        responsive: true, 
+        plugins: { 
+          legend: { 
+            position: "top",
+            labels: {
+              font: { size: 13, weight: 'bold' },
+              padding: 15,
+              usePointStyle: true
+            }
+          }, 
+          tooltip: { 
+            backgroundColor: '#0f172a', 
+            titleColor: '#fff', 
+            bodyColor: '#e2e8f0',
+            padding: 12,
+            borderColor: palette.accent,
+            borderWidth: 1,
+            cornerRadius: 8
+          } 
+        }, 
+        scales: { 
+          x: { 
+            grid: { color: palette.grid },
+            ticks: { font: { weight: 'bold' } }
+          }, 
+          y: { 
+            grid: { color: palette.grid },
+            ticks: { font: { weight: 'bold' } }
+          } 
+        } 
+      },
     });
     return () => chart.destroy();
   }, [monthly]);
 
   return (
-    <div className="card-elegant p-6">
-      <h3 className="font-bold text-lg mb-4 text-slate-200">Horas e ingresos por mes</h3>
-      <canvas ref={barRef} height={140} />
+    <div className={`${palette.card} rounded-2xl ${palette.shadow} overflow-hidden`}>
+      <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
+        <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          Financial Performance
+        </h3>
+      </div>
+      <div className="p-8">
+        <canvas ref={barRef} height={160} />
+      </div>
     </div>
   );
 }
