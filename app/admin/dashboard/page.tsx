@@ -34,7 +34,16 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       }
     }),
     prisma.flight.findMany({ orderBy: { fecha: "desc" }, select: { id: true, fecha: true, cliente: true, diff_hobbs: true, costo: true } }), // All flights for Active Pilots calculation without pilotoId to avoid null decode
-    prisma.flightSubmission.findMany({ include: { ImageLog: true, Flight: true }, orderBy: { createdAt: "desc" }, take: 200 }),
+    prisma.flightSubmission.findMany({
+      include: {
+        ImageLog: true,
+        Flight: {
+          select: { id: true, fecha: true, diff_hobbs: true, diff_tach: true, costo: true, cliente: true }
+        }
+      },
+      orderBy: { createdAt: "desc" },
+      take: 200
+    }),
     prisma.component.findMany(),
     prisma.transaction.findMany({ orderBy: { createdAt: "desc" }, take: 500 }),
     prisma.flight.count(),
