@@ -91,7 +91,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     users: users.map(u => ({ ...u, saldo_cuenta: Number(u.saldo_cuenta), tarifa_hora: Number(u.tarifa_hora) })),
     aircraft: aircraft.map(a => ({ ...a, hobbs_actual: Number(a.hobbs_actual), tach_actual: Number(a.tach_actual) })),
     flights: flights.map(f => ({ ...f, hobbs_inicio: Number(f.hobbs_inicio), hobbs_fin: Number(f.hobbs_fin), tach_inicio: Number(f.tach_inicio), tach_fin: Number(f.tach_fin), diff_hobbs: Number(f.diff_hobbs), diff_tach: Number(f.diff_tach), costo: Number(f.costo) })),
-    allFlights: allFlights.map(f => ({ id: f.id, fecha: f.fecha, pilotoId: f.pilotoId, diff_hobbs: Number(f.diff_hobbs), costo: Number(f.costo) })), // Lightweight for Active Pilots
+    allFlights: allFlights.map(f => ({ id: f.id, fecha: f.fecha, pilotoId: f.pilotoId, clienteCodigo: (f as any).clienteCodigo || null, diff_hobbs: Number(f.diff_hobbs), costo: Number(f.costo) })), // Lightweight for Active Pilots
     submissions: submissions.map(s => ({ ...s, imageLogs: s.ImageLog.map(img => ({ ...img, valorExtraido: img.valorExtraido ? Number(img.valorExtraido) : null, confianza: img.confianza ? Number(img.confianza) : null })), flight: s.Flight ? { ...s.Flight, diff_hobbs: Number(s.Flight.diff_hobbs), diff_tach: Number(s.Flight.diff_tach), costo: Number(s.Flight.costo) } : null })),
     components: computedComponents.map(c => ({ ...c, horas_acumuladas: Number(c.horas_acumuladas), limite_tbo: Number(c.limite_tbo) })),
     transactions: transactions.map(t => ({ ...t, monto: Number(t.monto) })),

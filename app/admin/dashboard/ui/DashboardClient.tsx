@@ -354,18 +354,33 @@ function Overview({ data, flights, palette, allowedPilotCodes, activeDaysLimit, 
     cutoffDate.setDate(cutoffDate.getDate() - activeDaysLimit);
     const cutoffTime = cutoffDate.getTime();
 
-    const pilotIds = new Set<number>();
     const allFlightsData = data.allFlights || data.flights; // Use allFlights if available, fallback to paginated flights
+
+    // Map allowed pilot codes to user IDs
+    const codeToUserId = new Map<string, number>();
+    data.users.forEach(u => {
+      const code = (u.codigo || '').toUpperCase();
+      if (code && allowed.has(code)) codeToUserId.set(code, u.id);
+    });
+
+    const pilotIds = new Set<number>();
     allFlightsData.forEach(f => {
-      if (new Date(f.fecha).getTime() >= cutoffTime && f.pilotoId) {
+      const t = new Date(f.fecha).getTime();
+      if (t < cutoffTime) return;
+      if (f.pilotoId) {
         pilotIds.add(f.pilotoId);
+      } else {
+        const code = (f as any).clienteCodigo ? String((f as any).clienteCodigo).toUpperCase() : '';
+        const uid = codeToUserId.get(code);
+        if (uid) pilotIds.add(uid);
       }
     });
 
     return data.users.filter(u => {
       if (u.rol !== 'PILOTO') return false;
       const code = (u.codigo || '').toUpperCase();
-      return allowed.size > 0 ? (code && allowed.has(code) && pilotIds.has(u.id)) : pilotIds.has(u.id);
+      const passesAllowed = allowed.size > 0 ? (code && allowed.has(code)) : true;
+      return passesAllowed && pilotIds.has(u.id);
     });
   }, [data.users, data.flights, data.allFlights, allowedPilotCodes, activeDaysLimit]);
 
