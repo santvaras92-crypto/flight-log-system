@@ -147,6 +147,9 @@ async function main() {
   let imported = 0;
   let skipped = 0;
   const BATCH_SIZE = 50;
+  const flightBatch: any[] = [];
+  const transactionBatch: any[] = [];
+  
   // Saltar header
   let lastTachFin: number | null = null;
   let lastHobbsFin: number | null = null;
@@ -295,9 +298,6 @@ async function main() {
     lastTachFin = tach_fin;
 
     if (flightBatch.length >= BATCH_SIZE) {
-      /* ...existing code... */
-    }
-  }
       try {
         await prisma.flight.createMany({ data: flightBatch });
         await prisma.transaction.createMany({ data: transactionBatch });
