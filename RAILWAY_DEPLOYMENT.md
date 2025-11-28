@@ -106,6 +106,7 @@ railway variables
 **Build falla:**
 - Verifica que `prisma generate` esté en el script `build` (ya configurado)
 - Revisa logs en Dashboard
+- Si el schema cambió y no ves columnas nuevas, fuerza un rebuild con un pequeño commit y asegúrate de que el start command ejecute `prisma db push`.
 
 **Database connection error:**
 - Verifica DATABASE_URL en variables
