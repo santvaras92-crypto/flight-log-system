@@ -70,7 +70,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
   }
 
   const registeredPilotCodes = users
-    .filter(u => u.rol === 'PILOTO')
+    .filter(u => u.rol === 'PILOTO' && u.email && !u.email.endsWith('@piloto.local'))
     .map(u => (u.codigo || '').toUpperCase())
     .filter(c => c && !allowedPilotCodes.includes(c));
 
@@ -137,8 +137,8 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         .filter(u => {
           if (u.rol !== 'PILOTO') return false;
           const code = (u.codigo || '').toUpperCase();
-          // Only include pilots NOT in CSV (i.e., new registrations)
-          return code && !allowedPilotCodes.includes(code);
+          // Only include pilots NOT in CSV AND have real email (not @piloto.local)
+          return code && !allowedPilotCodes.includes(code) && u.email && !u.email.endsWith('@piloto.local');
         })
         .map(u => ({ 
           id: u.id, 
