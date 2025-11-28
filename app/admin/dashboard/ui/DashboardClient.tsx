@@ -31,6 +31,7 @@ export default function DashboardClient({ initialData, pagination }: { initialDa
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(pagination?.page || 1);
+  const [editMode, setEditMode] = useState(false);
   const pageSize = pagination?.pageSize || 100;
   useEffect(() => { localStorage.setItem('dash-theme', theme); }, [theme]);
 
@@ -91,6 +92,22 @@ export default function DashboardClient({ initialData, pagination }: { initialDa
             </div>
             {/* Controls: normalize size + allow wrap to avoid overflow */}
             <div className="flex flex-wrap items-center justify-end gap-3">
+              <button
+                className="h-12 px-4 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl text-white font-bold shadow-lg flex items-center gap-2"
+                onClick={()=>setEditMode(e=>!e)}
+                title={editMode ? "Salir de edición" : "Modo edición"}
+              >
+                {editMode ? (
+                  <svg className="w-6 h-6 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <svg className="w-6 h-6 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                )}
+                {editMode ? "Editar (candado abierto)" : "Modo edición"}
+              </button>
               {/** shared control styles for consistent alignment */}
               {(() => {
                 const controlClass = "h-12 px-4 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl text-white placeholder-blue-200 font-medium focus:bg-white/20 focus:border-white/40 transition-all shadow-lg py-0";
@@ -183,7 +200,7 @@ export default function DashboardClient({ initialData, pagination }: { initialDa
       {tab === "overview" && <Overview data={initialData} flights={flights} palette={palette} />}
       {tab === "flights" && (
         <>
-          <FlightsTable flights={flights} users={initialData.users} />
+          <FlightsTable flights={flights} users={initialData.users} editMode={editMode} />
           <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-2 border-slate-200 rounded-b-2xl mt-2">
             <button
               className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-40 hover:bg-blue-700 transition-colors"
@@ -370,7 +387,37 @@ function LineChart({ labels, values, palette }: { labels: string[]; values: numb
   return <canvas ref={ref} height={120} />;
 }
 
-function FlightsTable({ flights, users }: { flights: any[]; users: any[] }) {
+function FlightsTable({ flights, users, editMode = false }: { flights: any[]; users: any[]; editMode?: boolean }) {
+  const [drafts, setDrafts] = useState<Record<number, any>>({});
+  const [saving, setSaving] = useState(false);
+  const handleChange = (id: number, field: string, value: any) => {
+    setDrafts(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
+  };
+  const applySave = async () => {
+    setSaving(true);
+    try {
+      const payload = Object.entries(drafts).map(([id, data]) => ({ id: Number(id), ...data }));
+      if (payload.length === 0) return;
+      const res = await fetch('/api/flights/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates: payload }),
+      });
+      const json = await res.json();
+      if (!json.ok) {
+        alert(json.error || 'Error al guardar cambios');
+      } else {
+        alert('Cambios guardados');
+        setDrafts({});
+        // Opcional: refresh via location
+        location.reload();
+      }
+    } catch (e) {
+      alert('Error de red al guardar');
+    } finally {
+      setSaving(false);
+    }
+  };
   return (
     <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
       <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
@@ -379,6 +426,15 @@ function FlightsTable({ flights, users }: { flights: any[]; users: any[] }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
           </svg>
           Flight Log Entries
+          {editMode && (
+            <button
+              onClick={applySave}
+              disabled={saving}
+              className="ml-auto px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-bold disabled:opacity-40"
+            >
+              {saving ? 'Guardando...' : 'Guardar cambios'}
+            </button>
+          )}
         </h3>
       </div>
       <div className="overflow-x-auto">
@@ -406,20 +462,62 @@ function FlightsTable({ flights, users }: { flights: any[]; users: any[] }) {
               const u = users.find(u => u.id === f.pilotoId);
               return (
                 <tr key={f.id} className="hover:bg-blue-50 transition-colors">
-                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600 font-medium">{new Date(f.fecha).toLocaleDateString("es-CL")}</td>
-                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">{Number(f.tach_inicio).toFixed(1)}</td>
-                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">{Number(f.tach_fin).toFixed(1)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600 font-medium">
+                    {editMode ? (
+                      <input type="date" className="px-2 py-1 border rounded" value={new Date(f.fecha).toISOString().slice(0,10)} onChange={e=>handleChange(f.id,'fecha',e.target.value)} />
+                    ) : (
+                      new Date(f.fecha).toLocaleDateString("es-CL")
+                    )}
+                  </td>
+                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
+                    {editMode ? (
+                      <input type="number" step="0.1" className="px-2 py-1 border rounded text-right" defaultValue={Number(f.tach_inicio).toFixed(1)} onChange={e=>handleChange(f.id,'tach_inicio',e.target.value)} />
+                    ) : Number(f.tach_inicio).toFixed(1)}
+                  </td>
+                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
+                    {editMode ? (
+                      <input type="number" step="0.1" className="px-2 py-1 border rounded text-right" defaultValue={Number(f.tach_fin).toFixed(1)} onChange={e=>handleChange(f.id,'tach_fin',e.target.value)} />
+                    ) : Number(f.tach_fin).toFixed(1)}
+                  </td>
                   <td className="px-3 py-3 whitespace-nowrap text-xs font-semibold text-blue-600 font-mono text-right">{Number(f.diff_tach).toFixed(1)} hrs</td>
-                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">{Number(f.hobbs_inicio).toFixed(1)}</td>
-                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">{Number(f.hobbs_fin).toFixed(1)}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
+                    {editMode ? (
+                      <input type="number" step="0.1" className="px-2 py-1 border rounded text-right" defaultValue={Number(f.hobbs_inicio).toFixed(1)} onChange={e=>handleChange(f.id,'hobbs_inicio',e.target.value)} />
+                    ) : Number(f.hobbs_inicio).toFixed(1)}
+                  </td>
+                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
+                    {editMode ? (
+                      <input type="number" step="0.1" className="px-2 py-1 border rounded text-right" defaultValue={Number(f.hobbs_fin).toFixed(1)} onChange={e=>handleChange(f.id,'hobbs_fin',e.target.value)} />
+                    ) : Number(f.hobbs_fin).toFixed(1)}
+                  </td>
                   <td className="px-3 py-3 whitespace-nowrap text-xs font-semibold text-blue-600 font-mono text-right">{Number(f.diff_hobbs).toFixed(1)} hrs</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-xs font-semibold text-slate-900">{u?.nombre || "N/A"}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600">{f.copiloto || "-"}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600">{f.cliente || "-"}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs font-semibold text-slate-900">
+                    {editMode ? (
+                      <input className="px-2 py-1 border rounded" defaultValue={u?.nombre || ''} onChange={e=>handleChange(f.id,'pilotoNombre',e.target.value)} />
+                    ) : (u?.nombre || "N/A")}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600">
+                    {editMode ? (
+                      <input className="px-2 py-1 border rounded" defaultValue={f.copiloto || ''} onChange={e=>handleChange(f.id,'copiloto',e.target.value)} />
+                    ) : (f.copiloto || "-")}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600">
+                    {editMode ? (
+                      <input className="px-2 py-1 border rounded" defaultValue={f.cliente || ''} onChange={e=>handleChange(f.id,'cliente',e.target.value)} />
+                    ) : (f.cliente || "-")}
+                  </td>
                   <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">{u ? `$${Number(u.tarifa_hora).toLocaleString("es-CL")}` : "-"}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600">{f.instructor || "-"}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600">
+                    {editMode ? (
+                      <input className="px-2 py-1 border rounded" defaultValue={f.instructor || ''} onChange={e=>handleChange(f.id,'instructor',e.target.value)} />
+                    ) : (f.instructor || "-")}
+                  </td>
                   <td className="px-3 py-3 whitespace-nowrap text-xs font-bold text-green-600 text-right">${Number(f.costo).toLocaleString("es-CL")}</td>
-                  <td className="px-4 py-3 text-xs text-slate-600 max-w-xs truncate" title={f.detalle || ""}>{f.detalle || "-"}</td>
+                  <td className="px-4 py-3 text-xs text-slate-600 max-w-xs truncate" title={f.detalle || ""}>
+                    {editMode ? (
+                      <input className="w-full px-2 py-1 border rounded" defaultValue={f.detalle || ''} onChange={e=>handleChange(f.id,'detalle',e.target.value)} />
+                    ) : (f.detalle || "-")}
+                  </td>
                 </tr>
               );
             })}
