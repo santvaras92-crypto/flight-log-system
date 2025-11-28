@@ -35,9 +35,19 @@ export async function registerFlight(
       throw new Error("Piloto no encontrado");
     }
 
-    // 2. Validar que los nuevos contadores sean mayores a los actuales (Decimal)
-    const hobbsActual = aircraft.hobbs_actual; // Prisma.Decimal
-    const tachActual = aircraft.tach_actual; // Prisma.Decimal
+    // 2. Buscar el último vuelo registrado para esta aeronave y piloto
+    const ultimoVuelo = await tx.flight.findFirst({
+      where: { matricula, pilotoId },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // Si hay vuelos previos, comparar contra los contadores finales de ese vuelo
+    let hobbsActual = aircraft.hobbs_actual;
+    let tachActual = aircraft.tach_actual;
+    if (ultimoVuelo) {
+      hobbsActual = ultimoVuelo.hobbs_fin;
+      tachActual = ultimoVuelo.tach_fin;
+    }
 
     const nuevoHobbsDec = new Decimal(nuevoHobbs);
     const nuevoTachDec = new Decimal(nuevoTach);
