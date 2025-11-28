@@ -584,7 +584,8 @@ function FlightsTable({ flights, users, editMode = false }: { flights: any[]; us
           </thead>
           <tbody className="bg-white divide-y divide-slate-100">
             {flights.map(f => {
-              const u = users.find(u => u.id === f.pilotoId);
+              const code = (f.cliente || '').toUpperCase();
+              const u = users.find(u => u.id === (f as any).pilotoId) || users.find(u => (u.codigo || '').toUpperCase() === code);
               return (
                 <tr key={f.id} className="hover:bg-blue-50 transition-colors">
                   <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600 font-medium">
@@ -668,7 +669,7 @@ function PilotsTable({ users, flights, transactions, allowedPilotCodes }: { user
       return allowed.size > 0 ? (code && allowed.has(code)) : Boolean(code);
     })
     .map(u => {
-      const f = flights.filter(f => f.pilotoId === u.id);
+      const f = flights.filter(f => (f as any).pilotoId === u.id || ((f.cliente || '').toUpperCase() === (u.codigo || '').toUpperCase()));
       const spent = transactions.filter(t => t.userId === u.id && t.tipo === 'CARGO_VUELO').reduce((a,b)=>a+Number(b.monto),0);
       const deposits = transactions.filter(t => t.userId === u.id && t.tipo === 'ABONO').reduce((a,b)=>a+Number(b.monto),0);
       return { ...u, flights: f.length, hours: f.reduce((a,b)=>a+Number(b.diff_hobbs),0), spent: spent, deposits: deposits };

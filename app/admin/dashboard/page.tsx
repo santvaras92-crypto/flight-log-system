@@ -12,7 +12,27 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
   const [users, aircraft, flights, allFlights, submissions, components, transactions, totalFlights] = await Promise.all([
     prisma.user.findMany(),
     prisma.aircraft.findMany(),
-    prisma.flight.findMany({ orderBy: { fecha: "desc" }, where: { NOT: { pilotoId: null as any } }, skip, take: pageSize }),
+    prisma.flight.findMany({
+      orderBy: { fecha: "desc" },
+      skip,
+      take: pageSize,
+      select: {
+        id: true,
+        fecha: true,
+        hobbs_inicio: true,
+        hobbs_fin: true,
+        tach_inicio: true,
+        tach_fin: true,
+        diff_hobbs: true,
+        diff_tach: true,
+        costo: true,
+        copiloto: true,
+        cliente: true,
+        instructor: true,
+        detalle: true,
+        aircraftId: true,
+      }
+    }),
     prisma.flight.findMany({ orderBy: { fecha: "desc" }, select: { id: true, fecha: true, cliente: true, diff_hobbs: true, costo: true } }), // All flights for Active Pilots calculation without pilotoId to avoid null decode
     prisma.flightSubmission.findMany({ include: { ImageLog: true, Flight: true }, orderBy: { createdAt: "desc" }, take: 200 }),
     prisma.component.findMany(),
