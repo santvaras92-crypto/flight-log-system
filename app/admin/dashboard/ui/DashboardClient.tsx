@@ -32,6 +32,8 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
   const [endDate, setEndDate] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(pagination?.page || 1);
   const [editMode, setEditMode] = useState(false);
+  const [activeDaysLimit, setActiveDaysLimit] = useState<number>(30);
+  const [showActivePilots, setShowActivePilots] = useState(false);
   const pageSize = pagination?.pageSize || 100;
   useEffect(() => { localStorage.setItem('dash-theme', theme); }, [theme]);
 
@@ -163,6 +165,17 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
                     >
                       {sortOrder==='desc' ? 'Newest first' : 'Oldest first'}
                     </button>
+                    <div className="flex items-center gap-2 h-12 px-4 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl text-white shadow-lg">
+                      <label className="text-xs font-bold whitespace-nowrap">Active days:</label>
+                      <input 
+                        type="number" 
+                        min="1" 
+                        max="365" 
+                        value={activeDaysLimit} 
+                        onChange={e => setActiveDaysLimit(Math.max(1, Math.min(365, Number(e.target.value) || 30)))}
+                        className="w-16 px-2 py-1 bg-white/20 border border-white/30 rounded text-white text-center font-mono focus:bg-white/30 focus:outline-none"
+                      />
+                    </div>
                   </>
                 );
               })()}
@@ -197,7 +210,7 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
         ))}
       </nav>
 
-      {tab === "overview" && <Overview data={initialData} flights={flights} palette={palette} />}
+      {tab === "overview" && <Overview data={initialData} flights={flights} palette={palette} allowedPilotCodes={allowedPilotCodes} activeDaysLimit={activeDaysLimit} showActivePilots={showActivePilots} setShowActivePilots={setShowActivePilots} />}
       {tab === "flights" && (
         <>
           <FlightsTable flights={flights} users={initialData.users} editMode={editMode} />
@@ -306,7 +319,7 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
   );
 }
 
-function Overview({ data, flights, palette }: { data: InitialData; flights: any[]; palette: any }) {
+function Overview({ data, flights, palette, allowedPilotCodes, activeDaysLimit, showActivePilots, setShowActivePilots }: { data: InitialData; flights: any[]; palette: any; allowedPilotCodes?: string[]; activeDaysLimit: number; showActivePilots: boolean; setShowActivePilots: (v: boolean) => void }) {
   const hoursByDay = useMemo(() => {
     const map: Record<string, number> = {};
     flights.slice().reverse().forEach(f => {
@@ -318,6 +331,27 @@ function Overview({ data, flights, palette }: { data: InitialData; flights: any[
     return { labels, values };
   }, [flights]);
 
+  // Compute Active Pilots: pilots from CSV who flew in last X days
+  const activePilots = useMemo(() => {
+    const allowed = new Set((allowedPilotCodes || []).map(c => String(c).toUpperCase()));
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - activeDaysLimit);
+    const cutoffTime = cutoffDate.getTime();
+
+    const pilotIds = new Set<number>();
+    data.flights.forEach(f => {
+      if (new Date(f.fecha).getTime() >= cutoffTime) {
+        pilotIds.add(f.pilotoId);
+      }
+    });
+
+    return data.users.filter(u => {
+      if (u.rol !== 'PILOTO') return false;
+      const code = (u.codigo || '').toUpperCase();
+      return allowed.size > 0 ? (code && allowed.has(code) && pilotIds.has(u.id)) : pilotIds.has(u.id);
+    });
+  }, [data.users, data.flights, allowedPilotCodes, activeDaysLimit]);
+
   const totalHours = data.flights.reduce((a,b)=>a+Number(b.diff_hobbs),0);
   const totalRevenue = data.flights.reduce((a,b)=>a+Number(b.costo||0),0);
   return (
@@ -326,9 +360,68 @@ function Overview({ data, flights, palette }: { data: InitialData; flights: any[
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
         <StatCard title="Total Flights" value={data.flights.length} accent="#3b82f6" icon="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" palette={palette} />
         <StatCard title="Hobbs Hours" value={totalHours.toFixed(1)} accent="#10b981" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" palette={palette} />
-        <StatCard title="Active Pilots" value={data.users.filter(u=>u.rol==='PILOTO').length} accent="#f59e0b" icon="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" palette={palette} />
+        <StatCard 
+          title="Active Pilots" 
+          value={activePilots.length} 
+          accent="#f59e0b" 
+          icon="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" 
+          palette={palette}
+          onClick={() => setShowActivePilots(!showActivePilots)}
+        />
         <StatCard title="Revenue" value={`$${Number(totalRevenue).toLocaleString('es-CL')}`} accent="#ef4444" icon="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" palette={palette} />
       </div>
+
+      {/* Active Pilots Modal */}
+      {showActivePilots && (
+        <div className={`${palette.card} rounded-2xl ${palette.shadow} overflow-hidden`}>
+          <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6 flex items-center justify-between">
+            <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+              Active Pilots (last {activeDaysLimit} days)
+            </h3>
+            <button 
+              onClick={() => setShowActivePilots(false)}
+              className="text-white hover:text-red-400 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="p-8">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Code</th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Last Flight</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-100">
+                  {activePilots.map(p => {
+                    const lastFlight = data.flights
+                      .filter(f => f.pilotoId === p.id)
+                      .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())[0];
+                    return (
+                      <tr key={p.id} className="hover:bg-blue-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-blue-600 font-mono">{p.codigo}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">{p.nombre}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                          {lastFlight ? new Date(lastFlight.fecha).toLocaleDateString('es-CL') : '-'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Chart Card - Estilo Jeppesen */}
       <div className={`${palette.card} rounded-2xl ${palette.shadow} overflow-hidden`}>
         <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
@@ -347,9 +440,12 @@ function Overview({ data, flights, palette }: { data: InitialData; flights: any[
   );
 }
 
-function StatCard({ title, value, accent, icon, palette }: { title: string; value: string | number; accent: string; icon: string; palette: any }) {
+function StatCard({ title, value, accent, icon, palette, onClick }: { title: string; value: string | number; accent: string; icon: string; palette: any; onClick?: () => void }) {
   return (
-    <div className={`${palette.card} rounded-2xl p-6 ${palette.shadow} relative overflow-hidden group hover:scale-105 transition-transform duration-300`}>
+    <div 
+      className={`${palette.card} rounded-2xl p-6 ${palette.shadow} relative overflow-hidden group hover:scale-105 transition-transform duration-300 ${onClick ? 'cursor-pointer' : ''}`}
+      onClick={onClick}
+    >
       <div className="absolute top-0 right-0 w-32 h-32 rounded-bl-full opacity-5" style={{ background: `linear-gradient(135deg, ${accent}, ${accent}dd)` }} />
       <div className="absolute top-4 right-4 w-12 h-12 rounded-xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
         <svg className="w-7 h-7" style={{ color: accent }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
