@@ -81,8 +81,8 @@ export default function NewPilotPublicPage() {
           <h2 className="text-2xl font-bold text-slate-900 mb-6">Información del Piloto</h2>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">Código *</label>
-              <input className="w-full px-4 py-3 border-2 rounded-xl" placeholder="Ej: SV, AC, etc." value={form.codigo} onChange={e=>setForm({ ...form, codigo: e.target.value.toUpperCase() })} required />
+              <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">Código (Opcional)</label>
+              <input className="w-full px-4 py-3 border-2 rounded-xl" placeholder="Ej: SV, AC, etc." value={form.codigo} onChange={e=>setForm({ ...form, codigo: e.target.value.toUpperCase() })} />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
