@@ -3,7 +3,6 @@ import { useState } from "react";
 
 export default function NewPilotPublicPage() {
   const [form, setForm] = useState({
-    codigo: "",
     nombre: "",
     apellido: "",
     fecha_nacimiento: "",
@@ -20,26 +19,25 @@ export default function NewPilotPublicPage() {
     setMessage(null);
     
     try {
-      const response = await fetch('/api/register-pilot', {
+      const response = await fetch('/api/pilots/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          codigo: form.codigo.trim(),
           nombre: form.nombre.trim(),
           apellido: form.apellido.trim(),
-          fecha_nacimiento: form.fecha_nacimiento,
+          fechaNacimiento: form.fecha_nacimiento || null,
           email: form.email.trim(),
-          telefono: form.telefono.trim(),
-          licencia: form.licencia.trim(),
+          telefono: form.telefono.trim() || null,
+          numeroLicencia: form.licencia.trim() || null,
+          tarifaHora: 0
         }),
       });
       
       const res = await response.json();
       
       if (res.ok) {
-        setMessage("Piloto creado correctamente. Gracias por registrarte.");
+        setMessage(`Piloto creado correctamente. Código asignado: ${res.codigo}`);
         setForm({
-          codigo: "",
           nombre: "",
           apellido: "",
           fecha_nacimiento: "",
@@ -80,10 +78,7 @@ export default function NewPilotPublicPage() {
         <div className="bg-white/95 border-2 border-slate-200 rounded-2xl shadow-2xl p-8">
           <h2 className="text-2xl font-bold text-slate-900 mb-6">Información del Piloto</h2>
           <form onSubmit={onSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">Código *</label>
-              <input className="w-full px-4 py-3 border-2 rounded-xl" placeholder="Ej: SV, AC, etc." value={form.codigo} onChange={e=>setForm({ ...form, codigo: e.target.value.toUpperCase() })} required />
-            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">Nombre *</label>
