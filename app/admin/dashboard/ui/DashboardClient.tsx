@@ -754,10 +754,20 @@ function PilotsTable({ users, flights, transactions, allowedPilotCodes, register
   );
 }
 
-function PilotDirectory({ directory }: { directory?: { initial: { code: string; name: string }[]; registered: { id: number; code: string; name: string; email: string; rate: number; createdAt: string | Date }[] } }) {
+function PilotDirectory({ directory }: { directory?: { initial: { code: string; name: string }[]; registered: { id: number; code: string; name: string; email: string; rate: number; createdAt: string | Date; fechaNacimiento?: string | Date | null; telefono?: string | null; numeroLicencia?: string | null }[] } }) {
   const rows = useMemo(() => {
-    const init = (directory?.initial || []).map(p => ({ code: p.code, name: p.name, source: 'CSV', email: '-', rate: '-', createdAt: '-' }));
-    const reg = (directory?.registered || []).map(p => ({ code: p.code, name: p.name, source: 'Registered', email: p.email || '-', rate: p.rate ? `$${Number(p.rate).toLocaleString('es-CL')}` : '-', createdAt: p.createdAt ? new Date(p.createdAt as any).toLocaleDateString('es-CL') : '-' }));
+    const init = (directory?.initial || []).map(p => ({ code: p.code, name: p.name, source: 'CSV', email: '-', rate: '-', createdAt: '-', fechaNacimiento: '-', telefono: '-', numeroLicencia: '-' }));
+    const reg = (directory?.registered || []).map(p => ({ 
+      code: p.code, 
+      name: p.name, 
+      source: 'Registered', 
+      email: p.email || '-', 
+      rate: p.rate ? `$${Number(p.rate).toLocaleString('es-CL')}` : '-', 
+      createdAt: p.createdAt ? new Date(p.createdAt as any).toLocaleDateString('es-CL') : '-',
+      fechaNacimiento: p.fechaNacimiento ? new Date(p.fechaNacimiento as any).toLocaleDateString('es-CL') : '-',
+      telefono: p.telefono || '-',
+      numeroLicencia: p.numeroLicencia || '-',
+    }));
     return [...init, ...reg].sort((a, b) => (a.code || '').localeCompare(b.code || ''));
   }, [directory]);
   return (
@@ -775,11 +785,11 @@ function PilotDirectory({ directory }: { directory?: { initial: { code: string; 
           <thead className="bg-slate-50">
             <tr>
               <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Code</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Source</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Email</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Rate/Hr</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Created</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Nombre</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha de nacimiento</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Correo</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Número de teléfono</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Número de licencia</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-slate-100">
@@ -787,10 +797,10 @@ function PilotDirectory({ directory }: { directory?: { initial: { code: string; 
               <tr key={`${r.code}-${idx}`} className="hover:bg-blue-50 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-blue-600 font-mono">{r.code}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">{r.name}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{r.source}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{r.fechaNacimiento}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{r.email}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{r.rate}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{r.createdAt}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{r.telefono}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{r.numeroLicencia}</td>
               </tr>
             ))}
           </tbody>

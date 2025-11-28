@@ -135,7 +135,17 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       initial: csvPilots,
       registered: users
         .filter(u => u.rol === 'PILOTO' && (!u.codigo || !allowedPilotCodes.includes((u.codigo || '').toUpperCase())))
-        .map(u => ({ id: u.id, code: (u.codigo || '').toUpperCase(), name: u.nombre, email: u.email, rate: Number(u.tarifa_hora), createdAt: u.createdAt }))
+        .map(u => ({ 
+          id: u.id, 
+          code: (u.codigo || '').toUpperCase(), 
+          name: u.nombre, 
+          email: u.email, 
+          rate: Number(u.tarifa_hora), 
+          createdAt: u.createdAt,
+          fechaNacimiento: u.fechaNacimiento || null,
+          telefono: u.telefono || null,
+          numeroLicencia: (u as any).licencia || null
+        }))
     }
   };
 
