@@ -51,21 +51,28 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
 
   // Read allowed pilot codes from official CSV (Base de dato pilotos)
   let allowedPilotCodes: string[] = [];
+  let csvPilots: { code: string; name: string }[] = [];
   try {
     const csvPath = path.join(process.cwd(), "Base de dato pilotos", "Base de dato pilotos.csv");
     if (fs.existsSync(csvPath)) {
       const content = fs.readFileSync(csvPath, "utf-8");
       const lines = content.split("\n").filter(l => l.trim());
-      allowedPilotCodes = Array.from(new Set(
-        lines.slice(1) // skip header
-          .map(l => l.split(";")[0]?.trim().toUpperCase())
-          .filter(Boolean) as string[]
-      ));
+      const entries = lines.slice(1).map(l => {
+        const [code, name] = l.split(";");
+        return { code: (code || '').trim().toUpperCase(), name: (name || '').trim() };
+      }).filter(e => e.code);
+      allowedPilotCodes = Array.from(new Set(entries.map(e => e.code)));
+      csvPilots = entries;
     }
   } catch (e) {
     // Ignore CSV errors; fallback will show current behavior
     allowedPilotCodes = [];
   }
+
+  const registeredPilotCodes = users
+    .filter(u => u.rol === 'PILOTO')
+    .map(u => (u.codigo || '').toUpperCase())
+    .filter(c => c && !allowedPilotCodes.includes(c));
 
   // Build maintenance items: use DB baseline + add Δ Tach from flights after baseline date
   // Baseline components are stored in DB with initial values (AIRFRAME 2722.8, ENGINE 569.6, PROPELLER 1899.0)
@@ -124,12 +131,18 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     submissions: submissions.map(s => ({ ...s, imageLogs: s.ImageLog.map(img => ({ ...img, valorExtraido: img.valorExtraido ? Number(img.valorExtraido) : null, confianza: img.confianza ? Number(img.confianza) : null })), flight: s.Flight ? { ...s.Flight, diff_hobbs: Number(s.Flight.diff_hobbs), diff_tach: Number(s.Flight.diff_tach), costo: Number(s.Flight.costo) } : null })),
     components: computedComponents.map(c => ({ ...c, horas_acumuladas: Number(c.horas_acumuladas), limite_tbo: Number(c.limite_tbo) })),
     transactions: transactions.map(t => ({ ...t, monto: Number(t.monto) })),
+    pilotDirectory: {
+      initial: csvPilots,
+      registered: users
+        .filter(u => u.rol === 'PILOTO' && (!u.codigo || !allowedPilotCodes.includes((u.codigo || '').toUpperCase())))
+        .map(u => ({ id: u.id, code: (u.codigo || '').toUpperCase(), name: u.nombre, email: u.email, rate: Number(u.tarifa_hora), createdAt: u.createdAt }))
+    }
   };
 
   return (
     <div className="min-h-screen w-full">
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <DashboardClient initialData={data} pagination={{ page, pageSize, total: totalFlights }} allowedPilotCodes={allowedPilotCodes} />
+        <DashboardClient initialData={data} pagination={{ page, pageSize, total: totalFlights }} allowedPilotCodes={allowedPilotCodes} registeredPilotCodes={registeredPilotCodes} />
       </div>
     </div>
   );

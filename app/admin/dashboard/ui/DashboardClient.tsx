@@ -14,10 +14,14 @@ type InitialData = {
   submissions: any[];
   components: any[];
   transactions: any[];
+  pilotDirectory?: {
+    initial: { code: string; name: string }[];
+    registered: { id: number; code: string; name: string; email: string; rate: number; createdAt: string | Date }[];
+  };
 };
 type PaginationInfo = { page: number; pageSize: number; total: number };
 
-export default function DashboardClient({ initialData, pagination, allowedPilotCodes }: { initialData: InitialData; pagination?: PaginationInfo; allowedPilotCodes?: string[] }) {
+export default function DashboardClient({ initialData, pagination, allowedPilotCodes, registeredPilotCodes }: { initialData: InitialData; pagination?: PaginationInfo; allowedPilotCodes?: string[]; registeredPilotCodes?: string[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState("overview");
@@ -206,6 +210,7 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
           { id: "overview", label: "Overview", icon: "M4 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 16a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1v-2zM14 16a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1v-2z" },
           { id: "flights", label: "Flight Log", icon: "M12 19l9 2-9-18-9 18 9-2zm0 0v-8" },
           { id: "pilots", label: "Pilots", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" },
+          { id: "directory", label: "Pilot Directory", icon: "M3 7h18M3 12h18M3 17h18" },
           { id: "maintenance", label: "Maintenance", icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" },
           { id: "finance", label: "Finance", icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
         ].map(t => (
@@ -328,7 +333,8 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
           </div>
         </>
       )}
-      {tab === "pilots" && <PilotsTable users={initialData.users} flights={initialData.flights} transactions={initialData.transactions} allowedPilotCodes={allowedPilotCodes} />}
+      {tab === "pilots" && <PilotsTable users={initialData.users} flights={initialData.flights} transactions={initialData.transactions} allowedPilotCodes={allowedPilotCodes} registeredPilotCodes={registeredPilotCodes} />}
+      {tab === "directory" && <PilotDirectory directory={initialData.pilotDirectory} />}
       {tab === "maintenance" && <MaintenanceTable components={initialData.components} aircraft={initialData.aircraft} />}
       {tab === "finance" && <FinanceCharts flights={initialData.flights} transactions={initialData.transactions} palette={palette} />}
     </div>
@@ -690,8 +696,12 @@ function FlightsTable({ flights, users, editMode = false }: { flights: any[]; us
     </div>
   );
 }
-function PilotsTable({ users, flights, transactions, allowedPilotCodes }: { users: any[]; flights: any[]; transactions: any[]; allowedPilotCodes?: string[] }) {
-  const allowed = useMemo(() => new Set((allowedPilotCodes || []).map(c => String(c).toUpperCase())), [allowedPilotCodes]);
+function PilotsTable({ users, flights, transactions, allowedPilotCodes, registeredPilotCodes }: { users: any[]; flights: any[]; transactions: any[]; allowedPilotCodes?: string[]; registeredPilotCodes?: string[] }) {
+  const allowed = useMemo(() => {
+    const base = new Set((allowedPilotCodes || []).map(c => String(c).toUpperCase()));
+    (registeredPilotCodes || []).forEach(c => base.add(String(c).toUpperCase()));
+    return base;
+  }, [allowedPilotCodes, registeredPilotCodes]);
   const data = users
     .filter(u => {
       if (u.rol !== 'PILOTO') return false;
@@ -741,6 +751,52 @@ function PilotsTable({ users, flights, transactions, allowedPilotCodes }: { user
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">${Number(p.saldo_cuenta).toLocaleString("es-CL")}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">${Number(-p.spent).toLocaleString("es-CL")}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">${Number(p.deposits).toLocaleString("es-CL")}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function PilotDirectory({ directory }: { directory?: { initial: { code: string; name: string }[]; registered: { id: number; code: string; name: string; email: string; rate: number; createdAt: string | Date }[] } }) {
+  const rows = useMemo(() => {
+    const init = (directory?.initial || []).map(p => ({ code: p.code, name: p.name, source: 'CSV', email: '-', rate: '-', createdAt: '-' }));
+    const reg = (directory?.registered || []).map(p => ({ code: p.code, name: p.name, source: 'Registered', email: p.email || '-', rate: p.rate ? `$${Number(p.rate).toLocaleString('es-CL')}` : '-', createdAt: p.createdAt ? new Date(p.createdAt as any).toLocaleDateString('es-CL') : '-' }));
+    return [...init, ...reg].sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+  }, [directory]);
+  return (
+    <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
+      <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
+        <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M3 12h18M3 17h18" />
+          </svg>
+          Pilot Directory
+        </h3>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200">
+          <thead className="bg-slate-50">
+            <tr>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Code</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Name</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Source</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Email</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Rate/Hr</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Created</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-slate-100">
+            {rows.map((r, idx) => (
+              <tr key={`${r.code}-${idx}`} className="hover:bg-blue-50 transition-colors">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-blue-600 font-mono">{r.code}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">{r.name}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{r.source}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{r.email}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{r.rate}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{r.createdAt}</td>
               </tr>
             ))}
           </tbody>
