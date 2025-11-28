@@ -37,22 +37,54 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     allowedPilotCodes = [];
   }
 
-  // Compute maintenance items (AIRFRAME/ENGINE/PROPELLER) using TACH totals from Flight Log
-  const tachSums = await prisma.flight.groupBy({
-    by: ['aircraftId'],
-    _sum: { diff_tach: true },
-  });
-  const tachMap = new Map<string, number>(
-    tachSums.map(s => [s.aircraftId, Number(s._sum.diff_tach || 0)])
+  // Build maintenance items: use DB baseline + add Δ Tach from flights after baseline date
+  // Baseline components are stored in DB with initial values (AIRFRAME 2722.8, ENGINE 569.6, PROPELLER 1899.0)
+  // Future flights will increment these values
+  const baselineDate = new Date('2025-11-28T00:00:00Z'); // Date when baseline was set
+  
+  const maintenanceComponents = await Promise.all(
+    aircraft.map(async (a) => {
+      // Get baseline from DB (if exists)
+      const dbComponents = await prisma.component.findMany({ 
+        where: { aircraftId: a.matricula },
+        orderBy: { tipo: 'asc' }
+      });
+      
+      // Calculate additional hours from flights after baseline
+      const additionalTach = await prisma.flight.aggregate({
+        where: { 
+          aircraftId: a.matricula,
+          fecha: { gte: baselineDate }
+        },
+        _sum: { diff_tach: true }
+      });
+      const increment = Number(additionalTach._sum.diff_tach || 0);
+
+      // If DB has components, use them + increment; otherwise compute from all flights (legacy)
+      if (dbComponents.length > 0) {
+        return dbComponents.map(c => ({
+          id: String(c.id),
+          aircraftId: c.aircraftId,
+          tipo: c.tipo,
+          horas_acumuladas: Number(c.horas_acumuladas) + increment,
+          limite_tbo: Number(c.limite_tbo)
+        }));
+      } else {
+        // Fallback: compute from all flights (for aircraft without baseline)
+        const allTach = await prisma.flight.aggregate({
+          where: { aircraftId: a.matricula },
+          _sum: { diff_tach: true }
+        });
+        const total = Number(allTach._sum.diff_tach || 0);
+        return [
+          { id: `${a.matricula}-AF`, aircraftId: a.matricula, tipo: 'AIRFRAME', horas_acumuladas: total, limite_tbo: 30000 },
+          { id: `${a.matricula}-EN`, aircraftId: a.matricula, tipo: 'ENGINE', horas_acumuladas: total, limite_tbo: 2000 },
+          { id: `${a.matricula}-PR`, aircraftId: a.matricula, tipo: 'PROPELLER', horas_acumuladas: total, limite_tbo: 2000 },
+        ];
+      }
+    })
   );
-  const computedComponents = aircraft.flatMap(a => {
-    const hours = Number(tachMap.get(a.matricula) || 0);
-    return [
-      { id: `${a.matricula}-AF`, aircraftId: a.matricula, tipo: 'AIRFRAME', horas_acumuladas: hours, limite_tbo: 30000 },
-      { id: `${a.matricula}-EN`, aircraftId: a.matricula, tipo: 'ENGINE', horas_acumuladas: hours, limite_tbo: 2000 },
-      { id: `${a.matricula}-PR`, aircraftId: a.matricula, tipo: 'PROPELLER', horas_acumuladas: hours, limite_tbo: 2000 },
-    ];
-  });
+  const computedComponents = maintenanceComponents.flat();
 
   const data = {
     users: users.map(u => ({ ...u, saldo_cuenta: Number(u.saldo_cuenta), tarifa_hora: Number(u.tarifa_hora) })),
