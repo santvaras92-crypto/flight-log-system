@@ -16,7 +16,7 @@ type InitialData = {
 };
 type PaginationInfo = { page: number; pageSize: number; total: number };
 
-export default function DashboardClient({ initialData, pagination }: { initialData: InitialData; pagination?: PaginationInfo }) {
+export default function DashboardClient({ initialData, pagination, allowedPilotCodes }: { initialData: InitialData; pagination?: PaginationInfo; allowedPilotCodes?: string[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState("overview");
@@ -299,7 +299,7 @@ export default function DashboardClient({ initialData, pagination }: { initialDa
           </div>
         </>
       )}
-      {tab === "pilots" && <PilotsTable users={initialData.users} flights={initialData.flights} transactions={initialData.transactions} />}
+      {tab === "pilots" && <PilotsTable users={initialData.users} flights={initialData.flights} transactions={initialData.transactions} allowedPilotCodes={allowedPilotCodes} />}
       {tab === "maintenance" && <MaintenanceTable components={initialData.components} aircraft={initialData.aircraft} />}
       {tab === "finance" && <FinanceCharts flights={initialData.flights} transactions={initialData.transactions} palette={palette} />}
     </div>
@@ -533,9 +533,15 @@ function FlightsTable({ flights, users, editMode = false }: { flights: any[]; us
     </div>
   );
 }
-function PilotsTable({ users, flights, transactions }: { users: any[]; flights: any[]; transactions: any[] }) {
+function PilotsTable({ users, flights, transactions, allowedPilotCodes }: { users: any[]; flights: any[]; transactions: any[]; allowedPilotCodes?: string[] }) {
+  const allowed = useMemo(() => new Set((allowedPilotCodes || []).map(c => String(c).toUpperCase())), [allowedPilotCodes]);
   const data = users
-    .filter(u => u.rol === 'PILOTO' && u.codigo) // Only show pilots with codigo (from CSV)
+    .filter(u => {
+      if (u.rol !== 'PILOTO') return false;
+      const code = (u.codigo || '').toUpperCase();
+      // If allowed list exists, strictly enforce membership; else fallback to legacy behavior (has codigo)
+      return allowed.size > 0 ? (code && allowed.has(code)) : Boolean(code);
+    })
     .map(u => {
       const f = flights.filter(f => f.pilotoId === u.id);
       const spent = transactions.filter(t => t.userId === u.id && t.tipo === 'CARGO_VUELO').reduce((a,b)=>a+Number(b.monto),0);

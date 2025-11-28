@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import DashboardClient from "./ui/DashboardClient";
+import fs from "fs";
+import path from "path";
 
 export const revalidate = 0;
 
@@ -17,6 +19,24 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     prisma.flight.count(),
   ]);
 
+  // Read allowed pilot codes from official CSV (Base de dato pilotos)
+  let allowedPilotCodes: string[] = [];
+  try {
+    const csvPath = path.join(process.cwd(), "Base de dato pilotos", "Base de dato pilotos.csv");
+    if (fs.existsSync(csvPath)) {
+      const content = fs.readFileSync(csvPath, "utf-8");
+      const lines = content.split("\n").filter(l => l.trim());
+      allowedPilotCodes = Array.from(new Set(
+        lines.slice(1) // skip header
+          .map(l => l.split(";")[0]?.trim().toUpperCase())
+          .filter(Boolean) as string[]
+      ));
+    }
+  } catch (e) {
+    // Ignore CSV errors; fallback will show current behavior
+    allowedPilotCodes = [];
+  }
+
   const data = {
     users: users.map(u => ({ ...u, saldo_cuenta: Number(u.saldo_cuenta), tarifa_hora: Number(u.tarifa_hora) })),
     aircraft: aircraft.map(a => ({ ...a, hobbs_actual: Number(a.hobbs_actual), tach_actual: Number(a.tach_actual) })),
@@ -29,7 +49,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
   return (
     <div className="min-h-screen w-full">
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <DashboardClient initialData={data} pagination={{ page, pageSize, total: totalFlights }} />
+        <DashboardClient initialData={data} pagination={{ page, pageSize, total: totalFlights }} allowedPilotCodes={allowedPilotCodes} />
       </div>
     </div>
   );
