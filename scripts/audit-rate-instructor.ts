@@ -87,7 +87,7 @@ function extractPilotCode(nombre: string): string | null {
     'álvarez': 'RA', 'rivera': 'RR', 'rodriguez': 'RRO',
     'rodríguez': 'RRO', 'tellez': 'RT', 'téllez': 'RT',
     'ugarte': 'RU', 'valdivia': 'RV', 'diaz': 'SD',
-      'garrido': 'SG', 'guzman': 'SU',
+    'díaz': 'SD', 'garrido': 'SG', 'guzman': 'SU',
     'guzmán': 'SU', 'villar': 'TV', 'gonzales': 'VG',
     'vial': 'VV', 'tapia': 'WT', 'canales': 'YC'
   };

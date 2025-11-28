@@ -87,7 +87,7 @@ function extractPilotCode(nombre: string): string | null {
     'torres': 'GT', 'caragol': 'GC', 'garlaschi': 'GG',
     'latorre': 'GL', 'allende': 'IA', 'roure': 'IR',
     'opazo': 'IO', 'cifuentes': 'ICI', 'cortez': 'IC',
-    'diez': 'ID', 'dias': 'JD',
+    'diez': 'ID', 'dias': 'JD', 'díaz': 'JD',
     'correa': 'JC', 'matheu': 'JM', 'vergara': 'JVE',
     'vera': 'JV', 'soto': 'KS', 'hola': 'LH',
     'iturrieta': 'LI', 'reyes': 'LR', 'vuskovic': 'LV',
@@ -103,7 +103,7 @@ function extractPilotCode(nombre: string): string | null {
     'álvarez': 'RA', 'rivera': 'RR', 'rodriguez': 'RRO',
     'rodríguez': 'RRO', 'tellez': 'RT', 'téllez': 'RT',
     'ugarte': 'RU', 'valdivia': 'RV', 'diaz': 'SD',
-    'garrido': 'SG', 'guzman': 'SU',
+    'díaz': 'SD', 'garrido': 'SG', 'guzman': 'SU',
     'guzmán': 'SU', 'villar': 'TV', 'gonzales': 'VG',
     'vial': 'VV', 'tapia': 'WT', 'canales': 'YC'
   };
@@ -151,10 +151,9 @@ async function main() {
   const transactionBatch: any[] = [];
   
   // Saltar header
-  let lastTachFin: number | null = null;
-  let lastHobbsFin: number | null = null;
   for (let i = 1; i < lines.length; i++) {
     const fields = parseCSVLine(lines[i]);
+    
     const fechaStr = fields[0];
     const tach_i = parseDecimal(fields[2]);
     const tach_f = parseDecimal(fields[3]);
@@ -173,7 +172,7 @@ async function main() {
     const detalleStr = fields[17] || null;
     const yearStr = fields[18];
     const monthStr = fields[19];
-
+    
     // Usar año y mes de las columnas finales si están disponibles
     let fecha = parseDate(fechaStr);
     if (!fecha && yearStr && monthStr) {
@@ -187,20 +186,21 @@ async function main() {
         fecha = new Date(year, month, 1);
       }
     }
-
+    
     if (!fecha) {
       skipped++;
       continue;
     }
-
+    
     if (imported < 3) {
       console.log(`Línea ${i}: fechaStr="${fechaStr}", year="${yearStr}", month="${monthStr}", fecha=${fecha.toISOString()}`);
     }
-
+    
     // Obtener/crear código de piloto
     let codigoPiloto = extractPilotCode(pilotoStr) || null;
     if (!codigoPiloto) {
-      const m = pilotoStr.match(/([A-ZÁÉÍÓÚÑ])[\.\s]*([A-Za-zÁÉÍÓÚÑáéíóúñ]+)/);
+      // Fallback: tomar iniciales del nombre "X. Apellido" -> XA
+      const m = pilotoStr.match(/([A-ZÁÉÍÓÚÑ])[\.]\s*([A-Za-zÁÉÍÓÚÑáéíóúñ]+)/);
       if (m) {
         const initial = m[1].toUpperCase();
         const apellido = m[2].normalize('NFD').replace(/[^A-Za-z]/g, '').substring(0,2).toUpperCase();
@@ -208,6 +208,7 @@ async function main() {
       }
     }
     if (!codigoPiloto) {
+      // Asignar código genérico para etiquetas no-persona o desconocidas
       const label = (pilotoStr || '').trim();
       const dictionary: Record<string,string> = {
         'AEROMUNDO': 'AERO', 'AIRC': 'AIRC', 'RUN UP': 'RUN', 'RUIZ': 'RUI', 'MAYKOL J': 'MJ', 'JORGE M.': 'JM2'
@@ -216,6 +217,7 @@ async function main() {
       codigoPiloto = dictionary[key] || (key.replace(/[^A-Z0-9]/g,'').substring(0,4) || 'UNK');
     }
 
+    // Buscar piloto por código; si no existe, crearlo on-the-fly
     let piloto = pilotosByCode.get(codigoPiloto);
     if (!piloto) {
       const nombrePiloto = pilotoStr.replace(/\s+/g,' ').trim();
@@ -227,7 +229,7 @@ async function main() {
             email: `${codigoPiloto}@piloto.local`,
             rol: 'PILOTO',
             saldo_cuenta: 0,
-            tarifa_hora: parseNumber(fields[11]) || 0,
+            tarifa_hora: parseNumber(tarifaStr) || 0,
             password: '',
           }
         });
@@ -238,33 +240,61 @@ async function main() {
         continue;
       }
     }
-
-    // Secuencia estricta: el inicio de cada vuelo es el fin del anterior
-    let hobbs_inicio = lastHobbsFin !== null ? lastHobbsFin : hobbs_i;
-    let tach_inicio = lastTachFin !== null ? lastTachFin : tach_i;
+    
+    // Usar valores de diferencia si los inicios/fines están vacíos
+    let hobbs_inicio = hobbs_i;
     let hobbs_fin = hobbs_f;
+    let tach_inicio = tach_i;
     let tach_fin = tach_f;
-
-    // Si no hay fin en la fila, calcularlo
-    if (hobbs_fin == null && hobbs_inicio != null && diff_hobbs != null) hobbs_fin = hobbs_inicio + diff_hobbs;
-    if (tach_fin == null && tach_inicio != null && diff_tach != null) tach_fin = tach_inicio + diff_tach;
-
-    // Si aún faltan, usar proxy
-    if (hobbs_fin == null && tach_fin != null && tach_inicio != null && hobbs_inicio != null) hobbs_fin = hobbs_inicio + (tach_fin - tach_inicio);
-    if (tach_fin == null && hobbs_fin != null && hobbs_inicio != null && tach_inicio != null) tach_fin = tach_inicio + (hobbs_fin - hobbs_inicio);
-
-    // Si aún faltan, usar el inicio
-    if (hobbs_fin == null) hobbs_fin = hobbs_inicio;
-    if (tach_fin == null) tach_fin = tach_inicio;
-
+    
+    // Reconstrucción más flexible usando diferencias
+    if (diff_hobbs != null) {
+      if (hobbs_inicio == null && hobbs_fin != null) hobbs_inicio = hobbs_fin - diff_hobbs;
+      if (hobbs_fin == null && hobbs_inicio != null) hobbs_fin = hobbs_inicio + diff_hobbs;
+    }
+    if (diff_tach != null) {
+      if (tach_inicio == null && tach_fin != null) tach_inicio = tach_fin - diff_tach;
+      if (tach_fin == null && tach_inicio != null) tach_fin = tach_inicio + diff_tach;
+    }
+    // Si aún faltan, usar un proxy: preferir tach para inferir hobbs y viceversa
+    if ((hobbs_inicio == null || hobbs_fin == null) && tach_inicio != null && tach_fin != null) {
+      if (hobbs_inicio == null) hobbs_inicio = tach_inicio;
+      if (hobbs_fin == null) hobbs_fin = hobbs_inicio + (tach_fin - tach_inicio);
+    }
+    if ((tach_inicio == null || tach_fin == null) && hobbs_inicio != null && hobbs_fin != null) {
+      if (tach_inicio == null) tach_inicio = hobbs_inicio;
+      if (tach_fin == null) tach_fin = tach_inicio + (hobbs_fin - hobbs_inicio);
+    }
+    
+    if (hobbs_inicio == null || hobbs_fin == null) {
+      // Solo tenemos diffs: sintetizar desde 0
+      if (diff_hobbs != null) {
+        hobbs_inicio = 0;
+        hobbs_fin = diff_hobbs;
+      }
+    }
+    if (tach_inicio == null || tach_fin == null) {
+      if (diff_tach != null) {
+        tach_inicio = 0;
+        tach_fin = diff_tach;
+      }
+    }
+    // Si aún faltan valores, último fallback: usar el que exista
+    if (hobbs_inicio == null) hobbs_inicio = tach_inicio ?? 0;
+    if (hobbs_fin == null) hobbs_fin = hobbs_inicio + (diff_hobbs ?? ((tach_fin ?? 0) - (tach_inicio ?? 0)));
+    if (tach_inicio == null) tach_inicio = hobbs_inicio ?? 0;
+    if (tach_fin == null) tach_fin = tach_inicio + (diff_tach ?? ((hobbs_fin ?? 0) - (hobbs_inicio ?? 0)));
+    
     const diff_h = hobbs_fin - hobbs_inicio;
     const diff_t = tach_fin - tach_inicio;
-
+    
+    // Aceptar vuelos con difs no negativas; si alguna es negativa, normalizar a cero
     if (!isFinite(diff_h) || diff_h < 0) hobbs_fin = hobbs_inicio;
     if (!isFinite(diff_t) || diff_t < 0) tach_fin = tach_inicio;
-
+    
     const costoCalc = Math.max(0, diff_h) * tarifaCSV;
-
+    
+    // Preparar datos para batch
     flightBatch.push({
       fecha,
       hobbs_inicio,
@@ -284,19 +314,16 @@ async function main() {
       engine_hours: engineHours,
       propeller_hours: propellerHours,
     });
-
+    
     transactionBatch.push({
       userId: piloto.id,
       tipo: 'CARGO_VUELO',
       monto: costoCalc,
     });
-
+    
     imported++;
-
-    // Guardar los finales para el próximo vuelo
-    lastHobbsFin = hobbs_fin;
-    lastTachFin = tach_fin;
-
+    
+    // Insertar en batch cada BATCH_SIZE registros
     if (flightBatch.length >= BATCH_SIZE) {
       try {
         await prisma.flight.createMany({ data: flightBatch });

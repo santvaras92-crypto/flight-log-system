@@ -5,7 +5,7 @@ import { randomUUID } from "crypto";
 type Payload = {
   nombre: string;
   apellido?: string;
-  fechaNacimiento?: string; // ISO date string
+  fecha_nacimiento?: string; // ISO date string
   email: string;
   telefono?: string;
   licencia?: string;

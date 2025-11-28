@@ -6,7 +6,7 @@ export default function NewPilotPublicPage() {
     codigo: "",
     nombre: "",
     apellido: "",
-    fechaNacimiento: "",
+    fecha_nacimiento: "",
     email: "",
     telefono: "",
     licencia: "",
@@ -27,7 +27,7 @@ export default function NewPilotPublicPage() {
           codigo: form.codigo.trim(),
           nombre: form.nombre.trim(),
           apellido: form.apellido.trim(),
-          fechaNacimiento: form.fechaNacimiento,
+          fecha_nacimiento: form.fecha_nacimiento,
           email: form.email.trim(),
           telefono: form.telefono.trim(),
           licencia: form.licencia.trim(),
@@ -42,7 +42,7 @@ export default function NewPilotPublicPage() {
           codigo: "",
           nombre: "",
           apellido: "",
-          fechaNacimiento: "",
+          fecha_nacimiento: "",
           email: "",
           telefono: "",
           licencia: "",
@@ -81,8 +81,8 @@ export default function NewPilotPublicPage() {
           <h2 className="text-2xl font-bold text-slate-900 mb-6">Información del Piloto</h2>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">Código (Opcional)</label>
-              <input className="w-full px-4 py-3 border-2 rounded-xl" placeholder="Ej: SV, AC, etc." value={form.codigo} onChange={e=>setForm({ ...form, codigo: e.target.value.toUpperCase() })} />
+              <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">Código *</label>
+              <input className="w-full px-4 py-3 border-2 rounded-xl" placeholder="Ej: SV, AC, etc." value={form.codigo} onChange={e=>setForm({ ...form, codigo: e.target.value.toUpperCase() })} required />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -97,7 +97,7 @@ export default function NewPilotPublicPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">Fecha de nacimiento</label>
-                <input className="w-full px-4 py-3 border-2 rounded-xl" type="date" value={form.fechaNacimiento} onChange={e=>setForm({ ...form, fechaNacimiento: e.target.value })} />
+                <input className="w-full px-4 py-3 border-2 rounded-xl" type="date" value={form.fecha_nacimiento} onChange={e=>setForm({ ...form, fecha_nacimiento: e.target.value })} />
               </div>
               <div className="space-y-2">
                 <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">Correo</label>
@@ -114,12 +114,9 @@ export default function NewPilotPublicPage() {
                 <input className="w-full px-4 py-3 border-2 rounded-xl" type="number" placeholder="123456" value={form.licencia} onChange={e=>setForm({ ...form, licencia: e.target.value })} />
               </div>
             </div>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-3">
-                <button disabled={loading} className="px-5 py-3 bg-[#003D82] hover:bg-[#0A2F5F] text-white rounded-xl disabled:opacity-40 transition-colors">{loading?"Creando...":"Crear piloto"}</button>
-                {message && <span className="text-sm text-slate-700">{message}</span>}
-              </div>
-              <p className="text-xs text-slate-500 italic">* Campos requeridos. El código se generará automáticamente si se deja en blanco.</p>
+            <div className="flex items-center gap-3">
+              <button disabled={loading} className="px-5 py-3 bg-[#003D82] hover:bg-[#0A2F5F] text-white rounded-xl disabled:opacity-40 transition-colors">{loading?"Creando...":"Crear piloto"}</button>
+              {message && <span className="text-sm text-slate-700">{message}</span>}
             </div>
           </form>
         </div>
