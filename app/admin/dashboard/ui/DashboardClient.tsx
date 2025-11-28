@@ -528,12 +528,15 @@ function FlightsTable({ flights, users, editMode = false }: { flights: any[]; us
   );
 }
 function PilotsTable({ users, flights, transactions }: { users: any[]; flights: any[]; transactions: any[] }) {
-  const data = users.filter(u=>u.rol==='PILOTO').map(u => {
-    const f = flights.filter(f => f.pilotoId === u.id);
-    const spent = transactions.filter(t => t.userId === u.id && t.tipo === 'CARGO_VUELO').reduce((a,b)=>a+Number(b.monto),0);
-    const deposits = transactions.filter(t => t.userId === u.id && t.tipo === 'ABONO').reduce((a,b)=>a+Number(b.monto),0);
-    return { ...u, flights: f.length, hours: f.reduce((a,b)=>a+Number(b.diff_hobbs),0), spent: spent, deposits: deposits };
-  });
+  const data = users
+    .filter(u => u.rol === 'PILOTO' && u.codigo) // Only show pilots with codigo (from CSV)
+    .map(u => {
+      const f = flights.filter(f => f.pilotoId === u.id);
+      const spent = transactions.filter(t => t.userId === u.id && t.tipo === 'CARGO_VUELO').reduce((a,b)=>a+Number(b.monto),0);
+      const deposits = transactions.filter(t => t.userId === u.id && t.tipo === 'ABONO').reduce((a,b)=>a+Number(b.monto),0);
+      return { ...u, flights: f.length, hours: f.reduce((a,b)=>a+Number(b.diff_hobbs),0), spent: spent, deposits: deposits };
+    })
+    .sort((a, b) => (a.codigo || '').localeCompare(b.codigo || '')); // Sort by codigo
   return (
     <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
       <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
