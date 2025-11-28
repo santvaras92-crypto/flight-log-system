@@ -36,6 +36,7 @@ export async function POST(req: Request) {
         codigo,
         rol: "PILOTO",
         tarifa_hora: tarifaHora != null ? Number(tarifaHora) : 0,
+          password: process.env.DEFAULT_PILOT_PASSWORD || `TEMP-${Math.random().toString(36).slice(2, 10)}`
       }
     });
 
