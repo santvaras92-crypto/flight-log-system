@@ -229,7 +229,7 @@ async function main() {
             email: `${codigoPiloto}@piloto.local`,
             rol: 'PILOTO',
             saldo_cuenta: 0,
-            tarifa_hora: parseNumber(tarifaStr) || 0,
+            tarifa_hora: parseNumber(tarifaCSV) || 0,
             password: '',
           }
         });

@@ -130,7 +130,7 @@ model User {
   saldo_cuenta     Decimal            @default(0.0)
   tarifa_hora      Decimal
   password         String
-  fecha_nacimiento DateTime?
+  fechaNacimiento  DateTime?
   telefono         String?
   licencia         String?
   createdAt        DateTime           @default(now())
