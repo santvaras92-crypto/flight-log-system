@@ -328,7 +328,7 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
           </div>
         </>
       )}
-      {tab === "pilots" && <PilotsTable users={initialData.users} flights={initialData.flights} transactions={initialData.transactions} allowedPilotCodes={allowedPilotCodes} />}
+      {tab === "pilots" && <PilotsTable users={initialData.users} flights={initialData.allFlights || initialData.flights} transactions={initialData.transactions} allowedPilotCodes={allowedPilotCodes} />}
       {tab === "maintenance" && <MaintenanceTable components={initialData.components} aircraft={initialData.aircraft} />}
       {tab === "finance" && <FinanceCharts flights={initialData.flights} transactions={initialData.transactions} palette={palette} />}
     </div>
@@ -670,7 +670,12 @@ function PilotsTable({ users, flights, transactions, allowedPilotCodes }: { user
       return allowed.size > 0 ? (code && allowed.has(code)) : Boolean(code);
     })
     .map(u => {
-      const f = flights.filter(f => f.pilotoId === u.id);
+      const code = (u.codigo || '').toUpperCase();
+      // Match flights by client code (Flight.cliente === User.codigo)
+      const f = flights.filter(flight => {
+        const clientCode = (flight.cliente || '').toUpperCase();
+        return clientCode === code;
+      });
       const spent = transactions.filter(t => t.userId === u.id && t.tipo === 'CARGO_VUELO').reduce((a,b)=>a+Number(b.monto),0);
       const deposits = transactions.filter(t => t.userId === u.id && t.tipo === 'ABONO').reduce((a,b)=>a+Number(b.monto),0);
       return { ...u, flights: f.length, hours: f.reduce((a,b)=>a+Number(b.diff_hobbs),0), spent: spent, deposits: deposits };
