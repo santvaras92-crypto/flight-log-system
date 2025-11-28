@@ -52,14 +52,14 @@ model Flight {
   id               Int               @id @default(autoincrement())
   submissionId     Int?              @unique
   fecha            DateTime          @default(now())
-  hobbs_inicio     Decimal
-  hobbs_fin        Decimal
-  tach_inicio      Decimal
-  tach_fin         Decimal
-  diff_hobbs       Decimal
-  diff_tach        Decimal
-  costo            Decimal
-  pilotoId         Int
+  hobbs_inicio     Decimal?
+  hobbs_fin        Decimal?
+  tach_inicio      Decimal?
+  tach_fin         Decimal?
+  diff_hobbs       Decimal?
+  diff_tach        Decimal?
+  costo            Decimal?
+  pilotoId         Int?
   aircraftId       String
   copiloto         String?
   cliente          String?
@@ -70,7 +70,7 @@ model Flight {
   propeller_hours  Decimal?
   createdAt        DateTime          @default(now())
   Aircraft         Aircraft          @relation(fields: [aircraftId], references: [matricula])
-  User             User              @relation(fields: [pilotoId], references: [id])
+  User             User?             @relation(fields: [pilotoId], references: [id])
   FlightSubmission FlightSubmission? @relation(fields: [submissionId], references: [id])
   Transaction      Transaction?
 }

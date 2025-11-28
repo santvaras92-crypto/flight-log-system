@@ -17,20 +17,14 @@ export async function POST(req: NextRequest) {
       const flight = await prisma.flight.findUnique({ where: { id } });
       if (!flight) continue;
 
-      // Prepare fields
+      // Prepare fields (permit nulls and explicit diffs)
       const fecha = up.fecha ? new Date(up.fecha) : undefined;
-      const tach_inicio = up.tach_inicio !== undefined ? Number(up.tach_inicio) : undefined;
-      const tach_fin = up.tach_fin !== undefined ? Number(up.tach_fin) : undefined;
-      const hobbs_inicio = up.hobbs_inicio !== undefined ? Number(up.hobbs_inicio) : undefined;
-      const hobbs_fin = up.hobbs_fin !== undefined ? Number(up.hobbs_fin) : undefined;
-
-      // Compute diffs if bases provided
-      const diff_tach = tach_inicio !== undefined && tach_fin !== undefined 
-        ? Number((tach_fin - tach_inicio).toFixed(1)) 
-        : undefined;
-      const diff_hobbs = hobbs_inicio !== undefined && hobbs_fin !== undefined 
-        ? Number((hobbs_fin - hobbs_inicio).toFixed(1)) 
-        : undefined;
+      const tach_inicio = up.tach_inicio === '' ? null : (up.tach_inicio !== undefined ? Number(up.tach_inicio) : undefined);
+      const tach_fin = up.tach_fin === '' ? null : (up.tach_fin !== undefined ? Number(up.tach_fin) : undefined);
+      const hobbs_inicio = up.hobbs_inicio === '' ? null : (up.hobbs_inicio !== undefined ? Number(up.hobbs_inicio) : undefined);
+      const hobbs_fin = up.hobbs_fin === '' ? null : (up.hobbs_fin !== undefined ? Number(up.hobbs_fin) : undefined);
+      const diff_tach = up.diff_tach === '' ? null : (up.diff_tach !== undefined ? Number(up.diff_tach) : (tach_inicio !== undefined && tach_fin !== undefined ? Number((Number(tach_fin ?? 0) - Number(tach_inicio ?? 0)).toFixed(1)) : undefined));
+      const diff_hobbs = up.diff_hobbs === '' ? null : (up.diff_hobbs !== undefined ? Number(up.diff_hobbs) : (hobbs_inicio !== undefined && hobbs_fin !== undefined ? Number((Number(hobbs_fin ?? 0) - Number(hobbs_inicio ?? 0)).toFixed(1)) : undefined));
 
       // Update mutable text fields
       const data: any = {
@@ -49,13 +43,17 @@ export async function POST(req: NextRequest) {
 
       // Recompute costo preserving the historical per-flight rate from CSV when possible
       // Determine previous effective rate from the stored flight (fallback to pilot's tarifa_hora)
-      const pilot = await prisma.user.findUnique({ where: { id: flight.pilotoId } });
-      const prevHoras = Number(flight.diff_hobbs) || 0;
-      const prevCosto = Number(flight.costo) || 0;
+      const pilot = flight.pilotoId ? await prisma.user.findUnique({ where: { id: flight.pilotoId } }) : null;
+      const prevHoras = flight.diff_hobbs != null ? Number(flight.diff_hobbs) : 0;
+      const prevCosto = flight.costo != null ? Number(flight.costo) : 0;
       const historicalRate = prevHoras > 0 ? (prevCosto / prevHoras) : Number(pilot?.tarifa_hora || 170000);
-      const horas = Number(data.diff_hobbs ?? diff_hobbs ?? flight.diff_hobbs) || 0;
-      // Keep integer CLP amounts; avoid altering historical rate by rounding hours only if necessary
-      data.costo = Number((historicalRate * horas).toFixed(0));
+      const horasVal = data.diff_hobbs ?? diff_hobbs ?? flight.diff_hobbs;
+      if (horasVal == null) {
+        data.costo = null;
+      } else {
+        const horas = Number(horasVal) || 0;
+        data.costo = Number((historicalRate * horas).toFixed(0));
+      }
 
       await prisma.flight.update({ where: { id }, data });
     }

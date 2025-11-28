@@ -606,6 +606,11 @@ function FlightsTable({ flights, users, editMode = false }: { flights: any[]; us
                     ) : Number(f.tach_fin).toFixed(1)}
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-xs font-semibold text-blue-600 font-mono text-right">{Number(f.diff_tach).toFixed(1)} hrs</td>
+                    <td className="px-3 py-3 whitespace-nowrap text-xs font-semibold text-blue-600 font-mono text-right">
+                      {editMode ? (
+                        <input type="number" step="0.1" className="px-2 py-1 border rounded text-right" defaultValue={f.diff_tach ?? ''} onChange={e=>handleChange(f.id,'diff_tach',e.target.value)} />
+                      ) : (f.diff_tach != null ? `${Number(f.diff_tach).toFixed(1)} hrs` : '-')}
+                    </td>
                   <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
                     {editMode ? (
                       <input type="number" step="0.1" className="px-2 py-1 border rounded text-right" defaultValue={Number(f.hobbs_inicio).toFixed(1)} onChange={e=>handleChange(f.id,'hobbs_inicio',e.target.value)} />
@@ -617,6 +622,15 @@ function FlightsTable({ flights, users, editMode = false }: { flights: any[]; us
                     ) : Number(f.hobbs_fin).toFixed(1)}
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-xs font-semibold text-blue-600 font-mono text-right">{Number(f.diff_hobbs).toFixed(1)} hrs</td>
+                                    <td className="px-3 py-3 whitespace-nowrap text-xs font-semibold text-blue-600 font-mono text-right">
+                                      {editMode ? (
+                                        <input type="number" step="0.1" className="px-2 py-1 border rounded text-right" defaultValue={f.diff_hobbs ?? ''} onChange={e=>handleChange(f.id,'diff_hobbs',e.target.value)} />
+                                      ) : (f.diff_hobbs != null ? `${Number(f.diff_hobbs).toFixed(1)} hrs` : '-')}
+                                    </td>
+                                      ) : (f.tach_inicio != null ? Number(f.tach_inicio).toFixed(1) : '-')}
+                                      ) : (f.tach_fin != null ? Number(f.tach_fin).toFixed(1) : '-')}
+                                      ) : (f.hobbs_inicio != null ? Number(f.hobbs_inicio).toFixed(1) : '-')}
+                                      ) : (f.hobbs_fin != null ? Number(f.hobbs_fin).toFixed(1) : '-')}
                   <td className="px-4 py-3 whitespace-nowrap text-xs font-semibold text-slate-900">
                     {editMode ? (
                       <input className="px-2 py-1 border rounded" defaultValue={u?.nombre || ''} onChange={e=>handleChange(f.id,'pilotoNombre',e.target.value)} />
@@ -645,11 +659,28 @@ function FlightsTable({ flights, users, editMode = false }: { flights: any[]; us
                     ) : (f.instructor || "-")}
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-xs font-bold text-green-600 text-right">${Number(f.costo).toLocaleString("es-CL")}</td>
+                                    <td className="px-3 py-3 whitespace-nowrap text-xs font-bold text-green-600 text-right">{f.costo != null ? `$${Number(f.costo).toLocaleString("es-CL")}` : '-'}</td>
                   <td className="px-4 py-3 text-xs text-slate-600 max-w-xs truncate" title={f.detalle || ""}>
                     {editMode ? (
                       <input className="w-full px-2 py-1 border rounded" defaultValue={f.detalle || ''} onChange={e=>handleChange(f.id,'detalle',e.target.value)} />
                     ) : (f.detalle || "-")}
                   </td>
+                  {editMode && (
+                    <td className="px-2 py-3 whitespace-nowrap text-xs text-right">
+                      <button
+                        className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded"
+                        onClick={async ()=>{
+                          if (!confirm('¿Eliminar este vuelo por completo?')) return;
+                          const res = await fetch('/api/flights/delete', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ id: f.id }) });
+                          const json = await res.json();
+                          if (!json.ok) alert(json.error||'Error al eliminar'); else location.reload();
+                        }}
+                        title="Eliminar vuelo"
+                      >
+                        Borrar
+                      </button>
+                    </td>
+                  )}
                 </tr>
               );
             })}

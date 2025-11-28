@@ -196,29 +196,53 @@ async function main() {
       console.log(`Línea ${i}: fechaStr="${fechaStr}", year="${yearStr}", month="${monthStr}", fecha=${fecha.toISOString()}`);
     }
     
-    // Obtener/crear código de piloto
-    let codigoPiloto = extractPilotCode(pilotoStr) || null;
-    if (!codigoPiloto) {
-      // Fallback: tomar iniciales del nombre "X. Apellido" -> XA
-      const m = pilotoStr.match(/([A-ZÁÉÍÓÚÑ])[\.]\s*([A-Za-zÁÉÍÓÚÑáéíóúñ]+)/);
-      if (m) {
-        const initial = m[1].toUpperCase();
-        const apellido = m[2].normalize('NFD').replace(/[^A-Za-z]/g, '').substring(0,2).toUpperCase();
-        codigoPiloto = `${initial}${apellido}`;
+    // Pilot mapping: usar el Client Code como código canónico del piloto
+    const codigoCliente = (clienteStr || '').trim().toUpperCase() || null;
+    let piloto = codigoCliente ? pilotosByCode.get(codigoCliente) : undefined;
+    if (!piloto) {
+      // Fallback: intentar extraer desde el nombre del piloto
+      let codigoPiloto = extractPilotCode(pilotoStr) || null;
+      if (!codigoPiloto && pilotoStr) {
+        const m = pilotoStr.match(/([A-ZÁÉÍÓÚÑ])[\.]\s*([A-Za-zÁÉÍÓÚÑáéíóúñ]+)/);
+        if (m) {
+          const initial = m[1].toUpperCase();
+          const apellido = m[2].normalize('NFD').replace(/[^A-Za-z]/g, '').substring(0,2).toUpperCase();
+          codigoPiloto = `${initial}${apellido}`;
+        }
+      }
+      if (!codigoPiloto && pilotoStr) {
+        const label = (pilotoStr || '').trim();
+        const dictionary: Record<string,string> = {
+          'AEROMUNDO': 'AERO', 'AIRC': 'AIRC', 'RUN UP': 'RUN', 'RUIZ': 'RUI', 'MAYKOL J': 'MJ', 'JORGE M.': 'JM2'
+        };
+        const key = label.toUpperCase();
+        codigoPiloto = dictionary[key] || (key.replace(/[^A-Z0-9]/g,'').substring(0,4) || 'UNK');
+      }
+      if (codigoPiloto) piloto = pilotosByCode.get(codigoPiloto);
+    }
+    // Si aún no existe, crear con el código del cliente si hay, si no con uno derivado
+    if (!piloto) {
+      const codigoNuevo = (codigoCliente || extractPilotCode(pilotoStr) || 'UNK');
+      const nombrePiloto = (pilotoStr || codigoNuevo).replace(/\s+/g,' ').trim();
+      try {
+        piloto = await prisma.user.create({
+          data: {
+            nombre: nombrePiloto,
+            codigo: codigoNuevo,
+            email: `${codigoNuevo}@piloto.local`,
+            rol: 'PILOTO',
+            saldo_cuenta: 0,
+            tarifa_hora: (parseNumber(fields[11]) ?? 0),
+            password: '',
+          }
+        });
+        pilotosByCode.set(codigoNuevo, piloto);
+      } catch (e) {
+        if (skipped < 10) console.log(`⚠️  Línea ${i}: No se pudo crear piloto ${codigoNuevo}`);
+        skipped++;
+        continue;
       }
     }
-    if (!codigoPiloto) {
-      // Asignar código genérico para etiquetas no-persona o desconocidas
-      const label = (pilotoStr || '').trim();
-      const dictionary: Record<string,string> = {
-        'AEROMUNDO': 'AERO', 'AIRC': 'AIRC', 'RUN UP': 'RUN', 'RUIZ': 'RUI', 'MAYKOL J': 'MJ', 'JORGE M.': 'JM2'
-      };
-      const key = label.toUpperCase();
-      codigoPiloto = dictionary[key] || (key.replace(/[^A-Z0-9]/g,'').substring(0,4) || 'UNK');
-    }
-
-    // Buscar piloto por código; si no existe, crearlo on-the-fly
-    let piloto = pilotosByCode.get(codigoPiloto);
     if (!piloto) {
       const nombrePiloto = pilotoStr.replace(/\s+/g,' ').trim();
       try {
@@ -241,58 +265,14 @@ async function main() {
       }
     }
     
-    // Usar valores de diferencia si los inicios/fines están vacíos
-    let hobbs_inicio = hobbs_i;
-    let hobbs_fin = hobbs_f;
-    let tach_inicio = tach_i;
-    let tach_fin = tach_f;
-    
-    // Reconstrucción más flexible usando diferencias
-    if (diff_hobbs != null) {
-      if (hobbs_inicio == null && hobbs_fin != null) hobbs_inicio = hobbs_fin - diff_hobbs;
-      if (hobbs_fin == null && hobbs_inicio != null) hobbs_fin = hobbs_inicio + diff_hobbs;
-    }
-    if (diff_tach != null) {
-      if (tach_inicio == null && tach_fin != null) tach_inicio = tach_fin - diff_tach;
-      if (tach_fin == null && tach_inicio != null) tach_fin = tach_inicio + diff_tach;
-    }
-    // Si aún faltan, usar un proxy: preferir tach para inferir hobbs y viceversa
-    if ((hobbs_inicio == null || hobbs_fin == null) && tach_inicio != null && tach_fin != null) {
-      if (hobbs_inicio == null) hobbs_inicio = tach_inicio;
-      if (hobbs_fin == null) hobbs_fin = hobbs_inicio + (tach_fin - tach_inicio);
-    }
-    if ((tach_inicio == null || tach_fin == null) && hobbs_inicio != null && hobbs_fin != null) {
-      if (tach_inicio == null) tach_inicio = hobbs_inicio;
-      if (tach_fin == null) tach_fin = tach_inicio + (hobbs_fin - hobbs_inicio);
-    }
-    
-    if (hobbs_inicio == null || hobbs_fin == null) {
-      // Solo tenemos diffs: sintetizar desde 0
-      if (diff_hobbs != null) {
-        hobbs_inicio = 0;
-        hobbs_fin = diff_hobbs;
-      }
-    }
-    if (tach_inicio == null || tach_fin == null) {
-      if (diff_tach != null) {
-        tach_inicio = 0;
-        tach_fin = diff_tach;
-      }
-    }
-    // Si aún faltan valores, último fallback: usar el que exista
-    if (hobbs_inicio == null) hobbs_inicio = tach_inicio ?? 0;
-    if (hobbs_fin == null) hobbs_fin = hobbs_inicio + (diff_hobbs ?? ((tach_fin ?? 0) - (tach_inicio ?? 0)));
-    if (tach_inicio == null) tach_inicio = hobbs_inicio ?? 0;
-    if (tach_fin == null) tach_fin = tach_inicio + (diff_tach ?? ((hobbs_fin ?? 0) - (hobbs_inicio ?? 0)));
-    
-    const diff_h = hobbs_fin - hobbs_inicio;
-    const diff_t = tach_fin - tach_inicio;
-    
-    // Aceptar vuelos con difs no negativas; si alguna es negativa, normalizar a cero
-    if (!isFinite(diff_h) || diff_h < 0) hobbs_fin = hobbs_inicio;
-    if (!isFinite(diff_t) || diff_t < 0) tach_fin = tach_inicio;
-    
-    const costoCalc = Math.max(0, diff_h) * tarifaCSV;
+    // Importar tal cual: usar valores de CSV sin reconstrucciones; permitir nulos
+    const hobbs_inicio = hobbs_i ?? null;
+    const hobbs_fin = hobbs_f ?? null;
+    const tach_inicio = tach_i ?? null;
+    const tach_fin = tach_f ?? null;
+    const diff_h = diff_hobbs ?? (hobbs_inicio != null && hobbs_fin != null ? (hobbs_fin - hobbs_inicio) : null);
+    const diff_t = diff_tach ?? (tach_inicio != null && tach_fin != null ? (tach_fin - tach_inicio) : null);
+    const costoCalc = (tarifaCSV != null && diff_h != null) ? (diff_h * tarifaCSV) : null;
     
     // Preparar datos para batch
     flightBatch.push({
@@ -304,7 +284,7 @@ async function main() {
       diff_hobbs: diff_h,
       diff_tach: diff_t,
       costo: costoCalc,
-      pilotoId: piloto.id,
+      pilotoId: piloto?.id ?? null,
       aircraftId: MATRICULA,
       copiloto: copilotoStr,
       cliente: clienteStr,
