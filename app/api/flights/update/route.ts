@@ -47,11 +47,15 @@ export async function POST(req: NextRequest) {
         ...(up.detalle !== undefined ? { detalle: String(up.detalle) } : {}),
       };
 
-      // Recompute costo using pilot's tarifa_hora if available
+      // Recompute costo preserving the historical per-flight rate from CSV when possible
+      // Determine previous effective rate from the stored flight (fallback to pilot's tarifa_hora)
       const pilot = await prisma.user.findUnique({ where: { id: flight.pilotoId } });
-      const tarifa = pilot?.tarifa_hora || 170000;
-      const horas = (data.diff_hobbs ?? diff_hobbs ?? flight.diff_hobbs) || 0;
-      data.costo = Math.round(Number(tarifa) * Number(horas));
+      const prevHoras = Number(flight.diff_hobbs) || 0;
+      const prevCosto = Number(flight.costo) || 0;
+      const historicalRate = prevHoras > 0 ? (prevCosto / prevHoras) : Number(pilot?.tarifa_hora || 170000);
+      const horas = Number(data.diff_hobbs ?? diff_hobbs ?? flight.diff_hobbs) || 0;
+      // Keep integer CLP amounts; avoid altering historical rate by rounding hours only if necessary
+      data.costo = Number((historicalRate * horas).toFixed(0));
 
       await prisma.flight.update({ where: { id }, data });
     }

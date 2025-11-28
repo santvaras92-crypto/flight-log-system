@@ -506,7 +506,13 @@ function FlightsTable({ flights, users, editMode = false }: { flights: any[]; us
                       <input className="px-2 py-1 border rounded" defaultValue={f.cliente || ''} onChange={e=>handleChange(f.id,'cliente',e.target.value)} />
                     ) : (f.cliente || "-")}
                   </td>
-                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">{u ? `$${Number(u.tarifa_hora).toLocaleString("es-CL")}` : "-"}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
+                    {(() => {
+                      const horas = Number(f.diff_hobbs);
+                      const rate = horas > 0 ? Number(f.costo) / horas : (u ? Number(u.tarifa_hora) : 0);
+                      return rate > 0 ? `$${Math.round(rate).toLocaleString("es-CL")}` : "-";
+                    })()}
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600">
                     {editMode ? (
                       <input className="px-2 py-1 border rounded" defaultValue={f.instructor || ''} onChange={e=>handleChange(f.id,'instructor',e.target.value)} />
