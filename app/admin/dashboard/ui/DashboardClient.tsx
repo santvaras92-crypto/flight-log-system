@@ -10,6 +10,7 @@ type InitialData = {
   users: any[];
   aircraft: any[];
   flights: any[];
+  allFlights?: any[];
   submissions: any[];
   components: any[];
   transactions: any[];
@@ -167,14 +168,29 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
                     </button>
                     <div className="flex items-center gap-2 h-12 px-4 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl text-white shadow-lg">
                       <label className="text-xs font-bold whitespace-nowrap">Active days:</label>
+                      <button
+                        onClick={() => setActiveDaysLimit(Math.max(1, activeDaysLimit - 10))}
+                        className="px-2 py-1 bg-white/20 hover:bg-white/30 border border-white/30 rounded text-white font-bold text-sm transition-colors"
+                        title="Decrease by 10 days"
+                      >
+                        -10
+                      </button>
                       <input 
                         type="number" 
                         min="1" 
-                        max="365" 
+                        max="365"
+                        step="10"
                         value={activeDaysLimit} 
                         onChange={e => setActiveDaysLimit(Math.max(1, Math.min(365, Number(e.target.value) || 30)))}
                         className="w-16 px-2 py-1 bg-white/20 border border-white/30 rounded text-white text-center font-mono focus:bg-white/30 focus:outline-none"
                       />
+                      <button
+                        onClick={() => setActiveDaysLimit(Math.min(365, activeDaysLimit + 10))}
+                        className="px-2 py-1 bg-white/20 hover:bg-white/30 border border-white/30 rounded text-white font-bold text-sm transition-colors"
+                        title="Increase by 10 days"
+                      >
+                        +10
+                      </button>
                     </div>
                   </>
                 );
@@ -339,8 +355,9 @@ function Overview({ data, flights, palette, allowedPilotCodes, activeDaysLimit, 
     const cutoffTime = cutoffDate.getTime();
 
     const pilotIds = new Set<number>();
-    data.flights.forEach(f => {
-      if (new Date(f.fecha).getTime() >= cutoffTime) {
+    const allFlightsData = data.allFlights || data.flights; // Use allFlights if available, fallback to paginated flights
+    allFlightsData.forEach(f => {
+      if (new Date(f.fecha).getTime() >= cutoffTime && f.pilotoId) {
         pilotIds.add(f.pilotoId);
       }
     });
@@ -350,7 +367,7 @@ function Overview({ data, flights, palette, allowedPilotCodes, activeDaysLimit, 
       const code = (u.codigo || '').toUpperCase();
       return allowed.size > 0 ? (code && allowed.has(code) && pilotIds.has(u.id)) : pilotIds.has(u.id);
     });
-  }, [data.users, data.flights, allowedPilotCodes, activeDaysLimit]);
+  }, [data.users, data.flights, data.allFlights, allowedPilotCodes, activeDaysLimit]);
 
   const totalHours = data.flights.reduce((a,b)=>a+Number(b.diff_hobbs),0);
   const totalRevenue = data.flights.reduce((a,b)=>a+Number(b.costo||0),0);
