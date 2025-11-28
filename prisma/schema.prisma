@@ -65,6 +65,9 @@ model Flight {
   cliente          String?
   instructor       String?
   detalle          String?
+  airframe_hours   Decimal?
+  engine_hours     Decimal?
+  propeller_hours  Decimal?
   createdAt        DateTime          @default(now())
   Aircraft         Aircraft          @relation(fields: [aircraftId], references: [matricula])
   User             User              @relation(fields: [pilotoId], references: [id])

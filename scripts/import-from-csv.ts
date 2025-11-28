@@ -164,8 +164,11 @@ async function main() {
     const pilotoStr = fields[8];
     const copilotoStr = fields[9] || null;
     const clienteStr = fields[10] || null;
-    const tarifaStr = fields[11];
-    const instructorStr = fields[12] || null;
+    const tarifaCSV = parseNumber(fields[11]) ?? 0;
+    const instructorCSV = (fields[12] || '').trim();
+    const airframeHours = parseDecimal(fields[14]) ?? null;
+    const engineHours = parseDecimal(fields[15]) ?? null;
+    const propellerHours = parseDecimal(fields[16]) ?? null;
     const detalleStr = fields[17] || null;
     const yearStr = fields[18];
     const monthStr = fields[19];
@@ -289,11 +292,7 @@ async function main() {
     if (!isFinite(diff_h) || diff_h < 0) hobbs_fin = hobbs_inicio;
     if (!isFinite(diff_t) || diff_t < 0) tach_fin = tach_inicio;
     
-    const tarifaCalc = parseNumber(tarifaStr) || 0;
-    const costoCalc = Math.max(0, diff_h) * tarifaCalc;
-    
-    const tarifa = parseNumber(tarifaStr) || 0;
-    const costo = diff_h * tarifa;
+    const costoCalc = Math.max(0, diff_h) * tarifaCSV;
     
     // Preparar datos para batch
     flightBatch.push({
@@ -309,8 +308,11 @@ async function main() {
       aircraftId: MATRICULA,
       copiloto: copilotoStr,
       cliente: clienteStr,
-      instructor: instructorStr,
+      instructor: instructorCSV,
       detalle: detalleStr,
+      airframe_hours: airframeHours,
+      engine_hours: engineHours,
+      propeller_hours: propellerHours,
     });
     
     transactionBatch.push({
