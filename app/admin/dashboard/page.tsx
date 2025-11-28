@@ -37,12 +37,29 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     allowedPilotCodes = [];
   }
 
+  // Compute maintenance items (AIRFRAME/ENGINE/PROPELLER) using TACH totals from Flight Log
+  const tachSums = await prisma.flight.groupBy({
+    by: ['aircraftId'],
+    _sum: { diff_tach: true },
+  });
+  const tachMap = new Map<string, number>(
+    tachSums.map(s => [s.aircraftId, Number(s._sum.diff_tach || 0)])
+  );
+  const computedComponents = aircraft.flatMap(a => {
+    const hours = Number(tachMap.get(a.matricula) || 0);
+    return [
+      { id: `${a.matricula}-AF`, aircraftId: a.matricula, tipo: 'AIRFRAME', horas_acumuladas: hours, limite_tbo: 30000 },
+      { id: `${a.matricula}-EN`, aircraftId: a.matricula, tipo: 'ENGINE', horas_acumuladas: hours, limite_tbo: 2000 },
+      { id: `${a.matricula}-PR`, aircraftId: a.matricula, tipo: 'PROPELLER', horas_acumuladas: hours, limite_tbo: 2000 },
+    ];
+  });
+
   const data = {
     users: users.map(u => ({ ...u, saldo_cuenta: Number(u.saldo_cuenta), tarifa_hora: Number(u.tarifa_hora) })),
     aircraft: aircraft.map(a => ({ ...a, hobbs_actual: Number(a.hobbs_actual), tach_actual: Number(a.tach_actual) })),
     flights: flights.map(f => ({ ...f, hobbs_inicio: Number(f.hobbs_inicio), hobbs_fin: Number(f.hobbs_fin), tach_inicio: Number(f.tach_inicio), tach_fin: Number(f.tach_fin), diff_hobbs: Number(f.diff_hobbs), diff_tach: Number(f.diff_tach), costo: Number(f.costo) })),
     submissions: submissions.map(s => ({ ...s, imageLogs: s.ImageLog.map(img => ({ ...img, valorExtraido: img.valorExtraido ? Number(img.valorExtraido) : null, confianza: img.confianza ? Number(img.confianza) : null })), flight: s.Flight ? { ...s.Flight, diff_hobbs: Number(s.Flight.diff_hobbs), diff_tach: Number(s.Flight.diff_tach), costo: Number(s.Flight.costo) } : null })),
-    components: components.map(c => ({ ...c, horas_acumuladas: Number(c.horas_acumuladas), limite_tbo: Number(c.limite_tbo) })),
+    components: computedComponents.map(c => ({ ...c, horas_acumuladas: Number(c.horas_acumuladas), limite_tbo: Number(c.limite_tbo) })),
     transactions: transactions.map(t => ({ ...t, monto: Number(t.monto) })),
   };
 
