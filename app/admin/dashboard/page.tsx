@@ -134,7 +134,12 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     pilotDirectory: {
       initial: csvPilots,
       registered: users
-        .filter(u => u.rol === 'PILOTO' && (!u.codigo || !allowedPilotCodes.includes((u.codigo || '').toUpperCase())))
+        .filter(u => {
+          if (u.rol !== 'PILOTO') return false;
+          const code = (u.codigo || '').toUpperCase();
+          // Only include pilots NOT in CSV (i.e., new registrations)
+          return code && !allowedPilotCodes.includes(code);
+        })
         .map(u => ({ 
           id: u.id, 
           code: (u.codigo || '').toUpperCase(), 
