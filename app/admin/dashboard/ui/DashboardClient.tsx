@@ -369,11 +369,10 @@ function Overview({ data, flights, palette, allowedPilotCodes, activeDaysLimit, 
       if (t < cutoffTime) return;
       if (f.pilotoId) {
         pilotIds.add(f.pilotoId);
-      } else {
-        const code = (f as any).clienteCodigo ? String((f as any).clienteCodigo).toUpperCase() : '';
-        const uid = codeToUserId.get(code);
-        if (uid) pilotIds.add(uid);
       }
+      const code = (f as any).cliente ? String((f as any).cliente).toUpperCase() : '';
+      const uid = codeToUserId.get(code);
+      if (uid) pilotIds.add(uid);
     });
 
     return data.users.filter(u => {
