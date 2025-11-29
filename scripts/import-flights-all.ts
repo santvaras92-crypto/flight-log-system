@@ -135,7 +135,11 @@ async function run() {
   const COL_TACH_I = 4;  // Tac. 1
   const COL_TACH_F = 5;  // Tac. 2
   const COL_PILOTO = 10;
-  const COL_TARIFA = 14; // Tarifa (USD/CLP as per sheet)
+  const COL_COPILOTO = 11;
+  const COL_CLIENTE = 12;
+  const COL_INSTRUCTOR = 14;
+  const COL_TARIFA = 15; // Tarifa (USD/CLP as per sheet)
+  const COL_DETALLE = 19;
 
   let imported = 0;
   let skipped = 0;
@@ -236,6 +240,12 @@ async function run() {
     const tarifa = toNum(row[COL_TARIFA]) || 0;
     const costo = diff_hobbs * Number(piloto.tarifa_hora || 0);
     
+    // Extraer campos de texto tal cual del CSV
+    const copiloto = row[COL_COPILOTO] ? String(row[COL_COPILOTO]).trim() : null;
+    const cliente = row[COL_CLIENTE] ? String(row[COL_CLIENTE]).trim() : null;
+    const instructor = row[COL_INSTRUCTOR] ? String(row[COL_INSTRUCTOR]).trim() : null;
+    const detalle = row[COL_DETALLE] ? String(row[COL_DETALLE]).trim() : null;
+    
     if (imported + skipped < 10) {
       console.log(`  ✓ Importando: hobbs ${hobbs_inicio}→${hobbs_fin} (${diff_hobbs}), tach ${tach_inicio}→${tach_fin} (${diff_tach}), costo=${costo}`);
     }
@@ -255,6 +265,10 @@ async function run() {
             costo,
             pilotoId: piloto.id,
             aircraftId: MATRICULA,
+            copiloto: copiloto || undefined,
+            cliente: cliente || undefined,
+            instructor: instructor || undefined,
+            detalle: detalle || undefined,
           },
         });
 
