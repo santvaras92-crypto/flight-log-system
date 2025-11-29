@@ -56,6 +56,7 @@ export default function AdminSubmissions({ initialData }: { initialData: Submiss
   const [filter, setFilter] = useState<string>("ESPERANDO_APROBACION");
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [rates, setRates] = useState<Record<number, string>>({});
   const [instructorRates, setInstructorRates] = useState<Record<number, string>>({});
   const [message, setMessage] = useState<string | null>(null);
 
@@ -68,11 +69,12 @@ export default function AdminSubmissions({ initialData }: { initialData: Submiss
     setMessage(null);
     setPendingId(submissionId);
     
+    const rate = rates[submissionId] ? parseFloat(rates[submissionId]) : 0;
     const instructorRate = instructorRates[submissionId] ? parseFloat(instructorRates[submissionId]) : 0;
 
     startTransition(async () => {
       try {
-        const res = await approveFlightSubmission(submissionId, instructorRate);
+        const res = await approveFlightSubmission(submissionId, rate, instructorRate);
         if (res.success) {
           setMessage(`✓ Vuelo #${submissionId} registrado exitosamente.`);
           setData((prev) => prev.map((p) => p.id === submissionId ? { ...p, estado: "COMPLETADO" } : p));
@@ -179,18 +181,22 @@ export default function AdminSubmissions({ initialData }: { initialData: Submiss
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <div>
-                      <label className="text-xs text-gray-600 block mb-1">Tarifa Piloto ($/hr)</label>
+                      <label className="text-xs text-gray-600 block mb-1">
+                        Rate ($/hr)
+                        <span className="text-purple-600 ml-1">*</span>
+                      </label>
                       <input
-                        type="text"
-                        readOnly
-                        value={`$${pilotoTarifa.toLocaleString('es-CL')}`}
-                        className="w-full border rounded px-3 py-2 text-sm bg-gray-100"
+                        type="number"
+                        step="1000"
+                        value={rates[s.id] ?? ""}
+                        onChange={(e) => setRates((prev) => ({ ...prev, [s.id]: e.target.value }))}
+                        placeholder="170000"
+                        className="w-full border border-purple-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-purple-200"
                       />
                     </div>
                     <div>
                       <label className="text-xs text-gray-600 block mb-1">
-                        Rate Instructor/SP ($/hr)
-                        <span className="text-purple-600 ml-1">*</span>
+                        Instructor/SP ($/hr)
                       </label>
                       <input
                         type="number"
@@ -206,7 +212,7 @@ export default function AdminSubmissions({ initialData }: { initialData: Submiss
                       <input
                         type="text"
                         readOnly
-                        value={`$${(pilotoTarifa + (parseFloat(instructorRates[s.id] || '0') || 0)).toLocaleString('es-CL')}`}
+                        value={`$${((parseFloat(rates[s.id] || '0') || 0) + (parseFloat(instructorRates[s.id] || '0') || 0)).toLocaleString('es-CL')}`}
                         className="w-full border rounded px-3 py-2 text-sm bg-gray-100 font-bold"
                       />
                     </div>

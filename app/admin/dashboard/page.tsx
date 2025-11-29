@@ -332,7 +332,6 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           code: (u.codigo || '').toUpperCase(), 
           name: u.nombre, 
           email: u.email, 
-          rate: Number(u.tarifa_hora), 
           createdAt: u.createdAt,
           fechaNacimiento: u.fechaNacimiento || null,
           telefono: u.telefono || null,

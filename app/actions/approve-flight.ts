@@ -6,13 +6,15 @@ import { Prisma } from "@prisma/client";
 /**
  * Aprueba un FlightSubmission pendiente y crea el vuelo correspondiente.
  * Usa los datos almacenados en el submission (hobbsFinal, tachFinal, fechaVuelo, etc.)
- * y agrega el instructorRate proporcionado por el admin.
+ * y agrega el rate e instructorRate proporcionados por el admin.
  *
  * @param submissionId - ID del FlightSubmission a aprobar
+ * @param rate - Tarifa base por hora del vuelo
  * @param instructorRate - Tarifa de instructor/SP por hora (puede ser 0)
  */
 export async function approveFlightSubmission(
   submissionId: number,
+  rate: number,
   instructorRate: number
 ): Promise<{ success: boolean; error?: string; flightId?: number }> {
   try {
@@ -41,6 +43,7 @@ export async function approveFlightSubmission(
 
       const nuevoHobbs = new Prisma.Decimal(submission.hobbsFinal.toString());
       const nuevoTach = new Prisma.Decimal(submission.tachFinal.toString());
+      const rateDec = new Prisma.Decimal(rate || 0);
       const instructorRateDec = new Prisma.Decimal(instructorRate || 0);
 
       // 3. Obtener los máximos actuales de la tabla Flight
@@ -75,9 +78,9 @@ export async function approveFlightSubmission(
       const diffHobbs = nuevoHobbs.minus(lastHobbs);
       const diffTach = nuevoTach.minus(lastTach);
 
-      // 6. Calcular el costo total: (tarifa_piloto + instructor_rate) * horas
-      const tarifaPiloto = new Prisma.Decimal(submission.User.tarifa_hora?.toString() || "0");
-      const tarifaTotal = tarifaPiloto.plus(instructorRateDec);
+      // 6. Calcular el costo total: (rate + instructor_rate) * horas
+      // A partir del 25/nov/2025 el total se calcula con Rate + Instructor/SP
+      const tarifaTotal = rateDec.plus(instructorRateDec);
       const costo = diffHobbs.mul(tarifaTotal);
 
       // 7. Crear el registro del vuelo
@@ -145,6 +148,7 @@ export async function approveFlightSubmission(
         where: { id: submissionId },
         data: {
           estado: "COMPLETADO",
+          rate: rateDec.toNumber(),
           instructorRate: instructorRateDec.toNumber(),
           Flight: { connect: { id: flight.id } },
         },

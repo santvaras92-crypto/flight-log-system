@@ -23,7 +23,7 @@ type InitialData = {
   depositsDetailsByCode?: Record<string, { fecha: string; descripcion: string; monto: number }[]>;
   pilotDirectory?: {
     initial: { code: string; name: string }[];
-    registered: { id: number; code: string; name: string; email: string; rate: number; createdAt: string | Date }[];
+    registered: { id: number; code: string; name: string; email: string; createdAt: string | Date; fechaNacimiento?: Date | null; telefono?: string | null; numeroLicencia?: string | null; tipoDocumento?: string | null; documento?: string | null }[];
   };
 };
 type PaginationInfo = { page: number; pageSize: number; total: number };
@@ -1090,7 +1090,7 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
   );
 }
 
-function PilotDirectory({ directory }: { directory?: { initial: { code: string; name: string }[]; registered: { id: number; code: string; name: string; email: string; rate: number; createdAt: string | Date; fechaNacimiento?: string | Date | null; telefono?: string | null; numeroLicencia?: string | null; tipoDocumento?: string | null; documento?: string | null }[] } }) {
+function PilotDirectory({ directory }: { directory?: { initial: { code: string; name: string }[]; registered: { id: number; code: string; name: string; email: string; createdAt: string | Date; fechaNacimiento?: string | Date | null; telefono?: string | null; numeroLicencia?: string | null; tipoDocumento?: string | null; documento?: string | null }[] } }) {
   const [editMode, setEditMode] = useState(false);
   const [editedRows, setEditedRows] = useState<Record<number, any>>({});
   const [saving, setSaving] = useState(false);
@@ -1103,8 +1103,6 @@ function PilotDirectory({ directory }: { directory?: { initial: { code: string; 
       name: p.name, 
       source: 'CSV', 
       email: '-', 
-      rate: 0, 
-      rateDisplay: '-', 
       createdAt: '-', 
       fechaNacimiento: null as string | null, 
       fechaNacimientoDisplay: '-',
@@ -1119,8 +1117,6 @@ function PilotDirectory({ directory }: { directory?: { initial: { code: string; 
       name: p.name, 
       source: 'Registered', 
       email: p.email || '', 
-      rate: p.rate || 0,
-      rateDisplay: p.rate ? `$${Number(p.rate).toLocaleString('es-CL')}` : '-', 
       createdAt: p.createdAt ? new Date(p.createdAt as any).toLocaleDateString('es-CL') : '-',
       fechaNacimiento: p.fechaNacimiento ? new Date(p.fechaNacimiento as any).toISOString().split('T')[0] : null,
       fechaNacimientoDisplay: p.fechaNacimiento ? new Date(p.fechaNacimiento as any).toLocaleDateString('es-CL') : '-',
@@ -1235,7 +1231,6 @@ function PilotDirectory({ directory }: { directory?: { initial: { code: string; 
               <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">N° Licencia</th>
               <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Tipo Doc.</th>
               <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Documento</th>
-              <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Tarifa/Hr</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-slate-100">
@@ -1325,16 +1320,6 @@ function PilotDirectory({ directory }: { directory?: { initial: { code: string; 
                         onChange={e => handleChange(r.id!, 'documento', e.target.value)}
                       />
                     ) : (r.documento || '-')}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600 font-mono">
-                    {canEdit ? (
-                      <input
-                        type="number"
-                        className="w-28 px-2 py-1 border rounded text-sm"
-                        defaultValue={r.rate || 0}
-                        onChange={e => handleChange(r.id!, 'tarifa_hora', e.target.value)}
-                      />
-                    ) : r.rateDisplay}
                   </td>
                 </tr>
               );
