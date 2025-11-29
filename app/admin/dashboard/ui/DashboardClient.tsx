@@ -550,6 +550,63 @@ function LineChart({ labels, values, palette }: { labels: string[]; values: numb
 function FlightsTable({ flights, users, editMode = false }: { flights: any[]; users: any[]; editMode?: boolean }) {
   const [drafts, setDrafts] = useState<Record<number, any>>({});
   const [saving, setSaving] = useState(false);
+  
+  // Filtros locales para la tabla
+  const [filterStartDate, setFilterStartDate] = useState("");
+  const [filterEndDate, setFilterEndDate] = useState("");
+  const [filterPilot, setFilterPilot] = useState("");
+  const [filterClient, setFilterClient] = useState("");
+  const [filterYear, setFilterYear] = useState("");
+  const [filterMonth, setFilterMonth] = useState("");
+
+  // Obtener años únicos para el dropdown
+  const availableYears = useMemo(() => {
+    const years = new Set(flights.map(f => new Date(f.fecha).getFullYear()));
+    return Array.from(years).sort((a, b) => b - a);
+  }, [flights]);
+
+  // Filtrar vuelos
+  const filteredFlights = useMemo(() => {
+    return flights.filter(f => {
+      const fecha = new Date(f.fecha);
+      const year = fecha.getFullYear();
+      const month = fecha.getMonth() + 1;
+
+      // Filtro por rango de fechas
+      if (filterStartDate) {
+        const start = new Date(filterStartDate);
+        if (fecha < start) return false;
+      }
+      if (filterEndDate) {
+        const end = new Date(filterEndDate);
+        end.setHours(23, 59, 59, 999);
+        if (fecha > end) return false;
+      }
+
+      // Filtro por año
+      if (filterYear && year !== parseInt(filterYear)) return false;
+
+      // Filtro por mes
+      if (filterMonth && month !== parseInt(filterMonth)) return false;
+
+      // Filtro por piloto (nombre)
+      if (filterPilot) {
+        const pilotName = (f.piloto_raw || '').toLowerCase();
+        const search = filterPilot.toLowerCase();
+        if (!pilotName.includes(search)) return false;
+      }
+
+      // Filtro por cliente (código)
+      if (filterClient) {
+        const clientCode = (f.cliente || '').toLowerCase();
+        const search = filterClient.toLowerCase();
+        if (!clientCode.includes(search)) return false;
+      }
+
+      return true;
+    });
+  }, [flights, filterStartDate, filterEndDate, filterPilot, filterClient, filterYear, filterMonth]);
+
   const handleChange = (id: number, field: string, value: any) => {
     setDrafts(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
   };
@@ -578,6 +635,18 @@ function FlightsTable({ flights, users, editMode = false }: { flights: any[]; us
       setSaving(false);
     }
   };
+
+  const clearFilters = () => {
+    setFilterStartDate("");
+    setFilterEndDate("");
+    setFilterPilot("");
+    setFilterClient("");
+    setFilterYear("");
+    setFilterMonth("");
+  };
+
+  const hasActiveFilters = filterStartDate || filterEndDate || filterPilot || filterClient || filterYear || filterMonth;
+
   return (
     <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
       <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
@@ -586,6 +655,9 @@ function FlightsTable({ flights, users, editMode = false }: { flights: any[]; us
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
           </svg>
           Flight Log Entries
+          <span className="ml-2 text-sm font-normal text-blue-200">
+            ({filteredFlights.length} of {flights.length})
+          </span>
           {editMode && (
             <button
               onClick={applySave}
@@ -597,6 +669,105 @@ function FlightsTable({ flights, users, editMode = false }: { flights: any[]; us
           )}
         </h3>
       </div>
+      
+      {/* Barra de filtros */}
+      <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-sm font-semibold text-slate-600 flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+            Filtros:
+          </span>
+          
+          {/* Fecha desde */}
+          <div className="flex items-center gap-1">
+            <label className="text-xs text-slate-500">Desde:</label>
+            <input
+              type="date"
+              value={filterStartDate}
+              onChange={e => setFilterStartDate(e.target.value)}
+              className="px-2 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          
+          {/* Fecha hasta */}
+          <div className="flex items-center gap-1">
+            <label className="text-xs text-slate-500">Hasta:</label>
+            <input
+              type="date"
+              value={filterEndDate}
+              onChange={e => setFilterEndDate(e.target.value)}
+              className="px-2 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          {/* Año */}
+          <select
+            value={filterYear}
+            onChange={e => setFilterYear(e.target.value)}
+            className="px-2 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">Año</option>
+            {availableYears.map(y => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+
+          {/* Mes */}
+          <select
+            value={filterMonth}
+            onChange={e => setFilterMonth(e.target.value)}
+            className="px-2 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">Mes</option>
+            <option value="1">Enero</option>
+            <option value="2">Febrero</option>
+            <option value="3">Marzo</option>
+            <option value="4">Abril</option>
+            <option value="5">Mayo</option>
+            <option value="6">Junio</option>
+            <option value="7">Julio</option>
+            <option value="8">Agosto</option>
+            <option value="9">Septiembre</option>
+            <option value="10">Octubre</option>
+            <option value="11">Noviembre</option>
+            <option value="12">Diciembre</option>
+          </select>
+          
+          {/* Piloto */}
+          <input
+            type="text"
+            placeholder="Piloto..."
+            value={filterPilot}
+            onChange={e => setFilterPilot(e.target.value)}
+            className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-32"
+          />
+          
+          {/* Cliente */}
+          <input
+            type="text"
+            placeholder="Cliente..."
+            value={filterClient}
+            onChange={e => setFilterClient(e.target.value)}
+            className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-28"
+          />
+
+          {/* Limpiar filtros */}
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="px-3 py-1.5 text-sm bg-red-100 text-red-700 hover:bg-red-200 rounded-lg font-medium transition-colors flex items-center gap-1"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Limpiar
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
@@ -618,7 +789,7 @@ function FlightsTable({ flights, users, editMode = false }: { flights: any[]; us
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-slate-100">
-            {flights.map(f => {
+            {filteredFlights.map(f => {
               const code = (f.cliente || '').toUpperCase();
               const u = users.find(u => u.id === (f as any).pilotoId) || users.find(u => (u.codigo || '').toUpperCase() === code);
               const pilotName = f.piloto_raw || u?.nombre || 'N/A';
