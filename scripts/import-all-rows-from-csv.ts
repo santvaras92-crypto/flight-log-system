@@ -110,7 +110,7 @@ async function run() {
     const hobbs_fin = toNum(row[COL_HOBBS_F]);
     const diff_hobbs = toNum(row[COL_DIFF_HOBBS]);
     
-    const piloto = row[COL_PILOTO]?.trim() || null;
+    const piloto = row[COL_PILOTO]?.trim() || null; // raw pilot name as in CSV
     const copiloto = row[COL_COPILOTO]?.trim() || null;
     const cliente = row[COL_CLIENTE]?.trim() || null;
     const instructor = row[COL_INSTRUCTOR]?.trim() || null;
@@ -170,7 +170,8 @@ async function run() {
             detalle,
             airframe_hours,
             engine_hours,
-            propeller_hours
+            propeller_hours,
+            piloto_raw: piloto
           }
         });
         
@@ -198,7 +199,8 @@ async function run() {
             detalle,
             airframe_hours,
             engine_hours,
-            propeller_hours
+            propeller_hours,
+            piloto_raw: piloto
           }
         });
 

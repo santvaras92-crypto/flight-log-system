@@ -618,6 +618,7 @@ function FlightsTable({ flights, users, editMode = false }: { flights: any[]; us
             {flights.map(f => {
               const code = (f.cliente || '').toUpperCase();
               const u = users.find(u => u.id === (f as any).pilotoId) || users.find(u => (u.codigo || '').toUpperCase() === code);
+              const pilotName = f.piloto_raw || u?.nombre || 'N/A';
               return (
                 <tr key={f.id} className="hover:bg-blue-50 transition-colors">
                   <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600 font-medium">
@@ -659,8 +660,8 @@ function FlightsTable({ flights, users, editMode = false }: { flights: any[]; us
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-xs font-semibold text-slate-900">
                     {editMode ? (
-                      <input className="px-2 py-1 border rounded" defaultValue={u?.nombre || ''} onChange={e=>handleChange(f.id,'pilotoNombre',e.target.value)} />
-                    ) : (u?.nombre || "N/A")}
+                      <input className="px-2 py-1 border rounded" defaultValue={pilotName} onChange={e=>handleChange(f.id,'piloto_raw',e.target.value)} />
+                    ) : pilotName}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600">
                     {editMode ? (

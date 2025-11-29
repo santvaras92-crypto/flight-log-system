@@ -81,7 +81,7 @@ async function run() {
     const fechaStr = row[COL_FECHA]?.trim();
     const hobbsI = toNum(row[COL_HOBBS_I]);
     const hobbsF = toNum(row[COL_HOBBS_F]);
-    const piloto = row[COL_PILOTO]?.trim() || null;
+    const piloto = row[COL_PILOTO]?.trim() || null; // raw pilot name from CSV
     const copiloto = row[COL_COPILOTO]?.trim() || null;
     const cliente = row[COL_CLIENTE]?.trim() || null;
     const instructor = row[COL_INSTRUCTOR]?.trim() || null;
@@ -129,7 +129,8 @@ async function run() {
       flight.copiloto !== copiloto ||
       flight.cliente !== cliente ||
       flight.instructor !== instructor ||
-      flight.detalle !== detalle;
+      flight.detalle !== detalle ||
+      flight.piloto_raw !== piloto;
 
     if (needsUpdate) {
       await prisma.flight.update({
@@ -138,7 +139,8 @@ async function run() {
           copiloto: copiloto || null,
           cliente: cliente || null,
           instructor: instructor || null,
-          detalle: detalle || null
+          detalle: detalle || null,
+          piloto_raw: piloto || null
         }
       });
 
