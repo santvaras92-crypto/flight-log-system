@@ -89,27 +89,42 @@ async function autoRegisterFlightForReview(submissionId: number) {
     const nuevoHobbs = hobbsLog.valorExtraido;
     const nuevoTach = tachLog.valorExtraido;
 
-    if (
-      nuevoHobbs.lte(submission.Aircraft.hobbs_actual) ||
-      nuevoTach.lte(submission.Aircraft.tach_actual)
-    ) {
-      throw new Error("Los nuevos contadores deben ser mayores a los actuales");
+    // Obtener los máximos actuales de la tabla Flight
+    const maxHobbsFlight = await tx.flight.findFirst({
+      where: { aircraftId: submission.aircraftId, hobbs_fin: { not: null } },
+      orderBy: { hobbs_fin: "desc" },
+      select: { hobbs_fin: true },
+    });
+
+    const maxTachFlight = await tx.flight.findFirst({
+      where: { aircraftId: submission.aircraftId, tach_fin: { not: null } },
+      orderBy: { tach_fin: "desc" },
+      select: { tach_fin: true },
+    });
+
+    const lastHobbs = maxHobbsFlight?.hobbs_fin || submission.Aircraft.hobbs_actual;
+    const lastTach = maxTachFlight?.tach_fin || submission.Aircraft.tach_actual;
+
+    if (nuevoHobbs.lte(lastHobbs) || nuevoTach.lte(lastTach)) {
+      throw new Error(`Los nuevos contadores deben ser mayores a los actuales (Hobbs: ${lastHobbs}, Tach: ${lastTach})`);
     }
 
-    const diffHobbs = nuevoHobbs.minus(submission.Aircraft.hobbs_actual);
-    const diffTach = nuevoTach.minus(submission.Aircraft.tach_actual);
+    const diffHobbs = nuevoHobbs.minus(lastHobbs);
+    const diffTach = nuevoTach.minus(lastTach);
     const costo = diffHobbs.mul(submission.User.tarifa_hora);
 
     const flight = await tx.flight.create({
       data: {
         submissionId,
-        hobbs_inicio: submission.Aircraft.hobbs_actual,
+        fecha: submission.fechaVuelo || new Date(),
+        hobbs_inicio: lastHobbs,
         hobbs_fin: nuevoHobbs,
-        tach_inicio: submission.Aircraft.tach_actual,
+        tach_inicio: lastTach,
         tach_fin: nuevoTach,
         diff_hobbs: diffHobbs,
         diff_tach: diffTach,
         costo,
+        tarifa: submission.User.tarifa_hora,
         pilotoId: submission.pilotoId,
         aircraftId: submission.aircraftId,
       },

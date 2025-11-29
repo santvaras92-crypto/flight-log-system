@@ -8,5 +8,23 @@ export default async function Home() {
     select: { id: true, nombre: true, email: true },
   });
 
-  return <FlightUploadForm pilots={pilots} />;
+  // Obtener los máximos Hobbs y Tach de los vuelos registrados para CC-AQI
+  const maxHobbsFlight = await prisma.flight.findFirst({
+    where: { aircraftId: "CC-AQI", hobbs_fin: { not: null } },
+    orderBy: { hobbs_fin: "desc" },
+    select: { hobbs_fin: true },
+  });
+
+  const maxTachFlight = await prisma.flight.findFirst({
+    where: { aircraftId: "CC-AQI", tach_fin: { not: null } },
+    orderBy: { tach_fin: "desc" },
+    select: { tach_fin: true },
+  });
+
+  const lastCounters = {
+    hobbs: maxHobbsFlight?.hobbs_fin ? Number(maxHobbsFlight.hobbs_fin) : null,
+    tach: maxTachFlight?.tach_fin ? Number(maxTachFlight.tach_fin) : null,
+  };
+
+  return <FlightUploadForm pilots={pilots} lastCounters={lastCounters} />;
 }

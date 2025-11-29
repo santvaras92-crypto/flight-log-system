@@ -41,7 +41,18 @@ interface SubmissionStatus {
 
 type PilotOption = { id: number; nombre: string; email: string };
 
-export default function FlightUploadForm({ pilots = [] as PilotOption[] }: { pilots?: PilotOption[] }) {
+interface LastCounters {
+  hobbs: number | null;
+  tach: number | null;
+}
+
+export default function FlightUploadForm({ 
+  pilots = [] as PilotOption[], 
+  lastCounters = { hobbs: null, tach: null } as LastCounters 
+}: { 
+  pilots?: PilotOption[];
+  lastCounters?: LastCounters;
+}) {
   const [pilotoId, setPilotoId] = useState(pilots.length ? String(pilots[0].id) : "");
   const [matricula, setMatricula] = useState("CC-AQI");
   const [hobbsImage, setHobbsImage] = useState<File | null>(null);
@@ -50,13 +61,43 @@ export default function FlightUploadForm({ pilots = [] as PilotOption[] }: { pil
   const [result, setResult] = useState<UploadResponse | null>(null);
   const [status, setStatus] = useState<SubmissionStatus | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
+  
+  // Nuevos campos para entrada manual
+  const [hobbsManual, setHobbsManual] = useState<string>("");
+  const [tachManual, setTachManual] = useState<string>("");
+  const [fechaVuelo, setFechaVuelo] = useState<string>(new Date().toISOString().split("T")[0]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!hobbsImage || !tachImage) {
-      alert("Por favor selecciona ambas imágenes");
+    // Validar que al menos tenga imágenes O valores manuales
+    const hasImages = hobbsImage && tachImage;
+    const hasManualValues = hobbsManual && tachManual;
+
+    if (!hasImages && !hasManualValues) {
+      alert("Por favor sube las fotos de los medidores o ingresa los valores manualmente");
       return;
+    }
+
+    // Validar valores manuales si se proporcionaron
+    if (hasManualValues) {
+      const hobbsNum = parseFloat(hobbsManual);
+      const tachNum = parseFloat(tachManual);
+      
+      if (isNaN(hobbsNum) || isNaN(tachNum)) {
+        alert("Los valores manuales deben ser números válidos");
+        return;
+      }
+
+      if (lastCounters.hobbs !== null && hobbsNum <= lastCounters.hobbs) {
+        alert(`El Hobbs debe ser mayor a ${lastCounters.hobbs.toFixed(1)}`);
+        return;
+      }
+
+      if (lastCounters.tach !== null && tachNum <= lastCounters.tach) {
+        alert(`El Tach debe ser mayor a ${lastCounters.tach.toFixed(1)}`);
+        return;
+      }
     }
 
     setLoading(true);
@@ -67,8 +108,12 @@ export default function FlightUploadForm({ pilots = [] as PilotOption[] }: { pil
       const formData = new FormData();
       formData.append("pilotoId", pilotoId);
       formData.append("matricula", matricula);
-      formData.append("hobbsImage", hobbsImage);
-      formData.append("tachImage", tachImage);
+      formData.append("fechaVuelo", fechaVuelo);
+      
+      if (hobbsImage) formData.append("hobbsImage", hobbsImage);
+      if (tachImage) formData.append("tachImage", tachImage);
+      if (hobbsManual) formData.append("hobbsManual", hobbsManual);
+      if (tachManual) formData.append("tachManual", tachManual);
 
       const response = await fetch("/api/upload-flight", {
         method: "POST",
@@ -194,6 +239,49 @@ export default function FlightUploadForm({ pilots = [] as PilotOption[] }: { pil
               </div>
             </div>
 
+            {/* Fecha del vuelo */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">
+                  Fecha del Vuelo
+                </label>
+                <input
+                  type="date"
+                  value={fechaVuelo}
+                  onChange={(e) => setFechaVuelo(e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-lg font-semibold text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all shadow-sm"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Últimos contadores registrados */}
+            {(lastCounters.hobbs !== null || lastCounters.tach !== null) && (
+              <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-4 mb-6 border-2 border-amber-200">
+                <h3 className="text-sm font-bold text-amber-800 mb-2 uppercase tracking-wide flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Últimos Contadores Registrados
+                </h3>
+                <div className="flex gap-6">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-slate-600">HOBBS:</span>
+                    <span className="font-mono font-bold text-lg text-[#003D82]">
+                      {lastCounters.hobbs !== null ? lastCounters.hobbs.toFixed(1) : "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-slate-600">TACH:</span>
+                    <span className="font-mono font-bold text-lg text-[#003D82]">
+                      {lastCounters.tach !== null ? lastCounters.tach.toFixed(1) : "N/A"}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-amber-700 mt-2">Los nuevos valores deben ser mayores a estos</p>
+              </div>
+            )}
+
             {/* Image Upload Section - Estilo ForeFlight */}
             <div className="bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl p-6 mb-6">
               <h3 className="text-lg font-bold text-slate-800 mb-4 uppercase tracking-wide flex items-center gap-2">
@@ -220,7 +308,6 @@ export default function FlightUploadForm({ pilots = [] as PilotOption[] }: { pil
                     accept="image/*"
                     onChange={(e) => setHobbsImage(e.target.files?.[0] || null)}
                     className="w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-[#003D82] hover:file:bg-blue-100 cursor-pointer"
-                    required
                   />
                   {hobbsImage && (
                     <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
@@ -245,7 +332,6 @@ export default function FlightUploadForm({ pilots = [] as PilotOption[] }: { pil
                     accept="image/*"
                     onChange={(e) => setTachImage(e.target.files?.[0] || null)}
                     className="w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-[#003D82] hover:file:bg-blue-100 cursor-pointer"
-                    required
                   />
                   {tachImage && (
                     <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
@@ -253,6 +339,51 @@ export default function FlightUploadForm({ pilots = [] as PilotOption[] }: { pil
                       <p className="text-xs text-green-600">{(tachImage.size / 1024).toFixed(0)} KB</p>
                     </div>
                   )}
+                </div>
+              </div>
+            </div>
+
+            {/* Manual Entry Section */}
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 mb-6 border-2 border-green-200">
+              <h3 className="text-lg font-bold text-slate-800 mb-4 uppercase tracking-wide flex items-center gap-2">
+                <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Entrada Manual (Opcional)
+              </h3>
+              <p className="text-sm text-slate-600 mb-4">Si prefieres, puedes ingresar los valores directamente. Si proporcionas valores manuales, estos tendrán prioridad sobre el OCR.</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Hobbs Manual */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">
+                    Hobbs Final
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min={lastCounters.hobbs !== null ? lastCounters.hobbs + 0.1 : 0}
+                    value={hobbsManual}
+                    onChange={(e) => setHobbsManual(e.target.value)}
+                    placeholder={lastCounters.hobbs !== null ? `Mayor a ${lastCounters.hobbs.toFixed(1)}` : "Ej: 2058.5"}
+                    className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-lg font-mono font-bold text-slate-900 text-lg focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all shadow-sm"
+                  />
+                </div>
+
+                {/* Tach Manual */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">
+                    Tach Final
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min={lastCounters.tach !== null ? lastCounters.tach + 0.1 : 0}
+                    value={tachManual}
+                    onChange={(e) => setTachManual(e.target.value)}
+                    placeholder={lastCounters.tach !== null ? `Mayor a ${lastCounters.tach.toFixed(1)}` : "Ej: 570.3"}
+                    className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-lg font-mono font-bold text-slate-900 text-lg focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all shadow-sm"
+                  />
                 </div>
               </div>
             </div>
@@ -269,14 +400,14 @@ export default function FlightUploadForm({ pilots = [] as PilotOption[] }: { pil
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  Processing OCR...
+                  Procesando...
                 </span>
               ) : (
                 <span className="flex items-center justify-center gap-3">
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Submit Flight Log
+                  Registrar Vuelo
                 </span>
               )}
             </button>

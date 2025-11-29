@@ -10,12 +10,14 @@ import Decimal from "decimal.js-light";
  * @param matricula - Matrícula de la aeronave utilizada.
  * @param nuevoHobbs - Nuevo valor del contador Hobbs al finalizar el vuelo.
  * @param nuevoTach - Nuevo valor del contador Tach al finalizar el vuelo.
+ * @param fechaVuelo - Fecha del vuelo (opcional, por defecto hoy).
  */
 export async function registerFlight(
   pilotoId: number,
   matricula: string,
   nuevoHobbs: number,
-  nuevoTach: number
+  nuevoTach: number,
+  fechaVuelo?: Date
 ) {
   return await prisma.$transaction(async (tx: any) => {
     // 1. Obtener datos actuales del avión y del piloto
@@ -35,30 +37,32 @@ export async function registerFlight(
       throw new Error("Piloto no encontrado");
     }
 
-    // 2. Buscar el último vuelo registrado para esta aeronave y piloto
-    const ultimoVuelo = await tx.flight.findFirst({
-      where: { matricula, pilotoId },
-      orderBy: { createdAt: "desc" },
+    // 2. Obtener los máximos actuales de la tabla Flight
+    const maxHobbsFlight = await tx.flight.findFirst({
+      where: { aircraftId: matricula, hobbs_fin: { not: null } },
+      orderBy: { hobbs_fin: "desc" },
+      select: { hobbs_fin: true },
     });
 
-    // Si hay vuelos previos, comparar contra los contadores finales de ese vuelo
-    let hobbsActual = aircraft.hobbs_actual;
-    let tachActual = aircraft.tach_actual;
-    if (ultimoVuelo) {
-      hobbsActual = ultimoVuelo.hobbs_fin;
-      tachActual = ultimoVuelo.tach_fin;
-    }
+    const maxTachFlight = await tx.flight.findFirst({
+      where: { aircraftId: matricula, tach_fin: { not: null } },
+      orderBy: { tach_fin: "desc" },
+      select: { tach_fin: true },
+    });
+
+    const lastHobbs = maxHobbsFlight?.hobbs_fin || aircraft.hobbs_actual;
+    const lastTach = maxTachFlight?.tach_fin || aircraft.tach_actual;
 
     const nuevoHobbsDec = new Decimal(nuevoHobbs);
     const nuevoTachDec = new Decimal(nuevoTach);
 
-    if (nuevoHobbsDec.lte(hobbsActual) || nuevoTachDec.lte(tachActual)) {
-      throw new Error("Los nuevos contadores deben ser mayores a los actuales");
+    if (nuevoHobbsDec.lte(lastHobbs) || nuevoTachDec.lte(lastTach)) {
+      throw new Error(`Los nuevos contadores deben ser mayores a los actuales (Hobbs: ${lastHobbs}, Tach: ${lastTach})`);
     }
 
     // 3. Calcular diferencias de contadores (Decimal)
-    const diffHobbs = nuevoHobbsDec.minus(hobbsActual);
-    const diffTach = nuevoTachDec.minus(tachActual);
+    const diffHobbs = nuevoHobbsDec.minus(lastHobbs);
+    const diffTach = nuevoTachDec.minus(lastTach);
 
     // 4. Calcular el costo del vuelo (Decimal)
     const costo = diffHobbs.mul(piloto.tarifa_hora);
@@ -66,13 +70,15 @@ export async function registerFlight(
     // 5. Crear el registro del vuelo
     const flight = await tx.flight.create({
       data: {
-        hobbs_inicio: hobbsActual,
+        fecha: fechaVuelo || new Date(),
+        hobbs_inicio: lastHobbs,
         hobbs_fin: nuevoHobbsDec,
-        tach_inicio: tachActual,
+        tach_inicio: lastTach,
         tach_fin: nuevoTachDec,
         diff_hobbs: diffHobbs,
         diff_tach: diffTach,
         costo,
+        tarifa: piloto.tarifa_hora,
         pilotoId,
         aircraftId: matricula,
       },

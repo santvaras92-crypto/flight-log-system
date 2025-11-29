@@ -83,6 +83,7 @@ model FlightSubmission {
   aircraftId   String
   estado       String     @default("PENDIENTE")
   errorMessage String?
+  fechaVuelo   DateTime?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   Flight       Flight?
