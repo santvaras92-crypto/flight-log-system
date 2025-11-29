@@ -358,7 +358,7 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
               Pilot Directory
             </button>
           </div>
-          {pilotSubTab === "accounts" && <PilotsTable users={initialData.users} flights={initialData.flights} transactions={initialData.transactions} fuelByCode={initialData.fuelByCode} allowedPilotCodes={allowedPilotCodes} registeredPilotCodes={registeredPilotCodes} csvPilotNames={csvPilotNames} />}
+          {pilotSubTab === "accounts" && <PilotsTable users={initialData.users} flights={initialData.allFlights || initialData.flights} transactions={initialData.transactions} fuelByCode={initialData.fuelByCode} allowedPilotCodes={allowedPilotCodes} registeredPilotCodes={registeredPilotCodes} csvPilotNames={csvPilotNames} />}
           {pilotSubTab === "directory" && <PilotDirectory directory={initialData.pilotDirectory} />}
         </>
       )}
