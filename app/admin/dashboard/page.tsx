@@ -136,6 +136,29 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     submissions: submissions.map(s => ({ ...s, imageLogs: s.ImageLog.map(img => ({ ...img, valorExtraido: img.valorExtraido ? Number(img.valorExtraido) : null, confianza: img.confianza ? Number(img.confianza) : null })), flight: s.Flight ? { ...s.Flight, diff_hobbs: Number(s.Flight.diff_hobbs), diff_tach: Number(s.Flight.diff_tach), costo: Number(s.Flight.costo) } : null })),
     components: computedComponents.map(c => ({ ...c, horas_acumuladas: Number(c.horas_acumuladas), limite_tbo: Number(c.limite_tbo) })),
     transactions: transactions.map(t => ({ ...t, monto: Number(t.monto) })),
+    fuelByCode: (() => {
+      const map: Record<string, number> = {};
+      try {
+        const fuelPath = path.join(process.cwd(), 'Combustible', 'Planilla control combustible.csv');
+        if (fs.existsSync(fuelPath)) {
+          const content = fs.readFileSync(fuelPath, 'utf-8');
+          const lines = content.split('\n').filter(l => l.trim());
+          const header = lines[0].split(';');
+          const COL_CUENTA = 1; // Code
+          const COL_MONTO = 4; // Monto con $
+          for (let i = 1; i < lines.length; i++) {
+            const parts = lines[i].split(';');
+            const code = (parts[COL_CUENTA] || '').trim().toUpperCase();
+            const montoStr = (parts[COL_MONTO] || '').trim();
+            if (!code) continue;
+            const cleaned = montoStr.replace(/\$/g, '').replace(/\./g, '').replace(',', '.');
+            const val = parseFloat(cleaned);
+            if (!isNaN(val)) map[code] = (map[code] || 0) + val;
+          }
+        }
+      } catch {}
+      return map;
+    })(),
     pilotDirectory: {
       initial: csvPilots,
       registered: users

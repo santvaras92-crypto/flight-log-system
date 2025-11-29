@@ -14,6 +14,7 @@ type InitialData = {
   submissions: any[];
   components: any[];
   transactions: any[];
+  fuelByCode?: Record<string, number>;
   pilotDirectory?: {
     initial: { code: string; name: string }[];
     registered: { id: number; code: string; name: string; email: string; rate: number; createdAt: string | Date }[];
@@ -735,62 +736,61 @@ function PilotsTable({ users, flights, transactions, allowedPilotCodes, register
   }, [allowedPilotCodes, registeredPilotCodes]);
   
   const data = useMemo(() => {
-    // Build data from users in DB
-    const usersByCode = new Map<string, any>();
-    users
-      .filter(u => {
-        if (u.rol !== 'PILOTO') return false;
-        const code = (u.codigo || '').toUpperCase();
-        return allowed.size > 0 ? (code && allowed.has(code)) : Boolean(code);
-      })
-      .forEach(u => {
-        const f = flights.filter(f => (f as any).pilotoId === u.id || ((f.cliente || '').toUpperCase() === (u.codigo || '').toUpperCase()));
-        const spent = transactions.filter(t => t.userId === u.id && t.tipo === 'CARGO_VUELO').reduce((a,b)=>a+Number(b.monto),0);
-        const deposits = transactions.filter(t => t.userId === u.id && t.tipo === 'ABONO').reduce((a,b)=>a+Number(b.monto),0);
-        const displayName = csvPilotNames?.[u.codigo?.toUpperCase()] || u.nombre;
-        usersByCode.set(u.codigo?.toUpperCase(), { 
-          ...u, 
-          nombre: displayName, 
-          flights: f.length, 
-          hours: f.reduce((a,b)=>a+Number(b.diff_hobbs),0), 
-          spent: spent, 
-          deposits: deposits 
-        });
-      });
+    // Build aggregation per Code using flights where cliente == Code
+    const byCode: Map<string, any> = new Map();
 
-    // Add all pilots from allowedPilotCodes (CSV) that don't have a user yet
-    const result: any[] = [];
-    (allowedPilotCodes || []).forEach(code => {
-      const upperCode = code.toUpperCase();
-      if (usersByCode.has(upperCode)) {
-        result.push(usersByCode.get(upperCode));
-      } else {
-        // Pilot in CSV but no user in DB - show with zeros
-        result.push({
-          id: null,
-          codigo: upperCode,
-          nombre: csvPilotNames?.[upperCode] || upperCode,
-          email: '-',
-          tarifa_hora: 0,
-          saldo_cuenta: 0,
-          flights: 0,
-          hours: 0,
-          spent: 0,
-          deposits: 0
-        });
-      }
+    // Seed from allowed pilot codes (CSV) and registered extra codes
+    const allCodes = new Set<string>();
+    (allowedPilotCodes || []).forEach(c => allCodes.add(String(c).toUpperCase()));
+    (registeredPilotCodes || []).forEach(c => allCodes.add(String(c).toUpperCase()));
+
+    // Map code -> user (if exists)
+    const userByCode = new Map<string, any>();
+    users.forEach(u => {
+      const code = (u.codigo || '').toUpperCase();
+      if (!code) return;
+      if (allCodes.size === 0 || allCodes.has(code)) userByCode.set(code, u);
     });
 
-    // Add registered pilots (not in CSV)
-    (registeredPilotCodes || []).forEach(code => {
-      const upperCode = code.toUpperCase();
-      if (usersByCode.has(upperCode) && !result.find(r => r.codigo === upperCode)) {
-        result.push(usersByCode.get(upperCode));
-      }
+    // Aggregate flights by cliente code
+    const flightsByCode = new Map<string, any[]>();
+    flights.forEach(f => {
+      const code = (f.cliente || '').toUpperCase();
+      if (!code) return;
+      if (!flightsByCode.has(code)) flightsByCode.set(code, []);
+      flightsByCode.get(code)!.push(f);
+    });
+
+    // Build rows
+    const result: any[] = [];
+    const codesToShow = allCodes.size > 0 ? Array.from(allCodes) : Array.from(flightsByCode.keys());
+    codesToShow.forEach(code => {
+      const u = userByCode.get(code) || null;
+      const fs = flightsByCode.get(code) || [];
+      const flightsCount = fs.length;
+      const hours = fs.reduce((a,b)=> a + Number(b.diff_hobbs || 0), 0);
+      const totalSpent = fs.reduce((a,b)=> a + Number(b.costo || 0), 0);
+      const rateHr = hours > 0 ? totalSpent / hours : 0;
+      const deposits = u ? transactions.filter(t => t.userId === u.id && t.tipo === 'ABONO').reduce((a,b)=>a+Number(b.monto),0) : 0;
+      const fuelCredit = (initialData.fuelByCode?.[code] || 0);
+      const displayName = csvPilotNames?.[code] || u?.nombre || code;
+      result.push({
+        id: u?.id ?? null,
+        codigo: code,
+        nombre: displayName,
+        email: u?.email || '-',
+        tarifa_hora: rateHr,
+        saldo_cuenta: Number(deposits) - Number(totalSpent) + Number(fuelCredit),
+        flights: flightsCount,
+        hours,
+        spent: totalSpent,
+        deposits,
+        fuel: fuelCredit
+      });
     });
 
     return result.sort((a, b) => (a.codigo || '').localeCompare(b.codigo || ''));
-  }, [users, flights, transactions, allowed, allowedPilotCodes, registeredPilotCodes, csvPilotNames]); // Sort by codigo
+  }, [users, flights, allowedPilotCodes, registeredPilotCodes, csvPilotNames, initialData.fuelByCode]); // Sort by codigo
   return (
     <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
       <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
@@ -812,6 +812,7 @@ function PilotsTable({ users, flights, transactions, allowedPilotCodes, register
               <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Rate/Hr</th>
               <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Balance</th>
               <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Total Spent</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fuel</th>
               <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Deposits</th>
             </tr>
           </thead>
@@ -825,6 +826,7 @@ function PilotsTable({ users, flights, transactions, allowedPilotCodes, register
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">${Number(p.tarifa_hora).toLocaleString("es-CL")}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">${Number(p.saldo_cuenta).toLocaleString("es-CL")}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">${Number(-p.spent).toLocaleString("es-CL")}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-mono">${Number(p.fuel||0).toLocaleString("es-CL")}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">${Number(p.deposits).toLocaleString("es-CL")}</td>
               </tr>
             ))}
