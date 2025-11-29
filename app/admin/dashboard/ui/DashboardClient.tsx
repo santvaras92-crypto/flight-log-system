@@ -752,13 +752,45 @@ function PilotsTable({ users, flights, transactions, fuelByCode, allowedPilotCod
       if (allCodes.size === 0 || allCodes.has(code)) userByCode.set(code, u);
     });
 
-    // Aggregate flights by cliente code
+    // Aggregate flights by code with fallbacks: cliente -> pilotoId(code) -> piloto_raw(name from CSV)
     const flightsByCode = new Map<string, any[]>();
+    // Precompute userId by code
+    const userIdByCode = new Map<string, number>();
+    users.forEach(u => {
+      const c = (u.codigo || '').toUpperCase();
+      if (c) userIdByCode.set(c, u.id);
+    });
+    // Precompute name by code (CSV)
+    const nameByCode = csvPilotNames || {};
+
     flights.forEach(f => {
-      const code = (f.cliente || '').toUpperCase();
-      if (!code) return;
-      if (!flightsByCode.has(code)) flightsByCode.set(code, []);
-      flightsByCode.get(code)!.push(f);
+      const clienteCode = (f.cliente || '').toUpperCase();
+      let targetCode = clienteCode;
+      if (!targetCode) {
+        // Try match by pilotoId → code
+        const pid = (f as any).pilotoId as number | undefined;
+        if (pid) {
+          // Find code with that user id
+          for (const [c, uid] of userIdByCode.entries()) {
+            if (uid === pid) { targetCode = c; break; }
+          }
+        }
+      }
+      if (!targetCode) {
+        // Try match by piloto_raw name to CSV name
+        const raw = (f.piloto_raw || '').trim();
+        if (raw) {
+          for (const [c, name] of Object.entries(nameByCode)) {
+            if (name && raw && raw.toLowerCase().includes(name.toLowerCase().split(' ')[0])) { // loose match on first token
+              targetCode = c.toUpperCase();
+              break;
+            }
+          }
+        }
+      }
+      if (!targetCode) return;
+      if (!flightsByCode.has(targetCode)) flightsByCode.set(targetCode, []);
+      flightsByCode.get(targetCode)!.push(f);
     });
 
     // Build rows
