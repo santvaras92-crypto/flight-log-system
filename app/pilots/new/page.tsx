@@ -9,6 +9,8 @@ export default function NewPilotPublicPage() {
     email: "",
     telefono: "",
     licencia: "",
+    tipoDocumento: "rut" as "rut" | "pasaporte",
+    documento: "",
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -29,6 +31,8 @@ export default function NewPilotPublicPage() {
           email: form.email.trim(),
           telefono: form.telefono.trim() || null,
           numeroLicencia: form.licencia.trim() || null,
+          tipoDocumento: form.tipoDocumento,
+          documento: form.documento.trim() || null,
           tarifaHora: 0
         }),
       });
@@ -44,6 +48,8 @@ export default function NewPilotPublicPage() {
           email: "",
           telefono: "",
           licencia: "",
+          tipoDocumento: "rut",
+          documento: "",
         });
       } else {
         setMessage(res.error || "Error al crear piloto");
@@ -95,8 +101,32 @@ export default function NewPilotPublicPage() {
                 <input className="w-full px-4 py-3 border-2 rounded-xl" type="date" value={form.fecha_nacimiento} onChange={e=>setForm({ ...form, fecha_nacimiento: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">Correo</label>
+                <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">Correo *</label>
                 <input className="w-full px-4 py-3 border-2 rounded-xl" type="email" placeholder="ejemplo@correo.com" value={form.email} onChange={e=>setForm({ ...form, email: e.target.value })} required />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">Tipo de documento</label>
+                <select 
+                  className="w-full px-4 py-3 border-2 rounded-xl bg-white"
+                  value={form.tipoDocumento}
+                  onChange={e => setForm({ ...form, tipoDocumento: e.target.value as "rut" | "pasaporte", documento: "" })}
+                >
+                  <option value="rut">RUT</option>
+                  <option value="pasaporte">Pasaporte</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">
+                  {form.tipoDocumento === "rut" ? "RUT" : "Número de Pasaporte"}
+                </label>
+                <input 
+                  className="w-full px-4 py-3 border-2 rounded-xl" 
+                  placeholder={form.tipoDocumento === "rut" ? "12.345.678-9" : "ABC123456"}
+                  value={form.documento} 
+                  onChange={e=>setForm({ ...form, documento: e.target.value })} 
+                />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

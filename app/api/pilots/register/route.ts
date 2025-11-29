@@ -12,6 +12,8 @@ export async function POST(req: Request) {
       email,
       telefono,
       numeroLicencia,
+      tipoDocumento,
+      documento,
       tarifaHora
     } = body || {};
 
@@ -32,6 +34,8 @@ export async function POST(req: Request) {
         email,
         telefono: telefono || null,
         licencia: numeroLicencia || null,
+        tipoDocumento: tipoDocumento || null,
+        documento: documento || null,
         fechaNacimiento: fechaNacimiento ? new Date(fechaNacimiento) : null,
         codigo,
         rol: "PILOTO",

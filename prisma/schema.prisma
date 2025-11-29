@@ -135,6 +135,8 @@ model User {
   fechaNacimiento  DateTime?
   telefono         String?
   licencia         String?
+  tipoDocumento    String?            // "rut" o "pasaporte"
+  documento        String?            // RUT o número de pasaporte
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   Account          Account[]
