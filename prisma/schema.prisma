@@ -61,6 +61,7 @@ model Flight {
   costo            Decimal?
   pilotoId         Int?
   aircraftId       String
+  piloto_raw       String?           // Nombre del piloto tal cual en CSV (incluye casos sin usuario)
   copiloto         String?
   cliente          String?
   instructor       String?
