@@ -59,18 +59,18 @@ model Flight {
   diff_hobbs       Decimal?
   diff_tach        Decimal?
   costo            Decimal?
-  tarifa           Decimal?          // Tarifa por hora del vuelo (desde CSV columna Tarifa)
   pilotoId         Int?
   aircraftId       String
-  piloto_raw       String?           // Nombre del piloto tal cual en CSV (incluye casos sin usuario)
   copiloto         String?
   cliente          String?
   instructor       String?
   detalle          String?
+  createdAt        DateTime          @default(now())
   airframe_hours   Decimal?
   engine_hours     Decimal?
   propeller_hours  Decimal?
-  createdAt        DateTime          @default(now())
+  piloto_raw       String?
+  tarifa           Decimal?
   Aircraft         Aircraft          @relation(fields: [aircraftId], references: [matricula])
   User             User?             @relation(fields: [pilotoId], references: [id])
   FlightSubmission FlightSubmission? @relation(fields: [submissionId], references: [id])
@@ -78,18 +78,25 @@ model Flight {
 }
 
 model FlightSubmission {
-  id           Int        @id @default(autoincrement())
-  pilotoId     Int
-  aircraftId   String
-  estado       String     @default("PENDIENTE")
-  errorMessage String?
-  fechaVuelo   DateTime?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  Flight       Flight?
-  Aircraft     Aircraft   @relation(fields: [aircraftId], references: [matricula])
-  User         User       @relation(fields: [pilotoId], references: [id])
-  ImageLog     ImageLog[]
+  id             Int        @id @default(autoincrement())
+  pilotoId       Int
+  aircraftId     String
+  estado         String     @default("PENDIENTE")
+  errorMessage   String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  fechaVuelo     DateTime?
+  cliente        String?
+  copiloto       String?
+  detalle        String?
+  hobbsFinal     Decimal?
+  instructorRate Decimal?
+  notificado     Boolean    @default(false)
+  tachFinal      Decimal?
+  Flight         Flight?
+  Aircraft       Aircraft   @relation(fields: [aircraftId], references: [matricula])
+  User           User       @relation(fields: [pilotoId], references: [id])
+  ImageLog       ImageLog[]
 }
 
 model ImageLog {
@@ -133,13 +140,13 @@ model User {
   saldo_cuenta     Decimal            @default(0.0)
   tarifa_hora      Decimal
   password         String
-  fechaNacimiento  DateTime?
-  telefono         String?
-  licencia         String?
-  tipoDocumento    String?            // "rut" o "pasaporte"
-  documento        String?            // RUT o número de pasaporte
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
+  fechaNacimiento  DateTime?
+  licencia         String?
+  telefono         String?
+  documento        String?
+  tipoDocumento    String?
   Account          Account[]
   Flight           Flight[]
   FlightSubmission FlightSubmission[]

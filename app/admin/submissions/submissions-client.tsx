@@ -1,12 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Image from "next/image";
-import { manualReviewAndApprove } from "@/app/actions/manual-review";
+import { approveFlightSubmission } from "@/app/actions/approve-flight";
 
 interface DecimalLike {
   toNumber?: () => number;
-  // fallback for already converted numbers
 }
 
 interface ImageLogDto {
@@ -23,7 +21,14 @@ interface SubmissionDto {
   estado: string;
   errorMessage: string | null;
   createdAt: string;
-  piloto: { id: number; nombre: string };
+  fechaVuelo: string | null;
+  hobbsFinal: any;
+  tachFinal: any;
+  cliente: string | null;
+  copiloto: string | null;
+  detalle: string | null;
+  instructorRate: any;
+  piloto: { id: number; nombre: string; codigo: string | null; tarifa_hora: any };
   aircraft: { matricula: string };
   imageLogs: ImageLogDto[];
   flight: null | { id: number; diff_hobbs: any; diff_tach: any; costo: any };
@@ -41,17 +46,17 @@ const estadoColors: Record<string, string> = {
   PENDIENTE: "bg-yellow-100 text-yellow-800",
   PROCESANDO: "bg-blue-50 text-[#003D82]",
   REVISION: "bg-orange-100 text-orange-800",
+  ESPERANDO_APROBACION: "bg-purple-100 text-purple-800",
   COMPLETADO: "bg-green-100 text-green-800",
   ERROR: "bg-red-50 text-[#D32F2F]",
 };
 
 export default function AdminSubmissions({ initialData }: { initialData: SubmissionDto[] }) {
   const [data, setData] = useState(initialData);
-  const [filter, setFilter] = useState<string>("ALL");
+  const [filter, setFilter] = useState<string>("ESPERANDO_APROBACION");
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [overrideHobbs, setOverrideHobbs] = useState<Record<number, string>>({});
-  const [overrideTach, setOverrideTach] = useState<Record<number, string>>({});
+  const [instructorRates, setInstructorRates] = useState<Record<number, string>>({});
   const [message, setMessage] = useState<string | null>(null);
 
   const filtered = data.filter((s) => {
@@ -59,39 +64,23 @@ export default function AdminSubmissions({ initialData }: { initialData: Submiss
     return s.estado === filter;
   });
 
-  async function handleManualApprove(submissionId: number, pilotoId: number) {
+  async function handleApprove(submissionId: number) {
     setMessage(null);
     setPendingId(submissionId);
-    const hobbsValStr = overrideHobbs[submissionId];
-    const tachValStr = overrideTach[submissionId];
-
-    const submission = data.find((d) => d.id === submissionId);
-    if (!submission) return;
-
-    const hobbsLog = submission.imageLogs.find((l) => l.tipo === "HOBBS");
-    const tachLog = submission.imageLogs.find((l) => l.tipo === "TACH");
-
-    const hobbsVal = hobbsValStr ? Number(hobbsValStr) : safeNum(hobbsLog?.valorExtraido);
-    const tachVal = tachValStr ? Number(tachValStr) : safeNum(tachLog?.valorExtraido);
-
-    if (hobbsVal == null || tachVal == null) {
-      setMessage("Valores Hobbs/Tach inválidos");
-      setPendingId(null);
-      return;
-    }
+    
+    const instructorRate = instructorRates[submissionId] ? parseFloat(instructorRates[submissionId]) : 0;
 
     startTransition(async () => {
       try {
-        const res = await manualReviewAndApprove(submissionId, hobbsVal, tachVal, 1); // adminId=1 (seed)
+        const res = await approveFlightSubmission(submissionId, instructorRate);
         if (res.success) {
-          setMessage(`Submission ${submissionId} aprobada manualmente.`);
-          // Refrescar estado local marcando COMPLETADO
+          setMessage(`✓ Vuelo #${submissionId} registrado exitosamente.`);
           setData((prev) => prev.map((p) => p.id === submissionId ? { ...p, estado: "COMPLETADO" } : p));
         } else {
-          setMessage(res.error || "Error desconocido al aprobar");
+          setMessage(`✗ Error: ${res.error}`);
         }
       } catch (e: any) {
-        setMessage(e.message || "Error inesperado");
+        setMessage(`✗ Error: ${e.message}`);
       } finally {
         setPendingId(null);
       }
@@ -106,102 +95,145 @@ export default function AdminSubmissions({ initialData }: { initialData: Submiss
           onChange={(e) => setFilter(e.target.value)}
           className="border px-3 py-2 rounded"
         >
+          <option value="ESPERANDO_APROBACION">Esperando Aprobación</option>
           <option value="ALL">Todos</option>
-          <option value="REVISION">Pendientes de Revisión</option>
-          <option value="ERROR">Errores</option>
-          <option value="PENDIENTE">Pendientes</option>
-          <option value="PROCESANDO">Procesando</option>
           <option value="COMPLETADO">Completados</option>
+          <option value="ERROR">Errores</option>
         </select>
         {message && (
-          <div className="text-sm px-3 py-2 rounded bg-gray-100 border">{message}</div>
+          <div className={`text-sm px-3 py-2 rounded border ${message.startsWith('✓') ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+            {message}
+          </div>
         )}
       </div>
 
       <div className="space-y-6">
+        {filtered.length === 0 && (
+          <p className="text-gray-500 text-center py-8">No hay submissions en este estado</p>
+        )}
         {filtered.map((s) => {
-          const hobbs = safeNum(s.imageLogs.find((l) => l.tipo === "HOBBS")?.valorExtraido);
-          const tach = safeNum(s.imageLogs.find((l) => l.tipo === "TACH")?.valorExtraido);
+          const hobbsFinal = safeNum(s.hobbsFinal);
+          const tachFinal = safeNum(s.tachFinal);
+          const pilotoTarifa = safeNum(s.piloto.tarifa_hora) || 0;
           const estadoClass = estadoColors[s.estado] || "bg-gray-100 text-gray-800";
+          
           return (
             <div key={s.id} className="border rounded-lg bg-white shadow-sm p-4">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <h2 className="font-semibold text-lg">Submission #{s.id}</h2>
-                  <p className="text-sm text-gray-600">Piloto: {s.piloto.nombre} · Aeronave: {s.aircraft.matricula}</p>
+                  <h2 className="font-semibold text-lg">Reporte #{s.id}</h2>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">{s.piloto.codigo ? `${s.piloto.codigo} - ` : ''}{s.piloto.nombre}</span>
+                    {' · '}{s.aircraft.matricula}
+                    {' · '}{s.fechaVuelo ? new Date(s.fechaVuelo).toLocaleDateString('es-CL') : 'Sin fecha'}
+                  </p>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${estadoClass}`}>{s.estado}</span>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${estadoClass}`}>
+                  {s.estado === 'ESPERANDO_APROBACION' ? 'Esperando Aprobación' : s.estado}
+                </span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                {s.imageLogs.map((img) => (
-                  <div key={img.id} className="border rounded p-2">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-xs font-semibold">{img.tipo}</span>
-                      {img.validadoManual && (
-                        <span className="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded">Manual</span>
-                      )}
-                    </div>
-                    <div className="w-full h-32 bg-gray-50 flex items-center justify-center text-gray-400 text-xs mb-2">
-                      {/* Placeholder: For real images use <Image /> component */}
-                      {img.imageUrl}
-                    </div>
-                    <p className="text-xs">Valor: {safeNum(img.valorExtraido) ?? "—"}</p>
-                    <p className="text-xs">Confianza: {safeNum(img.confianza) ?? "—"}%</p>
-                  </div>
-                ))}
-                <div className="border rounded p-2">
-                  <h3 className="text-xs font-semibold mb-2">Vuelo</h3>
-                  {s.flight ? (
-                    <div className="space-y-1 text-xs">
-                      <p>Hobbs Δ: {safeNum(s.flight.diff_hobbs)}</p>
-                      <p>Tach Δ: {safeNum(s.flight.diff_tach)}</p>
-                      <p>Costo: ${safeNum(s.flight.costo)?.toLocaleString()}</p>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-gray-500">No registrado</p>
-                  )}
+              {/* Información del vuelo */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 bg-gray-50 p-3 rounded">
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">Hobbs Final</p>
+                  <p className="font-mono font-bold text-lg">{hobbsFinal?.toFixed(1) || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">Tach Final</p>
+                  <p className="font-mono font-bold text-lg">{tachFinal?.toFixed(1) || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">Cliente</p>
+                  <p className="font-medium">{s.cliente || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">Copiloto</p>
+                  <p className="font-medium">{s.copiloto || '—'}</p>
                 </div>
               </div>
 
-              {(s.estado === "REVISION" || s.estado === "ERROR") && (
-                <div className="bg-gray-50 border rounded p-3">
-                  <h4 className="text-sm font-semibold mb-2">Aprobación Manual</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+              {s.detalle && (
+                <div className="mb-4 bg-blue-50 p-3 rounded">
+                  <p className="text-xs text-gray-500 uppercase mb-1">Detalle / Observaciones</p>
+                  <p className="text-sm">{s.detalle}</p>
+                </div>
+              )}
+
+              {/* Imágenes si las hay */}
+              {s.imageLogs.length > 0 && (
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  {s.imageLogs.map((img) => (
+                    <div key={img.id} className="border rounded p-2">
+                      <p className="text-xs font-semibold mb-1">{img.tipo}</p>
+                      <p className="text-xs text-gray-500 truncate">{img.imageUrl}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Panel de aprobación */}
+              {s.estado === "ESPERANDO_APROBACION" && (
+                <div className="bg-purple-50 border border-purple-200 rounded p-4">
+                  <h4 className="text-sm font-bold mb-3 text-purple-800">Aprobar Vuelo</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <div>
-                      <label className="text-xs text-gray-600">Hobbs Override</label>
+                      <label className="text-xs text-gray-600 block mb-1">Tarifa Piloto ($/hr)</label>
                       <input
-                        type="number"
-                        step="0.1"
-                        value={overrideHobbs[s.id] ?? ""}
-                        onChange={(e) => setOverrideHobbs((prev) => ({ ...prev, [s.id]: e.target.value }))}
-                        placeholder={hobbs != null ? hobbs.toString() : ""}
-                        className="mt-1 w-full border rounded px-2 py-1 text-sm"
+                        type="text"
+                        readOnly
+                        value={`$${pilotoTarifa.toLocaleString('es-CL')}`}
+                        className="w-full border rounded px-3 py-2 text-sm bg-gray-100"
                       />
                     </div>
                     <div>
-                      <label className="text-xs text-gray-600">Tach Override</label>
+                      <label className="text-xs text-gray-600 block mb-1">
+                        Rate Instructor/SP ($/hr)
+                        <span className="text-purple-600 ml-1">*</span>
+                      </label>
                       <input
                         type="number"
-                        step="0.1"
-                        value={overrideTach[s.id] ?? ""}
-                        onChange={(e) => setOverrideTach((prev) => ({ ...prev, [s.id]: e.target.value }))}
-                        placeholder={tach != null ? tach.toString() : ""}
-                        className="mt-1 w-full border rounded px-2 py-1 text-sm"
+                        step="1000"
+                        value={instructorRates[s.id] ?? ""}
+                        onChange={(e) => setInstructorRates((prev) => ({ ...prev, [s.id]: e.target.value }))}
+                        placeholder="0"
+                        className="w-full border border-purple-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-purple-200"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-600 block mb-1">Total por hora</label>
+                      <input
+                        type="text"
+                        readOnly
+                        value={`$${(pilotoTarifa + (parseFloat(instructorRates[s.id] || '0') || 0)).toLocaleString('es-CL')}`}
+                        className="w-full border rounded px-3 py-2 text-sm bg-gray-100 font-bold"
                       />
                     </div>
                   </div>
+                  
                   <button
                     disabled={isPending && pendingId === s.id}
-                    onClick={() => handleManualApprove(s.id, s.piloto.id)}
-                    className="px-4 py-2 rounded text-sm font-medium bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400"
+                    onClick={() => handleApprove(s.id)}
+                    className="px-6 py-2 rounded text-sm font-medium bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 transition-colors"
                   >
-                    {isPending && pendingId === s.id ? "Procesando..." : "Aprobar Manualmente"}
+                    {isPending && pendingId === s.id ? "Procesando..." : "✓ Aprobar y Registrar Vuelo"}
                   </button>
-                  {s.errorMessage && (
-                    <p className="text-xs text-red-600 mt-2">Error: {s.errorMessage}</p>
-                  )}
                 </div>
+              )}
+
+              {s.estado === "COMPLETADO" && s.flight && (
+                <div className="bg-green-50 border border-green-200 rounded p-3">
+                  <p className="text-sm text-green-800">
+                    <span className="font-bold">✓ Vuelo registrado</span>
+                    {' · '}Δ Hobbs: {safeNum(s.flight.diff_hobbs)?.toFixed(1)}
+                    {' · '}Costo: ${safeNum(s.flight.costo)?.toLocaleString('es-CL')}
+                  </p>
+                </div>
+              )}
+
+              {s.errorMessage && (
+                <p className="text-xs text-red-600 mt-2">Error: {s.errorMessage}</p>
               )}
             </div>
           );

@@ -2,217 +2,203 @@ import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
-import { submitFlightImages } from "@/app/actions/submit-flight-images";
-import { processOCR } from "@/app/actions/process-ocr";
 import { prisma } from "@/lib/prisma";
 import { Decimal } from "@prisma/client/runtime/library";
+
+// Función para enviar correo de notificación
+async function sendNotificationEmail(submission: any, piloto: any) {
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  
+  if (!RESEND_API_KEY) {
+    console.log("RESEND_API_KEY no configurada, omitiendo envío de correo");
+    return;
+  }
+
+  const emailContent = `
+    <h2>Nuevo Reporte de Vuelo - CC-AQI</h2>
+    <p><strong>Fecha:</strong> ${submission.fechaVuelo ? new Date(submission.fechaVuelo).toLocaleDateString('es-CL') : 'No especificada'}</p>
+    <p><strong>Piloto:</strong> ${piloto.nombre} (${piloto.codigo || 'Sin código'})</p>
+    <p><strong>Email:</strong> ${piloto.email}</p>
+    <hr/>
+    <h3>Contadores:</h3>
+    <p><strong>Hobbs Final:</strong> ${submission.hobbsFinal}</p>
+    <p><strong>Tach Final:</strong> ${submission.tachFinal}</p>
+    <hr/>
+    <h3>Información Adicional:</h3>
+    <p><strong>Cliente:</strong> ${submission.cliente || 'No especificado'}</p>
+    <p><strong>Copiloto:</strong> ${submission.copiloto || 'No especificado'}</p>
+    <p><strong>Detalle:</strong> ${submission.detalle || 'Sin observaciones'}</p>
+    <hr/>
+    <p>Para aprobar este vuelo y agregar la tarifa de instructor/SP, accede al panel de administración:</p>
+    <p><a href="${process.env.NEXTAUTH_URL || 'https://flight-log-system-production.up.railway.app'}/admin/submissions">Ver Submissions Pendientes</a></p>
+  `;
+
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'CC-AQI Flight Log <onboarding@resend.dev>',
+        to: ['santvaras92@gmail.com'],
+        subject: `Nuevo Vuelo - ${piloto.nombre} - ${new Date(submission.fechaVuelo || new Date()).toLocaleDateString('es-CL')}`,
+        html: emailContent,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('Error enviando correo:', await response.text());
+    } else {
+      console.log('Correo de notificación enviado exitosamente');
+    }
+  } catch (error) {
+    console.error('Error enviando correo:', error);
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     
     const pilotoId = Number(formData.get("pilotoId"));
-    const matricula = formData.get("matricula") as string;
+    const matricula = formData.get("matricula") as string || "CC-AQI";
+    const hobbsManual = formData.get("hobbsManual") as string;
+    const tachManual = formData.get("tachManual") as string;
+    const fechaVuelo = formData.get("fechaVuelo") as string | null;
+    const cliente = formData.get("cliente") as string | null;
+    const copiloto = formData.get("copiloto") as string | null;
+    const detalle = formData.get("detalle") as string | null;
     const hobbsImage = formData.get("hobbsImage") as File | null;
     const tachImage = formData.get("tachImage") as File | null;
-    const hobbsManual = formData.get("hobbsManual") as string | null;
-    const tachManual = formData.get("tachManual") as string | null;
-    const fechaVuelo = formData.get("fechaVuelo") as string | null;
 
     // Validaciones básicas
-    if (!pilotoId || !matricula) {
+    if (!pilotoId) {
       return NextResponse.json(
-        { error: "pilotoId y matricula son requeridos" },
+        { error: "Piloto es requerido" },
         { status: 400 }
       );
     }
 
-    // Validar que tenga imágenes O valores manuales
-    const hasImages = hobbsImage && tachImage;
-    const hasManualValues = hobbsManual && tachManual;
-
-    if (!hasImages && !hasManualValues) {
+    if (!hobbsManual || !tachManual) {
       return NextResponse.json(
-        { error: "Se requieren las imágenes o los valores manuales" },
+        { error: "Hobbs y Tach son requeridos" },
         { status: 400 }
       );
     }
 
-    // Si tiene valores manuales, registrar directamente sin OCR
-    if (hasManualValues) {
-      const hobbsNum = parseFloat(hobbsManual);
-      const tachNum = parseFloat(tachManual);
+    const hobbsNum = parseFloat(hobbsManual);
+    const tachNum = parseFloat(tachManual);
 
-      if (isNaN(hobbsNum) || isNaN(tachNum)) {
-        return NextResponse.json(
-          { error: "Los valores manuales deben ser números válidos" },
-          { status: 400 }
-        );
-      }
-
-      // Obtener los máximos actuales de la tabla Flight
-      const [maxHobbsFlight, maxTachFlight] = await Promise.all([
-        prisma.flight.findFirst({
-          where: { aircraftId: matricula, hobbs_fin: { not: null } },
-          orderBy: { hobbs_fin: "desc" },
-          select: { hobbs_fin: true },
-        }),
-        prisma.flight.findFirst({
-          where: { aircraftId: matricula, tach_fin: { not: null } },
-          orderBy: { tach_fin: "desc" },
-          select: { tach_fin: true },
-        }),
-      ]);
-
-      const lastHobbs = maxHobbsFlight?.hobbs_fin ? Number(maxHobbsFlight.hobbs_fin) : 0;
-      const lastTach = maxTachFlight?.tach_fin ? Number(maxTachFlight.tach_fin) : 0;
-
-      if (hobbsNum <= lastHobbs) {
-        return NextResponse.json(
-          { error: `El Hobbs (${hobbsNum}) debe ser mayor a ${lastHobbs}` },
-          { status: 400 }
-        );
-      }
-
-      if (tachNum <= lastTach) {
-        return NextResponse.json(
-          { error: `El Tach (${tachNum}) debe ser mayor a ${lastTach}` },
-          { status: 400 }
-        );
-      }
-
-      // Obtener el piloto para calcular el costo
-      const piloto = await prisma.user.findUnique({
-        where: { id: pilotoId },
-        select: { tarifa_hora: true },
-      });
-
-      if (!piloto) {
-        return NextResponse.json(
-          { error: "Piloto no encontrado" },
-          { status: 400 }
-        );
-      }
-
-      const diffHobbs = hobbsNum - lastHobbs;
-      const costo = diffHobbs * Number(piloto.tarifa_hora);
-
-      // Crear el vuelo directamente
-      const flight = await prisma.flight.create({
-        data: {
-          fecha: fechaVuelo ? new Date(fechaVuelo) : new Date(),
-          hobbs_inicio: new Decimal(lastHobbs),
-          hobbs_fin: new Decimal(hobbsNum),
-          tach_inicio: new Decimal(lastTach),
-          tach_fin: new Decimal(tachNum),
-          diff_hobbs: new Decimal(diffHobbs),
-          diff_tach: new Decimal(tachNum - lastTach),
-          costo: new Decimal(costo),
-          tarifa: piloto.tarifa_hora,
-          pilotoId: pilotoId,
-          aircraftId: matricula,
-        },
-      });
-
-      // Actualizar contadores del avión
-      await prisma.aircraft.update({
-        where: { matricula },
-        data: {
-          hobbs_actual: new Decimal(hobbsNum),
-          tach_actual: new Decimal(tachNum),
-        },
-      });
-
-      return NextResponse.json({
-        success: true,
-        message: "Vuelo registrado exitosamente (entrada manual)",
-        flightId: flight.id,
-        flight: {
-          diff_hobbs: diffHobbs,
-          diff_tach: tachNum - lastTach,
-          costo,
-        },
-      });
-    }
-
-    // Proceso con OCR (si tiene imágenes)
-    // Validar tipo de archivo
-    const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-    if (!validTypes.includes(hobbsImage!.type) || !validTypes.includes(tachImage!.type)) {
+    if (isNaN(hobbsNum) || isNaN(tachNum)) {
       return NextResponse.json(
-        { error: "Solo se permiten imágenes (JPEG, PNG, WEBP)" },
+        { error: "Los valores deben ser números válidos" },
         { status: 400 }
       );
     }
 
-    // Validar tamaño de archivo (máx 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    if (hobbsImage!.size > maxSize || tachImage!.size > maxSize) {
+    // Obtener los máximos actuales de la tabla Flight
+    const [maxHobbsFlight, maxTachFlight] = await Promise.all([
+      prisma.flight.findFirst({
+        where: { aircraftId: matricula, hobbs_fin: { not: null } },
+        orderBy: { hobbs_fin: "desc" },
+        select: { hobbs_fin: true },
+      }),
+      prisma.flight.findFirst({
+        where: { aircraftId: matricula, tach_fin: { not: null } },
+        orderBy: { tach_fin: "desc" },
+        select: { tach_fin: true },
+      }),
+    ]);
+
+    const lastHobbs = maxHobbsFlight?.hobbs_fin ? Number(maxHobbsFlight.hobbs_fin) : 0;
+    const lastTach = maxTachFlight?.tach_fin ? Number(maxTachFlight.tach_fin) : 0;
+
+    if (hobbsNum <= lastHobbs) {
       return NextResponse.json(
-        { error: "Las imágenes no deben superar 10MB" },
+        { error: `El Hobbs (${hobbsNum}) debe ser mayor a ${lastHobbs}` },
         { status: 400 }
       );
     }
 
-    // Crear directorio de uploads si no existe
-    const uploadDir = join(process.cwd(), "public", "uploads");
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
-
-    // Guardar imágenes
-    const timestamp = Date.now();
-    const hobbsExt = hobbsImage!.name.split(".").pop();
-    const tachExt = tachImage!.name.split(".").pop();
-    
-    const hobbsFileName = `hobbs-${pilotoId}-${timestamp}.${hobbsExt}`;
-    const tachFileName = `tach-${pilotoId}-${timestamp}.${tachExt}`;
-    
-    const hobbsPath = join(uploadDir, hobbsFileName);
-    const tachPath = join(uploadDir, tachFileName);
-
-    const hobbsBytes = await hobbsImage!.arrayBuffer();
-    const tachBytes = await tachImage!.arrayBuffer();
-    
-    await writeFile(hobbsPath, Buffer.from(hobbsBytes));
-    await writeFile(tachPath, Buffer.from(tachBytes));
-
-    // URLs públicas de las imágenes (para display)
-    const baseUrl = process.env.NEXTAUTH_URL || `https://${request.headers.get("host")}`;
-    const hobbsUrl = `${baseUrl}/uploads/${hobbsFileName}`;
-    const tachUrl = `${baseUrl}/uploads/${tachFileName}`;
-
-    // Crear la submission en la base de datos con paths locales para OCR
-    const result = await submitFlightImages(
-      pilotoId,
-      matricula,
-      hobbsUrl,
-      tachUrl,
-      hobbsPath, // path local para OCR
-      tachPath,  // path local para OCR
-      fechaVuelo ? new Date(fechaVuelo) : undefined
-    );
-
-    if (!result.success) {
+    if (tachNum <= lastTach) {
       return NextResponse.json(
-        { error: result.error },
-        { status: 500 }
+        { error: `El Tach (${tachNum}) debe ser mayor a ${lastTach}` },
+        { status: 400 }
       );
     }
 
-    // Procesar OCR en segundo plano
-    processOCR(result.submissionId!).catch((error) => {
-      console.error("Error procesando OCR en background:", error);
+    // Obtener el piloto
+    const piloto = await prisma.user.findUnique({
+      where: { id: pilotoId },
+      select: { id: true, nombre: true, email: true, codigo: true, tarifa_hora: true },
     });
+
+    if (!piloto) {
+      return NextResponse.json(
+        { error: "Piloto no encontrado" },
+        { status: 400 }
+      );
+    }
+
+    // Guardar imágenes si se proporcionaron
+    let hobbsImageUrl = null;
+    let tachImageUrl = null;
+
+    if (hobbsImage || tachImage) {
+      const uploadDir = join(process.cwd(), "public", "uploads");
+      if (!existsSync(uploadDir)) {
+        await mkdir(uploadDir, { recursive: true });
+      }
+
+      const timestamp = Date.now();
+      
+      if (hobbsImage) {
+        const hobbsExt = hobbsImage.name.split(".").pop();
+        const hobbsFileName = `hobbs-${pilotoId}-${timestamp}.${hobbsExt}`;
+        const hobbsPath = join(uploadDir, hobbsFileName);
+        await writeFile(hobbsPath, Buffer.from(await hobbsImage.arrayBuffer()));
+        hobbsImageUrl = `/uploads/${hobbsFileName}`;
+      }
+
+      if (tachImage) {
+        const tachExt = tachImage.name.split(".").pop();
+        const tachFileName = `tach-${pilotoId}-${timestamp}.${tachExt}`;
+        const tachPath = join(uploadDir, tachFileName);
+        await writeFile(tachPath, Buffer.from(await tachImage.arrayBuffer()));
+        tachImageUrl = `/uploads/${tachFileName}`;
+      }
+    }
+
+    // Crear la submission en estado ESPERANDO_APROBACION
+    const submission = await prisma.flightSubmission.create({
+      data: {
+        pilotoId,
+        aircraftId: matricula,
+        estado: "ESPERANDO_APROBACION",
+        fechaVuelo: fechaVuelo ? new Date(fechaVuelo) : new Date(),
+        hobbsFinal: new Decimal(hobbsNum),
+        tachFinal: new Decimal(tachNum),
+        cliente: cliente || null,
+        copiloto: copiloto || null,
+        detalle: detalle || null,
+        ImageLog: {
+          create: [
+            ...(hobbsImageUrl ? [{ tipo: "HOBBS", imageUrl: hobbsImageUrl, valorExtraido: new Decimal(hobbsNum), confianza: new Decimal(100) }] : []),
+            ...(tachImageUrl ? [{ tipo: "TACH", imageUrl: tachImageUrl, valorExtraido: new Decimal(tachNum), confianza: new Decimal(100) }] : []),
+          ],
+        },
+      },
+    });
+
+    // Enviar correo de notificación
+    await sendNotificationEmail(submission, piloto);
 
     return NextResponse.json({
       success: true,
-      submissionId: result.submissionId,
-      message: "Imágenes recibidas. El OCR está siendo procesado...",
-      images: {
-        hobbs: hobbsUrl,
-        tach: tachUrl,
-      },
+      submissionId: submission.id,
+      message: "Reporte de vuelo enviado. Se te notificará cuando sea aprobado.",
     });
   } catch (error) {
     console.error("Error en upload:", error);
