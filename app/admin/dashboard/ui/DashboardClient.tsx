@@ -1091,60 +1091,254 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
 }
 
 function PilotDirectory({ directory }: { directory?: { initial: { code: string; name: string }[]; registered: { id: number; code: string; name: string; email: string; rate: number; createdAt: string | Date; fechaNacimiento?: string | Date | null; telefono?: string | null; numeroLicencia?: string | null; tipoDocumento?: string | null; documento?: string | null }[] } }) {
+  const [editMode, setEditMode] = useState(false);
+  const [editedRows, setEditedRows] = useState<Record<number, any>>({});
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
   const rows = useMemo(() => {
-    const init = (directory?.initial || []).map(p => ({ code: p.code, name: p.name, source: 'CSV', email: '-', rate: '-', createdAt: '-', fechaNacimiento: '-', telefono: '-', numeroLicencia: '-', tipoDocumento: '-', documento: '-' }));
+    const init = (directory?.initial || []).map(p => ({ 
+      id: null as number | null, 
+      code: p.code, 
+      name: p.name, 
+      source: 'CSV', 
+      email: '-', 
+      rate: 0, 
+      rateDisplay: '-', 
+      createdAt: '-', 
+      fechaNacimiento: null as string | null, 
+      fechaNacimientoDisplay: '-',
+      telefono: '', 
+      numeroLicencia: '', 
+      tipoDocumento: '', 
+      documento: '' 
+    }));
     const reg = (directory?.registered || []).map(p => ({ 
+      id: p.id,
       code: p.code, 
       name: p.name, 
       source: 'Registered', 
-      email: p.email || '-', 
-      rate: p.rate ? `$${Number(p.rate).toLocaleString('es-CL')}` : '-', 
+      email: p.email || '', 
+      rate: p.rate || 0,
+      rateDisplay: p.rate ? `$${Number(p.rate).toLocaleString('es-CL')}` : '-', 
       createdAt: p.createdAt ? new Date(p.createdAt as any).toLocaleDateString('es-CL') : '-',
-      fechaNacimiento: p.fechaNacimiento ? new Date(p.fechaNacimiento as any).toLocaleDateString('es-CL') : '-',
-      telefono: p.telefono || '-',
-      numeroLicencia: p.numeroLicencia || '-',
-      tipoDocumento: p.tipoDocumento || '-',
-      documento: p.documento || '-',
+      fechaNacimiento: p.fechaNacimiento ? new Date(p.fechaNacimiento as any).toISOString().split('T')[0] : null,
+      fechaNacimientoDisplay: p.fechaNacimiento ? new Date(p.fechaNacimiento as any).toLocaleDateString('es-CL') : '-',
+      telefono: p.telefono || '',
+      numeroLicencia: p.numeroLicencia || '',
+      tipoDocumento: p.tipoDocumento || '',
+      documento: p.documento || '',
     }));
     return [...init, ...reg].sort((a, b) => (a.code || '').localeCompare(b.code || ''));
   }, [directory]);
+
+  const handleChange = (id: number, field: string, value: string) => {
+    setEditedRows(prev => ({
+      ...prev,
+      [id]: { ...prev[id], [field]: value }
+    }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setMessage(null);
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const [idStr, changes] of Object.entries(editedRows)) {
+      const id = Number(idStr);
+      if (!id || Object.keys(changes).length === 0) continue;
+
+      try {
+        const res = await fetch('/api/pilots/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, ...changes })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          successCount++;
+        } else {
+          errorCount++;
+          console.error(`Error updating pilot ${id}:`, data.error);
+        }
+      } catch (e) {
+        errorCount++;
+        console.error(`Error updating pilot ${id}:`, e);
+      }
+    }
+
+    setSaving(false);
+    if (successCount > 0 && errorCount === 0) {
+      setMessage(`✓ ${successCount} piloto(s) actualizado(s) correctamente`);
+      setEditedRows({});
+      // Reload page to refresh data
+      setTimeout(() => window.location.reload(), 1000);
+    } else if (errorCount > 0) {
+      setMessage(`⚠ ${successCount} actualizados, ${errorCount} errores`);
+    }
+  };
+
+  const getEditedValue = (id: number | null, field: string, originalValue: any) => {
+    if (!id) return originalValue;
+    return editedRows[id]?.[field] !== undefined ? editedRows[id][field] : originalValue;
+  };
+
   return (
     <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
-      <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
+      <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6 flex justify-between items-center">
         <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M3 12h18M3 17h18" />
           </svg>
           Pilot Directory
         </h3>
+        <div className="flex items-center gap-3">
+          {message && (
+            <span className={`text-sm px-3 py-1 rounded ${message.startsWith('✓') ? 'bg-green-500/20 text-green-200' : 'bg-yellow-500/20 text-yellow-200'}`}>
+              {message}
+            </span>
+          )}
+          {editMode && Object.keys(editedRows).length > 0 && (
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-bold text-sm disabled:opacity-50"
+            >
+              {saving ? 'Guardando...' : '💾 Guardar Cambios'}
+            </button>
+          )}
+          <button
+            onClick={() => {
+              setEditMode(!editMode);
+              if (editMode) setEditedRows({});
+            }}
+            className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors ${
+              editMode 
+                ? 'bg-red-500 hover:bg-red-600 text-white' 
+                : 'bg-white/20 hover:bg-white/30 text-white'
+            }`}
+          >
+            {editMode ? '✕ Cancelar' : '✏️ Editar'}
+          </button>
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
             <tr>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Code</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Nombre</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha de nacimiento</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Correo</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Número de teléfono</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Número de licencia</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Tipo Doc.</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Documento</th>
+              <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Code</th>
+              <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Nombre</th>
+              <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">F. Nacimiento</th>
+              <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Correo</th>
+              <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Teléfono</th>
+              <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">N° Licencia</th>
+              <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Tipo Doc.</th>
+              <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Documento</th>
+              <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Tarifa/Hr</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-slate-100">
-            {rows.map((r, idx) => (
-              <tr key={`${r.code}-${idx}`} className="hover:bg-blue-50 transition-colors">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-blue-600 font-mono">{r.code}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">{r.name}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{r.fechaNacimiento}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{r.email}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{r.telefono}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{r.numeroLicencia}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{r.tipoDocumento}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{r.documento}</td>
-              </tr>
-            ))}
+            {rows.map((r, idx) => {
+              const canEdit = editMode && r.id !== null;
+              return (
+                <tr key={`${r.code}-${idx}`} className={`transition-colors ${canEdit ? 'bg-blue-50/50' : 'hover:bg-blue-50'}`}>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-blue-600 font-mono">
+                    {canEdit ? (
+                      <input
+                        type="text"
+                        className="w-20 px-2 py-1 border rounded text-sm font-mono"
+                        defaultValue={r.code}
+                        onChange={e => handleChange(r.id!, 'codigo', e.target.value)}
+                      />
+                    ) : r.code}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-slate-900">
+                    {canEdit ? (
+                      <input
+                        type="text"
+                        className="w-full px-2 py-1 border rounded text-sm"
+                        defaultValue={r.name}
+                        onChange={e => handleChange(r.id!, 'nombre', e.target.value)}
+                      />
+                    ) : r.name}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
+                    {canEdit ? (
+                      <input
+                        type="date"
+                        className="w-36 px-2 py-1 border rounded text-sm"
+                        defaultValue={r.fechaNacimiento || ''}
+                        onChange={e => handleChange(r.id!, 'fechaNacimiento', e.target.value)}
+                      />
+                    ) : r.fechaNacimientoDisplay}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
+                    {canEdit ? (
+                      <input
+                        type="email"
+                        className="w-48 px-2 py-1 border rounded text-sm"
+                        defaultValue={r.email !== '-' ? r.email : ''}
+                        onChange={e => handleChange(r.id!, 'email', e.target.value)}
+                      />
+                    ) : r.email}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
+                    {canEdit ? (
+                      <input
+                        type="tel"
+                        className="w-32 px-2 py-1 border rounded text-sm"
+                        defaultValue={r.telefono}
+                        onChange={e => handleChange(r.id!, 'telefono', e.target.value)}
+                      />
+                    ) : (r.telefono || '-')}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
+                    {canEdit ? (
+                      <input
+                        type="text"
+                        className="w-28 px-2 py-1 border rounded text-sm"
+                        defaultValue={r.numeroLicencia}
+                        onChange={e => handleChange(r.id!, 'licencia', e.target.value)}
+                      />
+                    ) : (r.numeroLicencia || '-')}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
+                    {canEdit ? (
+                      <select
+                        className="w-24 px-2 py-1 border rounded text-sm"
+                        defaultValue={r.tipoDocumento}
+                        onChange={e => handleChange(r.id!, 'tipoDocumento', e.target.value)}
+                      >
+                        <option value="">-</option>
+                        <option value="RUT">RUT</option>
+                        <option value="Pasaporte">Pasaporte</option>
+                      </select>
+                    ) : (r.tipoDocumento || '-')}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
+                    {canEdit ? (
+                      <input
+                        type="text"
+                        className="w-32 px-2 py-1 border rounded text-sm"
+                        defaultValue={r.documento}
+                        onChange={e => handleChange(r.id!, 'documento', e.target.value)}
+                      />
+                    ) : (r.documento || '-')}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600 font-mono">
+                    {canEdit ? (
+                      <input
+                        type="number"
+                        className="w-28 px-2 py-1 border rounded text-sm"
+                        defaultValue={r.rate || 0}
+                        onChange={e => handleChange(r.id!, 'tarifa_hora', e.target.value)}
+                      />
+                    ) : r.rateDisplay}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
