@@ -722,21 +722,64 @@ function PilotsTable({ users, flights, transactions, allowedPilotCodes, register
     (registeredPilotCodes || []).forEach(c => base.add(String(c).toUpperCase()));
     return base;
   }, [allowedPilotCodes, registeredPilotCodes]);
-  const data = users
-    .filter(u => {
-      if (u.rol !== 'PILOTO') return false;
-      const code = (u.codigo || '').toUpperCase();
-      // If allowed list exists, strictly enforce membership; else fallback to legacy behavior (has codigo)
-      return allowed.size > 0 ? (code && allowed.has(code)) : Boolean(code);
-    })
-    .map(u => {
-      const f = flights.filter(f => (f as any).pilotoId === u.id || ((f.cliente || '').toUpperCase() === (u.codigo || '').toUpperCase()));
-      const spent = transactions.filter(t => t.userId === u.id && t.tipo === 'CARGO_VUELO').reduce((a,b)=>a+Number(b.monto),0);
-      const deposits = transactions.filter(t => t.userId === u.id && t.tipo === 'ABONO').reduce((a,b)=>a+Number(b.monto),0);
-      const displayName = csvPilotNames?.[u.codigo?.toUpperCase()] || u.nombre;
-      return { ...u, nombre: displayName, flights: f.length, hours: f.reduce((a,b)=>a+Number(b.diff_hobbs),0), spent: spent, deposits: deposits };
-    })
-    .sort((a, b) => (a.codigo || '').localeCompare(b.codigo || '')); // Sort by codigo
+  
+  const data = useMemo(() => {
+    // Build data from users in DB
+    const usersByCode = new Map<string, any>();
+    users
+      .filter(u => {
+        if (u.rol !== 'PILOTO') return false;
+        const code = (u.codigo || '').toUpperCase();
+        return allowed.size > 0 ? (code && allowed.has(code)) : Boolean(code);
+      })
+      .forEach(u => {
+        const f = flights.filter(f => (f as any).pilotoId === u.id || ((f.cliente || '').toUpperCase() === (u.codigo || '').toUpperCase()));
+        const spent = transactions.filter(t => t.userId === u.id && t.tipo === 'CARGO_VUELO').reduce((a,b)=>a+Number(b.monto),0);
+        const deposits = transactions.filter(t => t.userId === u.id && t.tipo === 'ABONO').reduce((a,b)=>a+Number(b.monto),0);
+        const displayName = csvPilotNames?.[u.codigo?.toUpperCase()] || u.nombre;
+        usersByCode.set(u.codigo?.toUpperCase(), { 
+          ...u, 
+          nombre: displayName, 
+          flights: f.length, 
+          hours: f.reduce((a,b)=>a+Number(b.diff_hobbs),0), 
+          spent: spent, 
+          deposits: deposits 
+        });
+      });
+
+    // Add all pilots from allowedPilotCodes (CSV) that don't have a user yet
+    const result: any[] = [];
+    (allowedPilotCodes || []).forEach(code => {
+      const upperCode = code.toUpperCase();
+      if (usersByCode.has(upperCode)) {
+        result.push(usersByCode.get(upperCode));
+      } else {
+        // Pilot in CSV but no user in DB - show with zeros
+        result.push({
+          id: null,
+          codigo: upperCode,
+          nombre: csvPilotNames?.[upperCode] || upperCode,
+          email: '-',
+          tarifa_hora: 0,
+          saldo_cuenta: 0,
+          flights: 0,
+          hours: 0,
+          spent: 0,
+          deposits: 0
+        });
+      }
+    });
+
+    // Add registered pilots (not in CSV)
+    (registeredPilotCodes || []).forEach(code => {
+      const upperCode = code.toUpperCase();
+      if (usersByCode.has(upperCode) && !result.find(r => r.codigo === upperCode)) {
+        result.push(usersByCode.get(upperCode));
+      }
+    });
+
+    return result.sort((a, b) => (a.codigo || '').localeCompare(b.codigo || ''));
+  }, [users, flights, transactions, allowed, allowedPilotCodes, registeredPilotCodes, csvPilotNames]); // Sort by codigo
   return (
     <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
       <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
