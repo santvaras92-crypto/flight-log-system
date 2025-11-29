@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Chart, LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler } from "chart.js";
 import { useEffect, useRef } from "react";
+import { generateAccountStatementPDF } from "@/lib/generate-account-pdf";
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler);
 
@@ -15,8 +16,10 @@ type InitialData = {
   components: any[];
   transactions: any[];
   fuelByCode?: Record<string, number>;
+  fuelDetailsByCode?: Record<string, { fecha: string; litros: number; monto: number }[]>;
   csvPilotStats?: Record<string, { flights: number; hours: number; spent: number }>;
   depositsByCode?: Record<string, number>;
+  depositsDetailsByCode?: Record<string, { fecha: string; descripcion: string; monto: number }[]>;
   pilotDirectory?: {
     initial: { code: string; name: string }[];
     registered: { id: number; code: string; name: string; email: string; rate: number; createdAt: string | Date }[];
@@ -247,6 +250,11 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
                 name: csvPilotNames?.[code.toUpperCase()] || code
               })).sort((a, b) => a.name.localeCompare(b.name))
             }
+            depositsByCode={initialData.depositsByCode}
+            depositsDetailsByCode={initialData.depositsDetailsByCode}
+            fuelByCode={initialData.fuelByCode}
+            fuelDetailsByCode={initialData.fuelDetailsByCode}
+            csvPilotNames={csvPilotNames}
           />
           <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-2 border-slate-200 rounded-b-2xl mt-2">
             <button
@@ -557,7 +565,17 @@ function LineChart({ labels, values, palette }: { labels: string[]; values: numb
   return <canvas ref={ref} height={120} />;
 }
 
-function FlightsTable({ flights, users, editMode = false, clientOptions }: { flights: any[]; users: any[]; editMode?: boolean; clientOptions?: { code: string; name: string }[] }) {
+function FlightsTable({ flights, users, editMode = false, clientOptions, depositsByCode, depositsDetailsByCode, fuelByCode, fuelDetailsByCode, csvPilotNames }: { 
+  flights: any[]; 
+  users: any[]; 
+  editMode?: boolean; 
+  clientOptions?: { code: string; name: string }[];
+  depositsByCode?: Record<string, number>;
+  depositsDetailsByCode?: Record<string, { fecha: string; descripcion: string; monto: number }[]>;
+  fuelByCode?: Record<string, number>;
+  fuelDetailsByCode?: Record<string, { fecha: string; litros: number; monto: number }[]>;
+  csvPilotNames?: Record<string, string>;
+}) {
   const [drafts, setDrafts] = useState<Record<number, any>>({});
   const [saving, setSaving] = useState(false);
   
@@ -757,6 +775,66 @@ function FlightsTable({ flights, users, editMode = false, clientOptions }: { fli
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
               Limpiar
+            </button>
+          )}
+
+          {/* Generar PDF - Solo visible cuando hay cliente seleccionado */}
+          {filterClient && (
+            <button
+              onClick={() => {
+                const code = filterClient.toUpperCase();
+                const clientName = csvPilotNames?.[code] || code;
+                
+                // Calculate totals from filtered flights
+                const totalHours = filteredFlights.reduce((sum, f) => sum + (Number(f.diff_hobbs) || 0), 0);
+                const totalSpent = filteredFlights.reduce((sum, f) => sum + (Number(f.costo) || 0), 0);
+                const totalDeposits = depositsByCode?.[code] || 0;
+                const totalFuel = fuelByCode?.[code] || 0;
+                const balance = totalDeposits - totalSpent + totalFuel;
+
+                // Get detailed deposits and fuel for this client
+                const clientDeposits = (depositsDetailsByCode?.[code] || []).map(d => ({
+                  fecha: d.fecha,
+                  descripcion: d.descripcion,
+                  monto: d.monto,
+                }));
+                const clientFuel = (fuelDetailsByCode?.[code] || []).map(f => ({
+                  fecha: f.fecha,
+                  descripcion: `${f.litros} litros`,
+                  monto: f.monto,
+                }));
+
+                generateAccountStatementPDF({
+                  clientCode: code,
+                  clientName: clientName,
+                  flights: filteredFlights.map(f => ({
+                    id: f.id,
+                    fecha: f.fecha,
+                    diff_hobbs: Number(f.diff_hobbs) || 0,
+                    costo: Number(f.costo) || 0,
+                    detalle: f.detalle || '',
+                    piloto_raw: f.piloto_raw || '',
+                  })),
+                  deposits: clientDeposits,
+                  fuelCredits: clientFuel,
+                  totalFlights: filteredFlights.length,
+                  totalHours,
+                  totalSpent,
+                  totalDeposits,
+                  totalFuel,
+                  balance,
+                  dateRange: {
+                    start: filterStartDate || undefined,
+                    end: filterEndDate || undefined,
+                  },
+                });
+              }}
+              className="px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium transition-colors flex items-center gap-1 shadow-sm"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Generar PDF
             </button>
           )}
         </div>

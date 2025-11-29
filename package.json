@@ -27,6 +27,8 @@
     "chart.js": "^4.5.1",
     "csv-parse": "^6.1.0",
     "decimal.js-light": "^2.5.1",
+    "jspdf": "^3.0.4",
+    "jspdf-autotable": "^5.0.2",
     "next": "^14.2.0",
     "next-auth": "^4.24.13",
     "openai": "^4.70.0",

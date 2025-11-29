@@ -218,6 +218,31 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       } catch {}
       return map;
     })(),
+    // Detailed fuel records by code for PDF
+    fuelDetailsByCode: (() => {
+      const map: Record<string, { fecha: string; litros: number; monto: number }[]> = {};
+      try {
+        const fuelPath = path.join(process.cwd(), 'Combustible', 'Planilla control combustible.csv');
+        if (fs.existsSync(fuelPath)) {
+          const content = fs.readFileSync(fuelPath, 'utf-8');
+          const lines = content.split('\n').filter(l => l.trim());
+          for (let i = 1; i < lines.length; i++) {
+            const parts = lines[i].split(';');
+            const code = (parts[1] || '').trim().toUpperCase();
+            const fecha = (parts[0] || '').trim();
+            const litrosStr = (parts[3] || '').trim().replace(',', '.');
+            const montoStr = (parts[4] || '').trim();
+            if (!code) continue;
+            const litros = parseFloat(litrosStr) || 0;
+            const cleaned = montoStr.replace(/\$/g, '').replace(/\./g, '').replace(',', '.');
+            const monto = parseFloat(cleaned) || 0;
+            if (!map[code]) map[code] = [];
+            map[code].push({ fecha, litros, monto });
+          }
+        }
+      } catch {}
+      return map;
+    })(),
     csvPilotStats,
     depositsByCode: (() => {
       const map: Record<string, number> = {};
@@ -237,6 +262,30 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
             const cleaned = montoStr.replace(/\$/g, '').replace(/\./g, '').replace(',', '.');
             const val = parseFloat(cleaned);
             if (!isNaN(val)) map[code] = (map[code] || 0) + val;
+          }
+        }
+      } catch {}
+      return map;
+    })(),
+    // Detailed deposit records by code for PDF
+    depositsDetailsByCode: (() => {
+      const map: Record<string, { fecha: string; descripcion: string; monto: number }[]> = {};
+      try {
+        const depositsPath = path.join(process.cwd(), 'Pago pilotos', 'Pago pilotos.csv');
+        if (fs.existsSync(depositsPath)) {
+          const content = fs.readFileSync(depositsPath, 'utf-8');
+          const lines = content.split('\n').filter(l => l.trim());
+          for (let i = 1; i < lines.length; i++) {
+            const parts = lines[i].split(';');
+            const fecha = (parts[0] || '').trim();
+            const descripcion = (parts[1] || '').trim();
+            const montoStr = (parts[2] || '').trim();
+            const code = (parts[3] || '').trim().toUpperCase();
+            if (!code) continue;
+            const cleaned = montoStr.replace(/\$/g, '').replace(/\./g, '').replace(',', '.');
+            const monto = parseFloat(cleaned) || 0;
+            if (!map[code]) map[code] = [];
+            map[code].push({ fecha, descripcion, monto });
           }
         }
       } catch {}

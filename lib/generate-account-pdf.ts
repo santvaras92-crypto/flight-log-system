@@ -1,0 +1,380 @@
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
+interface Flight {
+  id: number;
+  fecha: string | Date;
+  diff_hobbs: number;
+  costo: number;
+  detalle?: string;
+  piloto_raw?: string;
+  tach_inicio?: number;
+  tach_fin?: number;
+}
+
+interface Deposit {
+  fecha: string;
+  descripcion: string;
+  monto: number;
+}
+
+interface FuelCredit {
+  fecha: string;
+  descripcion: string;
+  monto: number;
+}
+
+interface AccountData {
+  clientCode: string;
+  clientName: string;
+  flights: Flight[];
+  deposits: Deposit[];
+  fuelCredits: FuelCredit[];
+  totalFlights: number;
+  totalHours: number;
+  totalSpent: number;
+  totalDeposits: number;
+  totalFuel: number;
+  balance: number;
+  dateRange?: { start?: string; end?: string };
+}
+
+export function generateAccountStatementPDF(data: AccountData): void {
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  
+  // Colors
+  const primaryBlue = '#003D82';
+  const darkBlue = '#0A2F5F';
+  const lightGray = '#F1F5F9';
+  
+  // Helper function to format currency
+  const formatCurrency = (value: number) => `$${Math.round(value).toLocaleString('es-CL')}`;
+  const formatDate = (date: string | Date) => {
+    if (typeof date === 'string' && date.includes('-') && date.length <= 12) {
+      // Already formatted like "14-Dec-17"
+      return date;
+    }
+    const d = new Date(date);
+    return d.toLocaleDateString('es-CL');
+  };
+
+  // === HEADER ===
+  // Blue gradient header bar
+  doc.setFillColor(0, 61, 130); // #003D82
+  doc.rect(0, 0, pageWidth, 45, 'F');
+  
+  // Title
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(24);
+  doc.setFont('helvetica', 'bold');
+  doc.text('ESTADO DE CUENTA', 20, 22);
+  
+  // Subtitle
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'normal');
+  doc.text('CC-AQI • Flight Operations', 20, 32);
+  
+  // Date
+  doc.setFontSize(10);
+  doc.text(`Generado: ${new Date().toLocaleDateString('es-CL')}`, pageWidth - 20, 22, { align: 'right' });
+  
+  // Date range if provided
+  if (data.dateRange?.start || data.dateRange?.end) {
+    const rangeText = `Período: ${data.dateRange.start || 'Inicio'} - ${data.dateRange.end || 'Actual'}`;
+    doc.text(rangeText, pageWidth - 20, 32, { align: 'right' });
+  }
+
+  // === CLIENT INFO BOX ===
+  doc.setFillColor(241, 245, 249); // light gray
+  doc.roundedRect(15, 52, pageWidth - 30, 28, 3, 3, 'F');
+  
+  doc.setTextColor(10, 47, 95);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Cliente:', 22, 64);
+  doc.text(data.clientName, 52, 64);
+  
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 116, 139);
+  doc.text(`Código: ${data.clientCode}`, 22, 73);
+
+  // === SUMMARY CARDS ===
+  const cardY = 88;
+  const cardHeight = 30;
+  const cardWidth = (pageWidth - 40) / 4;
+  const cardGap = 5;
+
+  const summaryItems = [
+    { label: 'Total Vuelos', value: data.totalFlights.toString(), color: '#3B82F6' },
+    { label: 'Horas Voladas', value: `${data.totalHours.toFixed(1)} hrs`, color: '#10B981' },
+    { label: 'Total Gastado', value: formatCurrency(data.totalSpent), color: '#F59E0B' },
+    { label: 'Balance', value: formatCurrency(data.balance), color: data.balance >= 0 ? '#10B981' : '#EF4444' },
+  ];
+
+  summaryItems.forEach((item, i) => {
+    const x = 15 + i * (cardWidth + cardGap);
+    
+    // Card background
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(x, cardY, cardWidth, cardHeight, 2, 2, 'F');
+    
+    // Top color bar
+    const rgb = hexToRgb(item.color);
+    doc.setFillColor(rgb.r, rgb.g, rgb.b);
+    doc.rect(x, cardY, cardWidth, 3, 'F');
+    
+    // Label
+    doc.setTextColor(100, 116, 139);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(item.label, x + cardWidth / 2, cardY + 12, { align: 'center' });
+    
+    // Value
+    doc.setTextColor(30, 41, 59);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(item.value, x + cardWidth / 2, cardY + 23, { align: 'center' });
+  });
+
+  // === FINANCIAL SUMMARY ===
+  let currentY = cardY + cardHeight + 15;
+  
+  doc.setTextColor(10, 47, 95);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Resumen Financiero', 15, currentY);
+  currentY += 8;
+  
+  // Financial details table
+  const financialData = [
+    ['Total Depósitos', formatCurrency(data.totalDeposits)],
+    ['Crédito Combustible', formatCurrency(data.totalFuel)],
+    ['Total Consumido', formatCurrency(data.totalSpent)],
+    ['Balance Actual', formatCurrency(data.balance)],
+  ];
+
+  autoTable(doc, {
+    startY: currentY,
+    head: [],
+    body: financialData,
+    theme: 'plain',
+    margin: { left: 15, right: 15 },
+    styles: {
+      fontSize: 10,
+      cellPadding: 4,
+    },
+    columnStyles: {
+      0: { fontStyle: 'normal', textColor: [100, 116, 139] },
+      1: { fontStyle: 'bold', halign: 'right', textColor: [30, 41, 59] },
+    },
+    tableWidth: 100,
+  });
+
+  // === DEPOSITS TABLE ===
+  currentY = (doc as any).lastAutoTable?.finalY + 15 || currentY + 50;
+  
+  if (data.deposits.length > 0) {
+    doc.setTextColor(10, 47, 95);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Depósitos (${data.deposits.length})`, 15, currentY);
+    currentY += 5;
+
+    const depositRows = data.deposits.map(d => [
+      d.fecha,
+      d.descripcion || '-',
+      formatCurrency(d.monto),
+    ]);
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [['Fecha', 'Descripción', 'Monto']],
+      body: depositRows,
+      theme: 'striped',
+      margin: { left: 15, right: 15 },
+      headStyles: {
+        fillColor: [16, 185, 129], // Green
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 9,
+      },
+      bodyStyles: {
+        fontSize: 8,
+        textColor: [51, 65, 85],
+      },
+      alternateRowStyles: {
+        fillColor: [240, 253, 244],
+      },
+      columnStyles: {
+        0: { cellWidth: 30 },
+        1: { cellWidth: 'auto' },
+        2: { cellWidth: 35, halign: 'right' },
+      },
+    });
+    
+    currentY = (doc as any).lastAutoTable?.finalY + 10 || currentY + 50;
+  }
+
+  // === FUEL CREDITS TABLE ===
+  if (data.fuelCredits.length > 0) {
+    // Check if we need a new page
+    if (currentY > pageHeight - 80) {
+      doc.addPage();
+      currentY = 20;
+    }
+
+    doc.setTextColor(10, 47, 95);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Créditos de Combustible (${data.fuelCredits.length})`, 15, currentY);
+    currentY += 5;
+
+    const fuelRows = data.fuelCredits.map(f => [
+      f.fecha,
+      f.descripcion || '-',
+      formatCurrency(f.monto),
+    ]);
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [['Fecha', 'Litros', 'Monto']],
+      body: fuelRows,
+      theme: 'striped',
+      margin: { left: 15, right: 15 },
+      headStyles: {
+        fillColor: [245, 158, 11], // Amber
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 9,
+      },
+      bodyStyles: {
+        fontSize: 8,
+        textColor: [51, 65, 85],
+      },
+      alternateRowStyles: {
+        fillColor: [255, 251, 235],
+      },
+      columnStyles: {
+        0: { cellWidth: 30 },
+        1: { cellWidth: 'auto' },
+        2: { cellWidth: 35, halign: 'right' },
+      },
+    });
+    
+    currentY = (doc as any).lastAutoTable?.finalY + 10 || currentY + 50;
+  }
+
+  // === FLIGHTS TABLE ===
+  // Check if we need a new page
+  if (currentY > pageHeight - 80) {
+    doc.addPage();
+    currentY = 20;
+  }
+  
+  doc.setTextColor(10, 47, 95);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Detalle de Vuelos (${data.flights.length})`, 15, currentY);
+  currentY += 5;
+
+  if (data.flights.length > 0) {
+    const flightRows = data.flights.map(f => [
+      formatDate(f.fecha),
+      f.diff_hobbs ? `${f.diff_hobbs.toFixed(1)} hrs` : '-',
+      f.costo ? formatCurrency(f.costo) : '-',
+      (f.detalle || '-').substring(0, 40),
+    ]);
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [['Fecha', 'Horas', 'Costo', 'Detalle']],
+      body: flightRows,
+      theme: 'striped',
+      margin: { left: 15, right: 15 },
+      headStyles: {
+        fillColor: [0, 61, 130],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 9,
+      },
+      bodyStyles: {
+        fontSize: 8,
+        textColor: [51, 65, 85],
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      columnStyles: {
+        0: { cellWidth: 25 },
+        1: { cellWidth: 25, halign: 'right' },
+        2: { cellWidth: 30, halign: 'right' },
+        3: { cellWidth: 'auto' },
+      },
+    });
+  }
+
+  // === FOOTER WITH BANK DETAILS ===
+  // Get the last page
+  const totalPages = doc.internal.pages.length - 1;
+  doc.setPage(totalPages);
+  
+  const lastY = (doc as any).lastAutoTable?.finalY || currentY + 50;
+  let footerY = Math.max(lastY + 20, pageHeight - 40);
+  
+  // If footer would overflow, add new page
+  if (footerY > pageHeight - 10) {
+    doc.addPage();
+    footerY = pageHeight - 40;
+  }
+  
+  // Separator line
+  doc.setDrawColor(203, 213, 225);
+  doc.line(15, footerY - 5, pageWidth - 15, footerY - 5);
+  
+  // Bank details section
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(15, footerY, pageWidth - 30, 30, 2, 2, 'F');
+  
+  doc.setTextColor(100, 116, 139);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('DATOS PARA TRANSFERENCIA:', 20, footerY + 8);
+  
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  const bankInfo = [
+    'SANTIAGO NICOLAS VARAS SAAVEDRA • RUT: 18.166.515-7',
+    'Cuenta Corriente Nº 0-000-75-79256-5 • Banco Santander',
+    'Email: SANTVARAS92@GMAIL.COM',
+  ];
+  
+  bankInfo.forEach((line, i) => {
+    doc.text(line, 20, footerY + 15 + (i * 5));
+  });
+  
+  // Footer text on all pages
+  const pagesCount = doc.internal.pages.length - 1;
+  for (let i = 1; i <= pagesCount; i++) {
+    doc.setPage(i);
+    doc.setTextColor(148, 163, 184);
+    doc.setFontSize(7);
+    doc.text(`CC-AQI Flight Operations • Página ${i} de ${pagesCount}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
+  }
+
+  // Save the PDF
+  const fileName = `Estado_Cuenta_${data.clientCode}_${new Date().toISOString().split('T')[0]}.pdf`;
+  doc.save(fileName);
+}
+
+// Helper function to convert hex to RGB
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16),
+  } : { r: 0, g: 0, b: 0 };
+}
