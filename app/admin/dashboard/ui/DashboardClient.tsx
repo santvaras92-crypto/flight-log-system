@@ -237,7 +237,17 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
       {tab === "overview" && <Overview data={initialData} flights={flights} palette={palette} allowedPilotCodes={allowedPilotCodes} activeDaysLimit={activeDaysLimit} showActivePilots={showActivePilots} setShowActivePilots={setShowActivePilots} />}
       {tab === "flights" && (
         <>
-          <FlightsTable flights={flights} users={initialData.users} editMode={editMode} />
+          <FlightsTable 
+            flights={flights} 
+            users={initialData.users} 
+            editMode={editMode} 
+            clientOptions={
+              (allowedPilotCodes || []).map(code => ({
+                code: code.toUpperCase(),
+                name: csvPilotNames?.[code.toUpperCase()] || code
+              })).sort((a, b) => a.name.localeCompare(b.name))
+            }
+          />
           <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-2 border-slate-200 rounded-b-2xl mt-2">
             <button
               className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-40 hover:bg-blue-700 transition-colors"
@@ -547,14 +557,13 @@ function LineChart({ labels, values, palette }: { labels: string[]; values: numb
   return <canvas ref={ref} height={120} />;
 }
 
-function FlightsTable({ flights, users, editMode = false }: { flights: any[]; users: any[]; editMode?: boolean }) {
+function FlightsTable({ flights, users, editMode = false, clientOptions }: { flights: any[]; users: any[]; editMode?: boolean; clientOptions?: { code: string; name: string }[] }) {
   const [drafts, setDrafts] = useState<Record<number, any>>({});
   const [saving, setSaving] = useState(false);
   
   // Filtros locales para la tabla
   const [filterStartDate, setFilterStartDate] = useState("");
   const [filterEndDate, setFilterEndDate] = useState("");
-  const [filterPilot, setFilterPilot] = useState("");
   const [filterClient, setFilterClient] = useState("");
   const [filterYear, setFilterYear] = useState("");
   const [filterMonth, setFilterMonth] = useState("");
@@ -589,23 +598,15 @@ function FlightsTable({ flights, users, editMode = false }: { flights: any[]; us
       // Filtro por mes
       if (filterMonth && month !== parseInt(filterMonth)) return false;
 
-      // Filtro por piloto (nombre)
-      if (filterPilot) {
-        const pilotName = (f.piloto_raw || '').toLowerCase();
-        const search = filterPilot.toLowerCase();
-        if (!pilotName.includes(search)) return false;
-      }
-
-      // Filtro por cliente (código)
+      // Filtro por cliente (código exacto)
       if (filterClient) {
-        const clientCode = (f.cliente || '').toLowerCase();
-        const search = filterClient.toLowerCase();
-        if (!clientCode.includes(search)) return false;
+        const clientCode = (f.cliente || '').toUpperCase();
+        if (clientCode !== filterClient.toUpperCase()) return false;
       }
 
       return true;
     });
-  }, [flights, filterStartDate, filterEndDate, filterPilot, filterClient, filterYear, filterMonth]);
+  }, [flights, filterStartDate, filterEndDate, filterClient, filterYear, filterMonth]);
 
   const handleChange = (id: number, field: string, value: any) => {
     setDrafts(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
@@ -639,13 +640,12 @@ function FlightsTable({ flights, users, editMode = false }: { flights: any[]; us
   const clearFilters = () => {
     setFilterStartDate("");
     setFilterEndDate("");
-    setFilterPilot("");
     setFilterClient("");
     setFilterYear("");
     setFilterMonth("");
   };
 
-  const hasActiveFilters = filterStartDate || filterEndDate || filterPilot || filterClient || filterYear || filterMonth;
+  const hasActiveFilters = filterStartDate || filterEndDate || filterClient || filterYear || filterMonth;
 
   return (
     <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
@@ -735,23 +735,17 @@ function FlightsTable({ flights, users, editMode = false }: { flights: any[]; us
             <option value="12">Diciembre</option>
           </select>
           
-          {/* Piloto */}
-          <input
-            type="text"
-            placeholder="Piloto..."
-            value={filterPilot}
-            onChange={e => setFilterPilot(e.target.value)}
-            className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-32"
-          />
-          
-          {/* Cliente */}
-          <input
-            type="text"
-            placeholder="Cliente..."
+          {/* Cliente (dropdown) */}
+          <select
             value={filterClient}
             onChange={e => setFilterClient(e.target.value)}
-            className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-28"
-          />
+            className="px-2 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[180px]"
+          >
+            <option value="">Cliente</option>
+            {(clientOptions || []).map(c => (
+              <option key={c.code} value={c.code}>{c.name} ({c.code})</option>
+            ))}
+          </select>
 
           {/* Limpiar filtros */}
           {hasActiveFilters && (
