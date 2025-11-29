@@ -675,6 +675,10 @@ function FlightsTable({ flights, users, editMode = false }: { flights: any[]; us
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
                     {(() => {
+                      // Prioridad: tarifa del CSV, luego cálculo desde costo/horas, luego tarifa del usuario
+                      if (f.tarifa && Number(f.tarifa) > 0) {
+                        return `$${Math.round(Number(f.tarifa)).toLocaleString("es-CL")}`;
+                      }
                       const horas = Number(f.diff_hobbs || 0);
                       const costoVal = Number(f.costo || 0);
                       if (horas > 0 && costoVal > 0) {

@@ -36,7 +36,7 @@ function parseDate(dateStr: string): Date | null {
 
 function toNum(val: string): number | null {
   if (!val || val.trim() === '') return null;
-  const cleaned = val.replace(/\./g, '').replace(',', '.');
+  const cleaned = val.replace(/\$/g, '').replace(/\./g, '').replace(',', '.');
   const num = parseFloat(cleaned);
   return isNaN(num) ? null : num;
 }
@@ -116,6 +116,7 @@ async function run() {
     const instructor = row[COL_INSTRUCTOR]?.trim() || null;
     const detalle = row[COL_DETALLE]?.trim() || null;
     
+    const tarifa = toNum(row[COL_TARIFA]);
     const costo = toNum(row[COL_TOTAL]);
     const airframe_hours = toNum(row[COL_AIRFRAME]);
     const engine_hours = toNum(row[COL_ENGINE]);
@@ -164,6 +165,7 @@ async function run() {
             diff_tach,
             diff_hobbs,
             costo,
+            tarifa,
             copiloto,
             cliente,
             instructor,
@@ -191,6 +193,7 @@ async function run() {
             hobbs_fin,
             diff_hobbs,
             costo,
+            tarifa,
             aircraftId: MATRICULA,
             pilotoId: null, // No intentamos matchear piloto
             copiloto,

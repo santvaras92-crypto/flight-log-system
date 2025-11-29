@@ -36,7 +36,7 @@ function parseDate(dateStr: string): Date | null {
 
 function toNum(val: string): number | null {
   if (!val || val.trim() === '') return null;
-  const cleaned = val.replace(/\./g, '').replace(',', '.');
+  const cleaned = val.replace(/\$/g, '').replace(/\./g, '').replace(',', '.');
   const num = parseFloat(cleaned);
   return isNaN(num) ? null : num;
 }
@@ -66,6 +66,7 @@ async function run() {
   const COL_PILOTO = 8;
   const COL_COPILOTO = 9;
   const COL_CLIENTE = 10;
+  const COL_TARIFA = 11;
   const COL_INSTRUCTOR = 12;
   const COL_DETALLE = 17;
 
@@ -84,6 +85,7 @@ async function run() {
     const piloto = row[COL_PILOTO]?.trim() || null; // raw pilot name from CSV
     const copiloto = row[COL_COPILOTO]?.trim() || null;
     const cliente = row[COL_CLIENTE]?.trim() || null;
+    const tarifa = toNum(row[COL_TARIFA]);
     const instructor = row[COL_INSTRUCTOR]?.trim() || null;
     const detalle = row[COL_DETALLE]?.trim() || null;
 
@@ -130,7 +132,8 @@ async function run() {
       flight.cliente !== cliente ||
       flight.instructor !== instructor ||
       flight.detalle !== detalle ||
-      flight.piloto_raw !== piloto;
+      flight.piloto_raw !== piloto ||
+      flight.tarifa?.toString() !== tarifa?.toString();
 
     if (needsUpdate) {
       await prisma.flight.update({
@@ -140,7 +143,8 @@ async function run() {
           cliente: cliente || null,
           instructor: instructor || null,
           detalle: detalle || null,
-          piloto_raw: piloto || null
+          piloto_raw: piloto || null,
+          tarifa: tarifa || null
         }
       });
 

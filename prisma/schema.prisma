@@ -59,6 +59,7 @@ model Flight {
   diff_hobbs       Decimal?
   diff_tach        Decimal?
   costo            Decimal?
+  tarifa           Decimal?          // Tarifa por hora del vuelo (desde CSV columna Tarifa)
   pilotoId         Int?
   aircraftId       String
   piloto_raw       String?           // Nombre del piloto tal cual en CSV (incluye casos sin usuario)
