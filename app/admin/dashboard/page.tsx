@@ -159,6 +159,29 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       } catch {}
       return map;
     })(),
+    depositsByCode: (() => {
+      const map: Record<string, number> = {};
+      try {
+        const depositsPath = path.join(process.cwd(), 'Pago pilotos', 'Pago pilotos.csv');
+        if (fs.existsSync(depositsPath)) {
+          const content = fs.readFileSync(depositsPath, 'utf-8');
+          const lines = content.split('\n').filter(l => l.trim());
+          // Header: Fecha;Descripción;ingreso;Cliente
+          const COL_INGRESO = 2;
+          const COL_CLIENTE = 3;
+          for (let i = 1; i < lines.length; i++) {
+            const parts = lines[i].split(';');
+            const code = (parts[COL_CLIENTE] || '').trim().toUpperCase();
+            const montoStr = (parts[COL_INGRESO] || '').trim();
+            if (!code) continue;
+            const cleaned = montoStr.replace(/\$/g, '').replace(/\./g, '').replace(',', '.');
+            const val = parseFloat(cleaned);
+            if (!isNaN(val)) map[code] = (map[code] || 0) + val;
+          }
+        }
+      } catch {}
+      return map;
+    })(),
     pilotDirectory: {
       initial: csvPilots,
       registered: users
