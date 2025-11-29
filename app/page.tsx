@@ -3,14 +3,16 @@ import { prisma } from "../lib/prisma";
 
 export default async function Home() {
   // Solo pilotos registrados (con cuenta en el sistema)
-  const pilots = await prisma.user.findMany({
+  const allPilots = await prisma.user.findMany({
     where: { 
       rol: "PILOTO",
-      email: { not: null }, // Solo los que tienen email (registrados)
     },
     orderBy: { nombre: "asc" },
     select: { id: true, nombre: true, email: true, codigo: true },
   });
+
+  // Filtrar pilotos con email (registrados)
+  const pilots = allPilots.filter((p) => p.email !== null);
 
   // Obtener los máximos Hobbs y Tach de los vuelos registrados para CC-AQI
   const maxHobbsFlight = await prisma.flight.findFirst({
