@@ -9,7 +9,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
   const page = Number(searchParams?.page || 1);
   const pageSize = Number(searchParams?.pageSize || 200);
   const skip = (page - 1) * pageSize;
-  const [users, aircraft, flights, allFlights, submissions, components, transactions, totalFlights] = await Promise.all([
+  const [users, aircraft, flights, allFlightsComplete, allFlightsLight, submissions, components, transactions, totalFlights] = await Promise.all([
     prisma.user.findMany(),
     prisma.aircraft.findMany(),
     prisma.flight.findMany({
@@ -36,7 +36,30 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         pilotoId: true,
       }
     }),
-    prisma.flight.findMany({ orderBy: { fecha: "desc" }, select: { id: true, fecha: true, cliente: true, diff_hobbs: true, costo: true } }), // All flights for Active Pilots calculation without pilotoId to avoid null decode
+    // All flights with complete data for client filtering in FlightsTable
+    prisma.flight.findMany({ 
+      orderBy: { fecha: "desc" }, 
+      select: { 
+        id: true, 
+        fecha: true, 
+        hobbs_inicio: true,
+        hobbs_fin: true,
+        tach_inicio: true,
+        tach_fin: true,
+        diff_hobbs: true,
+        diff_tach: true,
+        costo: true,
+        tarifa: true,
+        copiloto: true,
+        cliente: true, 
+        instructor: true,
+        detalle: true,
+        aircraftId: true,
+        piloto_raw: true,
+        pilotoId: true,
+      } 
+    }),
+    prisma.flight.findMany({ orderBy: { fecha: "desc" }, select: { id: true, fecha: true, cliente: true, diff_hobbs: true, costo: true } }), // Lightweight for Active Pilots calculation
     prisma.flightSubmission.findMany({
       include: {
         ImageLog: true,
@@ -191,7 +214,8 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     users: users.map(u => ({ ...u, saldo_cuenta: Number(u.saldo_cuenta), tarifa_hora: Number(u.tarifa_hora) })),
     aircraft: aircraft.map(a => ({ ...a, hobbs_actual: Number(a.hobbs_actual), tach_actual: Number(a.tach_actual) })),
     flights: flights.map(f => ({ ...f, hobbs_inicio: Number(f.hobbs_inicio), hobbs_fin: Number(f.hobbs_fin), tach_inicio: Number(f.tach_inicio), tach_fin: Number(f.tach_fin), diff_hobbs: Number(f.diff_hobbs), diff_tach: Number(f.diff_tach), costo: Number(f.costo), tarifa: f.tarifa ? Number(f.tarifa) : null, piloto_raw: f.piloto_raw || null })),
-    allFlights: allFlights.map((f: any) => ({ id: f.id, fecha: f.fecha, cliente: f.cliente || null, diff_hobbs: Number(f.diff_hobbs), costo: Number(f.costo) })), // Lightweight for Active Pilots
+    allFlights: allFlightsLight.map((f: any) => ({ id: f.id, fecha: f.fecha, cliente: f.cliente || null, diff_hobbs: Number(f.diff_hobbs), costo: Number(f.costo) })), // Lightweight for Active Pilots
+    allFlightsComplete: allFlightsComplete.map((f: any) => ({ ...f, hobbs_inicio: Number(f.hobbs_inicio), hobbs_fin: Number(f.hobbs_fin), tach_inicio: Number(f.tach_inicio), tach_fin: Number(f.tach_fin), diff_hobbs: Number(f.diff_hobbs), diff_tach: Number(f.diff_tach), costo: Number(f.costo), tarifa: f.tarifa ? Number(f.tarifa) : null, piloto_raw: f.piloto_raw || null })), // Complete data for FlightsTable client filter
     submissions: submissions.map(s => ({ ...s, imageLogs: s.ImageLog.map(img => ({ ...img, valorExtraido: img.valorExtraido ? Number(img.valorExtraido) : null, confianza: img.confianza ? Number(img.confianza) : null })), flight: s.Flight ? { ...s.Flight, diff_hobbs: Number(s.Flight.diff_hobbs), diff_tach: Number(s.Flight.diff_tach), costo: Number(s.Flight.costo) } : null })),
     components: computedComponents.map(c => ({ ...c, horas_acumuladas: Number(c.horas_acumuladas), limite_tbo: Number(c.limite_tbo) })),
     transactions: transactions.map(t => ({ ...t, monto: Number(t.monto) })),

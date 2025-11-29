@@ -12,6 +12,7 @@ type InitialData = {
   aircraft: any[];
   flights: any[];
   allFlights?: any[];
+  allFlightsComplete?: any[];
   submissions: any[];
   components: any[];
   transactions: any[];
@@ -242,6 +243,7 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
         <>
           <FlightsTable 
             flights={flights} 
+            allFlightsComplete={initialData.allFlightsComplete}
             users={initialData.users} 
             editMode={editMode} 
             clientOptions={
@@ -565,8 +567,9 @@ function LineChart({ labels, values, palette }: { labels: string[]; values: numb
   return <canvas ref={ref} height={120} />;
 }
 
-function FlightsTable({ flights, users, editMode = false, clientOptions, depositsByCode, depositsDetailsByCode, fuelByCode, fuelDetailsByCode, csvPilotNames }: { 
+function FlightsTable({ flights, allFlightsComplete, users, editMode = false, clientOptions, depositsByCode, depositsDetailsByCode, fuelByCode, fuelDetailsByCode, csvPilotNames }: { 
   flights: any[]; 
+  allFlightsComplete?: any[];
   users: any[]; 
   editMode?: boolean; 
   clientOptions?: { code: string; name: string }[];
@@ -586,15 +589,19 @@ function FlightsTable({ flights, users, editMode = false, clientOptions, deposit
   const [filterYear, setFilterYear] = useState("");
   const [filterMonth, setFilterMonth] = useState("");
 
-  // Obtener años únicos para el dropdown
+  // Obtener años únicos para el dropdown - usar todos los vuelos si están disponibles
   const availableYears = useMemo(() => {
-    const years = new Set(flights.map(f => new Date(f.fecha).getFullYear()));
+    const sourceFlights = allFlightsComplete || flights;
+    const years = new Set(sourceFlights.map(f => new Date(f.fecha).getFullYear()));
     return Array.from(years).sort((a, b) => b - a);
-  }, [flights]);
+  }, [flights, allFlightsComplete]);
 
-  // Filtrar vuelos
+  // Filtrar vuelos - usar allFlightsComplete cuando hay filtro de cliente para mostrar historial completo
   const filteredFlights = useMemo(() => {
-    return flights.filter(f => {
+    // Si hay filtro de cliente, usar todos los vuelos completos para mostrar historial completo
+    const sourceFlights = filterClient && allFlightsComplete ? allFlightsComplete : flights;
+    
+    return sourceFlights.filter(f => {
       const fecha = new Date(f.fecha);
       const year = fecha.getFullYear();
       const month = fecha.getMonth() + 1;
@@ -624,7 +631,7 @@ function FlightsTable({ flights, users, editMode = false, clientOptions, deposit
 
       return true;
     });
-  }, [flights, filterStartDate, filterEndDate, filterClient, filterYear, filterMonth]);
+  }, [flights, allFlightsComplete, filterStartDate, filterEndDate, filterClient, filterYear, filterMonth]);
 
   const handleChange = (id: number, field: string, value: any) => {
     setDrafts(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
