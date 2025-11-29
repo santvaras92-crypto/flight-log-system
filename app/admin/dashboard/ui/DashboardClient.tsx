@@ -1090,9 +1090,9 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
   );
 }
 
-function PilotDirectory({ directory }: { directory?: { initial: { code: string; name: string }[]; registered: { id: number; code: string; name: string; email: string; rate: number; createdAt: string | Date; fechaNacimiento?: string | Date | null; telefono?: string | null; numeroLicencia?: string | null }[] } }) {
+function PilotDirectory({ directory }: { directory?: { initial: { code: string; name: string }[]; registered: { id: number; code: string; name: string; email: string; rate: number; createdAt: string | Date; fechaNacimiento?: string | Date | null; telefono?: string | null; numeroLicencia?: string | null; tipoDocumento?: string | null; documento?: string | null }[] } }) {
   const rows = useMemo(() => {
-    const init = (directory?.initial || []).map(p => ({ code: p.code, name: p.name, source: 'CSV', email: '-', rate: '-', createdAt: '-', fechaNacimiento: '-', telefono: '-', numeroLicencia: '-' }));
+    const init = (directory?.initial || []).map(p => ({ code: p.code, name: p.name, source: 'CSV', email: '-', rate: '-', createdAt: '-', fechaNacimiento: '-', telefono: '-', numeroLicencia: '-', tipoDocumento: '-', documento: '-' }));
     const reg = (directory?.registered || []).map(p => ({ 
       code: p.code, 
       name: p.name, 
@@ -1103,6 +1103,8 @@ function PilotDirectory({ directory }: { directory?: { initial: { code: string; 
       fechaNacimiento: p.fechaNacimiento ? new Date(p.fechaNacimiento as any).toLocaleDateString('es-CL') : '-',
       telefono: p.telefono || '-',
       numeroLicencia: p.numeroLicencia || '-',
+      tipoDocumento: p.tipoDocumento || '-',
+      documento: p.documento || '-',
     }));
     return [...init, ...reg].sort((a, b) => (a.code || '').localeCompare(b.code || ''));
   }, [directory]);
@@ -1126,6 +1128,8 @@ function PilotDirectory({ directory }: { directory?: { initial: { code: string; 
               <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Correo</th>
               <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Número de teléfono</th>
               <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Número de licencia</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Tipo Doc.</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Documento</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-slate-100">
@@ -1137,6 +1141,8 @@ function PilotDirectory({ directory }: { directory?: { initial: { code: string; 
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{r.email}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{r.telefono}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{r.numeroLicencia}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{r.tipoDocumento}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{r.documento}</td>
               </tr>
             ))}
           </tbody>

@@ -336,7 +336,9 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           createdAt: u.createdAt,
           fechaNacimiento: u.fechaNacimiento || null,
           telefono: u.telefono || null,
-          numeroLicencia: (u as any).licencia || null
+          numeroLicencia: (u as any).licencia || null,
+          tipoDocumento: (u as any).tipoDocumento || null,
+          documento: (u as any).documento || null
         }))
     }
   };
