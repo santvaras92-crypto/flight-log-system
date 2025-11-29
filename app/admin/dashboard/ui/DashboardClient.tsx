@@ -675,9 +675,16 @@ function FlightsTable({ flights, users, editMode = false }: { flights: any[]; us
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
                     {(() => {
-                      const horas = Number(f.diff_hobbs);
-                      const rate = horas > 0 ? Number(f.costo) / horas : (u ? Number(u.tarifa_hora) : 0);
-                      return rate > 0 ? `$${Math.round(rate).toLocaleString("es-CL")}` : "-";
+                      const horas = Number(f.diff_hobbs || 0);
+                      const costoVal = Number(f.costo || 0);
+                      if (horas > 0 && costoVal > 0) {
+                        const rate = costoVal / horas;
+                        return `$${Math.round(rate).toLocaleString("es-CL")}`;
+                      }
+                      if (u && Number(u.tarifa_hora) > 0) {
+                        return `$${Math.round(Number(u.tarifa_hora)).toLocaleString("es-CL")}`;
+                      }
+                      return "-";
                     })()}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600">
@@ -685,8 +692,7 @@ function FlightsTable({ flights, users, editMode = false }: { flights: any[]; us
                       <input className="px-2 py-1 border rounded" defaultValue={f.instructor || ''} onChange={e=>handleChange(f.id,'instructor',e.target.value)} />
                     ) : (f.instructor || "-")}
                   </td>
-                  <td className="px-3 py-3 whitespace-nowrap text-xs font-bold text-green-600 text-right">${Number(f.costo).toLocaleString("es-CL")}</td>
-                                    <td className="px-3 py-3 whitespace-nowrap text-xs font-bold text-green-600 text-right">{f.costo != null ? `$${Number(f.costo).toLocaleString("es-CL")}` : '-'}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-xs font-bold text-green-600 text-right">{f.costo != null ? `$${Number(f.costo).toLocaleString("es-CL")}` : '-'}</td>
                   <td className="px-4 py-3 text-xs text-slate-600 max-w-xs truncate" title={f.detalle || ""}>
                     {editMode ? (
                       <input className="w-full px-2 py-1 border rounded" defaultValue={f.detalle || ''} onChange={e=>handleChange(f.id,'detalle',e.target.value)} />
