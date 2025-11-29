@@ -52,6 +52,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
   // Read allowed pilot codes from official CSV (Base de dato pilotos)
   let allowedPilotCodes: string[] = [];
   let csvPilots: { code: string; name: string }[] = [];
+  let csvPilotNames: Record<string, string> = {}; // Map code -> name
   try {
     const csvPath = path.join(process.cwd(), "Base de dato pilotos", "Base de dato pilotos.csv");
     if (fs.existsSync(csvPath)) {
@@ -63,6 +64,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       }).filter(e => e.code);
       allowedPilotCodes = Array.from(new Set(entries.map(e => e.code)));
       csvPilots = entries;
+      csvPilotNames = Object.fromEntries(entries.map(e => [e.code, e.name]));
     }
   } catch (e) {
     // Ignore CSV errors; fallback will show current behavior
@@ -157,7 +159,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
   return (
     <div className="min-h-screen w-full">
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <DashboardClient initialData={data} pagination={{ page, pageSize, total: totalFlights }} allowedPilotCodes={allowedPilotCodes} registeredPilotCodes={registeredPilotCodes} />
+        <DashboardClient initialData={data} pagination={{ page, pageSize, total: totalFlights }} allowedPilotCodes={allowedPilotCodes} registeredPilotCodes={registeredPilotCodes} csvPilotNames={csvPilotNames} />
       </div>
     </div>
   );

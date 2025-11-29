@@ -21,7 +21,7 @@ type InitialData = {
 };
 type PaginationInfo = { page: number; pageSize: number; total: number };
 
-export default function DashboardClient({ initialData, pagination, allowedPilotCodes, registeredPilotCodes }: { initialData: InitialData; pagination?: PaginationInfo; allowedPilotCodes?: string[]; registeredPilotCodes?: string[] }) {
+export default function DashboardClient({ initialData, pagination, allowedPilotCodes, registeredPilotCodes, csvPilotNames }: { initialData: InitialData; pagination?: PaginationInfo; allowedPilotCodes?: string[]; registeredPilotCodes?: string[]; csvPilotNames?: Record<string, string> }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState("overview");
@@ -357,7 +357,7 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
               Pilot Directory
             </button>
           </div>
-          {pilotSubTab === "accounts" && <PilotsTable users={initialData.users} flights={initialData.flights} transactions={initialData.transactions} allowedPilotCodes={allowedPilotCodes} registeredPilotCodes={registeredPilotCodes} />}
+          {pilotSubTab === "accounts" && <PilotsTable users={initialData.users} flights={initialData.flights} transactions={initialData.transactions} allowedPilotCodes={allowedPilotCodes} registeredPilotCodes={registeredPilotCodes} csvPilotNames={csvPilotNames} />}
           {pilotSubTab === "directory" && <PilotDirectory directory={initialData.pilotDirectory} />}
         </>
       )}
@@ -716,7 +716,7 @@ function FlightsTable({ flights, users, editMode = false }: { flights: any[]; us
     </div>
   );
 }
-function PilotsTable({ users, flights, transactions, allowedPilotCodes, registeredPilotCodes }: { users: any[]; flights: any[]; transactions: any[]; allowedPilotCodes?: string[]; registeredPilotCodes?: string[] }) {
+function PilotsTable({ users, flights, transactions, allowedPilotCodes, registeredPilotCodes, csvPilotNames }: { users: any[]; flights: any[]; transactions: any[]; allowedPilotCodes?: string[]; registeredPilotCodes?: string[]; csvPilotNames?: Record<string, string> }) {
   const allowed = useMemo(() => {
     const base = new Set((allowedPilotCodes || []).map(c => String(c).toUpperCase()));
     (registeredPilotCodes || []).forEach(c => base.add(String(c).toUpperCase()));
@@ -733,7 +733,8 @@ function PilotsTable({ users, flights, transactions, allowedPilotCodes, register
       const f = flights.filter(f => (f as any).pilotoId === u.id || ((f.cliente || '').toUpperCase() === (u.codigo || '').toUpperCase()));
       const spent = transactions.filter(t => t.userId === u.id && t.tipo === 'CARGO_VUELO').reduce((a,b)=>a+Number(b.monto),0);
       const deposits = transactions.filter(t => t.userId === u.id && t.tipo === 'ABONO').reduce((a,b)=>a+Number(b.monto),0);
-      return { ...u, flights: f.length, hours: f.reduce((a,b)=>a+Number(b.diff_hobbs),0), spent: spent, deposits: deposits };
+      const displayName = csvPilotNames?.[u.codigo?.toUpperCase()] || u.nombre;
+      return { ...u, nombre: displayName, flights: f.length, hours: f.reduce((a,b)=>a+Number(b.diff_hobbs),0), spent: spent, deposits: deposits };
     })
     .sort((a, b) => (a.codigo || '').localeCompare(b.codigo || '')); // Sort by codigo
   return (
