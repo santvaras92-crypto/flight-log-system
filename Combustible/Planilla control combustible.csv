@@ -1,4 +1,242 @@
 ﻿Fecha;Cuenta;Piloto;Litros cargados;Monto;Precio por litro
+13-Jun-18;ACPDV; ACPDV ;;$97.240;
+13-Jun-18;ACPDV; ACPDV ;;$83.550;
+15-Jun-18;ACPDV; ACPDV ;;$72.402;
+21-Jun-18;ACPDV; ACPDV ;;$93.245;
+27-Jun-18;ACPDV; ACPDV ;;$85.410;
+27-Jun-18;ACPDV; ACPDV ;;$65.700;
+7-Jul-18;ACPDV; ACPDV ;;$72.600;
+7-Jul-18;ACPDV; ACPDV ;;$38.500;
+8-Jul-18;ACPDV; ACPDV ;;$100.100;
+8-Jul-18;ACPDV; ACPDV ;;$72.600;
+8-Jul-18;ACPDV; ACPDV ;;$55.386;
+9-Jul-18;ACPDV; ACPDV ;;$81.400;
+24-Jul-18;ACPDV; ACPDV ;;$73.905;
+24-Jul-18;ACPDV; ACPDV ;;$58.714;
+1-Aug-18;ACPDV; ACPDV ;;$67.860;
+1-Aug-18;ACPDV; ACPDV ;;$61.020;
+3-Aug-18;ACPDV; ACPDV ;;$42.598;
+3-Aug-18;ACPDV; ACPDV ;;$63.056;
+4-Aug-18;PV; Patricio ;;$64.182;
+7-Aug-18;ACPDV; ACPDV ;;$67.560;
+13-Aug-18;AC; Alejandro ;;$43.329;
+14-Aug-18;AC; Alejandro ;;$74.437;
+14-Aug-18;ACPDV; ACPDV ;;$63.327;
+15-Aug-18;ACPDV; ACPDV ;;$64.960;
+17-Aug-18;PV; Patricio ;;$90.882;
+20-Aug-18;ACPDV; ACPDV ;;$109.956;
+24-Aug-18;ACPDV; ACPDV ;;$41.995;
+24-Aug-18;ACPDV; ACPDV ;;$82.855;
+25-Aug-18;ACPDV; ACPDV ;;$73.775;
+25-Aug-18;ACPDV; ACPDV ;;$82.855;
+1-Sep-18;ACPDV; ACPDV ;;$72.960;
+1-Sep-18;ACPDV; ACPDV ;;$82.080;
+8-Sep-18;PV; Patricio ;;$85.500;
+11-Sep-18;AC; Alejandro ;;$57.900;
+14-Sep-18;AC; Alejandro ;;$83.877;
+17-Sep-18;AC; Alejandro ;;$70.269;
+3-Oct-18;AC; Alejandro ;;$59.450;
+5-Oct-18;AC; Alejandro ;;$75.520;
+15-Oct-18;AC; Alejandro ;;$108.745;
+15-Oct-18;AC; Alejandro ;;$61.404;
+16-Oct-18;AC; Alejandro ;;$77.675;
+16-Oct-18;AC; Alejandro ;;$78.260;
+16-Oct-18;AC; Alejandro ;;$77.056;
+19-Oct-18;AC; Alejandro ;;$60.650;
+20-Oct-18;PV; Patricio ;;$94.171;
+20-Oct-18;PV; Patricio ;;$73.380;
+26-Oct-18;AC; Alejandro ;;$82.810;
+28-Oct-18;AC; Alejandro ;;$52.159;
+29-Oct-18;AC; Alejandro ;;$112.385;
+30-Oct-18;PV; Patricio ;;$130.861;
+31-Oct-18;AC; Alejandro ;;$80.444;
+5-Nov-18;AC; Alejandro ;;$38.742;
+6-Nov-18;AC; Alejandro ;;$67.146;
+6-Nov-18;AC; Alejandro ;;$73.036;
+6-Nov-18;AC; Alejandro ;;$54.188;
+7-Nov-18;AC; Alejandro ;;$31.698;
+7-Nov-18;AC; Alejandro ;;$73.036;
+8-Nov-18;AC; Alejandro ;;$55.366;
+9-Nov-18;AC; Alejandro ;;$93.280;
+11-Nov-18;AC; Alejandro ;;$39.644;
+12-Nov-18;AC; Alejandro ;;$61.798;
+12-Nov-18;AC; Alejandro ;;$93.717;
+12-Nov-18;AC; Alejandro ;;$92.114;
+13-Nov-18;AC; Alejandro ;;$61.798;
+13-Nov-18;AC; Alejandro ;;$105.287;
+13-Nov-18;AC; Alejandro ;;$75.790;
+14-Nov-18;AC; Alejandro ;;$56.693;
+14-Nov-18;AC; Alejandro ;;$57.850;
+15-Nov-18;AC; Alejandro ;;$99.110;
+18-Nov-18;AC; Alejandro ;;$104.130;
+19-Nov-18;AC; Alejandro ;;$88.480;
+20-Nov-18;AC; Alejandro ;;$76.314;
+26-Nov-18;AC; Alejandro ;;$45.402;
+26-Nov-18;CP; C. Piraino ;;$62.176;
+30-Nov-18;AC; Alejandro ;;$48.240;
+30-Nov-18;AC; Alejandro ;;$96.480;
+3-Dec-18;AC; Alejandro ;;$75.040;
+9-Dec-18;AC; Alejandro ;;$66.594;
+10-Dec-18;AC; Alejandro ;;$40.360;
+10-Dec-18;AC; Alejandro ;;$30.270;
+11-Dec-18;AC; Alejandro ;;$77.368;
+11-Dec-18;AC; Alejandro ;;$77.693;
+14-Dec-18;AC; Alejandro ;;$74.666;
+14-Dec-18;AC; Alejandro ;;$83.747;
+17-Dec-18;AC; Alejandro ;;$79.316;
+19-Dec-18;AC; Alejandro ;;$43.172;
+19-Dec-18;AC; Alejandro ;;$77.308;
+20-Dec-18;AC; Alejandro ;;$90.360;
+26-Dec-18;AC; Alejandro ;;$54.864;
+27-Dec-18;AC; Alejandro ;;$69.088;
+28-Dec-18;AC; Alejandro ;;$99.522;
+30-Dec-18;AC; Alejandro ;;$83.312;
+30-Dec-18;AC; Alejandro ;;$66.462;
+31-Dec-18;AC; Alejandro ;;$73.152;
+9-Jan-19;CP; C. Piraino ;;$54.432;
+16-Jan-19;PV; Patricio ;;$82.236;
+25-Jan-19;AC; Alejandro ;;$72.520;
+28-Jan-19;AC; Alejandro ;;$30.380;
+28-Jan-19;AC; Alejandro ;;$44.620;
+30-Jan-19;AC; Alejandro ;;$100.116;
+8-Feb-19;AC; Alejandro ;;$67.116;
+11-Feb-19;AC; Alejandro ;;$65.620;
+11-Feb-19;AC; Alejandro ;;$35.705;
+12-Feb-19;AC; Alejandro ;;$25.350;
+12-Feb-19;AC; Alejandro ;;$60.795;
+12-Feb-19;AC; Alejandro ;;$81.060;
+13-Feb-19;AC; Alejandro ;;$69.480;
+13-Feb-19;AC; Alejandro ;;$82.025;
+14-Feb-19;AC; Alejandro ;;$92.640;
+14-Feb-19;AC; Alejandro ;;$69.480;
+14-Feb-19;AC; Alejandro ;;$57.466;
+15-Feb-19;AC; Alejandro ;;$65.325;
+17-Feb-19;AC; Alejandro ;;$55.970;
+25-Feb-19;AC; Alejandro ;;$38.680;
+25-Feb-19;AC; Alejandro ;;$58.987;
+1-Mar-19;AC; Alejandro ;;$76.153;
+1-Mar-19;AC; Alejandro ;;$19.980;
+3-Mar-19;AC; Alejandro ;;$56.373;
+6-Mar-19;CP; C. Piraino ;;$80.580;
+7-Mar-19;AC; Alejandro ;;$40.400;
+8-Mar-19;AC; Alejandro ;;$70.311;
+8-Mar-19;AC; Alejandro ;;$48.480;
+9-Mar-19;AC; Alejandro ;;$35.350;
+11-Mar-19;AC; Alejandro ;;$115.260;
+12-Mar-19;NE; N. Elias ;;$55.550;
+13-Mar-19;AC; Alejandro ;;$54.540;
+15-Mar-19;AC; Alejandro ;;$57.570;
+20-Mar-19;AC; Alejandro ;;$77.520;
+20-Mar-19;AC; Alejandro ;;$71.400;
+21-Mar-19;AC; Alejandro ;;$49.490;
+22-Mar-19;AC; Alejandro ;;$93.510;
+22-Mar-19;AC; Alejandro ;;$78.767;
+26-Mar-19;PV; Patricio ;;$51.360;
+8-Apr-19;AC; Alejandro ;;$41.662;
+10-Apr-19;PV; Patricio ;;$42.788;
+12-Apr-19;AC; Alejandro ;;$67.560;
+14-Apr-19;AC; Alejandro ;;$56.300;
+14-Apr-19;AC; Alejandro ;;$51.796;
+15-Apr-19;AC; Alejandro ;;$82.584;
+15-Apr-19;AC; Alejandro ;;$83.700;
+22-Apr-19;AC; Alejandro ;;$82.198;
+25-Apr-19;AC; Alejandro ;;$78.820;
+26-Apr-19;AC; Alejandro ;;$100.214;
+27-Apr-19;AC; Alejandro ;;$81.468;
+28-Apr-19;AC; Alejandro ;;$66.352;
+28-Apr-19;AC; Alejandro ;;$63.612;
+28-Apr-19;AC; Alejandro ;;$65.208;
+3-May-19;AC; Alejandro ;;$46.240;
+10-May-19;AC; Alejandro ;;$43.524;
+14-May-19;FP; F. Puente  ;;$69.420;
+22-May-19;AC; Alejandro ;;$49.579;
+22-May-19;AC; Alejandro ;;$102.690;
+23-May-19;AK; A. Kia ;;$87.704;
+26-May-19;AC; Alejandro ;;$95.844;
+26-May-19;AC; Alejandro ;;$76.447;
+27-May-19;AC; Alejandro ;;$66.758;
+2-Jun-19;AC; Alejandro ;;$90.929;
+3-Jun-19;CP; C. Piraino ;;$103.831;
+8-Jun-19;AC; Alejandro ;;$115.200;
+9-Jun-19;AC; Alejandro ;;$67.437;
+15-Jun-19;AC; Alejandro ;;$70.866;
+16-Jun-19;AC; Alejandro ;;$80.010;
+18-Jun-19;PV; Patricio ;;$77.490;
+19-Jun-19;AC; Alejandro ;;$57.096;
+20-Jun-19;AC; Alejandro ;;$74.236;
+28-Jun-19;AC; Alejandro ;;$50.478;
+1-Jul-19;AC; Alejandro ;;$41.192;
+4-Jul-19;AC; Alejandro ;;$100.440;
+5-Jul-19;PV; Patricio ;;$37.450;
+5-Jul-19;PV; Patricio ;;$39.911;
+6-Jul-19;AC; Alejandro ;;$79.760;
+10-Jul-19;IA; I. Allende ;;$32.000;
+16-Jul-19;PV; Patricio ;;$49.957;
+19-Jul-19;AC; Alejandro ;;$44.360;
+20-Jul-19;AK; A. Kia ;;$79.848;
+25-Jul-19;AC; Alejandro ;;$68.758;
+4-Aug-19;AC; Alejandro ;;$80.640;
+20-Aug-19;CP; C. Piraino ;;$66.788;
+21-Aug-19;AC; Alejandro ;;$32.828;
+22-Aug-19;AC; Alejandro ;;$51.612;
+26-Aug-19;RA; R. Alvarez ;;$21.960;
+2-Sep-19;AC; Alejandro ;;$32.538;
+10-Sep-19;AC; Alejandro ;;$79.272;
+11-Sep-19;AC; Alejandro ;;$72.666;
+22-Sep-19;AK; A. Kia ;;$114.504;
+28-Sep-19;AC; Alejandro ;;$56.151;
+29-Sep-19;AC; Alejandro ;;$88.062;
+3-Oct-19;AC; Alejandro ;;$89.191;
+6-Oct-19;AC; Alejandro ;;$47.314;
+7-Oct-19;AC; Alejandro ;;$65.778;
+10-Oct-19;AC; Alejandro ;;$58.150;
+11-Oct-19;AC; Alejandro ;;$92.320;
+13-Oct-19;PV; Patricio ;;$41.000;
+20-Oct-19;PV; Patricio ;;$30.672;
+28-Oct-19;CP; C. Piraino ;;$62.316;
+4-Nov-19;PV; Patricio ;;$59.892;
+5-Nov-19;AC; Alejandro ;;$86.550;
+5-Nov-19;PV; Patricio ;;$77.318;
+6-Nov-19;PV; Patricio ;;$62.316;
+7-Nov-19;AC; Alejandro ;;$72.702;
+8-Nov-19;AC; Alejandro ;;$54.238;
+8-Nov-19;RA; R. Alvarez ;;$16.000;
+12-Nov-19;FP; F. Puente  ;;$98.091;
+18-Nov-19;PV; Patricio ;;$41.699;
+19-Nov-19;PV; Patricio ;;$92.016;
+19-Nov-19;PV; Patricio ;;$59.850;
+20-Nov-19;AC; Alejandro ;;$60.544;
+21-Nov-19;AC; Alejandro ;;$49.588;
+21-Nov-19;AC; Alejandro ;;$84.960;
+28-Nov-19;PV; Patricio ;;$39.102;
+28-Nov-19;AC; Alejandro ;;$41.684;
+2-Dec-19;RC; R. Castro ;;$74.280;
+3-Dec-19;AC; Alejandro ;;$54.472;
+4-Dec-19;AC; Alejandro ;;$82.946;
+7-Dec-19;AC; Alejandro ;;$97.508;
+8-Dec-19;AC; Alejandro ;;$53.886;
+11-Dec-19;AC; Alejandro ;;$101.920;
+12-Dec-19;PV; Patricio ;;$72.618;
+13-Dec-19;AC; Alejandro ;;$71.344;
+14-Dec-19;RC; R. Castro ;;$59.878;
+16-Dec-19;RC; R. Castro ;;$76.440;
+17-Dec-19;AC; Alejandro ;;$71.920;
+24-Dec-19;AC; Alejandro ;;$75.600;
+10-Jan-20;PV; Patricio ;;$61.750;
+24-Jan-20;RC; R. Castro ;;$70.504;
+28-Jan-20;AC; Alejandro ;;$83.147;
+29-Jan-20;AC; Alejandro ;;$78.183;
+3-Feb-20;PV; Patricio ;;$86.030;
+4-Feb-20;PV; Patricio ;;$79.910;
+8-Feb-20;AC; Alejandro ;;$70.200;
+8-Feb-20;AK; A. Kia ;;$58.500;
+13-Feb-20;AC; Alejandro ;;$112.800;
+21-Feb-20;PV; Patricio ;;$98.700;
+5-Mar-20;PV; Patricio ;;$62.910;
+12-Mar-20;PV; Patricio ;;$51.260;
+4-May-20;FP; F. Puente  ;;$40.000;
+4-May-20;FP; Boleta ficticia ;;$759.936;
+16-Jun-19;AK; Boleta ficticia ;;$150.296;
 09-09-20;GL;;40,2;$39.000;$970
 14-09-20;AGH;;57,1;$55.390;$970
 16-09-20;AC;;64,5;$62.565;$970
@@ -131,24 +369,24 @@
 26-02-22;PV;;55;$80.630;$1.466
 27-02-22;IO;;97;$151.805;$1.565
 08-03-22;RL;;53,4;$78.445;$1.469
-10-03-22;Fpro;;80,9;124667;$1.541
-11-03-22;Fpro;;95;146395;$1.541
-11-03-22;AC;;60;92460;$1.541
-12-03-22;Stratus;;75;115575;$1.541
-14-03-22;Fpro;;64;98624;$1.541
-16-03-22;Cer;;55,8;85988;$1.541
-17-03-22;Cer;;41;63181;$1.541
-17-03-22;Cer;;38;58900;$1.550
-18-03-22;Cer;;78;120900;$1.550
-23-03-22;AC;;78;120198;$1.541
-25-03-22;Stratus;;73,2;112801;$1.541
-25-03-22;Stratus;;92;160859;$1.748
+10-03-22;Fpro;;80,9;$124.667;$1.541
+11-03-22;Fpro;;95;$146.395;$1.541
+11-03-22;AC;;60;$92.460;$1.541
+12-03-22;Stratus;;75;$115.575;$1.541
+14-03-22;Fpro;;64;$98.624;$1.541
+16-03-22;Cer;;55,8;$85.988;$1.541
+17-03-22;Cer;;41;$63.181;$1.541
+17-03-22;Cer;;38;$58.900;$1.550
+18-03-22;Cer;;78;$120.900;$1.550
+23-03-22;AC;;78;$120.198;$1.541
+25-03-22;Stratus;;73,2;$112.801;$1.541
+25-03-22;Stratus;;92;$160.859;$1.748
 04-04-22;FP;;81;$144.666;$1.786
 06-04-22;FP;;48,5;$86.621;$1.786
-12-04-22;Stratus;;52;86528;$1.664
-23-04-22;IR;;38;63232;$1.664
-23-04-22;AC;;48,8;81203;$1.664
-24-04-22;RL;;76;126464;$1.664
+12-04-22;Stratus;;52;$86.528;$1.664
+23-04-22;IR;;38;$63.232;$1.664
+23-04-22;AC;;48,8;$81.203;$1.664
+24-04-22;RL;;76;$126.464;$1.664
 28-04-22;Stratus;;41;$68.224;$1.664
 04-05-22;Stratus;;84;$145.740;$1.735
 15-05-22;Stratus;;95,5;$165.693;$1.735

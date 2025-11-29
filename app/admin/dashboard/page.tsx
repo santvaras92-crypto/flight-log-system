@@ -261,7 +261,10 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
             const cleaned = montoStr.replace(/\$/g, '').replace(/\./g, '').replace(',', '.');
             const monto = parseFloat(cleaned) || 0;
             if (!map[code]) map[code] = [];
-            map[code].push({ fecha, litros, monto });
+            // Include entry even if litros is 0 (some entries only have monto)
+            if (monto > 0) {
+              map[code].push({ fecha, litros, monto });
+            }
           }
         }
       } catch {}
