@@ -39,10 +39,40 @@ interface AccountData {
   dateRange?: { start?: string; end?: string };
 }
 
-export function generateAccountStatementPDF(data: AccountData): void {
+// Helper function to load image as base64
+async function loadImageAsBase64(url: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      } else {
+        reject(new Error('Could not get canvas context'));
+      }
+    };
+    img.onerror = () => reject(new Error('Could not load image'));
+    img.src = url;
+  });
+}
+
+export async function generateAccountStatementPDF(data: AccountData): Promise<void> {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
+  
+  // Load logo
+  let logoBase64: string | null = null;
+  try {
+    logoBase64 = await loadImageAsBase64('/logo.png');
+  } catch (e) {
+    console.warn('Could not load logo:', e);
+  }
   
   // Colors
   const primaryBlue = '#003D82';
@@ -65,16 +95,26 @@ export function generateAccountStatementPDF(data: AccountData): void {
   doc.setFillColor(0, 61, 130); // #003D82
   doc.rect(0, 0, pageWidth, 45, 'F');
   
-  // Title
+  // Add logo if loaded
+  if (logoBase64) {
+    try {
+      doc.addImage(logoBase64, 'PNG', 15, 8, 30, 30);
+    } catch (e) {
+      console.warn('Could not add logo to PDF:', e);
+    }
+  }
+  
+  // Title (offset to account for logo)
+  const titleX = logoBase64 ? 50 : 20;
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(24);
   doc.setFont('helvetica', 'bold');
-  doc.text('ESTADO DE CUENTA', 20, 22);
+  doc.text('ESTADO DE CUENTA', titleX, 22);
   
   // Subtitle
   doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
-  doc.text('CC-AQI • Flight Operations', 20, 32);
+  doc.text('CC-AQI • Flight Operations', titleX, 32);
   
   // Date
   doc.setFontSize(10);

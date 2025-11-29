@@ -788,7 +788,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
           {/* Generar PDF - Solo visible cuando hay cliente seleccionado */}
           {filterClient && (
             <button
-              onClick={() => {
+              onClick={async () => {
                 const code = filterClient.toUpperCase();
                 const clientName = csvPilotNames?.[code] || code;
                 
@@ -811,7 +811,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                   monto: f.monto,
                 }));
 
-                generateAccountStatementPDF({
+                await generateAccountStatementPDF({
                   clientCode: code,
                   clientName: clientName,
                   flights: filteredFlights.map(f => ({
