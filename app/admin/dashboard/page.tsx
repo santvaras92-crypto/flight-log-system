@@ -74,6 +74,65 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     allowedPilotCodes = [];
   }
 
+  const csvPilotStats: Record<string, { flights: number; hours: number; spent: number }> = {};
+  try {
+    const flightsCsvPath = path.join(process.cwd(), "Base de dato AQI.csv");
+    if (fs.existsSync(flightsCsvPath)) {
+      const raw = fs.readFileSync(flightsCsvPath, "utf-8");
+      const lines = raw.split("\n").filter(l => l.trim());
+
+      const parseCSVLine = (line: string) => {
+        const result: string[] = [];
+        let current = "";
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ';' && !inQuotes) {
+            result.push(current);
+            current = "";
+          } else {
+            current += char;
+          }
+        }
+        result.push(current);
+        return result;
+      };
+
+      const parseDecimal = (value?: string) => {
+        if (!value) return 0;
+        const cleaned = value.replace(/[^0-9,.-]/g, "").replace(/\./g, "").replace(",", ".");
+        if (!cleaned) return 0;
+        const num = Number(cleaned);
+        return Number.isFinite(num) ? num : 0;
+      };
+
+      const parseCurrency = (value?: string) => {
+        if (!value) return 0;
+        const cleaned = value.replace(/[^0-9,-]+/g, "").replace(/\./g, "").replace(",", ".");
+        if (!cleaned) return 0;
+        const num = Number(cleaned);
+        return Number.isFinite(num) ? num : 0;
+      };
+
+      const dataLines = lines.slice(1); // skip header
+      dataLines.forEach(line => {
+        const cols = parseCSVLine(line);
+        const code = (cols[10] || "").trim().toUpperCase();
+        if (!code) return;
+        const hours = parseDecimal(cols[7]);
+        const total = parseCurrency(cols[13]);
+        if (!csvPilotStats[code]) {
+          csvPilotStats[code] = { flights: 0, hours: 0, spent: 0 };
+        }
+        csvPilotStats[code].flights += 1;
+        csvPilotStats[code].hours += hours;
+        csvPilotStats[code].spent += total;
+      });
+    }
+  } catch {}
+
   const registeredPilotCodes = users
     .filter(u => u.rol === 'PILOTO' && u.email && !u.email.endsWith('@piloto.local'))
     .map(u => (u.codigo || '').toUpperCase())
@@ -159,6 +218,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       } catch {}
       return map;
     })(),
+    csvPilotStats,
     depositsByCode: (() => {
       const map: Record<string, number> = {};
       try {

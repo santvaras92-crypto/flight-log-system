@@ -15,6 +15,7 @@ type InitialData = {
   components: any[];
   transactions: any[];
   fuelByCode?: Record<string, number>;
+  csvPilotStats?: Record<string, { flights: number; hours: number; spent: number }>;
   depositsByCode?: Record<string, number>;
   pilotDirectory?: {
     initial: { code: string; name: string }[];
@@ -359,7 +360,7 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
               Pilot Directory
             </button>
           </div>
-          {pilotSubTab === "accounts" && <PilotsTable users={initialData.users} flights={initialData.allFlights || initialData.flights} transactions={initialData.transactions} fuelByCode={initialData.fuelByCode} depositsByCode={initialData.depositsByCode} allowedPilotCodes={allowedPilotCodes} registeredPilotCodes={registeredPilotCodes} csvPilotNames={csvPilotNames} />}
+          {pilotSubTab === "accounts" && <PilotsTable users={initialData.users} flights={initialData.allFlights || initialData.flights} transactions={initialData.transactions} fuelByCode={initialData.fuelByCode} depositsByCode={initialData.depositsByCode} csvPilotStats={initialData.csvPilotStats} allowedPilotCodes={allowedPilotCodes} registeredPilotCodes={registeredPilotCodes} csvPilotNames={csvPilotNames} />}
           {pilotSubTab === "directory" && <PilotDirectory directory={initialData.pilotDirectory} />}
         </>
       )}
@@ -729,7 +730,7 @@ function FlightsTable({ flights, users, editMode = false }: { flights: any[]; us
     </div>
   );
 }
-function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode, allowedPilotCodes, registeredPilotCodes, csvPilotNames }: { users: any[]; flights: any[]; transactions: any[]; fuelByCode?: Record<string, number>; depositsByCode?: Record<string, number>; allowedPilotCodes?: string[]; registeredPilotCodes?: string[]; csvPilotNames?: Record<string, string> }) {
+function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode, csvPilotStats, allowedPilotCodes, registeredPilotCodes, csvPilotNames }: { users: any[]; flights: any[]; transactions: any[]; fuelByCode?: Record<string, number>; depositsByCode?: Record<string, number>; csvPilotStats?: Record<string, { flights: number; hours: number; spent: number }>; allowedPilotCodes?: string[]; registeredPilotCodes?: string[]; csvPilotNames?: Record<string, string> }) {
   const allowed = useMemo(() => {
     const base = new Set((allowedPilotCodes || []).map(c => String(c).toUpperCase()));
     (registeredPilotCodes || []).forEach(c => base.add(String(c).toUpperCase()));
@@ -768,11 +769,12 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
     codesToShow.forEach(code => {
       const u = userByCode.get(code) || null;
       const fs = flightsByCode.get(code) || [];
-      const flightsCount = fs.length;
-      const hours = fs.reduce((a,b)=> a + Number(b.diff_hobbs || 0), 0);
-      const totalSpent = fs.reduce((a,b)=> a + Number(b.costo || 0), 0);
+      const csvStats = csvPilotStats?.[code];
+      const flightsCount = csvStats?.flights ?? fs.length;
+      const hours = csvStats?.hours ?? fs.reduce((a,b)=> a + Number(b.diff_hobbs || 0), 0);
+      const totalSpent = csvStats?.spent ?? fs.reduce((a,b)=> a + Number(b.costo || 0), 0);
       const rateHr = hours > 0 ? totalSpent / hours : 0;
-      const deposits = (depositsByCode?.[code] || 0);
+      const deposits = depositsByCode?.[code] ?? (u ? transactions.filter(t => t.userId === u.id && t.tipo === 'ABONO').reduce((a,b)=>a+Number(b.monto),0) : 0);
       const fuelCredit = (fuelByCode?.[code] || 0);
       const displayName = csvPilotNames?.[code] || u?.nombre || code;
       result.push({
@@ -791,7 +793,7 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
     });
 
     return result.sort((a, b) => (a.codigo || '').localeCompare(b.codigo || ''));
-  }, [users, flights, transactions, fuelByCode, depositsByCode, allowedPilotCodes, registeredPilotCodes, csvPilotNames]); // Sort by codigo
+  }, [users, flights, transactions, fuelByCode, depositsByCode, csvPilotStats, allowedPilotCodes, registeredPilotCodes, csvPilotNames]); // Sort by codigo
   return (
     <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
       <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
