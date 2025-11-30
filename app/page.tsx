@@ -34,8 +34,7 @@ export default async function Home() {
     const registeredPilots = await prisma.user.findMany({
       where: { 
         rol: "PILOTO",
-        codigo: { not: null },
-        email: { not: { endsWith: "@piloto.local" } } // Excluir cuentas placeholder
+        codigo: { not: null }
       },
       select: { id: true, nombre: true, email: true, codigo: true },
     });
