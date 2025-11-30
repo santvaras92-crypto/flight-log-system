@@ -4,7 +4,7 @@ import fs from "fs";
 import path from "path";
 
 export default async function Home() {
-  // Leer pilotos del Pilot Directory (CSV oficial) - mostrar TODOS con nombre completo
+  // Leer pilotos del Pilot Directory (CSV oficial) - solo los registrados en DB
   let pilotDirectoryPilots: { id: number; nombre: string; email: string }[] = [];
   
   try {
@@ -14,15 +14,15 @@ export default async function Home() {
       const lines = content.split("\n").filter(l => l.trim());
       
       // Crear mapa de código -> nombre completo del CSV
-      const csvPilots: { code: string; name: string }[] = [];
+      const csvPilotNames = new Map<string, string>();
       lines.slice(1).forEach(l => {
         const [code, name] = l.split(";");
         if (code && name) {
-          csvPilots.push({ code: code.trim(), name: name.trim() });
+          csvPilotNames.set(code.trim().toUpperCase(), name.trim());
         }
       });
       
-      // Buscar usuarios registrados en la DB
+      // Buscar usuarios registrados en la DB con código en el CSV
       const registeredPilots = await prisma.user.findMany({
         where: { 
           rol: "PILOTO",
@@ -31,32 +31,18 @@ export default async function Home() {
         select: { id: true, nombre: true, email: true, codigo: true },
       });
       
-      // Crear mapa de código -> datos de DB
-      const dbPilotMap = new Map<string, { id: number; email: string }>();
+      // Solo incluir pilotos que están en el CSV Y registrados en DB
       registeredPilots.forEach(p => {
         if (p.codigo) {
-          dbPilotMap.set(p.codigo.toUpperCase(), { id: p.id, email: p.email });
-        }
-      });
-      
-      // Para cada piloto del CSV, buscar si está registrado en DB
-      // Si está registrado, usar su ID real. Si no, usar ID temporal negativo
-      let tempId = -1;
-      csvPilots.forEach(csvPilot => {
-        const dbData = dbPilotMap.get(csvPilot.code.toUpperCase());
-        if (dbData) {
-          pilotDirectoryPilots.push({
-            id: dbData.id,
-            nombre: csvPilot.name, // Usar nombre del CSV (completo)
-            email: dbData.email
-          });
-        } else {
-          // Piloto en CSV pero no registrado en DB - asignar ID temporal
-          pilotDirectoryPilots.push({
-            id: tempId--,
-            nombre: csvPilot.name,
-            email: ''
-          });
+          const csvName = csvPilotNames.get(p.codigo.toUpperCase());
+          if (csvName) {
+            // Piloto está en CSV y en DB - usar nombre del CSV (completo)
+            pilotDirectoryPilots.push({
+              id: p.id,
+              nombre: csvName,
+              email: p.email
+            });
+          }
         }
       });
       
