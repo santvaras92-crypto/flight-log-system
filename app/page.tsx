@@ -4,53 +4,63 @@ import fs from "fs";
 import path from "path";
 
 export default async function Home() {
-  // Leer pilotos del Pilot Directory (CSV oficial) - solo los registrados en DB
+  // Cargar pilotos del Pilot Directory (mismo criterio que el Dashboard)
+  // El Pilot Directory incluye:
+  // 1. Pilotos del CSV (initial)
+  // 2. Pilotos registrados en DB que NO están en CSV (registered)
+  
   let pilotDirectoryPilots: { id: number; nombre: string; email: string }[] = [];
   
   try {
+    // Leer CSV para obtener códigos y nombres
     const csvPath = path.join(process.cwd(), "Base de dato pilotos", "Base de dato pilotos.csv");
+    const allowedPilotCodes: string[] = [];
+    const csvPilotNames = new Map<string, string>();
+    
     if (fs.existsSync(csvPath)) {
       const content = fs.readFileSync(csvPath, "utf-8");
       const lines = content.split("\n").filter(l => l.trim());
-      
-      // Crear mapa de código -> nombre completo del CSV
-      const csvPilotNames = new Map<string, string>();
       lines.slice(1).forEach(l => {
         const [code, name] = l.split(";");
         if (code && name) {
-          csvPilotNames.set(code.trim().toUpperCase(), name.trim());
+          const upperCode = code.trim().toUpperCase();
+          allowedPilotCodes.push(upperCode);
+          csvPilotNames.set(upperCode, name.trim());
         }
       });
-      
-      // Buscar usuarios registrados en la DB con código en el CSV
-      const registeredPilots = await prisma.user.findMany({
-        where: { 
-          rol: "PILOTO",
-          codigo: { not: null }
-        },
-        select: { id: true, nombre: true, email: true, codigo: true },
-      });
-      
-      // Solo incluir pilotos que están en el CSV Y registrados en DB
-      registeredPilots.forEach(p => {
-        if (p.codigo) {
-          const csvName = csvPilotNames.get(p.codigo.toUpperCase());
-          if (csvName) {
-            // Piloto está en CSV y en DB - usar nombre del CSV (completo)
-            pilotDirectoryPilots.push({
-              id: p.id,
-              nombre: csvName,
-              email: p.email
-            });
-          }
-        }
-      });
-      
-      // Ordenar por nombre
-      pilotDirectoryPilots.sort((a, b) => a.nombre.localeCompare(b.nombre));
     }
+    
+    // Buscar todos los pilotos registrados en la DB
+    const registeredPilots = await prisma.user.findMany({
+      where: { 
+        rol: "PILOTO",
+        codigo: { not: null },
+        email: { not: { endsWith: "@piloto.local" } } // Excluir cuentas placeholder
+      },
+      select: { id: true, nombre: true, email: true, codigo: true },
+    });
+    
+    // Construir lista de pilotos del Pilot Directory:
+    // - Si el piloto está en CSV, usar nombre del CSV
+    // - Si no está en CSV pero está registrado, usar nombre de DB
+    registeredPilots.forEach(p => {
+      if (p.codigo) {
+        const upperCode = p.codigo.toUpperCase();
+        const csvName = csvPilotNames.get(upperCode);
+        
+        pilotDirectoryPilots.push({
+          id: p.id,
+          nombre: csvName || p.nombre, // Preferir nombre del CSV si existe
+          email: p.email
+        });
+      }
+    });
+    
+    // Ordenar por nombre
+    pilotDirectoryPilots.sort((a, b) => a.nombre.localeCompare(b.nombre));
+    
   } catch (e) {
-    console.error("Error leyendo Pilot Directory:", e);
+    console.error("Error cargando Pilot Directory:", e);
   }
 
   // Obtener los últimos Hobbs y Tach del vuelo más reciente para CC-AQI
