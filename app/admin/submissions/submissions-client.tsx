@@ -31,6 +31,8 @@ interface SubmissionDto {
   instructorRate: any;
   piloto: { id: number; nombre: string; codigo: string | null; tarifa_hora: any };
   aircraft: { matricula: string };
+  lastHobbs: any;
+  lastTach: any;
   imageLogs: ImageLogDto[];
   flight: null | { id: number; diff_hobbs: any; diff_tach: any; costo: any };
 }
@@ -139,6 +141,10 @@ export default function AdminSubmissions({ initialData }: { initialData: Submiss
         {filtered.map((s) => {
           const hobbsFinal = safeNum(s.hobbsFinal);
           const tachFinal = safeNum(s.tachFinal);
+          const lastHobbs = safeNum(s.lastHobbs);
+          const blockTime = hobbsFinal != null && lastHobbs != null && hobbsFinal > lastHobbs
+            ? Number((hobbsFinal - lastHobbs).toFixed(1))
+            : null;
           const pilotoTarifa = safeNum(s.piloto.tarifa_hora) || 0;
           const estadoClass = estadoColors[s.estado] || "bg-gray-100 text-gray-800";
           
@@ -159,7 +165,7 @@ export default function AdminSubmissions({ initialData }: { initialData: Submiss
               </div>
 
               {/* Información del vuelo */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 bg-gray-50 p-3 rounded">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4 bg-gray-50 p-3 rounded">
                 <div>
                   <p className="text-xs text-gray-500 uppercase">Hobbs Final</p>
                   <p className="font-mono font-bold text-lg">{hobbsFinal?.toFixed(1) || '—'}</p>
@@ -170,12 +176,23 @@ export default function AdminSubmissions({ initialData }: { initialData: Submiss
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 uppercase">Cliente</p>
-                  <p className="font-medium">{s.cliente || '—'}</p>
+                  <p className="font-medium">{s.piloto.codigo || '—'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 uppercase">Copiloto</p>
                   <p className="font-medium">{s.copiloto || '—'}</p>
                 </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">Tiempo en Vuelo</p>
+                  <p className="font-mono font-bold text-lg">{blockTime?.toFixed(1) || '—'}</p>
+                </div>
+              </div>
+
+              {/* Fecha del vuelo visible también como chip */}
+              <div className="mb-3">
+                <span className="inline-block text-xs px-2 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                  Fecha volada: {s.fechaVuelo ? new Date(s.fechaVuelo).toLocaleDateString('es-CL') : '—'}
+                </span>
               </div>
 
               {s.detalle && (

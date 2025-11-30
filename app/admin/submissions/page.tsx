@@ -16,8 +16,23 @@ export default async function AdminSubmissionsPage() {
     take: 50,
   });
 
-  // Serializar fechas y evitar tipos no serializables para el cliente
-  const submissionsDto = submissions.map((s) => ({
+  // Armar DTO con últimos contadores por fecha para calcular tiempo de vuelo
+  const submissionsDto = await Promise.all(submissions.map(async (s) => {
+    const lastFlight = await prisma.flight.findFirst({
+      where: {
+        aircraftId: s.Aircraft.matricula,
+        ...(s.fechaVuelo ? { fecha: { lte: s.fechaVuelo } } : {}),
+      },
+      orderBy: { fecha: "desc" },
+      select: { hobbs_fin: true, tach_fin: true },
+    });
+
+    // Si no hay vuelo previo, usar los actuales del avión como base
+    const lastHobbs = (lastFlight?.hobbs_fin ?? s.Aircraft.hobbs_actual).toString();
+    const lastTach = (lastFlight?.tach_fin ?? s.Aircraft.tach_actual).toString();
+
+    // Serializar fechas y evitar tipos no serializables para el cliente
+    return ({
     id: s.id,
     estado: s.estado,
     errorMessage: s.errorMessage,
@@ -29,6 +44,8 @@ export default async function AdminSubmissionsPage() {
     detalle: s.detalle,
     instructorRate: s.instructorRate?.toString() || null,
     createdAt: s.createdAt.toISOString(),
+      lastHobbs,
+      lastTach,
     imageLogs: s.ImageLog.map((img) => ({
       id: img.id,
       tipo: img.tipo,
@@ -53,6 +70,7 @@ export default async function AdminSubmissionsPage() {
       diff_tach: s.Flight.diff_tach?.toString() || null,
       costo: s.Flight.costo?.toString() || null,
     } : null,
+    });
   }));
 
   return (
