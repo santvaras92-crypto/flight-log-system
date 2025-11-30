@@ -552,6 +552,14 @@ export default function FlightUploadForm({
                     <p className="text-xs text-slate-500 mt-2 italic">
                       * Los valores mostrados son una vista previa. Se confirmarán al aprobar el vuelo.
                     </p>
+                    {/* Diagnóstico: muestra bases y deltas usados para trazabilidad */}
+                    <div className="mt-2 text-[10px] text-slate-500 font-mono">
+                      <div className="flex gap-4">
+                        <span>Base A/E/P: {lastComponents.airframe !== null ? lastComponents.airframe.toFixed(1) : "--"} / {lastComponents.engine !== null ? lastComponents.engine.toFixed(1) : "--"} / {lastComponents.propeller !== null ? lastComponents.propeller.toFixed(1) : "--"}</span>
+                        <span>Δ Tach usado: {deltaTach.toFixed(1)}</span>
+                        <span>Δ Hobbs: {deltaHobbs.toFixed(1)}</span>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
