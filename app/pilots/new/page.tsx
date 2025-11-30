@@ -68,9 +68,9 @@ export default function NewPilotPublicPage() {
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center gap-4">
               <img 
-                src="/logo.png" 
+                src="/LOGO_BLANCO.png" 
                 alt="CC-AQI" 
-                className="h-[4.664rem] w-auto"
+                className="h-[6.48rem] w-auto"
               />
             <div>
               <h1 className="text-3xl font-bold text-white tracking-tight">Pilot Registration</h1>

@@ -71,7 +71,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   // Load logo
   let logoBase64: string | null = null;
   try {
-    logoBase64 = await loadImageAsBase64('/logo.png');
+    logoBase64 = await loadImageAsBase64('/LOGO_BLANCO.png');
   } catch (e) {
     console.warn('Could not load logo:', e);
   }

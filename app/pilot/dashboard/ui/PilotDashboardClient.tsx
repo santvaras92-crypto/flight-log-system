@@ -90,7 +90,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <img 
-                src="/logo.png" 
+                src="/LOGO_BLANCO.png" 
                 alt="CC-AQI" 
                 className="h-[6.48rem] w-auto"
               />

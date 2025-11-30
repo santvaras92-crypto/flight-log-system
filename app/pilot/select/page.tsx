@@ -18,6 +18,11 @@ export default async function PilotSelectPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md mx-auto">
+        {/* Logo Header */}
+        <div className="flex justify-center mb-8 bg-gradient-to-r from-[#003D82] to-[#0A2F5F] rounded-lg py-6">
+          <img src="/LOGO_BLANCO.png" alt="CC-AQI" className="h-[6.48rem] w-auto" />
+        </div>
+        
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
             Selecciona tu Nombre
