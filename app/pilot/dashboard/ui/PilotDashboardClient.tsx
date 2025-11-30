@@ -92,7 +92,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
               <img 
                 src="/LOGO_BLANCO.png?v=3" 
                 alt="CC-AQI" 
-                className="h-[6.48rem] w-auto"
+                className="h-[5.832rem] w-auto"
               />
               <div>
                 <h1 className="text-4xl font-bold text-white tracking-tight">Mi Cuenta de Vuelo</h1>

@@ -23,7 +23,7 @@ export default async function PilotSelectPage() {
       <div className="max-w-md mx-auto">
         {/* Logo Header */}
         <div className="flex justify-center mb-8 bg-gradient-to-r from-[#003D82] to-[#0A2F5F] rounded-lg py-6">
-          <img src="/LOGO_BLANCO.png?v=3" alt="CC-AQI" className="h-[6.48rem] w-auto" />
+          <img src="/LOGO_BLANCO.png?v=3" alt="CC-AQI" className="h-[5.832rem] w-auto" />
         </div>
         
         <div className="text-center mb-8">

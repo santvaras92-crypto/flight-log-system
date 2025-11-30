@@ -70,7 +70,7 @@ export default function NewPilotPublicPage() {
               <img 
                 src="/LOGO_BLANCO.png?v=3" 
                 alt="CC-AQI" 
-                className="h-[6.48rem] w-auto"
+                className="h-[5.832rem] w-auto"
               />
             <div>
               <h1 className="text-3xl font-bold text-white tracking-tight">Pilot Registration</h1>
