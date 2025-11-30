@@ -23,8 +23,37 @@ export async function POST(req: NextRequest) {
       const tach_fin = up.tach_fin === '' ? null : (up.tach_fin !== undefined ? Number(up.tach_fin) : undefined);
       const hobbs_inicio = up.hobbs_inicio === '' ? null : (up.hobbs_inicio !== undefined ? Number(up.hobbs_inicio) : undefined);
       const hobbs_fin = up.hobbs_fin === '' ? null : (up.hobbs_fin !== undefined ? Number(up.hobbs_fin) : undefined);
-      const diff_tach = up.diff_tach === '' ? null : (up.diff_tach !== undefined ? Number(up.diff_tach) : (tach_inicio !== undefined && tach_fin !== undefined ? Number((Number(tach_fin ?? 0) - Number(tach_inicio ?? 0)).toFixed(1)) : undefined));
-      const diff_hobbs = up.diff_hobbs === '' ? null : (up.diff_hobbs !== undefined ? Number(up.diff_hobbs) : (hobbs_inicio !== undefined && hobbs_fin !== undefined ? Number((Number(hobbs_fin ?? 0) - Number(hobbs_inicio ?? 0)).toFixed(1)) : undefined));
+      
+      // Fecha límite: solo recalcular automáticamente para vuelos >= 25 nov 2025
+      const autoRecalcDate = new Date('2025-11-25');
+      const flightDate = fecha || flight.fecha;
+      const shouldAutoRecalc = flightDate && flightDate >= autoRecalcDate;
+      
+      // Recalcular diff_tach si se editó tach_inicio o tach_fin (solo para vuelos >= 25 nov 2025)
+      let diff_tach: number | null | undefined = undefined;
+      if (up.diff_tach !== undefined) {
+        diff_tach = up.diff_tach === '' ? null : Number(up.diff_tach);
+      } else if (shouldAutoRecalc && (tach_inicio !== undefined || tach_fin !== undefined)) {
+        // Usar el valor nuevo o el existente del vuelo
+        const ti = tach_inicio !== undefined ? tach_inicio : (flight.tach_inicio ? Number(flight.tach_inicio) : 0);
+        const tf = tach_fin !== undefined ? tach_fin : (flight.tach_fin ? Number(flight.tach_fin) : 0);
+        if (ti !== null && tf !== null) {
+          diff_tach = Number((tf - ti).toFixed(1));
+        }
+      }
+      
+      // Recalcular diff_hobbs si se editó hobbs_inicio o hobbs_fin (solo para vuelos >= 25 nov 2025)
+      let diff_hobbs: number | null | undefined = undefined;
+      if (up.diff_hobbs !== undefined) {
+        diff_hobbs = up.diff_hobbs === '' ? null : Number(up.diff_hobbs);
+      } else if (shouldAutoRecalc && (hobbs_inicio !== undefined || hobbs_fin !== undefined)) {
+        // Usar el valor nuevo o el existente del vuelo
+        const hi = hobbs_inicio !== undefined ? hobbs_inicio : (flight.hobbs_inicio ? Number(flight.hobbs_inicio) : 0);
+        const hf = hobbs_fin !== undefined ? hobbs_fin : (flight.hobbs_fin ? Number(flight.hobbs_fin) : 0);
+        if (hi !== null && hf !== null) {
+          diff_hobbs = Number((hf - hi).toFixed(1));
+        }
+      }
 
       // Update mutable text fields
       const data: any = {
