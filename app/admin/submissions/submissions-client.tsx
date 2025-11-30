@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { approveFlightSubmission } from "@/app/actions/approve-flight";
+import { cancelFlightSubmission } from "@/app/actions/cancel-submission";
 
 interface DecimalLike {
   toNumber?: () => number;
@@ -49,6 +50,7 @@ const estadoColors: Record<string, string> = {
   ESPERANDO_APROBACION: "bg-purple-100 text-purple-800",
   COMPLETADO: "bg-green-100 text-green-800",
   ERROR: "bg-red-50 text-[#D32F2F]",
+  CANCELADO: "bg-gray-100 text-gray-700",
 };
 
 export default function AdminSubmissions({ initialData }: { initialData: SubmissionDto[] }) {
@@ -89,6 +91,26 @@ export default function AdminSubmissions({ initialData }: { initialData: Submiss
     });
   }
 
+  async function handleCancel(submissionId: number) {
+    setMessage(null);
+    setPendingId(submissionId);
+    startTransition(async () => {
+      try {
+        const res = await cancelFlightSubmission(submissionId);
+        if (res.success) {
+          setMessage(`✓ Submission #${submissionId} cancelado.`);
+          setData((prev) => prev.map((p) => (p.id === submissionId ? { ...p, estado: "CANCELADO" } : p)));
+        } else {
+          setMessage(`✗ Error: ${res.error}`);
+        }
+      } catch (e: any) {
+        setMessage(`✗ Error: ${e.message}`);
+      } finally {
+        setPendingId(null);
+      }
+    });
+  }
+
   return (
     <div>
       <div className="flex items-center gap-4 mb-4">
@@ -101,6 +123,7 @@ export default function AdminSubmissions({ initialData }: { initialData: Submiss
           <option value="ALL">Todos</option>
           <option value="COMPLETADO">Completados</option>
           <option value="ERROR">Errores</option>
+          <option value="CANCELADO">Cancelados</option>
         </select>
         {message && (
           <div className={`text-sm px-3 py-2 rounded border ${message.startsWith('✓') ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
@@ -218,13 +241,22 @@ export default function AdminSubmissions({ initialData }: { initialData: Submiss
                     </div>
                   </div>
                   
-                  <button
-                    disabled={isPending && pendingId === s.id}
-                    onClick={() => handleApprove(s.id)}
-                    className="px-6 py-2 rounded text-sm font-medium bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 transition-colors"
-                  >
-                    {isPending && pendingId === s.id ? "Procesando..." : "✓ Aprobar y Registrar Vuelo"}
-                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      disabled={isPending && pendingId === s.id}
+                      onClick={() => handleApprove(s.id)}
+                      className="px-6 py-2 rounded text-sm font-medium bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 transition-colors"
+                    >
+                      {isPending && pendingId === s.id ? "Procesando..." : "✓ Aprobar y Registrar Vuelo"}
+                    </button>
+                    <button
+                      disabled={isPending && pendingId === s.id}
+                      onClick={() => handleCancel(s.id)}
+                      className="px-6 py-2 rounded text-sm font-medium bg-gray-200 text-gray-800 hover:bg-gray-300 disabled:bg-gray-200 border border-gray-300 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
                 </div>
               )}
 
