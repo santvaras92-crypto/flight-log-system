@@ -1095,6 +1095,8 @@ function PilotDirectory({ directory }: { directory?: { initial: { code: string; 
   const [editedRows, setEditedRows] = useState<Record<number, any>>({});
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deletedIds, setDeletedIds] = useState<Set<number>>(new Set());
 
   const rows = useMemo(() => {
     const init = (directory?.initial || []).map(p => ({ 
@@ -1175,6 +1177,38 @@ function PilotDirectory({ directory }: { directory?: { initial: { code: string; 
     }
   };
 
+  const handleDelete = async (id: number, name: string) => {
+    if (!confirm(`¿Estás seguro de eliminar al piloto "${name}"? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+    
+    setDeletingId(id);
+    setMessage(null);
+    
+    try {
+      const res = await fetch('/api/pilots/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      
+      if (data.ok) {
+        setMessage(`✓ Piloto "${name}" eliminado correctamente`);
+        setDeletedIds(prev => new Set([...prev, id]));
+        // Reload page after 1 second
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        setMessage(`⚠ Error: ${data.error || 'No se pudo eliminar'}`);
+      }
+    } catch (e) {
+      setMessage('⚠ Error de conexión al eliminar');
+      console.error('Error deleting pilot:', e);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const getEditedValue = (id: number | null, field: string, originalValue: any) => {
     if (!id) return originalValue;
     return editedRows[id]?.[field] !== undefined ? editedRows[id][field] : originalValue;
@@ -1223,6 +1257,7 @@ function PilotDirectory({ directory }: { directory?: { initial: { code: string; 
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
             <tr>
+              {editMode && <th className="px-4 py-4 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">Acciones</th>}
               <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Code</th>
               <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Nombre</th>
               <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">F. Nacimiento</th>
@@ -1234,10 +1269,26 @@ function PilotDirectory({ directory }: { directory?: { initial: { code: string; 
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-slate-100">
-            {rows.map((r, idx) => {
+            {rows.filter(r => !deletedIds.has(r.id || 0)).map((r, idx) => {
               const canEdit = editMode && r.id !== null;
               return (
                 <tr key={`${r.code}-${idx}`} className={`transition-colors ${canEdit ? 'bg-blue-50/50' : 'hover:bg-blue-50'}`}>
+                  {editMode && (
+                    <td className="px-4 py-3 whitespace-nowrap text-center">
+                      {r.id !== null ? (
+                        <button
+                          onClick={() => handleDelete(r.id!, r.name)}
+                          disabled={deletingId === r.id}
+                          className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-bold disabled:opacity-50"
+                          title="Eliminar piloto"
+                        >
+                          {deletingId === r.id ? '...' : '🗑️'}
+                        </button>
+                      ) : (
+                        <span className="text-slate-400 text-xs">CSV</span>
+                      )}
+                    </td>
+                  )}
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-blue-600 font-mono">
                     {canEdit ? (
                       <input
