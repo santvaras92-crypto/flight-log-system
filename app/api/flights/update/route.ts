@@ -26,8 +26,12 @@ export async function POST(req: NextRequest) {
       
       // Fecha límite: solo recalcular automáticamente para vuelos >= 25 nov 2025
       const autoRecalcDate = new Date('2025-11-25');
-      const flightDate = fecha || flight.fecha;
+      autoRecalcDate.setHours(0, 0, 0, 0);
+      const flightDate = fecha || (flight.fecha ? new Date(flight.fecha) : null);
+      if (flightDate) flightDate.setHours(0, 0, 0, 0);
       const shouldAutoRecalc = flightDate && flightDate >= autoRecalcDate;
+      
+      console.log('Flight update:', { id, flightDate: flightDate?.toISOString(), autoRecalcDate: autoRecalcDate.toISOString(), shouldAutoRecalc, tach_fin, tach_inicio });
       
       // Recalcular diff_tach si se editó tach_inicio o tach_fin (solo para vuelos >= 25 nov 2025)
       let diff_tach: number | null | undefined = undefined;
