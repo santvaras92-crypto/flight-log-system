@@ -70,7 +70,7 @@ export default async function Home() {
   const lastFlight = await prisma.flight.findFirst({
     where: { aircraftId: "CC-AQI" },
     orderBy: { fecha: "desc" },
-    select: { hobbs_fin: true, tach_fin: true, airframe_hours: true, engine_hours: true, propeller_hours: true },
+    select: { hobbs_fin: true, tach_fin: true },
   });
 
   const lastCounters = {
@@ -78,10 +78,21 @@ export default async function Home() {
     tach: lastFlight?.tach_fin ? Number(lastFlight.tach_fin) : null,
   };
 
+  // Fuente oficial de A/E/P: componentes acumulados del avión
+  const components = await prisma.component.findMany({
+    where: { aircraftId: "CC-AQI" },
+    select: { tipo: true, horas_acumuladas: true },
+  });
+
+  const getComp = (tipo: string) => {
+    const c = components.find((x) => x.tipo.toUpperCase() === tipo);
+    return c?.horas_acumuladas ? Number(c.horas_acumuladas) : null;
+  };
+
   const lastComponents = {
-    airframe: lastFlight?.airframe_hours ? Number(lastFlight.airframe_hours) : null,
-    engine: lastFlight?.engine_hours ? Number(lastFlight.engine_hours) : null,
-    propeller: lastFlight?.propeller_hours ? Number(lastFlight.propeller_hours) : null,
+    airframe: getComp("AIRFRAME"),
+    engine: getComp("ENGINE"),
+    propeller: getComp("PROPELLER"),
   };
 
   return <FlightUploadForm pilots={pilotDirectoryPilots} lastCounters={lastCounters} lastComponents={lastComponents} />;
