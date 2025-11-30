@@ -43,23 +43,6 @@ export default async function PilotDashboardPage({ searchParams }: Props) {
 
   // Get transactions (deposits and fuel credits)
   const transactions = await prisma.transaction.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      monto: true,
-      tipo: true,
-      createdAt: true,
-      Flight: {
-        select: {
-          id: true,
-          fecha: true,
-          diff_hobbs: true,
-        },
-      },
-    },
-  // Get transactions (deposits and fuel credits)
-  const transactions = await prisma.transaction.findMany({
     where: { userId: code },
     orderBy: { createdAt: "desc" },
   });
