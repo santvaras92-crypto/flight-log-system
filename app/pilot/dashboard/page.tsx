@@ -17,6 +17,12 @@ export default async function PilotDashboardPage({ searchParams }: Props) {
 
   const code = codigo.toUpperCase();
 
+  // Find user by codigo to get transactions
+  const user = await prisma.user.findUnique({
+    where: { codigo: code },
+    select: { id: true },
+  });
+
   // Get flights where this pilot is the client (paid)
   const flights = await prisma.flight.findMany({
     where: { cliente: code },
@@ -41,11 +47,11 @@ export default async function PilotDashboardPage({ searchParams }: Props) {
     },
   });
 
-  // Get transactions (deposits and fuel credits)
-  const transactions = await prisma.transaction.findMany({
-    where: { userId: code },
+  // Get transactions (deposits and fuel credits) if user exists
+  const transactions = user ? await prisma.transaction.findMany({
+    where: { userId: user.id },
     orderBy: { createdAt: "desc" },
-  });
+  }) : [];
 
   // Calculate totals
   const totalFlights = flights.length;
