@@ -4,15 +4,15 @@ import fs from "fs";
 import path from "path";
 
 export default async function Home() {
-  // Cargar pilotos del Pilot Directory (mismo criterio que el Dashboard)
+  // Cargar pilotos del Pilot Directory (misma lógica que el Dashboard)
   // El Pilot Directory incluye:
-  // 1. Pilotos del CSV (initial)
-  // 2. Pilotos registrados en DB que NO están en CSV (registered)
+  // 1. Pilotos del CSV que están registrados en DB
+  // 2. Pilotos registrados en DB que NO están en CSV (nuevos registros con email real)
   
   let pilotDirectoryPilots: { id: number; nombre: string; email: string }[] = [];
   
   try {
-    // Leer CSV para obtener códigos y nombres
+    // Leer CSV para obtener códigos permitidos y nombres
     const csvPath = path.join(process.cwd(), "Base de dato pilotos", "Base de dato pilotos.csv");
     const allowedPilotCodes: string[] = [];
     const csvPilotNames = new Map<string, string>();
@@ -31,7 +31,7 @@ export default async function Home() {
     }
     
     // Buscar todos los pilotos registrados en la DB
-    const registeredPilots = await prisma.user.findMany({
+    const allPilots = await prisma.user.findMany({
       where: { 
         rol: "PILOTO",
         codigo: { not: null }
@@ -39,17 +39,21 @@ export default async function Home() {
       select: { id: true, nombre: true, email: true, codigo: true },
     });
     
-    // Construir lista de pilotos del Pilot Directory:
-    // - Si el piloto está en CSV, usar nombre del CSV
-    // - Si no está en CSV pero está registrado, usar nombre de DB
-    registeredPilots.forEach(p => {
-      if (p.codigo) {
-        const upperCode = p.codigo.toUpperCase();
-        const csvName = csvPilotNames.get(upperCode);
-        
+    // Construir lista del Pilot Directory:
+    allPilots.forEach(p => {
+      if (!p.codigo) return;
+      
+      const upperCode = p.codigo.toUpperCase();
+      const isInCSV = allowedPilotCodes.includes(upperCode);
+      const hasRealEmail = p.email && !p.email.endsWith("@piloto.local");
+      
+      // Incluir si:
+      // - Está en el CSV (initial del Pilot Directory)
+      // - O NO está en CSV pero tiene email real (registered del Pilot Directory)
+      if (isInCSV || (!isInCSV && hasRealEmail)) {
         pilotDirectoryPilots.push({
           id: p.id,
-          nombre: csvName || p.nombre, // Preferir nombre del CSV si existe
+          nombre: csvPilotNames.get(upperCode) || p.nombre, // Preferir nombre del CSV
           email: p.email
         });
       }
