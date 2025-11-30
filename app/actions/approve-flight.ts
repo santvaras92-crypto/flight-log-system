@@ -50,7 +50,7 @@ export async function approveFlightSubmission(
       const lastFlight = await tx.flight.findFirst({
         where: { aircraftId: submission.aircraftId },
         orderBy: { fecha: "desc" },
-        select: { hobbs_fin: true, tach_fin: true },
+        select: { hobbs_fin: true, tach_fin: true, airframe_hours: true, engine_hours: true, propeller_hours: true },
       });
 
       const lastHobbs = lastFlight?.hobbs_fin 
@@ -59,6 +59,11 @@ export async function approveFlightSubmission(
       const lastTach = lastFlight?.tach_fin 
         ? new Prisma.Decimal(lastFlight.tach_fin.toString()) 
         : new Prisma.Decimal(submission.Aircraft.tach_actual.toString());
+      
+      // Obtener últimas horas de componentes
+      const lastAirframe = lastFlight?.airframe_hours ? Number(lastFlight.airframe_hours) : null;
+      const lastEngine = lastFlight?.engine_hours ? Number(lastFlight.engine_hours) : null;
+      const lastPropeller = lastFlight?.propeller_hours ? Number(lastFlight.propeller_hours) : null;
 
       // 4. Validar que los nuevos contadores sean mayores
       if (nuevoHobbs.lte(lastHobbs) || nuevoTach.lte(lastTach)) {
@@ -78,6 +83,11 @@ export async function approveFlightSubmission(
       const costo = diffHobbs.mul(tarifaTotal);
 
       // 7. Crear el registro del vuelo
+      // Calcular nuevas horas de componentes (solo si hay valores previos)
+      const newAirframe = lastAirframe !== null ? Number((lastAirframe + diffTach.toNumber()).toFixed(1)) : null;
+      const newEngine = lastEngine !== null ? Number((lastEngine + diffTach.toNumber()).toFixed(1)) : null;
+      const newPropeller = lastPropeller !== null ? Number((lastPropeller + diffTach.toNumber()).toFixed(1)) : null;
+
       const flight = await tx.flight.create({
         data: {
           fecha: submission.fechaVuelo || new Date(),
@@ -90,6 +100,9 @@ export async function approveFlightSubmission(
           costo: costo.toNumber(),
           tarifa: rateDec.toNumber(),
           instructor_rate: instructorRateDec.toNumber(),
+          airframe_hours: newAirframe,
+          engine_hours: newEngine,
+          propeller_hours: newPropeller,
           pilotoId: submission.pilotoId,
           aircraftId: submission.aircraftId,
           // Cliente = código del piloto (ej. "FA" para Franco Acosta)
@@ -108,15 +121,25 @@ export async function approveFlightSubmission(
         },
       });
 
-      // 9. Actualizar los componentes del avión
-      await tx.component.updateMany({
-        where: { aircraftId: submission.aircraftId },
-        data: {
-          horas_acumuladas: {
-            increment: diffTach.toNumber(),
-          },
-        },
-      });
+      // 9. Actualizar los componentes del avión con los valores exactos del vuelo
+      if (newAirframe !== null) {
+        await tx.component.updateMany({
+          where: { aircraftId: submission.aircraftId, tipo: "AIRFRAME" },
+          data: { horas_acumuladas: newAirframe },
+        });
+      }
+      if (newEngine !== null) {
+        await tx.component.updateMany({
+          where: { aircraftId: submission.aircraftId, tipo: "ENGINE" },
+          data: { horas_acumuladas: newEngine },
+        });
+      }
+      if (newPropeller !== null) {
+        await tx.component.updateMany({
+          where: { aircraftId: submission.aircraftId, tipo: "PROPELLER" },
+          data: { horas_acumuladas: newPropeller },
+        });
+      }
 
       // 10. Crear la transacción de cobro
       await tx.transaction.create({

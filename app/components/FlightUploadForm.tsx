@@ -46,12 +46,20 @@ interface LastCounters {
   tach: number | null;
 }
 
+interface LastComponents {
+  airframe: number | null;
+  engine: number | null;
+  propeller: number | null;
+}
+
 export default function FlightUploadForm({ 
   pilots = [] as PilotOption[], 
-  lastCounters = { hobbs: null, tach: null } as LastCounters 
+  lastCounters = { hobbs: null, tach: null } as LastCounters,
+  lastComponents = { airframe: null, engine: null, propeller: null } as LastComponents
 }: { 
   pilots?: PilotOption[];
   lastCounters?: LastCounters;
+  lastComponents?: LastComponents;
 }) {
   const [pilotoId, setPilotoId] = useState(pilots.length ? String(pilots[0].id) : "");
   const [hobbsImage, setHobbsImage] = useState<File | null>(null);
@@ -525,9 +533,15 @@ export default function FlightUploadForm({
                           <td className="border border-slate-300 px-3 py-3 text-center font-mono font-bold text-blue-600">{deltaHobbs.toFixed(1)}</td>
                           <td className="border border-slate-300 px-3 py-3 text-center font-mono font-bold">{tachManual}</td>
                           <td className="border border-slate-300 px-3 py-3 text-center font-mono font-bold text-blue-600">{deltaTach.toFixed(1)}</td>
-                          <td className="border border-slate-300 px-3 py-3 text-center font-mono text-slate-400">--</td>
-                          <td className="border border-slate-300 px-3 py-3 text-center font-mono text-slate-400">--</td>
-                          <td className="border border-slate-300 px-3 py-3 text-center font-mono text-slate-400">--</td>
+                          <td className="border border-slate-300 px-3 py-3 text-center font-mono font-bold">
+                            {lastComponents.airframe !== null ? (lastComponents.airframe + deltaTach).toFixed(1) : "--"}
+                          </td>
+                          <td className="border border-slate-300 px-3 py-3 text-center font-mono font-bold">
+                            {lastComponents.engine !== null ? (lastComponents.engine + deltaTach).toFixed(1) : "--"}
+                          </td>
+                          <td className="border border-slate-300 px-3 py-3 text-center font-mono font-bold">
+                            {lastComponents.propeller !== null ? (lastComponents.propeller + deltaTach).toFixed(1) : "--"}
+                          </td>
                           <td className="border border-slate-300 px-3 py-3 text-center font-semibold">{selectedPilot.nombre}</td>
                           <td className="border border-slate-300 px-3 py-3 text-center">{copiloto || "--"}</td>
                           <td className="border border-slate-300 px-3 py-3 text-center">LOCAL</td>
@@ -536,7 +550,7 @@ export default function FlightUploadForm({
                       </tbody>
                     </table>
                     <p className="text-xs text-slate-500 mt-2 italic">
-                      * Los valores de TOTAL TIME IN SERVICE se calculan automáticamente al aprobar el vuelo
+                      * Los valores mostrados son una vista previa. Se confirmarán al aprobar el vuelo.
                     </p>
                   </div>
                 )}
