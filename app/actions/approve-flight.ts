@@ -91,8 +91,8 @@ export async function approveFlightSubmission(
           tarifa: tarifaTotal.toNumber(),
           pilotoId: submission.pilotoId,
           aircraftId: submission.aircraftId,
-          // Campos opcionales del submission
-          cliente: submission.cliente,
+          // Cliente = código del piloto (ej. "FA" para Franco Acosta)
+          cliente: submission.User?.codigo || null,
           copiloto: submission.copiloto,
           detalle: submission.detalle,
         },
