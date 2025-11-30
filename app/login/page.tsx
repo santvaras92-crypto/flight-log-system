@@ -23,7 +23,13 @@ export default function LoginPage() {
     if (res?.error) {
       setError("Credenciales inválidas");
     } else {
-      router.push("/admin/submissions");
+      // Get user session to check role
+      const session = await fetch('/api/auth/session').then(r => r.json());
+      if (session?.user?.rol === 'ADMIN') {
+        router.push("/admin/submissions");
+      } else {
+        router.push("/pilot/dashboard");
+      }
     }
   }
 
