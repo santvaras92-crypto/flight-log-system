@@ -90,10 +90,10 @@ model FlightSubmission {
   copiloto       String?
   detalle        String?
   hobbsFinal     Decimal?
-  tachFinal      Decimal?
-  rate           Decimal?   // Rate por hora del vuelo
-  instructorRate Decimal?   // Rate instructor/SP por hora
+  instructorRate Decimal?
   notificado     Boolean    @default(false)
+  tachFinal      Decimal?
+  rate           Decimal?
   Flight         Flight?
   Aircraft       Aircraft   @relation(fields: [aircraftId], references: [matricula])
   User           User       @relation(fields: [pilotoId], references: [id])
