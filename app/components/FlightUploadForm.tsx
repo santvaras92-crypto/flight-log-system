@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 interface UploadResponse {
   success: boolean;
@@ -69,6 +69,42 @@ export default function FlightUploadForm({
   // Nuevos campos
   const [copiloto, setCopiloto] = useState<string>("");
   const [detalle, setDetalle] = useState<string>("");
+  const [showPreview, setShowPreview] = useState<boolean>(false);
+
+  // Calcular deltas en tiempo real
+  const deltaHobbs = useMemo(() => {
+    if (!hobbsManual || lastCounters.hobbs === null) return null;
+    const val = parseFloat(hobbsManual) - lastCounters.hobbs;
+    return isNaN(val) || val <= 0 ? null : Number(val.toFixed(1));
+  }, [hobbsManual, lastCounters.hobbs]);
+
+  const deltaTach = useMemo(() => {
+    if (!tachManual || lastCounters.tach === null) return null;
+    const val = parseFloat(tachManual) - lastCounters.tach;
+    return isNaN(val) || val <= 0 ? null : Number(val.toFixed(1));
+  }, [tachManual, lastCounters.tach]);
+
+  // Verificar relación Hobbs/Tach (~1.3x con margen de 20%)
+  const ratioWarning = useMemo(() => {
+    if (deltaHobbs === null || deltaTach === null || deltaTach === 0) return null;
+    const ratio = deltaHobbs / deltaTach;
+    // Esperado: 1.3 con margen de 20% (entre 1.04 y 1.56)
+    if (ratio < 1.04 || ratio > 1.56) {
+      return {
+        ratio: ratio.toFixed(2),
+        expected: "~1.3",
+        message: ratio < 1.04 
+          ? "Δ Hobbs parece bajo respecto a Δ Tach" 
+          : "Δ Hobbs parece alto respecto a Δ Tach"
+      };
+    }
+    return null;
+  }, [deltaHobbs, deltaTach]);
+
+  // Obtener nombre del piloto seleccionado
+  const selectedPilot = useMemo(() => {
+    return pilots.find(p => String(p.id) === pilotoId);
+  }, [pilots, pilotoId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -292,6 +328,12 @@ export default function FlightUploadForm({
                     className="w-full px-4 py-3 bg-white border-2 border-green-400 rounded-lg font-mono font-bold text-slate-900 text-lg focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all shadow-sm"
                     required
                   />
+                  {deltaHobbs !== null && (
+                    <div className="flex items-center gap-2 mt-2 p-2 bg-blue-50 rounded-lg">
+                      <span className="text-xs font-bold text-blue-700 uppercase">Δ Hobbs:</span>
+                      <span className="font-mono font-bold text-blue-900">{deltaHobbs.toFixed(1)} hrs</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -308,8 +350,34 @@ export default function FlightUploadForm({
                     className="w-full px-4 py-3 bg-white border-2 border-green-400 rounded-lg font-mono font-bold text-slate-900 text-lg focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all shadow-sm"
                     required
                   />
+                  {deltaTach !== null && (
+                    <div className="flex items-center gap-2 mt-2 p-2 bg-indigo-50 rounded-lg">
+                      <span className="text-xs font-bold text-indigo-700 uppercase">Δ Tach:</span>
+                      <span className="font-mono font-bold text-indigo-900">{deltaTach.toFixed(1)} hrs</span>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Warning de relación Hobbs/Tach */}
+              {ratioWarning && (
+                <div className="mt-4 p-4 bg-amber-50 border-2 border-amber-300 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <svg className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div>
+                      <p className="font-bold text-amber-800">⚠️ Verificar Contadores</p>
+                      <p className="text-sm text-amber-700 mt-1">
+                        {ratioWarning.message}. Ratio actual: <span className="font-mono font-bold">{ratioWarning.ratio}</span> (esperado: {ratioWarning.expected})
+                      </p>
+                      <p className="text-xs text-amber-600 mt-2">
+                        Generalmente Δ Hobbs ≈ 1.3 × Δ Tach. Verifica que los valores ingresados sean correctos.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Información adicional */}
@@ -408,6 +476,72 @@ export default function FlightUploadForm({
                 </div>
               </div>
             </div>
+
+            {/* Preview de Bitácora */}
+            {deltaHobbs !== null && deltaTach !== null && selectedPilot && (
+              <div className="bg-gradient-to-r from-slate-50 to-gray-50 rounded-xl p-6 mb-6 border-2 border-slate-300">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-slate-800 uppercase tracking-wide flex items-center gap-2">
+                    <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Vista Previa - Bitácora CC-AQI
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowPreview(!showPreview)}
+                    className="text-sm font-semibold text-blue-600 hover:text-blue-800 underline"
+                  >
+                    {showPreview ? "Ocultar" : "Mostrar"}
+                  </button>
+                </div>
+                
+                {showPreview && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs border-collapse border border-slate-400 bg-white">
+                      <thead>
+                        <tr className="bg-slate-100">
+                          <th className="border border-slate-300 px-2 py-2 text-center font-bold" rowSpan={2}>DATE</th>
+                          <th className="border border-slate-300 px-2 py-2 text-center font-bold" rowSpan={2}>HOBBS</th>
+                          <th className="border border-slate-300 px-2 py-2 text-center font-bold" rowSpan={2}>BLOCK<br/>TIME</th>
+                          <th className="border border-slate-300 px-2 py-2 text-center font-bold" rowSpan={2}>TAC</th>
+                          <th className="border border-slate-300 px-2 py-2 text-center font-bold" rowSpan={2}>TACH.<br/>TIME</th>
+                          <th className="border border-slate-300 px-2 py-2 text-center font-bold" colSpan={3}>TOTAL TIME IN SERVICE</th>
+                          <th className="border border-slate-300 px-2 py-2 text-center font-bold" rowSpan={2}>PILOT<br/>LICENSE</th>
+                          <th className="border border-slate-300 px-2 py-2 text-center font-bold" rowSpan={2}>INSTRUCTOR/<br/>COPILOT</th>
+                          <th className="border border-slate-300 px-2 py-2 text-center font-bold" rowSpan={2}>ROUTE</th>
+                          <th className="border border-slate-300 px-2 py-2 text-center font-bold" rowSpan={2}>REMARKS<br/>SIGNATURE</th>
+                        </tr>
+                        <tr className="bg-slate-100">
+                          <th className="border border-slate-300 px-2 py-1 text-center font-bold text-[10px]">AIRFRAME</th>
+                          <th className="border border-slate-300 px-2 py-1 text-center font-bold text-[10px]">ENGINE</th>
+                          <th className="border border-slate-300 px-2 py-1 text-center font-bold text-[10px]">PROPELLER</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td className="border border-slate-300 px-3 py-3 text-center font-mono">{fechaVuelo}</td>
+                          <td className="border border-slate-300 px-3 py-3 text-center font-mono font-bold">{hobbsManual}</td>
+                          <td className="border border-slate-300 px-3 py-3 text-center font-mono font-bold text-blue-600">{deltaHobbs.toFixed(1)}</td>
+                          <td className="border border-slate-300 px-3 py-3 text-center font-mono font-bold">{tachManual}</td>
+                          <td className="border border-slate-300 px-3 py-3 text-center font-mono font-bold text-blue-600">{deltaTach.toFixed(1)}</td>
+                          <td className="border border-slate-300 px-3 py-3 text-center font-mono text-slate-400">--</td>
+                          <td className="border border-slate-300 px-3 py-3 text-center font-mono text-slate-400">--</td>
+                          <td className="border border-slate-300 px-3 py-3 text-center font-mono text-slate-400">--</td>
+                          <td className="border border-slate-300 px-3 py-3 text-center font-semibold">{selectedPilot.nombre}</td>
+                          <td className="border border-slate-300 px-3 py-3 text-center">{copiloto || "--"}</td>
+                          <td className="border border-slate-300 px-3 py-3 text-center">LOCAL</td>
+                          <td className="border border-slate-300 px-3 py-3 text-center">{detalle || "S/Obs"}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <p className="text-xs text-slate-500 mt-2 italic">
+                      * Los valores de TOTAL TIME IN SERVICE se calculan automáticamente al aprobar el vuelo
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Submit Button */}
             <button
