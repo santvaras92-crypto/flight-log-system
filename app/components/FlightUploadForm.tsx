@@ -221,7 +221,7 @@ export default function FlightUploadForm({
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center gap-4">
             <img 
-              src="/LOGO_BLANCO.png?v=2" 
+              src="/LOGO_BLANCO.png?v=3" 
               alt="CC-AQI" 
               className="h-[4.664rem] w-auto"
             />
