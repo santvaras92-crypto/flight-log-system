@@ -9,6 +9,9 @@ export default async function PilotSelectPage() {
     select: {
       cliente: true,
     },
+    where: {
+      cliente: { not: null },
+    },
     distinct: ['cliente'],
     orderBy: {
       cliente: 'asc',
@@ -36,7 +39,7 @@ export default async function PilotSelectPage() {
           {clientes.map((item) => (
             <Link
               key={item.cliente}
-              href={`/pilot/dashboard?codigo=${encodeURIComponent(item.cliente)}`}
+              href={`/pilot/dashboard?codigo=${encodeURIComponent(item.cliente!)}`}
               className="block px-6 py-4 hover:bg-gray-50 transition-colors"
             >
               <div className="text-lg font-medium text-gray-900">
