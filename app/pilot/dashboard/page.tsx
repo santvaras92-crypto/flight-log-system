@@ -1,37 +1,21 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import PilotDashboardClient from "./ui/PilotDashboardClient";
 
 export const revalidate = 0;
 
-export default async function PilotDashboardPage() {
-  const session = await getServerSession(authOptions);
+type Props = {
+  searchParams: { codigo?: string };
+};
+
+export default async function PilotDashboardPage({ searchParams }: Props) {
+  const codigo = searchParams.codigo;
   
-  if (!session?.user) {
-    redirect("/login");
+  if (!codigo) {
+    redirect("/pilot/select");
   }
 
-  // Get pilot user data
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email! },
-    select: {
-      id: true,
-      nombre: true,
-      email: true,
-      codigo: true,
-      saldo_cuenta: true,
-      tarifa_hora: true,
-      rol: true,
-    },
-  });
-
-  if (!user || user.rol !== "PILOTO") {
-    redirect("/login");
-  }
-
-  const code = (user.codigo || "").toUpperCase();
+  const code = codigo.toUpperCase();
 
   // Get flights where this pilot is the client (paid)
   const flights = await prisma.flight.findMany({
@@ -74,6 +58,10 @@ export default async function PilotDashboardPage() {
         },
       },
     },
+  // Get transactions (deposits and fuel credits)
+  const transactions = await prisma.transaction.findMany({
+    where: { userId: code },
+    orderBy: { createdAt: "desc" },
   });
 
   // Calculate totals
@@ -95,16 +83,14 @@ export default async function PilotDashboardPage() {
   // Fuel credits (if any - you may need to adjust based on your fuel tracking)
   const totalFuel = 0; // TODO: implement fuel tracking if needed
 
-  const balance = Number(user.saldo_cuenta);
+  // Calculate balance: deposits - spent
+  const balance = totalDeposits - totalSpent;
 
   const data = {
     user: {
-      id: user.id,
-      nombre: user.nombre,
-      email: user.email,
+      nombre: code,
       codigo: code,
       saldo_cuenta: balance,
-      tarifa_hora: Number(user.tarifa_hora),
     },
     flights: flights.map(f => ({
       ...f,

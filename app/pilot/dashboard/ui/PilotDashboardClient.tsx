@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { signOut } from "next-auth/react";
 
 interface Flight {
   id: number;
@@ -31,12 +30,9 @@ interface Deposit {
 
 interface PilotData {
   user: {
-    id: number;
     nombre: string;
-    email: string;
     codigo: string;
     saldo_cuenta: number;
-    tarifa_hora: number;
   };
   flights: Flight[];
   deposits: Deposit[];
@@ -101,19 +97,19 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
               <div>
                 <h1 className="text-4xl font-bold text-white tracking-tight">Mi Cuenta de Vuelo</h1>
                 <p className="mt-1.5 text-blue-50 text-base font-medium">
-                  {data.user.nombre} • {data.user.codigo}
+                  {data.user.nombre}
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => signOut({ callbackUrl: '/login' })}
+            <a
+              href="/pilot/select"
               className="h-12 px-5 bg-white/20 backdrop-blur-sm hover:bg-white/30 border-2 border-white/30 rounded-xl text-white font-bold transition-all shadow-lg flex items-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
-              Cerrar Sesión
-            </button>
+              Cambiar Piloto
+            </a>
           </div>
         </div>
       </div>
