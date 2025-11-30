@@ -98,22 +98,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Obtener los máximos actuales de la tabla Flight
-    const [maxHobbsFlight, maxTachFlight] = await Promise.all([
-      prisma.flight.findFirst({
-        where: { aircraftId: matricula, hobbs_fin: { not: null } },
-        orderBy: { hobbs_fin: "desc" },
-        select: { hobbs_fin: true },
-      }),
-      prisma.flight.findFirst({
-        where: { aircraftId: matricula, tach_fin: { not: null } },
-        orderBy: { tach_fin: "desc" },
-        select: { tach_fin: true },
-      }),
-    ]);
+    // Obtener los contadores del último vuelo por fecha
+    const lastFlight = await prisma.flight.findFirst({
+      where: { aircraftId: matricula },
+      orderBy: { fecha: "desc" },
+      select: { hobbs_fin: true, tach_fin: true },
+    });
 
-    const lastHobbs = maxHobbsFlight?.hobbs_fin ? Number(maxHobbsFlight.hobbs_fin) : 0;
-    const lastTach = maxTachFlight?.tach_fin ? Number(maxTachFlight.tach_fin) : 0;
+    const lastHobbs = lastFlight?.hobbs_fin ? Number(lastFlight.hobbs_fin) : 0;
+    const lastTach = lastFlight?.tach_fin ? Number(lastFlight.tach_fin) : 0;
 
     if (hobbsNum <= lastHobbs) {
       return NextResponse.json(

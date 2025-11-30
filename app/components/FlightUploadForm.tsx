@@ -67,7 +67,6 @@ export default function FlightUploadForm({
   const [fechaVuelo, setFechaVuelo] = useState<string>(new Date().toISOString().split("T")[0]);
   
   // Nuevos campos
-  const [cliente, setCliente] = useState<string>("");
   const [copiloto, setCopiloto] = useState<string>("");
   const [detalle, setDetalle] = useState<string>("");
 
@@ -109,7 +108,6 @@ export default function FlightUploadForm({
       formData.append("fechaVuelo", fechaVuelo);
       formData.append("hobbsManual", hobbsManual);
       formData.append("tachManual", tachManual);
-      formData.append("cliente", cliente);
       formData.append("copiloto", copiloto);
       formData.append("detalle", detalle);
       
@@ -323,45 +321,32 @@ export default function FlightUploadForm({
                 Información Adicional
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">
-                    Cliente
-                  </label>
-                  <input
-                    type="text"
-                    value={cliente}
-                    onChange={(e) => setCliente(e.target.value)}
-                    placeholder="Nombre del cliente (opcional)"
-                    className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-lg font-semibold text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all shadow-sm"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">
-                    Copiloto
+                    Copiloto / Instructor
                   </label>
                   <input
                     type="text"
                     value={copiloto}
                     onChange={(e) => setCopiloto(e.target.value)}
-                    placeholder="Nombre del copiloto (opcional)"
+                    placeholder="Nombre del copiloto o instructor (opcional)"
                     className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-lg font-semibold text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all shadow-sm"
                   />
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">
-                  Detalle del Vuelo
-                </label>
-                <textarea
-                  value={detalle}
-                  onChange={(e) => setDetalle(e.target.value)}
-                  placeholder="Observaciones o detalles adicionales del vuelo (opcional)"
-                  rows={3}
-                  className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-lg font-semibold text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all shadow-sm resize-none"
-                />
+                <div className="space-y-2">
+                  <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">
+                    Detalle del Vuelo
+                  </label>
+                  <textarea
+                    value={detalle}
+                    onChange={(e) => setDetalle(e.target.value)}
+                    placeholder="Observaciones o detalles adicionales del vuelo (opcional)"
+                    rows={3}
+                    className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-lg font-semibold text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all shadow-sm resize-none"
+                  />
+                </div>
               </div>
             </div>
 
