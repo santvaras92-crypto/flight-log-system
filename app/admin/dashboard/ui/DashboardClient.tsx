@@ -861,7 +861,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
               <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Pilot</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Copilot/Instructor</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Client</th>
-              <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Rate</th>
+              <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Airplane Rate</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Instructor/SP</th>
               <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Total</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Details</th>
@@ -928,10 +928,19 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
                     {(() => {
-                      // Prioridad: tarifa del CSV, luego cálculo desde costo/horas, luego tarifa del usuario
-                      if (f.tarifa && Number(f.tarifa) > 0) {
-                        return `$${Math.round(Number(f.tarifa)).toLocaleString("es-CL")}`;
+                      // Solo mostrar tarifa del vuelo para >= 25 nov 2025
+                      const flightDate = new Date(f.fecha);
+                      const nov25 = new Date('2025-11-25');
+                      
+                      if (flightDate >= nov25) {
+                        // Vuelos nuevos: mostrar tarifa guardada en el vuelo
+                        if (f.tarifa && Number(f.tarifa) > 0) {
+                          return `$${Math.round(Number(f.tarifa)).toLocaleString("es-CL")}`;
+                        }
+                        return "-";
                       }
+                      
+                      // Vuelos antiguos: calcular desde costo/horas o usar tarifa del usuario
                       const horas = Number(f.diff_hobbs || 0);
                       const costoVal = Number(f.costo || 0);
                       if (horas > 0 && costoVal > 0) {
@@ -944,10 +953,15 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                       return "-";
                     })()}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600">
-                    {editMode ? (
-                      <input className="px-2 py-1 border rounded" defaultValue={f.instructor || ''} onChange={e=>handleChange(f.id,'instructor',e.target.value)} />
-                    ) : (f.instructor || "-")}
+                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
+                    {(() => {
+                      // Solo mostrar instructor_rate para vuelos >= 25 nov 2025
+                      const flightDate = new Date(f.fecha);
+                      const nov25 = new Date('2025-11-25');
+                      if (flightDate < nov25) return "-";
+                      const rate = f.instructor_rate ? Number(f.instructor_rate) : 0;
+                      return rate > 0 ? `$${Math.round(rate).toLocaleString("es-CL")}` : "-";
+                    })()}
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-xs font-bold text-green-600 text-right">{f.costo != null ? `$${Number(f.costo).toLocaleString("es-CL")}` : '-'}</td>
                   <td className="px-4 py-3 text-xs text-slate-600 max-w-xs truncate" title={f.detalle || ""}>

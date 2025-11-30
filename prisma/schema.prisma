@@ -71,6 +71,7 @@ model Flight {
   propeller_hours  Decimal?
   piloto_raw       String?
   tarifa           Decimal?
+  instructor_rate  Decimal?
   Aircraft         Aircraft          @relation(fields: [aircraftId], references: [matricula])
   User             User?             @relation(fields: [pilotoId], references: [id])
   FlightSubmission FlightSubmission? @relation(fields: [submissionId], references: [id])

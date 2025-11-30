@@ -88,7 +88,8 @@ export async function approveFlightSubmission(
           diff_hobbs: diffHobbs.toNumber(),
           diff_tach: diffTach.toNumber(),
           costo: costo.toNumber(),
-          tarifa: tarifaTotal.toNumber(),
+          tarifa: rateDec.toNumber(),
+          instructor_rate: instructorRateDec.toNumber(),
           pilotoId: submission.pilotoId,
           aircraftId: submission.aircraftId,
           // Cliente = código del piloto (ej. "FA" para Franco Acosta)
