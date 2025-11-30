@@ -819,6 +819,8 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                     fecha: f.fecha,
                     diff_hobbs: Number(f.diff_hobbs) || 0,
                     costo: Number(f.costo) || 0,
+                    tarifa: f.tarifa ? Number(f.tarifa) : undefined,
+                    instructor_rate: f.instructor_rate ? Number(f.instructor_rate) : undefined,
                     detalle: f.detalle || '',
                     piloto_raw: f.piloto_raw || '',
                   })),

@@ -10,6 +10,8 @@ interface Flight {
   piloto_raw?: string;
   tach_inicio?: number;
   tach_fin?: number;
+  tarifa?: number;
+  instructor_rate?: number;
 }
 
 interface Deposit {
@@ -321,16 +323,39 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   currentY += 5;
 
   if (data.flights.length > 0) {
-    const flightRows = data.flights.map(f => [
-      formatDate(f.fecha),
-      f.diff_hobbs ? `${f.diff_hobbs.toFixed(1)} hrs` : '-',
-      f.costo ? formatCurrency(f.costo) : '-',
-      (f.detalle || '-').substring(0, 40),
-    ]);
+    const flightRows = data.flights.map(f => {
+      const horas = Number(f.diff_hobbs || 0);
+      const nov25 = new Date('2025-11-25');
+      const flightDate = new Date(f.fecha);
+      let avion = 0;
+      let instructor = 0;
+      if ((f.tarifa != null) || (f.instructor_rate != null)) {
+        const rate = Number(f.tarifa || 0);
+        const ir = Number(f.instructor_rate || 0);
+        avion = horas * rate;
+        instructor = horas * ir;
+      } else if (flightDate < nov25 && f.costo) {
+        // Vuelos antiguos: todo el costo se considera Avión
+        avion = Number(f.costo);
+        instructor = 0;
+      } else if (f.costo) {
+        // Fallback si no hay tarifas guardadas
+        avion = Number(f.costo);
+      }
+
+      return [
+        formatDate(f.fecha),
+        horas ? `${horas.toFixed(1)} hrs` : '-',
+        avion ? formatCurrency(avion) : '-',
+        instructor ? formatCurrency(instructor) : '-',
+        f.costo ? formatCurrency(f.costo) : '-',
+        (f.detalle || '-').substring(0, 40),
+      ];
+    });
 
     autoTable(doc, {
       startY: currentY,
-      head: [['Fecha', 'Horas', 'Costo', 'Detalle']],
+      head: [['Fecha', 'Horas', 'Avión', 'Instructor/SP', 'Costo', 'Detalle']],
       body: flightRows,
       theme: 'striped',
       margin: { left: 15, right: 15 },
@@ -349,9 +374,11 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
       },
       columnStyles: {
         0: { cellWidth: 25 },
-        1: { cellWidth: 25, halign: 'right' },
-        2: { cellWidth: 30, halign: 'right' },
-        3: { cellWidth: 'auto' },
+        1: { cellWidth: 20, halign: 'right' },
+        2: { cellWidth: 28, halign: 'right' },
+        3: { cellWidth: 30, halign: 'right' },
+        4: { cellWidth: 30, halign: 'right' },
+        5: { cellWidth: 'auto' },
       },
     });
   }
