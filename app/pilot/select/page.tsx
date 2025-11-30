@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function PilotSelectPage() {
   // Obtener todos los clientes únicos de los vuelos
-  const clientes = await prisma.vuelo.findMany({
+  const clientes = await prisma.flight.findMany({
     select: {
       cliente: true,
     },
