@@ -46,24 +46,18 @@ export async function approveFlightSubmission(
       const rateDec = new Prisma.Decimal(rate || 0);
       const instructorRateDec = new Prisma.Decimal(instructorRate || 0);
 
-      // 3. Obtener los máximos actuales de la tabla Flight
-      const maxHobbsFlight = await tx.flight.findFirst({
-        where: { aircraftId: submission.aircraftId, hobbs_fin: { not: null } },
-        orderBy: { hobbs_fin: "desc" },
-        select: { hobbs_fin: true },
+      // 3. Obtener los últimos contadores del vuelo más reciente por FECHA
+      const lastFlight = await tx.flight.findFirst({
+        where: { aircraftId: submission.aircraftId },
+        orderBy: { fecha: "desc" },
+        select: { hobbs_fin: true, tach_fin: true },
       });
 
-      const maxTachFlight = await tx.flight.findFirst({
-        where: { aircraftId: submission.aircraftId, tach_fin: { not: null } },
-        orderBy: { tach_fin: "desc" },
-        select: { tach_fin: true },
-      });
-
-      const lastHobbs = maxHobbsFlight?.hobbs_fin 
-        ? new Prisma.Decimal(maxHobbsFlight.hobbs_fin.toString()) 
+      const lastHobbs = lastFlight?.hobbs_fin 
+        ? new Prisma.Decimal(lastFlight.hobbs_fin.toString()) 
         : new Prisma.Decimal(submission.Aircraft.hobbs_actual.toString());
-      const lastTach = maxTachFlight?.tach_fin 
-        ? new Prisma.Decimal(maxTachFlight.tach_fin.toString()) 
+      const lastTach = lastFlight?.tach_fin 
+        ? new Prisma.Decimal(lastFlight.tach_fin.toString()) 
         : new Prisma.Decimal(submission.Aircraft.tach_actual.toString());
 
       // 4. Validar que los nuevos contadores sean mayores
