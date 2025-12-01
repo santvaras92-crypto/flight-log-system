@@ -472,77 +472,86 @@ export default function FlightUploadForm({
 
             {/* Preview de Bitácora */}
             {deltaHobbs !== null && deltaTach !== null && selectedPilot && (
-              <div className="rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 border-2" style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)' }}>
+              <div className="rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 border-2 shadow-lg" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--aviation-blue-500)' }}>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-base sm:text-lg font-bold uppercase tracking-wide flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'var(--aviation-blue-500)' }}>
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    Vista Previa - Bitácora CC-AQI
+                    VISTA PREVIA - BITÁCORA CC-AQI
                   </h3>
                   <button
                     type="button"
                     onClick={() => setShowPreview(!showPreview)}
-                    className="text-xs sm:text-sm font-semibold underline" style={{ color: 'var(--aviation-blue-500)' }}
+                    className="px-3 py-1.5 text-xs sm:text-sm font-bold rounded-lg transition-colors" 
+                    style={{ 
+                      background: showPreview ? 'var(--aviation-blue-500)' : 'var(--bg-tertiary)',
+                      color: showPreview ? 'white' : 'var(--aviation-blue-500)',
+                      border: '1px solid var(--aviation-blue-500)'
+                    }}
                   >
                     {showPreview ? "Ocultar" : "Mostrar"}
                   </button>
                 </div>
                 
                 {showPreview && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs border-collapse border border-slate-400 bg-white">
-                      <thead>
-                        <tr className="bg-slate-100">
-                          <th className="border border-slate-300 px-2 py-2 text-center font-bold" rowSpan={2}>DATE</th>
-                          <th className="border border-slate-300 px-2 py-2 text-center font-bold" rowSpan={2}>HOBBS</th>
-                          <th className="border border-slate-300 px-2 py-2 text-center font-bold" rowSpan={2}>BLOCK<br/>TIME</th>
-                          <th className="border border-slate-300 px-2 py-2 text-center font-bold" rowSpan={2}>TAC</th>
-                          <th className="border border-slate-300 px-2 py-2 text-center font-bold" rowSpan={2}>TACH.<br/>TIME</th>
-                          <th className="border border-slate-300 px-2 py-2 text-center font-bold" colSpan={3}>TOTAL TIME IN SERVICE</th>
-                          <th className="border border-slate-300 px-2 py-2 text-center font-bold" rowSpan={2}>PILOT<br/>LICENSE</th>
-                          <th className="border border-slate-300 px-2 py-2 text-center font-bold" rowSpan={2}>INSTRUCTOR/<br/>COPILOT</th>
-                          <th className="border border-slate-300 px-2 py-2 text-center font-bold" rowSpan={2}>ROUTE</th>
-                          <th className="border border-slate-300 px-2 py-2 text-center font-bold" rowSpan={2}>REMARKS<br/>SIGNATURE</th>
-                        </tr>
-                        <tr className="bg-slate-100">
-                          <th className="border border-slate-300 px-2 py-1 text-center font-bold text-[10px]">AIRFRAME</th>
-                          <th className="border border-slate-300 px-2 py-1 text-center font-bold text-[10px]">ENGINE</th>
-                          <th className="border border-slate-300 px-2 py-1 text-center font-bold text-[10px]">PROPELLER</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td className="border border-slate-300 px-3 py-3 text-center font-mono">{fechaVuelo}</td>
-                          <td className="border border-slate-300 px-3 py-3 text-center font-mono font-bold">{hobbsManual}</td>
-                          <td className="border border-slate-300 px-3 py-3 text-center font-mono font-bold text-blue-600">{deltaHobbs.toFixed(1)}</td>
-                          <td className="border border-slate-300 px-3 py-3 text-center font-mono font-bold">{tachManual}</td>
-                          <td className="border border-slate-300 px-3 py-3 text-center font-mono font-bold text-blue-600">{deltaTach.toFixed(1)}</td>
-                          <td className="border border-slate-300 px-3 py-3 text-center font-mono font-bold">
-                            {lastComponents.airframe !== null ? (lastComponents.airframe + deltaTach).toFixed(1) : "--"}
-                          </td>
-                          <td className="border border-slate-300 px-3 py-3 text-center font-mono font-bold">
-                            {lastComponents.engine !== null ? (lastComponents.engine + deltaTach).toFixed(1) : "--"}
-                          </td>
-                          <td className="border border-slate-300 px-3 py-3 text-center font-mono font-bold">
-                            {lastComponents.propeller !== null ? (lastComponents.propeller + deltaTach).toFixed(1) : "--"}
-                          </td>
-                          <td className="border border-slate-300 px-3 py-3 text-center font-semibold">{selectedPilot.nombre}</td>
-                          <td className="border border-slate-300 px-3 py-3 text-center">{copiloto || "--"}</td>
-                          <td className="border border-slate-300 px-3 py-3 text-center">LOCAL</td>
-                          <td className="border border-slate-300 px-3 py-3 text-center">{detalle || "S/Obs"}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                    <p className="text-xs text-slate-500 mt-2 italic">
+                  <div className="overflow-x-auto -mx-2 sm:mx-0">
+                    <div className="inline-block min-w-full align-middle">
+                      <div className="overflow-hidden shadow-lg ring-1 ring-black ring-opacity-5 rounded-lg">
+                        <table className="min-w-full divide-y divide-gray-300 bg-white text-xs sm:text-sm">
+                          <thead className="bg-slate-700">
+                            <tr>
+                              <th className="border border-slate-400 px-2 sm:px-3 py-2 text-center font-bold text-white text-[10px] sm:text-xs" rowSpan={2}>DATE</th>
+                              <th className="border border-slate-400 px-2 sm:px-3 py-2 text-center font-bold text-white text-[10px] sm:text-xs" rowSpan={2}>HOBBS</th>
+                              <th className="border border-slate-400 px-2 sm:px-3 py-2 text-center font-bold text-white text-[10px] sm:text-xs" rowSpan={2}>BLOCK<br/>TIME</th>
+                              <th className="border border-slate-400 px-2 sm:px-3 py-2 text-center font-bold text-white text-[10px] sm:text-xs" rowSpan={2}>TAC</th>
+                              <th className="border border-slate-400 px-2 sm:px-3 py-2 text-center font-bold text-white text-[10px] sm:text-xs" rowSpan={2}>TACH.<br/>TIME</th>
+                              <th className="border border-slate-400 px-2 sm:px-3 py-2 text-center font-bold text-white text-[10px] sm:text-xs" colSpan={3}>TOTAL TIME IN SERVICE</th>
+                              <th className="border border-slate-400 px-2 sm:px-3 py-2 text-center font-bold text-white text-[10px] sm:text-xs" rowSpan={2}>PILOT<br/>LICENSE</th>
+                              <th className="border border-slate-400 px-2 sm:px-3 py-2 text-center font-bold text-white text-[10px] sm:text-xs" rowSpan={2}>INSTRUCTOR/<br/>COPILOT</th>
+                              <th className="border border-slate-400 px-2 sm:px-3 py-2 text-center font-bold text-white text-[10px] sm:text-xs" rowSpan={2}>ROUTE</th>
+                              <th className="border border-slate-400 px-2 sm:px-3 py-2 text-center font-bold text-white text-[10px] sm:text-xs" rowSpan={2}>REMARKS<br/>SIGNATURE</th>
+                            </tr>
+                            <tr>
+                              <th className="border border-slate-400 px-2 sm:px-3 py-1 text-center font-bold text-white text-[9px] sm:text-[10px]">AIRFRAME</th>
+                              <th className="border border-slate-400 px-2 sm:px-3 py-1 text-center font-bold text-white text-[9px] sm:text-[10px]">ENGINE</th>
+                              <th className="border border-slate-400 px-2 sm:px-3 py-1 text-center font-bold text-white text-[9px] sm:text-[10px]">PROPELLER</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            <tr className="hover:bg-gray-50">
+                              <td className="border border-slate-300 px-2 sm:px-3 py-2 sm:py-3 text-center font-mono text-gray-900 whitespace-nowrap">{fechaVuelo}</td>
+                              <td className="border border-slate-300 px-2 sm:px-3 py-2 sm:py-3 text-center font-mono font-bold text-gray-900">{hobbsManual}</td>
+                              <td className="border border-slate-300 px-2 sm:px-3 py-2 sm:py-3 text-center font-mono font-bold text-blue-600">{deltaHobbs.toFixed(1)}</td>
+                              <td className="border border-slate-300 px-2 sm:px-3 py-2 sm:py-3 text-center font-mono font-bold text-gray-900">{tachManual}</td>
+                              <td className="border border-slate-300 px-2 sm:px-3 py-2 sm:py-3 text-center font-mono font-bold text-blue-600">{deltaTach.toFixed(1)}</td>
+                              <td className="border border-slate-300 px-2 sm:px-3 py-2 sm:py-3 text-center font-mono font-bold text-gray-900">
+                                {lastComponents.airframe !== null ? (lastComponents.airframe + deltaTach).toFixed(1) : "--"}
+                              </td>
+                              <td className="border border-slate-300 px-2 sm:px-3 py-2 sm:py-3 text-center font-mono font-bold text-gray-900">
+                                {lastComponents.engine !== null ? (lastComponents.engine + deltaTach).toFixed(1) : "--"}
+                              </td>
+                              <td className="border border-slate-300 px-2 sm:px-3 py-2 sm:py-3 text-center font-mono font-bold text-gray-900">
+                                {lastComponents.propeller !== null ? (lastComponents.propeller + deltaTach).toFixed(1) : "--"}
+                              </td>
+                              <td className="border border-slate-300 px-2 sm:px-3 py-2 sm:py-3 text-center font-semibold text-gray-900">{selectedPilot.nombre}</td>
+                              <td className="border border-slate-300 px-2 sm:px-3 py-2 sm:py-3 text-center text-gray-900">{copiloto || "--"}</td>
+                              <td className="border border-slate-300 px-2 sm:px-3 py-2 sm:py-3 text-center text-gray-900">LOCAL</td>
+                              <td className="border border-slate-300 px-2 sm:px-3 py-2 sm:py-3 text-center text-gray-900">{detalle || "S/Obs"}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <p className="text-xs sm:text-sm mt-3 italic" style={{ color: 'var(--text-tertiary)' }}>
                       * Los valores mostrados son una vista previa. Se confirmarán al aprobar el vuelo.
                     </p>
                     {/* Diagnóstico: muestra bases y deltas usados para trazabilidad */}
-                    <div className="mt-2 text-[10px] text-slate-500 font-mono">
-                      <div className="flex gap-4">
-                        <span>Base A/E/P: {lastComponents.airframe !== null ? lastComponents.airframe.toFixed(1) : "--"} / {lastComponents.engine !== null ? lastComponents.engine.toFixed(1) : "--"} / {lastComponents.propeller !== null ? lastComponents.propeller.toFixed(1) : "--"}</span>
-                        <span>Δ Tach usado: {deltaTach.toFixed(1)}</span>
-                        <span>Δ Hobbs: {deltaHobbs.toFixed(1)}</span>
+                    <div className="mt-3 p-3 rounded-lg text-[10px] sm:text-xs font-mono" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
+                      <div className="flex flex-wrap gap-3 sm:gap-4">
+                        <span className="whitespace-nowrap">Base A/E/P: {lastComponents.airframe !== null ? lastComponents.airframe.toFixed(1) : "--"} / {lastComponents.engine !== null ? lastComponents.engine.toFixed(1) : "--"} / {lastComponents.propeller !== null ? lastComponents.propeller.toFixed(1) : "--"}</span>
+                        <span className="whitespace-nowrap">Δ Tach usado: {deltaTach.toFixed(1)}</span>
+                        <span className="whitespace-nowrap">Δ Hobbs: {deltaHobbs.toFixed(1)}</span>
                       </div>
                     </div>
                   </div>
