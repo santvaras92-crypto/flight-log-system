@@ -18,7 +18,7 @@ interface Flight {
   User: {
     nombre: string;
     codigo: string | null;
-  };
+  } | null;
 }
 
 interface Aircraft {
@@ -111,7 +111,7 @@ export default function CountersClient({
           <div>
             <span className="font-semibold" style={{ color: 'var(--text-secondary)' }}>Piloto:</span>
             <p style={{ color: 'var(--text-primary)' }}>
-              {lastFlight.User.nombre} ({lastFlight.User.codigo})
+              {lastFlight.User ? `${lastFlight.User.nombre} (${lastFlight.User.codigo})` : 'N/A'}
             </p>
           </div>
           <div>
