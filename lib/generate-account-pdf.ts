@@ -71,15 +71,17 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   // Load logo
   let logoBase64: string | null = null;
   try {
-    logoBase64 = await loadImageAsBase64('/logo.png');
+    logoBase64 = await loadImageAsBase64('/LOGO_BLANCO.png');
   } catch (e) {
     console.warn('Could not load logo:', e);
   }
   
-  // Colors
-  const primaryBlue = '#003D82';
-  const darkBlue = '#0A2F5F';
-  const lightGray = '#F1F5F9';
+  // Dashboard hybrid theme colors
+  const slateBlue = '#1E293B'; // slate-800
+  const accentBlue = '#2563EB'; // blue-600
+  const lightBg = '#F8FAFC'; // slate-50
+  const textPrimary = '#0F172A'; // slate-900
+  const textSecondary = '#64748B'; // slate-500
   
   // Helper function to format currency
   const formatCurrency = (value: number) => `$${Math.round(value).toLocaleString('es-CL')}`;
@@ -93,8 +95,8 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   };
 
   // === HEADER ===
-  // Blue gradient header bar
-  doc.setFillColor(0, 61, 130); // #003D82
+  // Gradient header bar (slate-800 to blue-900)
+  doc.setFillColor(30, 41, 59); // #1E293B slate-800
   doc.rect(0, 0, pageWidth, 45, 'F');
   
   // Add logo if loaded
@@ -129,10 +131,10 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   }
 
   // === CLIENT INFO BOX ===
-  doc.setFillColor(241, 245, 249); // light gray
+  doc.setFillColor(248, 250, 252); // #F8FAFC slate-50
   doc.roundedRect(15, 52, pageWidth - 30, 28, 3, 3, 'F');
   
-  doc.setTextColor(10, 47, 95);
+  doc.setTextColor(15, 23, 42); // #0F172A slate-900
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.text('Cliente:', 22, 64);
@@ -140,7 +142,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(100, 116, 139);
+  doc.setTextColor(100, 116, 139); // #64748B slate-500
   doc.text(`Código: ${data.clientCode}`, 22, 73);
 
   // === SUMMARY CARDS ===
@@ -150,10 +152,10 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   const cardGap = 5;
 
   const summaryItems = [
-    { label: 'Total Vuelos', value: data.totalFlights.toString(), color: '#3B82F6' },
-    { label: 'Horas Voladas', value: `${data.totalHours.toFixed(1)} hrs`, color: '#10B981' },
-    { label: 'Total Gastado', value: formatCurrency(data.totalSpent), color: '#F59E0B' },
-    { label: 'Balance', value: formatCurrency(data.balance), color: data.balance >= 0 ? '#10B981' : '#EF4444' },
+    { label: 'Total Vuelos', value: data.totalFlights.toString(), color: '#2563EB' }, // blue-600
+    { label: 'Horas Voladas', value: `${data.totalHours.toFixed(1)} hrs`, color: '#059669' }, // emerald-600
+    { label: 'Total Gastado', value: formatCurrency(data.totalSpent), color: '#D97706' }, // amber-600
+    { label: 'Balance', value: formatCurrency(data.balance), color: data.balance >= 0 ? '#059669' : '#DC2626' }, // emerald-600 / red-600
   ];
 
   summaryItems.forEach((item, i) => {
@@ -184,7 +186,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   // === FINANCIAL SUMMARY ===
   let currentY = cardY + cardHeight + 15;
   
-  doc.setTextColor(10, 47, 95);
+  doc.setTextColor(15, 23, 42); // #0F172A slate-900
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('Resumen Financiero', 15, currentY);
@@ -219,7 +221,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   currentY = (doc as any).lastAutoTable?.finalY + 15 || currentY + 50;
   
   if (data.deposits.length > 0) {
-    doc.setTextColor(10, 47, 95);
+    doc.setTextColor(15, 23, 42); // #0F172A slate-900
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.text(`Depósitos (${data.deposits.length})`, 15, currentY);
@@ -238,7 +240,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
       theme: 'striped',
       margin: { left: 15, right: 15 },
       headStyles: {
-        fillColor: [16, 185, 129], // Green
+        fillColor: [5, 150, 105], // #059669 emerald-600
         textColor: [255, 255, 255],
         fontStyle: 'bold',
         fontSize: 9,
@@ -248,7 +250,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
         textColor: [51, 65, 85],
       },
       alternateRowStyles: {
-        fillColor: [240, 253, 244],
+        fillColor: [248, 250, 252], // #F8FAFC slate-50
       },
       columnStyles: {
         0: { cellWidth: 30 },
@@ -268,7 +270,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
       currentY = 20;
     }
 
-    doc.setTextColor(10, 47, 95);
+    doc.setTextColor(15, 23, 42); // #0F172A slate-900
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.text(`Créditos de Combustible (${data.fuelCredits.length})`, 15, currentY);
@@ -287,7 +289,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
       theme: 'striped',
       margin: { left: 15, right: 15 },
       headStyles: {
-        fillColor: [245, 158, 11], // Amber
+        fillColor: [217, 119, 6], // #D97706 amber-600
         textColor: [255, 255, 255],
         fontStyle: 'bold',
         fontSize: 9,
@@ -297,7 +299,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
         textColor: [51, 65, 85],
       },
       alternateRowStyles: {
-        fillColor: [255, 251, 235],
+        fillColor: [254, 252, 232], // amber-50
       },
       columnStyles: {
         0: { cellWidth: 30 },
@@ -316,7 +318,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     currentY = 20;
   }
   
-  doc.setTextColor(10, 47, 95);
+  doc.setTextColor(15, 23, 42); // #0F172A slate-900
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text(`Detalle de Vuelos (${data.flights.length})`, 15, currentY);
@@ -360,7 +362,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
       theme: 'striped',
       margin: { left: 15, right: 15 },
       headStyles: {
-        fillColor: [0, 61, 130],
+        fillColor: [37, 99, 235], // #2563EB blue-600
         textColor: [255, 255, 255],
         fontStyle: 'bold',
         fontSize: 9,
@@ -370,7 +372,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
         textColor: [51, 65, 85],
       },
       alternateRowStyles: {
-        fillColor: [248, 250, 252],
+        fillColor: [248, 250, 252], // #F8FAFC slate-50
       },
       columnStyles: {
         0: { cellWidth: 25 },
