@@ -154,6 +154,50 @@ model User {
   FlightSubmission FlightSubmission[]
   Session          Session[]
   Transaction      Transaction[]
+  Deposit          Deposit[]
+  FuelCharge       FuelCharge[]
+}
+
+model Deposit {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  amount      Float
+  date        DateTime @default(now())
+  description String?
+  reference   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([date])
+}
+
+model FuelCharge {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  liters        Float
+  pricePerLiter Float
+  totalAmount   Float
+  date          DateTime @default(now())
+  location      String?
+  reference     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  User          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([date])
+}
+
+model SheetState {
+  id               Int      @id @default(autoincrement())
+  key              String   @unique
+  matrix           Json
+  formulas         Json?
+  namedExpressions Json?
+  updatedAt        DateTime @default(now()) @updatedAt
+  updatedBy        Int?
 }
 
 model VerificationToken {

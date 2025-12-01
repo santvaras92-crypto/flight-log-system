@@ -24,6 +24,8 @@ export async function POST(req: NextRequest) {
       include: {
         Flight: { take: 1 },
         FlightSubmission: { take: 1 },
+        Deposit: { take: 1 },
+        FuelCharge: { take: 1 },
       }
     });
 
@@ -43,6 +45,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ 
         ok: false, 
         error: "No se puede eliminar: el piloto tiene submissions pendientes" 
+      }, { status: 400 });
+    }
+
+    if (pilot.Deposit.length > 0) {
+      return NextResponse.json({ 
+        ok: false, 
+        error: "No se puede eliminar: el piloto tiene depósitos registrados" 
+      }, { status: 400 });
+    }
+
+    if (pilot.FuelCharge.length > 0) {
+      return NextResponse.json({ 
+        ok: false, 
+        error: "No se puede eliminar: el piloto tiene cargos de combustible registrados" 
       }, { status: 400 });
     }
 
