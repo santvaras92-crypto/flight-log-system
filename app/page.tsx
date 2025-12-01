@@ -71,33 +71,62 @@ export default async function Home() {
     console.error("Error cargando Pilot Directory:", e);
   }
 
-  // Obtener los últimos Hobbs y Tach del vuelo más reciente para CC-AQI
-  const lastFlight = await prisma.flight.findFirst({
-    where: { aircraftId: "CC-AQI" },
-    orderBy: { fecha: "desc" },
-    select: { hobbs_fin: true, tach_fin: true },
+  // Obtener los últimos Hobbs, Tach y componentes del Excel (flight_entries)
+  const excelState = await prisma.sheetState.findUnique({
+    where: { key: 'flight_entries' }
   });
+
+  let lastHobbs = null;
+  let lastTach = null;
+  let lastAirframe = null;
+  let lastEngine = null;
+  let lastPropeller = null;
+
+  if (excelState?.matrix && Array.isArray(excelState.matrix) && excelState.matrix.length > 1) {
+    const lastFlight = (excelState.matrix as any[])[1]; // Primera fila de datos (después del header)
+    // Columnas: ["Fecha","TACH I","TACH F","Δ TACH","HOBBS I","HOBBS F","Δ HOBBS",
+    //           "Piloto","Copiloto/Instructor","Cliente","Rate","Instructor/SP Rate",
+    //           "Total","AIRFRAME","ENGINE","PROPELLER","Detalle"]
+    lastHobbs = lastFlight[5] ? Number(lastFlight[5]) : null; // HOBBS F (columna 5)
+    lastTach = lastFlight[2] ? Number(lastFlight[2]) : null;  // TACH F (columna 2)
+    lastAirframe = lastFlight[13] ? Number(lastFlight[13]) : null; // AIRFRAME (columna 13)
+    lastEngine = lastFlight[14] ? Number(lastFlight[14]) : null;   // ENGINE (columna 14)
+    lastPropeller = lastFlight[15] ? Number(lastFlight[15]) : null; // PROPELLER (columna 15)
+  }
+
+  // Si el Excel está vacío, usar valores iniciales del Aircraft
+  if (lastHobbs === null || lastTach === null) {
+    const aircraft = await prisma.aircraft.findUnique({
+      where: { matricula: "CC-AQI" }
+    });
+    lastHobbs = aircraft?.hobbs_actual ? Number(aircraft.hobbs_actual) : null;
+    lastTach = aircraft?.tach_actual ? Number(aircraft.tach_actual) : null;
+  }
+
+  // Si los componentes están vacíos en el Excel, usar valores de la tabla Component
+  if (lastAirframe === null || lastEngine === null || lastPropeller === null) {
+    const components = await prisma.component.findMany({
+      where: { aircraftId: "CC-AQI" },
+      select: { tipo: true, horas_acumuladas: true },
+    });
+    const getComp = (tipo: string) => {
+      const c = components.find((x) => x.tipo.toUpperCase() === tipo);
+      return c?.horas_acumuladas ? Number(c.horas_acumuladas) : null;
+    };
+    if (lastAirframe === null) lastAirframe = getComp("AIRFRAME");
+    if (lastEngine === null) lastEngine = getComp("ENGINE");
+    if (lastPropeller === null) lastPropeller = getComp("PROPELLER");
+  }
 
   const lastCounters = {
-    hobbs: lastFlight?.hobbs_fin ? Number(lastFlight.hobbs_fin) : null,
-    tach: lastFlight?.tach_fin ? Number(lastFlight.tach_fin) : null,
-  };
-
-  // Fuente oficial de A/E/P: componentes acumulados del avión
-  const components = await prisma.component.findMany({
-    where: { aircraftId: "CC-AQI" },
-    select: { tipo: true, horas_acumuladas: true },
-  });
-
-  const getComp = (tipo: string) => {
-    const c = components.find((x) => x.tipo.toUpperCase() === tipo);
-    return c?.horas_acumuladas ? Number(c.horas_acumuladas) : null;
+    hobbs: lastHobbs,
+    tach: lastTach,
   };
 
   const lastComponents = {
-    airframe: getComp("AIRFRAME"),
-    engine: getComp("ENGINE"),
-    propeller: getComp("PROPELLER"),
+    airframe: lastAirframe,
+    engine: lastEngine,
+    propeller: lastPropeller,
   };
 
   return (

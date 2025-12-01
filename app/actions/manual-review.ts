@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { Decimal } from "@prisma/client/runtime/library";
 
 /**
  * Permite a un ADMIN validar manualmente los valores de OCR
@@ -89,21 +90,41 @@ async function autoRegisterFlightForReview(submissionId: number) {
     const nuevoHobbs = hobbsLog.valorExtraido;
     const nuevoTach = tachLog.valorExtraido;
 
-    // Obtener los máximos actuales de la tabla Flight
-    const maxHobbsFlight = await tx.flight.findFirst({
-      where: { aircraftId: submission.aircraftId, hobbs_fin: { not: null } },
-      orderBy: { hobbs_fin: "desc" },
-      select: { hobbs_fin: true },
+    // Obtener últimos contadores del Excel (flight_entries)
+    const excelState = await tx.sheetState.findUnique({
+      where: { key: 'flight_entries' }
     });
 
-    const maxTachFlight = await tx.flight.findFirst({
-      where: { aircraftId: submission.aircraftId, tach_fin: { not: null } },
-      orderBy: { tach_fin: "desc" },
-      select: { tach_fin: true },
-    });
+    let lastHobbs = submission.Aircraft.hobbs_actual;
+    let lastTach = submission.Aircraft.tach_actual;
+    let lastAirframe = 0;
+    let lastEngine = 0;
+    let lastPropeller = 0;
 
-    const lastHobbs = maxHobbsFlight?.hobbs_fin || submission.Aircraft.hobbs_actual;
-    const lastTach = maxTachFlight?.tach_fin || submission.Aircraft.tach_actual;
+    // Si hay datos en el Excel, usar el primer vuelo (fila 1, después del header)
+    if (excelState?.matrix && Array.isArray(excelState.matrix) && excelState.matrix.length > 1) {
+      const lastRow = (excelState.matrix as any[])[1];
+      // Columnas: ["Fecha","TACH I","TACH F","Δ TACH","HOBBS I","HOBBS F","Δ HOBBS",
+      //           "Piloto","Copiloto/Instructor","Cliente","Rate","Instructor/SP Rate",
+      //           "Total","AIRFRAME","ENGINE","PROPELLER","Detalle"]
+      if (lastRow[5]) lastHobbs = new Decimal(lastRow[5]); // HOBBS F
+      if (lastRow[2]) lastTach = new Decimal(lastRow[2]); // TACH F
+      if (lastRow[13]) lastAirframe = Number(lastRow[13]); // AIRFRAME
+      if (lastRow[14]) lastEngine = Number(lastRow[14]); // ENGINE
+      if (lastRow[15]) lastPropeller = Number(lastRow[15]); // PROPELLER
+    } else {
+      // Si Excel vacío, leer componentes de la DB
+      const components = await tx.component.findMany({
+        where: { aircraftId: submission.aircraftId }
+      });
+      const getComp = (tipo: string) => {
+        const c = components.find(x => x.tipo.toUpperCase() === tipo);
+        return c?.horas_acumuladas ? Number(c.horas_acumuladas) : 0;
+      };
+      lastAirframe = getComp("AIRFRAME");
+      lastEngine = getComp("ENGINE");
+      lastPropeller = getComp("PROPELLER");
+    }
 
     if (nuevoHobbs.lte(lastHobbs) || nuevoTach.lte(lastTach)) {
       throw new Error(`Los nuevos contadores deben ser mayores a los actuales (Hobbs: ${lastHobbs}, Tach: ${lastTach})`);
@@ -111,25 +132,67 @@ async function autoRegisterFlightForReview(submissionId: number) {
 
     const diffHobbs = nuevoHobbs.minus(lastHobbs);
     const diffTach = nuevoTach.minus(lastTach);
-    const costo = diffHobbs.mul(submission.User.tarifa_hora);
+    
+    // Obtener rate del submission o del usuario
+    const rate = submission.rate || submission.User.tarifa_hora;
+    const instrRate = submission.instructorRate || new Decimal(0);
+    
+    const costoAvion = diffHobbs.mul(rate);
+    const costoInstructor = new Decimal(instrRate).gt(0) ? diffHobbs.mul(instrRate) : new Decimal(0);
+    const costoTotal = costoAvion.plus(costoInstructor);
 
-    const flight = await tx.flight.create({
-      data: {
-        submissionId,
-        fecha: submission.fechaVuelo || new Date(),
-        hobbs_inicio: lastHobbs,
-        hobbs_fin: nuevoHobbs,
-        tach_inicio: lastTach,
-        tach_fin: nuevoTach,
-        diff_hobbs: diffHobbs,
-        diff_tach: diffTach,
-        costo,
-        tarifa: submission.User.tarifa_hora,
-        pilotoId: submission.pilotoId,
-        aircraftId: submission.aircraftId,
-      },
+    // Calcular nuevos componentes
+    const newAirframe = lastAirframe + Number(diffTach);
+    const newEngine = lastEngine + Number(diffTach);
+    const newPropeller = lastPropeller + Number(diffTach);
+
+    // **AGREGAR FILA AL EXCEL**
+    const newRow = [
+      submission.fechaVuelo?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
+      Number(lastTach).toFixed(1),              // TACH I
+      Number(nuevoTach).toFixed(1),            // TACH F
+      Number(diffTach).toFixed(1),             // Δ TACH
+      Number(lastHobbs).toFixed(1),            // HOBBS I
+      Number(nuevoHobbs).toFixed(1),           // HOBBS F
+      Number(diffHobbs).toFixed(1),            // Δ HOBBS
+      submission.User.nombre,                   // Piloto
+      submission.copiloto || "",                // Copiloto/Instructor
+      submission.cliente || "",                 // Cliente
+      Number(rate),                             // Rate
+      Number(instrRate),                        // Instructor Rate
+      Number(costoTotal),                       // Total
+      newAirframe.toFixed(1),                   // AIRFRAME
+      newEngine.toFixed(1),                     // ENGINE
+      newPropeller.toFixed(1),                  // PROPELLER
+      submission.detalle || ""                  // Detalle
+    ];
+
+    // Cargar matriz actual
+    let matrix = excelState?.matrix as any[][] || [
+      ["Fecha","TACH I","TACH F","Δ TACH","HOBBS I","HOBBS F","Δ HOBBS",
+       "Piloto","Copiloto/Instructor","Cliente","Rate","Instructor/SP Rate",
+       "Total","AIRFRAME","ENGINE","PROPELLER","Detalle"]
+    ];
+
+    // Insertar nueva fila en posición 1 (vuelos más recientes arriba)
+    matrix.splice(1, 0, newRow);
+
+    // Guardar Excel actualizado
+    await tx.sheetState.upsert({
+      where: { key: 'flight_entries' },
+      update: { matrix, updatedAt: new Date() },
+      create: {
+        key: 'flight_entries',
+        matrix,
+        formulas: {},
+        namedExpressions: [
+          { name: "rate", expression: String(rate) },
+          { name: "instrRate", expression: String(instrRate) }
+        ]
+      }
     });
 
+    // Actualizar contadores del aircraft
     await tx.aircraft.update({
       where: { matricula: submission.aircraftId },
       data: {
@@ -138,6 +201,7 @@ async function autoRegisterFlightForReview(submissionId: number) {
       },
     });
 
+    // Actualizar componentes
     await tx.component.updateMany({
       where: { aircraftId: submission.aircraftId },
       data: {
@@ -145,27 +209,29 @@ async function autoRegisterFlightForReview(submissionId: number) {
       },
     });
 
+    // Crear transacción de cargo
     await tx.transaction.create({
       data: {
-        monto: costo.negated(),
+        monto: costoTotal.negated(),
         tipo: "CARGO_VUELO",
         userId: submission.pilotoId,
-        flightId: flight.id,
       },
     });
 
+    // Actualizar saldo del piloto
     await tx.user.update({
       where: { id: submission.pilotoId },
       data: {
-        saldo_cuenta: { decrement: costo },
+        saldo_cuenta: { decrement: costoTotal },
       },
     });
 
+    // Marcar submission como completada
     await tx.flightSubmission.update({
       where: { id: submissionId },
       data: { estado: "COMPLETADO" },
     });
 
-    return flight;
+    return { success: true, row: newRow };
   });
 }

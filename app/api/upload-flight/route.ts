@@ -98,15 +98,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Obtener los contadores del último vuelo por fecha
-    const lastFlight = await prisma.flight.findFirst({
-      where: { aircraftId: matricula },
-      orderBy: { fecha: "desc" },
-      select: { hobbs_fin: true, tach_fin: true },
+    // Obtener los contadores del último vuelo desde el Excel
+    const excelState = await prisma.sheetState.findUnique({
+      where: { key: 'flight_entries' }
     });
 
-    const lastHobbs = lastFlight?.hobbs_fin ? Number(lastFlight.hobbs_fin) : 0;
-    const lastTach = lastFlight?.tach_fin ? Number(lastFlight.tach_fin) : 0;
+    let lastHobbs = 0;
+    let lastTach = 0;
+
+    if (excelState?.matrix && Array.isArray(excelState.matrix) && excelState.matrix.length > 1) {
+      const lastFlight = (excelState.matrix as any[])[1]; // Primera fila de datos
+      // Columnas: ["Fecha","TACH I","TACH F","Δ TACH","HOBBS I","HOBBS F","Δ HOBBS",...]
+      lastHobbs = lastFlight[5] ? Number(lastFlight[5]) : 0; // HOBBS F (columna 5)
+      lastTach = lastFlight[2] ? Number(lastFlight[2]) : 0;  // TACH F (columna 2)
+    } else {
+      // Si Excel vacío, usar valores del Aircraft
+      const aircraft = await prisma.aircraft.findUnique({
+        where: { matricula }
+      });
+      lastHobbs = aircraft?.hobbs_actual ? Number(aircraft.hobbs_actual) : 0;
+      lastTach = aircraft?.tach_actual ? Number(aircraft.tach_actual) : 0;
+    }
 
     if (hobbsNum <= lastHobbs) {
       return NextResponse.json(
