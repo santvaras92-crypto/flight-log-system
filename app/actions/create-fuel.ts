@@ -1,7 +1,6 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { Decimal } from '@prisma/client/runtime/library';
 import { saveUpload } from './_utils/save-upload';
 
 type Input = {
@@ -20,8 +19,8 @@ export async function createFuel(input: Input) {
     data: {
       userId: input.pilotoId,
       fecha: new Date(input.fecha),
-      litros: new Decimal(input.litros),
-      monto: new Decimal(input.monto),
+      litros: input.litros,
+      monto: input.monto,
       imageUrl,
       detalle: input.detalle,
     },

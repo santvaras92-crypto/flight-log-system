@@ -24,7 +24,6 @@ export default function RegisterClient({ pilots }: { pilots: PilotOpt[] }) {
           fecha,
           hobbs_fin: Number(formData.get('hobbs_fin') || '') || NaN,
           tach_fin: Number(formData.get('tach_fin') || '') || NaN,
-          instructor: String(formData.get('instructor') || '') || undefined,
           copiloto: String(formData.get('copiloto') || '') || undefined,
           detalle: String(formData.get('detalle') || '') || undefined,
         });
@@ -114,10 +113,6 @@ export default function RegisterClient({ pilots }: { pilots: PilotOpt[] }) {
                   <label className="flex flex-col text-sm">
                     <span className="mb-1">Tach F</span>
                     <input name="tach_fin" type="number" step="0.1" required className="rounded-xl border px-3 py-3 bg-slate-50" />
-                  </label>
-                  <label className="flex flex-col text-sm">
-                    <span className="mb-1">Copiloto/Instructor (opcional)</span>
-                    <input name="instructor" className="rounded-xl border px-3 py-3 bg-slate-50" />
                   </label>
                   <label className="flex flex-col text-sm">
                     <span className="mb-1">Copiloto (opcional)</span>

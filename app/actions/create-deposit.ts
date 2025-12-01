@@ -1,7 +1,6 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { Decimal } from '@prisma/client/runtime/library';
 import { saveUpload } from './_utils/save-upload';
 
 type Input = {
@@ -19,7 +18,7 @@ export async function createDeposit(input: Input) {
     data: {
       userId: input.pilotoId,
       fecha: new Date(input.fecha),
-      monto: new Decimal(input.monto),
+      monto: input.monto,
       imageUrl,
       detalle: input.detalle,
     },

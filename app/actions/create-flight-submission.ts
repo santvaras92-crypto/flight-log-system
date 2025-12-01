@@ -8,7 +8,6 @@ type Input = {
   hobbs_fin: number;   // REQUIRED
   tach_fin: number;    // REQUIRED
   copiloto?: string;   // optional
-  instructor?: string; // optional
   detalle?: string;    // optional
 };
 
@@ -34,7 +33,6 @@ export async function createFlightSubmission(input: Input) {
       detalle: input.detalle,
       hobbsFinal: input.hobbs_fin,
       tachFinal: input.tach_fin,
-      instructor: input.instructor,
     },
     select: { id: true },
   });
