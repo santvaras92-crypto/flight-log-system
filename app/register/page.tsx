@@ -54,7 +54,13 @@ export default async function RegistroPage() {
   const lastFlight = await prisma.flight.findFirst({
     where: { aircraftId: "CC-AQI" },
     orderBy: { fecha: "desc" },
-    select: { hobbs_fin: true, tach_fin: true },
+    select: { 
+      hobbs_fin: true, 
+      tach_fin: true,
+      airframe_hours: true,
+      engine_hours: true,
+      propeller_hours: true
+    },
   });
 
   const lastCounters = {
@@ -62,21 +68,11 @@ export default async function RegistroPage() {
     tach: lastFlight?.tach_fin ? Number(lastFlight.tach_fin) : null,
   };
 
-  // Obtener horas acumuladas de componentes para vista previa
-  const components = await prisma.component.findMany({
-    where: { aircraftId: "CC-AQI" },
-    select: { tipo: true, horas_acumuladas: true },
-  });
-
-  const getComp = (tipo: string) => {
-    const c = components.find((x) => x.tipo.toUpperCase() === tipo);
-    return c?.horas_acumuladas ? Number(c.horas_acumuladas) : null;
-  };
-
+  // Obtener horas acumuladas de componentes desde el último vuelo registrado
   const lastComponents = {
-    airframe: getComp("AIRFRAME"),
-    engine: getComp("ENGINE"),
-    propeller: getComp("PROPELLER"),
+    airframe: lastFlight?.airframe_hours ? Number(lastFlight.airframe_hours) : null,
+    engine: lastFlight?.engine_hours ? Number(lastFlight.engine_hours) : null,
+    propeller: lastFlight?.propeller_hours ? Number(lastFlight.propeller_hours) : null,
   };
 
   return <RegisterClient pilots={allPilots} lastCounters={lastCounters} lastComponents={lastComponents} />;

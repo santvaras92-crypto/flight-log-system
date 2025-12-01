@@ -280,7 +280,7 @@ export default function RegisterClient({
                             <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>TAC</th>
                             <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>TACH.<br/>TIME</th>
                             <th className="border border-slate-400 px-2 py-2 text-center font-bold" colSpan={3}>TOTAL TIME IN SERVICE</th>
-                            <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>PILOT<br/>LICENSE</th>
+                            <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>PILOT</th>
                             <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>INSTRUCTOR/<br/>COPILOT</th>
                             <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>ROUTE</th>
                             <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>REMARKS<br/>SIGNATURE</th>
@@ -301,7 +301,7 @@ export default function RegisterClient({
                             <td className="border border-slate-300 px-2 py-2 text-center font-mono">{newComponents?.airframe?.toFixed(1) || '--'}</td>
                             <td className="border border-slate-300 px-2 py-2 text-center font-mono">{newComponents?.engine?.toFixed(1) || '--'}</td>
                             <td className="border border-slate-300 px-2 py-2 text-center font-mono">{newComponents?.propeller?.toFixed(1) || '--'}</td>
-                            <td className="border border-slate-300 px-2 py-2 text-center">{selectedPilot?.label.split('(')[1]?.replace(')', '') || '--'}</td>
+                            <td className="border border-slate-300 px-2 py-2 text-center">{selectedPilot?.label.split('(')[0]?.trim() || '--'}</td>
                             <td className="border border-slate-300 px-2 py-2 text-center">{copiloto || '--'}</td>
                             <td className="border border-slate-300 px-2 py-2 text-center">LOCAL</td>
                             <td className="border border-slate-300 px-2 py-2 text-center text-[10px]">{detalle || 'S/Obs'}</td>

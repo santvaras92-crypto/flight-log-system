@@ -169,51 +169,30 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     .map(u => (u.codigo || '').toUpperCase())
     .filter(c => c && !allowedPilotCodes.includes(c));
 
-  // Build maintenance items: use DB baseline + add Δ Tach from flights after baseline date
-  // Baseline components are stored in DB with initial values (AIRFRAME 2722.8, ENGINE 569.6, PROPELLER 1899.0)
-  // Future flights will increment these values
-  const baselineDate = new Date('2025-11-28T00:00:00Z'); // Date when baseline was set
-  
+  // Build maintenance items: get values directly from last flight in Flight Log Entries
   const maintenanceComponents = await Promise.all(
     aircraft.map(async (a) => {
-      // Get baseline from DB (if exists)
-      const dbComponents = await prisma.component.findMany({ 
+      // Get the last flight for this aircraft
+      const lastFlight = await prisma.flight.findFirst({
         where: { aircraftId: a.matricula },
-        orderBy: { tipo: 'asc' }
+        orderBy: { fecha: 'desc' },
+        select: {
+          airframe_hours: true,
+          engine_hours: true,
+          propeller_hours: true
+        }
       });
-      
-      // Calculate additional hours from flights after baseline
-      const additionalTach = await prisma.flight.aggregate({
-        where: { 
-          aircraftId: a.matricula,
-          fecha: { gte: baselineDate }
-        },
-        _sum: { diff_tach: true }
-      });
-      const increment = Number(additionalTach._sum.diff_tach || 0);
 
-      // If DB has components, use them + increment; otherwise compute from all flights (legacy)
-      if (dbComponents.length > 0) {
-        return dbComponents.map(c => ({
-          id: String(c.id),
-          aircraftId: c.aircraftId,
-          tipo: c.tipo,
-          horas_acumuladas: Number(c.horas_acumuladas) + increment,
-          limite_tbo: Number(c.limite_tbo)
-        }));
-      } else {
-        // Fallback: compute from all flights (for aircraft without baseline)
-        const allTach = await prisma.flight.aggregate({
-          where: { aircraftId: a.matricula },
-          _sum: { diff_tach: true }
-        });
-        const total = Number(allTach._sum.diff_tach || 0);
-        return [
-          { id: `${a.matricula}-AF`, aircraftId: a.matricula, tipo: 'AIRFRAME', horas_acumuladas: total, limite_tbo: 30000 },
-          { id: `${a.matricula}-EN`, aircraftId: a.matricula, tipo: 'ENGINE', horas_acumuladas: total, limite_tbo: 2000 },
-          { id: `${a.matricula}-PR`, aircraftId: a.matricula, tipo: 'PROPELLER', horas_acumuladas: total, limite_tbo: 2000 },
-        ];
-      }
+      // Use values from Flight Log Entries, or default to 0 if no flights exist
+      const airframeHours = lastFlight?.airframe_hours ? Number(lastFlight.airframe_hours) : 0;
+      const engineHours = lastFlight?.engine_hours ? Number(lastFlight.engine_hours) : 0;
+      const propellerHours = lastFlight?.propeller_hours ? Number(lastFlight.propeller_hours) : 0;
+
+      return [
+        { id: `${a.matricula}-AF`, aircraftId: a.matricula, tipo: 'AIRFRAME', horas_acumuladas: airframeHours, limite_tbo: 30000 },
+        { id: `${a.matricula}-EN`, aircraftId: a.matricula, tipo: 'ENGINE', horas_acumuladas: engineHours, limite_tbo: 2000 },
+        { id: `${a.matricula}-PR`, aircraftId: a.matricula, tipo: 'PROPELLER', horas_acumuladas: propellerHours, limite_tbo: 2000 },
+      ];
     })
   );
   const computedComponents = maintenanceComponents.flat();
