@@ -5,13 +5,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 :root {
-  /* Dark Mode Palette - Aviation Professional */
-  --bg-primary: #0B0F19;
-  --bg-secondary: #111827;
-  --bg-tertiary: #1A202E;
-  --bg-elevated: #1F2937;
+  /* Hybrid Light/Dark Palette - Aviation Professional */
+  --bg-primary: #F8FAFC;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #F1F5F9;
+  --bg-elevated: #FFFFFF;
+  --bg-dark: #1E293B;
   
-  /* Aviation Blues - Inspired by ForeFlight/Jeppesen */
+  /* Aviation Blues - Professional */
   --aviation-blue-900: #0A2540;
   --aviation-blue-800: #0D3A65;
   --aviation-blue-700: #1E4976;
@@ -19,17 +20,17 @@
   --aviation-blue-500: #3B82F6;
   --aviation-blue-400: #60A5FA;
   
-  /* Neutral Grays - Professional */
-  --gray-950: #030712;
-  --gray-900: #111827;
-  --gray-800: #1F2937;
-  --gray-700: #374151;
-  --gray-600: #4B5563;
-  --gray-500: #6B7280;
-  --gray-400: #9CA3AF;
-  --gray-300: #D1D5DB;
-  --gray-200: #E5E7EB;
-  --gray-100: #F3F4F6;
+  /* Neutral Grays - Balanced */
+  --gray-950: #0F172A;
+  --gray-900: #1E293B;
+  --gray-800: #334155;
+  --gray-700: #475569;
+  --gray-600: #64748B;
+  --gray-500: #94A3B8;
+  --gray-400: #CBD5E1;
+  --gray-300: #E2E8F0;
+  --gray-200: #F1F5F9;
+  --gray-100: #F8FAFC;
   
   /* Accent Colors */
   --accent-success: #10B981;
@@ -37,15 +38,16 @@
   --accent-danger: #EF4444;
   --accent-info: #06B6D4;
   
-  /* Text Colors */
-  --text-primary: #F9FAFB;
-  --text-secondary: #D1D5DB;
-  --text-tertiary: #9CA3AF;
-  --text-muted: #6B7280;
+  /* Text Colors - Optimized for readability */
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-tertiary: #64748B;
+  --text-muted: #94A3B8;
+  --text-on-dark: #F8FAFC;
   
   /* Borders */
-  --border-primary: #374151;
-  --border-secondary: #1F2937;
+  --border-primary: #E2E8F0;
+  --border-secondary: #CBD5E1;
   --border-accent: #2563EB;
 }
 
@@ -65,17 +67,24 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Mobile-friendly responsive utilities */
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+}
+
 .executive-card {
   background: var(--bg-elevated);
   border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
   border: 1px solid var(--border-primary);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .executive-card:hover {
-  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.3);
-  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
   border-color: var(--border-accent);
 }
 
@@ -96,12 +105,12 @@ body {
 .btn-executive-primary {
   background: linear-gradient(135deg, var(--aviation-blue-600) 0%, var(--aviation-blue-700) 100%);
   color: white;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.25);
 }
 
 .btn-executive-primary:hover {
   background: linear-gradient(135deg, var(--aviation-blue-500) 0%, var(--aviation-blue-600) 100%);
-  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.5);
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.35);
   transform: translateY(-1px);
 }
 
@@ -164,12 +173,12 @@ body {
   letter-spacing: 0.8px;
   text-transform: uppercase;
   color: var(--text-secondary);
-  border-bottom: 1px solid var(--border-primary);
+  border-bottom: 2px solid var(--border-primary);
 }
 
 .executive-table td {
   padding: 16px 20px;
-  border-bottom: 1px solid var(--border-secondary);
+  border-bottom: 1px solid var(--border-primary);
   color: var(--text-primary);
   font-size: 14px;
 }
@@ -183,27 +192,43 @@ body {
   background-color: var(--bg-tertiary);
 }
 
+@media (max-width: 768px) {
+  .executive-table th,
+  .executive-table td {
+    padding: 12px 16px;
+    font-size: 13px;
+  }
+}
+
 .executive-input {
   width: 100%;
   padding: 12px 16px;
   border: 1.5px solid var(--border-primary);
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 16px;
   font-family: inherit;
   transition: all 0.2s ease;
   background: var(--bg-tertiary);
   color: var(--text-primary);
+  min-height: 48px;
 }
 
 .executive-input:focus {
   outline: none;
   border-color: var(--aviation-blue-600);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
   background: var(--bg-elevated);
 }
 
 .executive-input::placeholder {
   color: var(--text-muted);
+}
+
+@media (max-width: 768px) {
+  .executive-input {
+    font-size: 16px;
+    padding: 14px 16px;
+  }
 }
 
 .executive-badge {

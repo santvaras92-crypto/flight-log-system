@@ -35,10 +35,7 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
   const [pilotSubTab, setPilotSubTab] = useState<"accounts" | "directory">("accounts");
   const [filterAircraft, setFilterAircraft] = useState("");
   const [filterPilot, setFilterPilot] = useState("");
-  const [theme, setTheme] = useState<string>(() => {
-    if (typeof window === 'undefined') return 'light';
-    return localStorage.getItem('dash-theme') || 'light';
-  });
+  const [theme, setTheme] = useState<string>('hybrid');
   const [yearFilter, setYearFilter] = useState<string>("");
   const [sortOrder, setSortOrder] = useState<"desc"|"asc">("desc");
   const [startDate, setStartDate] = useState<string>("");
@@ -84,156 +81,115 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
     });
   }, [initialData.submissions, initialData.users, filterPilot]);
 
-  const palette = theme === 'dark'
-    ? { bg: 'bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900', card: 'bg-slate-800/90 backdrop-blur-lg border-2 border-slate-700/50', text: 'text-white', subtext: 'text-slate-300', border: 'border-slate-600', accent: '#3b82f6', accent2: '#10b981', grid: 'rgba(148,163,184,0.15)', shadow: 'shadow-2xl' }
-    : { bg: 'bg-gradient-to-br from-slate-100 via-blue-50 to-slate-100', card: 'bg-white/95 backdrop-blur-lg border-2 border-slate-200', text: 'text-slate-900', subtext: 'text-slate-600', border: 'border-slate-300', accent: '#2563eb', accent2: '#059669', grid: 'rgba(100,116,139,0.1)', shadow: 'shadow-2xl' };
+  const palette = {
+    bg: 'bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100',
+    card: 'bg-white/95 backdrop-blur-sm border border-slate-200',
+    text: 'text-slate-900',
+    subtext: 'text-slate-600',
+    border: 'border-slate-200',
+    accent: '#2563eb',
+    accent2: '#059669',
+    grid: 'rgba(100,116,139,0.08)',
+    shadow: 'shadow-lg'
+  };
 
   return (
-    <div className={`min-h-screen ${palette.bg} -mx-6 -my-8 px-6 py-8`}>
-      {/* Header estilo Jeppesen */}
-      <div className="bg-gradient-to-r from-[#003D82] to-[#0A2F5F] shadow-2xl rounded-2xl mb-8">
-        <div className="px-8 py-8">
+    <div className={`min-h-screen ${palette.bg} -mx-6 -my-8 px-4 sm:px-6 py-6 sm:py-8`}>
+      {/* Simplified Header - Mobile Friendly */}
+      <div className="dashboard-header shadow-xl mb-6 sm:mb-8">
+        <div className="flex flex-col gap-4">
+          {/* Title Row */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <img 
                 src="/logo.png" 
                 alt="CC-AQI" 
-                  className="h-[6.48rem] w-auto"
+                className="h-12 w-auto sm:h-16"
               />
               <div>
-                <h1 className="text-4xl font-bold text-white tracking-tight">Operations Dashboard</h1>
-                <p className="mt-1.5 text-blue-50 text-base font-medium">Flight Operations • Maintenance • Finance</p>
+                <h1 className="text-xl sm:text-3xl font-bold text-white tracking-tight">Operations Dashboard</h1>
+                <p className="hidden sm:block mt-1 text-blue-100 text-sm font-medium">Flight Operations • Maintenance • Finance</p>
               </div>
             </div>
-            {/* Controls: normalize size + allow wrap to avoid overflow */}
-            <div className="flex flex-wrap items-center justify-end gap-3">
-              <button
-                className="h-12 px-4 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl text-white font-bold shadow-lg flex items-center gap-2"
-                onClick={()=>setEditMode(e=>!e)}
-                title={editMode ? "Salir de edición" : "Modo edición"}
-              >
-                {editMode ? (
-                  <svg className="w-6 h-6 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : (
-                  <svg className="w-6 h-6 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                )}
-                {editMode ? "Editar (candado abierto)" : "Modo edición"}
-              </button>
-              {/** shared control styles for consistent alignment */}
-              {(() => {
-                const controlClass = "h-12 px-4 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl text-white placeholder-blue-200 font-medium focus:bg-white/20 focus:border-white/40 transition-all shadow-lg py-0";
-                const buttonClass = "h-12 px-5 bg-white/20 backdrop-blur-sm hover:bg-white/30 border-2 border-white/30 rounded-xl text-white font-bold transition-all shadow-lg flex items-center gap-2";
-                return (
-                  <>
-                    <input 
-                      value={filterAircraft} 
-                      onChange={e=>setFilterAircraft(e.target.value)} 
-                      placeholder="Filter aircraft..." 
-                      className={`${controlClass} min-w-[220px]`}
-                    />
-                    <input 
-                      value={filterPilot} 
-                      onChange={e=>setFilterPilot(e.target.value)} 
-                      placeholder="Filter pilot..." 
-                      className={`${controlClass} min-w-[220px]`}
-                    />
-                    <button 
-                      className={buttonClass}
-                      onClick={()=>setTheme(theme==='dark'?'light':'dark')}
-                    >
-                      {theme==='dark'?<>☀️ Light</>:<>🌙 Dark</>}
-                    </button>
-                    <select
-                      value={yearFilter}
-                      onChange={e=>setYearFilter(e.target.value)}
-                      className={`${controlClass} min-w-[140px] appearance-none`}
-                    >
-                      <option value="">All years</option>
-                      {Array.from(new Set(initialData.flights.map(f=>new Date(f.fecha).getFullYear()).sort((a,b)=>b-a))).map(y=>
-                        <option key={y} value={y.toString()}>{y}</option>
-                      )}
-                    </select>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={e=>{ setStartDate(e.target.value); setCurrentPage(1); }}
-                      className={`${controlClass} min-w-[160px]`}
-                      title="Start date"
-                    />
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={e=>{ setEndDate(e.target.value); setCurrentPage(1); }}
-                      className={`${controlClass} min-w-[160px]`}
-                      title="End date"
-                    />
-                    <button
-                      onClick={()=>setSortOrder(sortOrder==='desc'?'asc':'desc')}
-                      className={buttonClass}
-                      title="Toggle sort order"
-                    >
-                      {sortOrder==='desc' ? 'Newest first' : 'Oldest first'}
-                    </button>
-                    <div className="flex items-center gap-2 h-12 px-4 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl text-white shadow-lg">
-                      <label className="text-xs font-bold whitespace-nowrap">Active days:</label>
-                      <button
-                        onClick={() => setActiveDaysLimit(Math.max(1, activeDaysLimit - 10))}
-                        className="px-2 py-1 bg-white/20 hover:bg-white/30 border border-white/30 rounded text-white font-bold text-sm transition-colors"
-                        title="Decrease by 10 days"
-                      >
-                        -10
-                      </button>
-                      <input 
-                        type="number" 
-                        min="1" 
-                        max="365"
-                        step="10"
-                        value={activeDaysLimit} 
-                        onChange={e => setActiveDaysLimit(Math.max(1, Math.min(365, Number(e.target.value) || 30)))}
-                        className="w-16 px-2 py-1 bg-white/20 border border-white/30 rounded text-white text-center font-mono focus:bg-white/30 focus:outline-none"
-                      />
-                      <button
-                        onClick={() => setActiveDaysLimit(Math.min(365, activeDaysLimit + 10))}
-                        className="px-2 py-1 bg-white/20 hover:bg-white/30 border border-white/30 rounded text-white font-bold text-sm transition-colors"
-                        title="Increase by 10 days"
-                      >
-                        +10
-                      </button>
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
+            <button
+              className="px-3 py-2 sm:px-4 sm:py-2.5 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-lg text-white font-semibold text-sm shadow-lg flex items-center gap-2 hover:bg-white/20 transition-colors"
+              onClick={()=>setEditMode(e=>!e)}
+              title={editMode ? "Salir de edición" : "Modo edición"}
+            >
+              {editMode ? (
+                <svg className="w-5 h-5 text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              )}
+              <span className="hidden sm:inline">{editMode ? "Unlocked" : "Locked"}</span>
+            </button>
+          </div>
+
+          {/* Filters Row - Mobile Responsive Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+            <input 
+              value={yearFilter}
+              onChange={e=>setYearFilter(e.target.value)}
+              list="years"
+              placeholder="All years" 
+              className="px-3 py-2.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-blue-200 font-medium focus:bg-white/20 focus:border-white/40 transition-all text-sm"
+            />
+            <datalist id="years">
+              {Array.from(new Set(initialData.flights.map(f=>new Date(f.fecha).getFullYear()).sort((a,b)=>b-a))).map(y=>
+                <option key={y} value={y.toString()}/>
+              )}
+            </datalist>
+            
+            <input
+              type="date"
+              value={startDate}
+              onChange={e=>{ setStartDate(e.target.value); setCurrentPage(1); }}
+              className="px-3 py-2.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white font-medium focus:bg-white/20 focus:border-white/40 transition-all text-sm"
+              placeholder="dd-mm-yyyy"
+            />
+            <input
+              type="date"
+              value={endDate}
+              onChange={e=>{ setEndDate(e.target.value); setCurrentPage(1); }}
+              className="px-3 py-2.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white font-medium focus:bg-white/20 focus:border-white/40 transition-all text-sm"
+              placeholder="dd-mm-yyyy"
+            />
+            <button
+              onClick={()=>setSortOrder(sortOrder==='desc'?'asc':'desc')}
+              className="px-3 py-2.5 bg-white/15 hover:bg-white/25 border border-white/30 rounded-lg text-white font-semibold transition-all shadow-sm flex items-center justify-center gap-2 text-sm"
+            >
+              {sortOrder==='desc' ? 'Newest first' : 'Oldest first'}
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Navigation Tabs - Estilo ForeFlight */}
-      <nav className="mb-8 flex gap-2 bg-white/5 backdrop-blur-sm p-2 rounded-2xl border-2 border-white/10">
+      {/* Navigation Tabs - Mobile Responsive */}
+      <nav className="mb-6 sm:mb-8 flex flex-wrap gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-xl border border-slate-200 shadow-sm">
         {[
           { id: "overview", label: "Overview", icon: "M4 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 16a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1v-2zM14 16a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1v-2z" },
-          { id: "flights", label: "Flight Log", icon: "M12 19l9 2-9-18-9 18 9-2zm0 0v-8" },
+          { id: "flights", label: "Flights", icon: "M12 19l9 2-9-18-9 18 9-2zm0 0v-8" },
           { id: "pilots", label: "Pilots", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" },
-          { id: "maintenance", label: "Maintenance", icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" },
+          { id: "maintenance", label: "Mx", icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" },
           { id: "finance", label: "Finance", icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
         ].map(t => (
           <button 
             key={t.id} 
             onClick={()=>setTab(t.id)}
-            className={`flex-1 px-6 py-4 rounded-xl font-bold uppercase tracking-wide text-sm transition-all flex items-center justify-center gap-2 ${
+            className={`flex-1 min-w-[80px] px-3 sm:px-6 py-3 sm:py-4 rounded-lg font-bold uppercase tracking-wide text-xs sm:text-sm transition-all flex items-center justify-center gap-2 ${
               tab===t.id 
-                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl' 
-                : 'text-slate-400 hover:text-white hover:bg-white/5'
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg' 
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={t.icon} />
             </svg>
-            {t.label}
+            <span className="hidden sm:inline">{t.label}</span>
           </button>
         ))}
       </nav>

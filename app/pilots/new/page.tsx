@@ -64,8 +64,13 @@ export default function NewPilotPublicPage() {
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <div className="executive-card p-6 sm:p-8">
-          <h2 className="text-xl sm:text-2xl font-bold mb-6 uppercase tracking-wide" style={{ color: 'var(--text-primary)' }}>Pilot Registration</h2>
+        <div className="executive-card p-6 sm:p-8 shadow-lg">
+          {/* Header */}
+          <div className="mb-6 pb-4 border-b-2" style={{ borderColor: 'var(--border-primary)' }}>
+            <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-wide" style={{ color: 'var(--text-primary)' }}>Pilot Registration</h2>
+            <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Complete the information to create a new pilot profile</p>
+          </div>
+          
           <form onSubmit={onSubmit} className="space-y-4 sm:space-y-5">
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

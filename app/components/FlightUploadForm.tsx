@@ -218,10 +218,10 @@ export default function FlightUploadForm({
     <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Main Form */}
-        <form onSubmit={handleSubmit} className="executive-card mb-8">
+        <form onSubmit={handleSubmit} className="executive-card mb-8 shadow-lg">
           {/* Form Header */}
-          <div className="executive-header px-4 sm:px-8 py-4 sm:py-6 border-b-2" style={{ borderColor: 'var(--aviation-blue-600)' }}>
-            <h2 className="text-lg sm:text-xl font-bold uppercase tracking-wide" style={{ color: 'var(--text-primary)' }}>Registro de Vuelo · CC-AQI</h2>
+          <div className="px-4 sm:px-8 py-4 sm:py-6 border-b-2 bg-gradient-to-r from-blue-600 to-indigo-700" style={{ borderColor: 'var(--aviation-blue-600)' }}>
+            <h2 className="text-lg sm:text-xl font-bold uppercase tracking-wide text-white">Registro de Vuelo · CC-AQI</h2>
           </div>
 
           <div className="p-4 sm:p-8">
