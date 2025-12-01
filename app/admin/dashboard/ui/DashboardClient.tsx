@@ -56,7 +56,6 @@ export default function DashboardClient({
   const stats = useMemo(() => {
     const totalFlights = initialData.flights.length;
     const totalHours = initialData.flights.reduce((sum, f) => sum + (Number(f.diff_hobbs) || 0), 0);
-    const totalRevenue = initialData.flights.reduce((sum, f) => sum + (Number(f.costo) || 0), 0);
     
     // Active pilots (flights in last N days)
     const cutoffDate = new Date();
@@ -67,7 +66,7 @@ export default function DashboardClient({
     const uniquePilots = new Set(recentFlights.map((f: any) => f.cliente).filter(Boolean));
     const activePilots = uniquePilots.size;
 
-    return { totalFlights, totalHours, totalRevenue, activePilots };
+    return { totalFlights, totalHours, activePilots };
   }, [initialData, activeDaysLimit]);
 
   const filteredFlights = useMemo(() => {
@@ -166,7 +165,7 @@ export default function DashboardClient({
       {activeTab === "overview" && (
         <>
           {/* Overview Stats */}
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="stat-card">
           <div className="flex items-center justify-between">
             <div>
@@ -204,19 +203,6 @@ export default function DashboardClient({
             </div>
           </div>
           <div className="mt-4 h-1 bg-gradient-to-r from-amber-500 to-amber-300 rounded-full"></div>
-        </div>
-
-        <div className="stat-card">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Revenue</div>
-              <div className="text-4xl font-bold text-navy-950">${stats.totalRevenue.toLocaleString()}</div>
-            </div>
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-500 to-rose-600 flex items-center justify-center shadow-lg">
-              <CurrencyDollarIcon className="w-7 h-7 text-white" />
-            </div>
-          </div>
-          <div className="mt-4 h-1 bg-gradient-to-r from-rose-500 to-rose-300 rounded-full"></div>
         </div>
       </div>
 
