@@ -153,11 +153,19 @@ export async function POST(request: NextRequest) {
     let lastHobbs = 0;
     let lastTach = 0;
 
+    console.log('📊 Excel State existe?', !!excelState);
+    console.log('📊 Tiene matrix?', !!excelState?.matrix);
+    console.log('📊 Es array?', Array.isArray(excelState?.matrix));
+    console.log('📊 Longitud:', excelState?.matrix ? (excelState.matrix as any[]).length : 0);
+
     if (excelState?.matrix && Array.isArray(excelState.matrix) && excelState.matrix.length > 1) {
+      console.log('📊 Todas las filas del Excel:', JSON.stringify((excelState.matrix as any[][]).slice(0, 3), null, 2));
+      
       // Elegir la última fila por fecha
       const lastFlight = getLatestFlightRow(excelState.matrix as any[][]) || (excelState.matrix as any[])[1];
       
-      console.log('🔍 DEBUG - Última fila del Excel:', lastFlight);
+      console.log('🔍 DEBUG - Última fila del Excel seleccionada:', lastFlight);
+      console.log('🔍 DEBUG - Fecha de esa fila:', lastFlight[0]);
       console.log('🔍 DEBUG - lastFlight[5] (HOBBS F):', lastFlight[5]);
       console.log('🔍 DEBUG - lastFlight[2] (TACH F):', lastFlight[2]);
       
@@ -167,12 +175,20 @@ export async function POST(request: NextRequest) {
       
       console.log('✅ Contadores parseados - Hobbs:', lastHobbs, 'Tach:', lastTach);
     } else {
-      // Si Excel vacío, usar valores del Aircraft
-      const aircraft = await prisma.aircraft.findUnique({
-        where: { matricula }
-      });
-      lastHobbs = aircraft?.hobbs_actual ? Number(aircraft.hobbs_actual) : 0;
-      lastTach = aircraft?.tach_actual ? Number(aircraft.tach_actual) : 0;
+      console.log('⚠️ Excel vacío o sin datos, NO usar Aircraft como fallback');
+      return NextResponse.json(
+        { error: "No hay vuelos registrados en el sistema. Por favor contacta al administrador." },
+        { status: 400 }
+      );
+    }
+
+    // Validar que los contadores parseados sean válidos
+    if (lastHobbs === 0 || lastTach === 0) {
+      console.log('⚠️ Contadores en 0 después de parsear');
+      return NextResponse.json(
+        { error: "Los contadores del último vuelo no son válidos. Por favor contacta al administrador." },
+        { status: 400 }
+      );
     }
 
     console.log('📊 Validando contadores:');
