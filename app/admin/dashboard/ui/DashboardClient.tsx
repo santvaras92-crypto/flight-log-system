@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import ExecutiveHeader from "@/app/components/ExecutiveHeader";
 import ExecutiveNav from "@/app/components/ExecutiveNav";
+import ExcelGrid from "@/app/components/ExcelGrid";
 import { 
   PaperAirplaneIcon, 
   UsersIcon, 
@@ -49,6 +50,7 @@ export default function DashboardClient({
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [activeDaysLimit, setActiveDaysLimit] = useState<number>(30);
+  const [activeTab, setActiveTab] = useState<"overview" | "flights" | "pilots" | "maintenance">("overview");
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -116,8 +118,55 @@ export default function DashboardClient({
 
       <ExecutiveNav />
 
-      {/* Overview Stats */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Tab Navigation */}
+      <div className="mt-8 flex gap-2 border-b-2 border-gray-200">
+        <button
+          onClick={() => setActiveTab("overview")}
+          className={`px-6 py-3 font-semibold transition-all ${
+            activeTab === "overview"
+              ? "text-blue-600 border-b-4 border-blue-600 -mb-0.5"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          📊 Overview
+        </button>
+        <button
+          onClick={() => setActiveTab("flights")}
+          className={`px-6 py-3 font-semibold transition-all ${
+            activeTab === "flights"
+              ? "text-blue-600 border-b-4 border-blue-600 -mb-0.5"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          ✈️ Flight Log (Excel)
+        </button>
+        <button
+          onClick={() => setActiveTab("pilots")}
+          className={`px-6 py-3 font-semibold transition-all ${
+            activeTab === "pilots"
+              ? "text-blue-600 border-b-4 border-blue-600 -mb-0.5"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          👥 Pilots Account (Excel)
+        </button>
+        <button
+          onClick={() => setActiveTab("maintenance")}
+          className={`px-6 py-3 font-semibold transition-all ${
+            activeTab === "maintenance"
+              ? "text-blue-600 border-b-4 border-blue-600 -mb-0.5"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          🔧 Maintenance (Excel)
+        </button>
+      </div>
+
+      {/* Overview Tab */}
+      {activeTab === "overview" && (
+        <>
+          {/* Overview Stats */}
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="stat-card">
           <div className="flex items-center justify-between">
             <div>
@@ -258,6 +307,92 @@ export default function DashboardClient({
           })}
         </div>
       </div>
+        </>
+      )}
+
+      {/* Flight Log Tab - Excel Grid */}
+      {activeTab === "flights" && (
+        <div className="mt-8">
+          <ExcelGrid 
+            gridKey="flight_entries"
+            initialData={[
+              ["Fecha", "Matrícula", "Piloto", "Hobbs Inicio", "Hobbs Fin", "Δ Hobbs", "Tach Inicio", "Tach Fin", "Δ Tach", "Costo", "Tarifa", "Detalle"],
+              ...filteredFlights.map(f => [
+                new Date(f.fecha).toLocaleDateString(),
+                f.aircraftId,
+                f.cliente || "",
+                f.hobbs_inicio,
+                f.hobbs_fin,
+                f.diff_hobbs,
+                f.tach_inicio,
+                f.tach_fin,
+                f.diff_tach,
+                f.costo,
+                f.tarifa || "",
+                f.detalle || ""
+              ])
+            ]}
+          />
+        </div>
+      )}
+
+      {/* Pilots Account Tab - Excel Grid */}
+      {activeTab === "pilots" && (
+        <div className="mt-8">
+          <ExcelGrid 
+            gridKey="pilots_account"
+            initialData={[
+              ["Código", "Nombre", "Email", "Saldo", "Tarifa/Hora", "Total Vuelos", "Total Horas", "Total Gastado"],
+              ...initialData.users
+                .filter(u => u.rol === "PILOTO")
+                .map(u => {
+                  const userFlights = initialData.flights.filter(f => f.cliente === u.codigo);
+                  const totalFlights = userFlights.length;
+                  const totalHours = userFlights.reduce((sum, f) => sum + Number(f.diff_hobbs || 0), 0);
+                  const totalSpent = userFlights.reduce((sum, f) => sum + Number(f.costo || 0), 0);
+                  
+                  return [
+                    u.codigo || "",
+                    u.nombre,
+                    u.email,
+                    u.saldo_cuenta,
+                    u.tarifa_hora,
+                    totalFlights,
+                    totalHours.toFixed(1),
+                    totalSpent.toFixed(0)
+                  ];
+                })
+            ]}
+          />
+        </div>
+      )}
+
+      {/* Maintenance Tab - Excel Grid */}
+      {activeTab === "maintenance" && (
+        <div className="mt-8">
+          <ExcelGrid 
+            gridKey="maintenance"
+            initialData={[
+              ["Matrícula", "Componente", "Horas Acumuladas", "Límite TBO", "Horas Restantes", "% Usado", "Estado"],
+              ...initialData.components.map(c => {
+                const remaining = c.limite_tbo - c.horas_acumuladas;
+                const percentage = ((c.horas_acumuladas / c.limite_tbo) * 100).toFixed(1);
+                const status = Number(percentage) > 90 ? "CRÍTICO" : Number(percentage) > 75 ? "ADVERTENCIA" : "OK";
+                
+                return [
+                  c.aircraftId,
+                  c.tipo,
+                  c.horas_acumuladas.toFixed(1),
+                  c.limite_tbo,
+                  remaining.toFixed(1),
+                  percentage + "%",
+                  status
+                ];
+              })
+            ]}
+          />
+        </div>
+      )}
     </div>
   );
 }

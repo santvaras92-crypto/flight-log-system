@@ -13,11 +13,13 @@ import {
 
 const navItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: HomeIcon },
-  { href: "/admin/submissions", label: "Aprobaciones", icon: ClipboardDocumentListIcon },
   { href: "/grids/flight-entries", label: "Flight Log", icon: ChartBarIcon },
-  { href: "/grids/pilot-directory", label: "Pilotos", icon: UserGroupIcon },
+  { href: "/grids/pilots-account", label: "Pilots Account", icon: UserGroupIcon },
+  { href: "/grids/pilot-directory", label: "Pilot Directory", icon: UserGroupIcon },
+  { href: "/grids/maintenance", label: "Maintenance", icon: WrenchScrewdriverIcon },
   { href: "/admin/deposits", label: "Depósitos", icon: CurrencyDollarIcon },
-  { href: "/admin/fuel-charges", label: "Combustible", icon: WrenchScrewdriverIcon },
+  { href: "/admin/fuel-charges", label: "Combustible", icon: Cog6ToothIcon },
+  { href: "/admin/submissions", label: "Aprobaciones", icon: ClipboardDocumentListIcon },
 ];
 
 export default function ExecutiveNav() {
