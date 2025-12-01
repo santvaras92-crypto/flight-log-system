@@ -93,14 +93,22 @@ export default async function Home() {
     const lastFlight = (excelState.matrix as any[])[1]; // Fila 1: Primera fila de datos (fila 0 es el header)
     console.log('🛫 Last Flight Row:', lastFlight);
     
+    // Función para parsear números con coma decimal
+    const parseExcelNumber = (val: any): number | null => {
+      if (val === null || val === undefined || val === '') return null;
+      const str = String(val).replace(',', '.').trim();
+      const num = parseFloat(str);
+      return isNaN(num) ? null : num;
+    };
+    
     // Columnas: ["Fecha","TACH I","TACH F","Δ TACH","HOBBS I","HOBBS F","Δ HOBBS",
     //           "Piloto","Copiloto/Instructor","Cliente","Rate","Instructor/SP Rate",
     //           "Total","AIRFRAME","ENGINE","PROPELLER","Detalle"]
-    lastHobbs = lastFlight[5] ? Number(lastFlight[5]) : null; // HOBBS F (columna 5)
-    lastTach = lastFlight[2] ? Number(lastFlight[2]) : null;  // TACH F (columna 2)
-    lastAirframe = lastFlight[13] ? Number(lastFlight[13]) : null; // AIRFRAME (columna 13)
-    lastEngine = lastFlight[14] ? Number(lastFlight[14]) : null;   // ENGINE (columna 14)
-    lastPropeller = lastFlight[15] ? Number(lastFlight[15]) : null; // PROPELLER (columna 15)
+    lastHobbs = parseExcelNumber(lastFlight[5]); // HOBBS F (columna 5)
+    lastTach = parseExcelNumber(lastFlight[2]); // TACH F (columna 2)
+    lastAirframe = parseExcelNumber(lastFlight[13]); // AIRFRAME (columna 13)
+    lastEngine = parseExcelNumber(lastFlight[14]); // ENGINE (columna 14)
+    lastPropeller = parseExcelNumber(lastFlight[15]); // PROPELLER (columna 15)
     
     console.log('📍 Parsed Counters:', { lastHobbs, lastTach, lastAirframe, lastEngine, lastPropeller });
   }
