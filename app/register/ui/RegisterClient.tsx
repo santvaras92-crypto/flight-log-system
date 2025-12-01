@@ -420,8 +420,8 @@ export default function RegisterClient({
                     <input name="monto" type="number" step="0.001" required className="rounded-xl border px-3 py-3 bg-slate-50" />
                   </label>
                   <label className="flex flex-col text-sm">
-                    <span className="mb-1">Comprobante (imagen)</span>
-                    <input name="file" type="file" accept="image/*" required className="rounded-xl border px-3 py-2 bg-slate-50" />
+                    <span className="mb-1">Comprobante (imagen) - Opcional</span>
+                    <input name="file" type="file" accept="image/*" className="rounded-xl border px-3 py-2 bg-slate-50" />
                   </label>
                 </div>
                 <label className="flex flex-col text-sm">
