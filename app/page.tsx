@@ -140,7 +140,7 @@ export default async function Home() {
         actions={
           <a
             href="/pilot/select"
-            className="btn-executive btn-executive-secondary"
+            className="btn-executive btn-executive-secondary text-sm px-3 py-2 sm:text-base sm:px-4 sm:py-2.5"
           >
             Mi Cuenta
           </a>
