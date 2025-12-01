@@ -141,9 +141,9 @@ export default function RegisterClient({
       setCopiloto('');
       setDetalle('');
       (document.getElementById('registro-form') as HTMLFormElement)?.reset();
-    } catch (e) {
-      console.error(e);
-      alert('Hubo un error guardando el registro.');
+    } catch (e: any) {
+      console.error('Error guardando registro:', e);
+      alert(`Hubo un error guardando el registro: ${e.message || 'Error desconocido'}`);
     } finally {
       setSubmitting(false);
     }
@@ -189,6 +189,7 @@ export default function RegisterClient({
               <label className="flex flex-col text-sm">
                 <span className="mb-1 font-medium">Fecha</span>
                 <input 
+                  name="fecha"
                   value={fecha}
                   onChange={(e) => setFecha(e.target.value)}
                   type="date" 

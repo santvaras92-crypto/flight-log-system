@@ -15,10 +15,14 @@ type Input = {
 export async function createFuel(input: Input) {
   const imageUrl = input.file && input.file.size > 0 ? await saveUpload(input.file, 'fuel') : undefined;
 
+  // Parse fecha as local date at noon to avoid timezone issues
+  const [year, month, day] = input.fecha.split('-').map(Number);
+  const fecha = new Date(year, month - 1, day, 12, 0, 0);
+
   const row = await prisma.fuelLog.create({
     data: {
       userId: input.pilotoId,
-      fecha: new Date(input.fecha),
+      fecha,
       litros: input.litros,
       monto: input.monto,
       imageUrl,

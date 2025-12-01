@@ -14,10 +14,14 @@ type Input = {
 export async function createDeposit(input: Input) {
   const imageUrl = input.file && input.file.size > 0 ? await saveUpload(input.file, 'deposit') : undefined;
 
+  // Parse fecha as local date at noon to avoid timezone issues
+  const [year, month, day] = input.fecha.split('-').map(Number);
+  const fecha = new Date(year, month - 1, day, 12, 0, 0);
+
   const row = await prisma.deposit.create({
     data: {
       userId: input.pilotoId,
-      fecha: new Date(input.fecha),
+      fecha,
       monto: input.monto,
       imageUrl,
       detalle: input.detalle,
