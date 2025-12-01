@@ -228,27 +228,27 @@ export default function FlightUploadForm({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         {/* Main Form */}
-        <form onSubmit={handleSubmit} className="bg-white/95 backdrop-blur-sm shadow-2xl rounded-2xl overflow-hidden mb-8">
+        <form onSubmit={handleSubmit} className="bg-white/95 backdrop-blur-sm shadow-2xl rounded-xl sm:rounded-2xl overflow-hidden mb-4 sm:mb-8">
           {/* Form Header */}
-          <div className="bg-gradient-to-r from-slate-50 to-blue-50 px-8 py-6 border-b-2 border-blue-200">
-            <h2 className="text-xl font-bold text-slate-800 uppercase tracking-wide">Información del Vuelo - CC-AQI</h2>
+          <div className="bg-gradient-to-r from-slate-50 to-blue-50 px-4 sm:px-8 py-4 sm:py-6 border-b-2 border-blue-200">
+            <h2 className="text-base sm:text-xl font-bold text-slate-800 uppercase tracking-wide">Información del Vuelo - CC-AQI</h2>
           </div>
 
-          <div className="p-8">
+          <div className="p-4 sm:p-6 md:p-8">
             {/* Piloto y Fecha */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-8">
               {/* Pilot Selection */}
-              <div className="space-y-2">
-                <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">
+              <div className="space-y-1.5 sm:space-y-2">
+                <label className="block text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-wide">
                   Piloto al Mando *
                 </label>
                 {pilots.length > 0 ? (
                   <select
                     value={pilotoId}
                     onChange={(e) => setPilotoId(e.target.value)}
-                    className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-lg font-semibold text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all shadow-sm"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border-2 border-slate-300 rounded-lg font-semibold text-base text-slate-900 focus:border-blue-500 focus:ring-2 sm:focus:ring-4 focus:ring-blue-100 transition-all shadow-sm"
                     required
                   >
                     <option value="">Seleccionar piloto...</option>
@@ -259,22 +259,22 @@ export default function FlightUploadForm({
                     ))}
                   </select>
                 ) : (
-                  <div className="p-4 bg-yellow-50 border-2 border-yellow-200 rounded-lg text-slate-800">
-                    <p className="text-sm font-semibold">No hay pilotos registrados en el directorio.</p>
+                  <div className="p-3 sm:p-4 bg-yellow-50 border-2 border-yellow-200 rounded-lg text-slate-800">
+                    <p className="text-xs sm:text-sm font-semibold">No hay pilotos registrados en el directorio.</p>
                   </div>
                 )}
               </div>
 
               {/* Fecha del vuelo */}
-              <div className="space-y-2">
-                <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">
+              <div className="space-y-1.5 sm:space-y-2">
+                <label className="block text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-wide">
                   Fecha del Vuelo *
                 </label>
                 <input
                   type="date"
                   value={fechaVuelo}
                   onChange={(e) => setFechaVuelo(e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-lg font-semibold text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all shadow-sm"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border-2 border-slate-300 rounded-lg font-semibold text-base text-slate-900 focus:border-blue-500 focus:ring-2 sm:focus:ring-4 focus:ring-blue-100 transition-all shadow-sm"
                   required
                 />
               </div>
@@ -282,23 +282,23 @@ export default function FlightUploadForm({
 
             {/* Últimos contadores */}
             {(lastCounters.hobbs !== null || lastCounters.tach !== null) && (
-              <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-4 mb-6 border-2 border-amber-200">
-                <h3 className="text-sm font-bold text-amber-800 mb-2 uppercase tracking-wide flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg sm:rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 border-2 border-amber-200">
+                <h3 className="text-xs sm:text-sm font-bold text-amber-800 mb-2 uppercase tracking-wide flex items-center gap-2">
+                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   Últimos Contadores Registrados
                 </h3>
-                <div className="flex gap-6">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-6">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-slate-600">HOBBS:</span>
-                    <span className="font-mono font-bold text-lg text-[#003D82]">
+                    <span className="text-xs sm:text-sm font-semibold text-slate-600">HOBBS:</span>
+                    <span className="font-mono font-bold text-base sm:text-lg text-[#003D82]">
                       {lastCounters.hobbs !== null ? lastCounters.hobbs.toFixed(1) : "N/A"}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-slate-600">TACH:</span>
-                    <span className="font-mono font-bold text-lg text-[#003D82]">
+                    <span className="text-xs sm:text-sm font-semibold text-slate-600">TACH:</span>
+                    <span className="font-mono font-bold text-base sm:text-lg text-[#003D82]">
                       {lastCounters.tach !== null ? lastCounters.tach.toFixed(1) : "N/A"}
                     </span>
                   </div>
@@ -308,17 +308,17 @@ export default function FlightUploadForm({
             )}
 
             {/* Contadores Section - OBLIGATORIO */}
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 mb-6 border-2 border-green-300">
-              <h3 className="text-lg font-bold text-slate-800 mb-4 uppercase tracking-wide flex items-center gap-2">
-                <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg sm:rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 border-2 border-green-300">
+              <h3 className="text-sm sm:text-base md:text-lg font-bold text-slate-800 mb-3 sm:mb-4 uppercase tracking-wide flex items-center gap-2">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
                 Contadores Finales (Obligatorio)
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <label className="block text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-wide">
                     Hobbs Final *
                   </label>
                   <input
@@ -328,7 +328,7 @@ export default function FlightUploadForm({
                     value={hobbsManual}
                     onChange={(e) => setHobbsManual(e.target.value)}
                     placeholder={lastCounters.hobbs !== null ? `Mayor a ${lastCounters.hobbs.toFixed(1)}` : "Ej: 2058.5"}
-                    className="w-full px-4 py-3 bg-white border-2 border-green-400 rounded-lg font-mono font-bold text-slate-900 text-lg focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all shadow-sm"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border-2 border-green-400 rounded-lg font-mono font-bold text-slate-900 text-base sm:text-lg focus:border-green-500 focus:ring-2 sm:focus:ring-4 focus:ring-green-100 transition-all shadow-sm"
                     required
                   />
                   {deltaHobbs !== null && (
@@ -339,8 +339,8 @@ export default function FlightUploadForm({
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <label className="block text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-wide">
                     Tach Final *
                   </label>
                   <input
