@@ -112,11 +112,50 @@ export async function POST(request: NextRequest) {
       where: { key: 'flight_entries' }
     });
 
+    // Utilidad: obtener última fila por fecha (si el índice 1 no es el más reciente)
+    const parseEsDate = (val: any): Date | null => {
+      if (!val) return null;
+      const s = String(val).trim();
+      // Soportar formatos "DD-MM-YYYY", "YYYY-MM-DD" y locales
+      const dmy = s.match(/^([0-3]?\d)-([0-1]?\d)-(\d{4})$/);
+      if (dmy) {
+        const day = Number(dmy[1]);
+        const month = Number(dmy[2]) - 1;
+        const year = Number(dmy[3]);
+        return new Date(year, month, day);
+      }
+      const ymd = s.match(/^(\d{4})-([0-1]?\d)-([0-3]?\d)$/);
+      if (ymd) {
+        const year = Number(ymd[1]);
+        const month = Number(ymd[2]) - 1;
+        const day = Number(ymd[3]);
+        return new Date(year, month, day);
+      }
+      const dt = new Date(s);
+      return isNaN(dt.getTime()) ? null : dt;
+    };
+
+    const getLatestFlightRow = (matrix: any[][]): any[] | null => {
+      if (!Array.isArray(matrix) || matrix.length <= 1) return null;
+      const dataRows = matrix.slice(1).filter(r => Array.isArray(r) && r.length > 0);
+      if (dataRows.length === 0) return null;
+      // Ordenar por fecha descendente usando columna 0
+      const sorted = dataRows.slice().sort((a, b) => {
+        const da = parseEsDate(a[0]);
+        const db = parseEsDate(b[0]);
+        const ta = da ? da.getTime() : 0;
+        const tb = db ? db.getTime() : 0;
+        return tb - ta;
+      });
+      return sorted[0];
+    };
+
     let lastHobbs = 0;
     let lastTach = 0;
 
     if (excelState?.matrix && Array.isArray(excelState.matrix) && excelState.matrix.length > 1) {
-      const lastFlight = (excelState.matrix as any[])[1]; // Fila 1: Primera fila de datos (fila 0 es header)
+      // Elegir la última fila por fecha
+      const lastFlight = getLatestFlightRow(excelState.matrix as any[][]) || (excelState.matrix as any[])[1];
       
       console.log('🔍 DEBUG - Última fila del Excel:', lastFlight);
       console.log('🔍 DEBUG - lastFlight[5] (HOBBS F):', lastFlight[5]);
