@@ -158,44 +158,25 @@ export default function FlightUploadForm({
     setStatus(null);
 
     try {
-      const formData = new FormData();
-      formData.append("pilotoCodigo", pilotoId); // Código del piloto del Excel
-      formData.append("pilotoNombre", selectedPilot?.nombre || ""); // Nombre del piloto
-      formData.append("matricula", "CC-AQI"); // Siempre CC-AQI
-      formData.append("fechaVuelo", fechaVuelo);
-      
-      // Contadores finales
-      formData.append("hobbsManual", hobbsManual);
-      formData.append("tachManual", tachManual);
-      
-      // Contadores iniciales (últimos registrados)
-      formData.append("hobbsInicial", lastCounters.hobbs?.toString() || "0");
-      formData.append("tachInicial", lastCounters.tach?.toString() || "0");
-      
-      // Deltas calculados
-      formData.append("deltaHobbs", deltaHobbs?.toString() || "0");
-      formData.append("deltaTach", deltaTach?.toString() || "0");
-      
-      formData.append("copiloto", copiloto);
-      formData.append("detalle", detalle);
-      
-      if (hobbsImage) formData.append("hobbsImage", hobbsImage);
-      if (tachImage) formData.append("tachImage", tachImage);
-
-      const response = await fetch("/api/upload-flight", {
-        method: "POST",
-        body: formData,
+      // Navegar a la página de confirmación con los datos capturados
+      const params = new URLSearchParams({
+        pilotoCodigo: pilotoId,
+        pilotoNombre: selectedPilot?.nombre || "",
+        fechaVuelo,
+        hobbsInicial: lastCounters.hobbs?.toString() || "",
+        hobbsFinal: hobbsManual,
+        deltaHobbs: (deltaHobbs ?? "").toString(),
+        tachInicial: lastCounters.tach?.toString() || "",
+        tachFinal: tachManual,
+        deltaTach: (deltaTach ?? "").toString(),
+        copiloto,
+        detalle,
+        cliente: "",
       });
-
-      const data: UploadResponse = await response.json();
-      setResult(data);
-
-      if (data.success && data.submissionId) {
-        setTimeout(() => checkStatus(data.submissionId!), 2000);
-      }
+      window.location.href = `/pilot/confirm?${params.toString()}`;
     } catch (error) {
       console.error("Error:", error);
-      setResult({ success: false, error: "Error al enviar el vuelo" });
+      setResult({ success: false, error: "Error al preparar confirmación" });
     } finally {
       setLoading(false);
     }
