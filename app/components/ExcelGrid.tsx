@@ -16,7 +16,7 @@ type Props = {
 };
 
 export default function ExcelGrid({ gridKey, initialData, initialNamedExpressions, onSave }: Props) {
-  const hotRef = useRef<HotTable>(null);
+  const hotRef = useRef<any>(null);
   const [data, setData] = useState<any[][]>(initialData ?? []);
   const [namedExpressions, setNamedExpressions] = useState(initialNamedExpressions ?? []);
   const [loading, setLoading] = useState(true);
@@ -37,11 +37,11 @@ export default function ExcelGrid({ gridKey, initialData, initialNamedExpression
   }, [gridKey]);
 
   async function saveAll() {
-    const hot = hotRef.current?.hotInstance;
+    const hot = (hotRef.current as any)?.hotInstance;
     if (!hot) return;
     
     const all = hot.getData();
-    const metaMatrix = all.map((row, r) => row.map((_, c) => hot.getCellMeta(r, c)?.formula ?? null));
+    const metaMatrix = all.map((row: any, r: number) => row.map((_: any, c: number) => hot.getCellMeta(r, c)?.formula ?? null));
     
     if (onSave) {
       await onSave(all, metaMatrix, namedExpressions);
@@ -69,25 +69,25 @@ export default function ExcelGrid({ gridKey, initialData, initialNamedExpression
           💾 Guardar
         </button>
         <button className="btn-executive btn-executive-secondary" onClick={() => {
-          const hot = hotRef.current?.hotInstance;
+          const hot = (hotRef.current as any)?.hotInstance;
           hot?.alter("insert_row_below", hot.countRows()-1);
         }}>
           ➕ Fila
         </button>
         <button className="btn-executive btn-executive-secondary" onClick={() => {
-          const hot = hotRef.current?.hotInstance;
+          const hot = (hotRef.current as any)?.hotInstance;
           hot?.alter("insert_col_end");
         }}>
           ➕ Columna
         </button>
         <button className="btn-executive btn-executive-secondary" onClick={() => {
-          const hot = hotRef.current?.hotInstance;
+          const hot = (hotRef.current as any)?.hotInstance;
           hot?.undo();
         }}>
           ↩️ Deshacer
         </button>
         <button className="btn-executive btn-executive-secondary" onClick={() => {
-          const hot = hotRef.current?.hotInstance;
+          const hot = (hotRef.current as any)?.hotInstance;
           hot?.redo();
         }}>
           ↪️ Rehacer
