@@ -798,20 +798,25 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Date</th>
-              <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Tach I</th>
-              <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Tach F</th>
-              <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Δ Tach</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</th>
+              <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Tac. 1</th>
+              <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Tac. 2</th>
+              <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Dif. Taco</th>
               <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Hobbs I</th>
               <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Hobbs F</th>
-              <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Δ Hobbs</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Pilot</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Copilot/Instructor</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Client</th>
+              <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Dif. Hobbs</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Piloto</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Copiloto-instructor</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Pilot ID</th>
               <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Airplane Rate</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Instructor/SP</th>
+              <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Instructor/ Safety Pilot Rate</th>
               <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Total</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Details</th>
+              <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">AIRFRAME</th>
+              <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">ENGINE</th>
+              <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">PROPELLER</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Detalle</th>
+              <th className="px-3 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">Año</th>
+              <th className="px-3 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">Mes</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-slate-100">
@@ -819,119 +824,140 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
               const code = (f.cliente || '').toUpperCase();
               const u = users.find(u => u.id === (f as any).pilotoId) || users.find(u => (u.codigo || '').toUpperCase() === code);
               const pilotName = f.piloto_raw || u?.nombre || 'N/A';
+              const fecha = new Date(f.fecha);
+              const año = fecha.getFullYear();
+              const mesNombres = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+              const mes = mesNombres[fecha.getMonth()];
+              
               return (
                 <tr key={f.id} className="hover:bg-blue-50 transition-colors">
+                  {/* Fecha */}
                   <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600 font-medium">
                     {editMode ? (
-                      <input type="date" className="px-2 py-1 border rounded" value={new Date(f.fecha).toISOString().slice(0,10)} onChange={e=>handleChange(f.id,'fecha',e.target.value)} />
+                      <input type="date" className="px-2 py-1 border rounded text-xs w-full" value={fecha.toISOString().slice(0,10)} onChange={e=>handleChange(f.id,'fecha',e.target.value)} />
                     ) : (
-                      new Date(f.fecha).toLocaleDateString("es-CL")
+                      fecha.toLocaleDateString("es-CL")
                     )}
                   </td>
+                  
+                  {/* Tac. 1 */}
                   <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="0.1" className="px-2 py-1 border rounded text-right" defaultValue={Number(f.tach_inicio).toFixed(1)} onChange={e=>handleChange(f.id,'tach_inicio',e.target.value)} />
+                      <input type="number" step="0.1" className="px-2 py-1 border rounded text-right text-xs w-20" defaultValue={Number(f.tach_inicio).toFixed(1)} onChange={e=>handleChange(f.id,'tach_inicio',e.target.value)} />
                     ) : Number(f.tach_inicio).toFixed(1)}
                   </td>
+                  
+                  {/* Tac. 2 */}
                   <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="0.1" className="px-2 py-1 border rounded text-right" defaultValue={Number(f.tach_fin).toFixed(1)} onChange={e=>handleChange(f.id,'tach_fin',e.target.value)} />
+                      <input type="number" step="0.1" className="px-2 py-1 border rounded text-right text-xs w-20" defaultValue={Number(f.tach_fin).toFixed(1)} onChange={e=>handleChange(f.id,'tach_fin',e.target.value)} />
                     ) : Number(f.tach_fin).toFixed(1)}
                   </td>
+                  
+                  {/* Dif. Taco */}
                   <td className="px-3 py-3 whitespace-nowrap text-xs font-semibold text-blue-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="0.1" className="px-2 py-1 border rounded text-right" defaultValue={f.diff_tach ?? ''} onChange={e=>handleChange(f.id,'diff_tach',e.target.value)} />
-                    ) : (f.diff_tach != null ? `${Number(f.diff_tach).toFixed(1)} hrs` : '-')}
+                      <input type="number" step="0.1" className="px-2 py-1 border rounded text-right text-xs w-20" defaultValue={f.diff_tach ?? ''} onChange={e=>handleChange(f.id,'diff_tach',e.target.value)} />
+                    ) : (f.diff_tach != null ? Number(f.diff_tach).toFixed(1) : '-')}
                   </td>
+                  
+                  {/* Hobbs I */}
                   <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="0.1" className="px-2 py-1 border rounded text-right" defaultValue={f.hobbs_inicio ?? ''} onChange={e=>handleChange(f.id,'hobbs_inicio',e.target.value)} />
+                      <input type="number" step="0.1" className="px-2 py-1 border rounded text-right text-xs w-20" defaultValue={f.hobbs_inicio ?? ''} onChange={e=>handleChange(f.id,'hobbs_inicio',e.target.value)} />
                     ) : (f.hobbs_inicio != null ? Number(f.hobbs_inicio).toFixed(1) : '-')}
                   </td>
+                  
+                  {/* Hobbs F */}
                   <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="0.1" className="px-2 py-1 border rounded text-right" defaultValue={f.hobbs_fin ?? ''} onChange={e=>handleChange(f.id,'hobbs_fin',e.target.value)} />
+                      <input type="number" step="0.1" className="px-2 py-1 border rounded text-right text-xs w-20" defaultValue={f.hobbs_fin ?? ''} onChange={e=>handleChange(f.id,'hobbs_fin',e.target.value)} />
                     ) : (f.hobbs_fin != null ? Number(f.hobbs_fin).toFixed(1) : '-')}
                   </td>
+                  
+                  {/* Dif. Hobbs */}
                   <td className="px-3 py-3 whitespace-nowrap text-xs font-semibold text-blue-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="0.1" className="px-2 py-1 border rounded text-right" defaultValue={f.diff_hobbs ?? ''} onChange={e=>handleChange(f.id,'diff_hobbs',e.target.value)} />
-                    ) : (f.diff_hobbs != null ? `${Number(f.diff_hobbs).toFixed(1)} hrs` : '-')}
+                      <input type="number" step="0.1" className="px-2 py-1 border rounded text-right text-xs w-20" defaultValue={f.diff_hobbs ?? ''} onChange={e=>handleChange(f.id,'diff_hobbs',e.target.value)} />
+                    ) : (f.diff_hobbs != null ? Number(f.diff_hobbs).toFixed(1) : '-')}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-xs font-semibold text-slate-900">
+                  
+                  {/* Piloto */}
+                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-700 font-medium">
                     {editMode ? (
-                      <input className="px-2 py-1 border rounded" defaultValue={pilotName} onChange={e=>handleChange(f.id,'piloto_raw',e.target.value)} />
+                      <input type="text" className="px-2 py-1 border rounded text-xs w-full" defaultValue={pilotName} onChange={e=>handleChange(f.id,'piloto_raw',e.target.value)} />
                     ) : pilotName}
                   </td>
+                  
+                  {/* Copiloto-instructor */}
                   <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600">
                     {editMode ? (
-                      <input className="px-2 py-1 border rounded" defaultValue={f.copiloto || ''} onChange={e=>handleChange(f.id,'copiloto',e.target.value)} />
-                    ) : (f.copiloto || "-")}
+                      <input type="text" className="px-2 py-1 border rounded text-xs w-full" defaultValue={f.copiloto || ''} onChange={e=>handleChange(f.id,'copiloto',e.target.value)} />
+                    ) : (f.copiloto || '-')}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-600">
+                  
+                  {/* Pilot ID (Cliente) */}
+                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-700 font-semibold">
                     {editMode ? (
-                      <input className="px-2 py-1 border rounded" defaultValue={f.cliente || ''} onChange={e=>handleChange(f.id,'cliente',e.target.value)} />
-                    ) : (f.cliente || "-")}
+                      <input type="text" className="px-2 py-1 border rounded text-xs w-20" defaultValue={f.cliente || ''} onChange={e=>handleChange(f.id,'cliente',e.target.value)} />
+                    ) : (f.cliente || '-')}
                   </td>
+                  
+                  {/* Airplane Rate (Tarifa) */}
                   <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
-                    {(() => {
-                      // Solo mostrar tarifa del vuelo para >= 25 nov 2025
-                      const flightDate = new Date(f.fecha);
-                      const nov25 = new Date('2025-11-25');
-                      
-                      if (flightDate >= nov25) {
-                        // Vuelos nuevos: mostrar tarifa guardada en el vuelo
-                        if (f.tarifa && Number(f.tarifa) > 0) {
-                          return `$${Math.round(Number(f.tarifa)).toLocaleString("es-CL")}`;
-                        }
-                        return "-";
-                      }
-                      
-                      // Vuelos antiguos: calcular desde costo/horas o usar tarifa del usuario
-                      const horas = Number(f.diff_hobbs || 0);
-                      const costoVal = Number(f.costo || 0);
-                      if (horas > 0 && costoVal > 0) {
-                        const rate = costoVal / horas;
-                        return `$${Math.round(rate).toLocaleString("es-CL")}`;
-                      }
-                      if (u && Number(u.tarifa_hora) > 0) {
-                        return `$${Math.round(Number(u.tarifa_hora)).toLocaleString("es-CL")}`;
-                      }
-                      return "-";
-                    })()}
-                  </td>
-                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
-                    {(() => {
-                      // Solo mostrar instructor_rate para vuelos >= 25 nov 2025
-                      const flightDate = new Date(f.fecha);
-                      const nov25 = new Date('2025-11-25');
-                      if (flightDate < nov25) return "-";
-                      const rate = f.instructor_rate ? Number(f.instructor_rate) : 0;
-                      return rate > 0 ? `$${Math.round(rate).toLocaleString("es-CL")}` : "-";
-                    })()}
-                  </td>
-                  <td className="px-3 py-3 whitespace-nowrap text-xs font-bold text-green-600 text-right">{f.costo != null ? `$${Number(f.costo).toLocaleString("es-CL")}` : '-'}</td>
-                  <td className="px-4 py-3 text-xs text-slate-600 max-w-xs truncate" title={f.detalle || ""}>
                     {editMode ? (
-                      <input className="w-full px-2 py-1 border rounded" defaultValue={f.detalle || ''} onChange={e=>handleChange(f.id,'detalle',e.target.value)} />
-                    ) : (f.detalle || "-")}
+                      <input type="number" step="1000" className="px-2 py-1 border rounded text-right text-xs w-24" defaultValue={f.tarifa || ''} onChange={e=>handleChange(f.id,'tarifa',e.target.value)} />
+                    ) : (f.tarifa ? `$${Number(f.tarifa).toLocaleString('es-CL')}` : '-')}
                   </td>
-                  {editMode && (
-                    <td className="px-2 py-3 whitespace-nowrap text-xs text-right">
-                      <button
-                        className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded"
-                        onClick={async ()=>{
-                          if (!confirm('¿Eliminar este vuelo por completo?')) return;
-                          const res = await fetch('/api/flights/delete', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ id: f.id }) });
-                          const json = await res.json();
-                          if (!json.ok) alert(json.error||'Error al eliminar'); else location.reload();
-                        }}
-                        title="Eliminar vuelo"
-                      >
-                        Borrar
-                      </button>
-                    </td>
-                  )}
+                  
+                  {/* Instructor/ Safety Pilot Rate */}
+                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
+                    {editMode ? (
+                      <input type="number" step="1000" className="px-2 py-1 border rounded text-right text-xs w-24" defaultValue={f.instructor_rate || ''} onChange={e=>handleChange(f.id,'instructor_rate',e.target.value)} />
+                    ) : (f.instructor_rate ? `$${Number(f.instructor_rate).toLocaleString('es-CL')}` : '-')}
+                  </td>
+                  
+                  {/* Total */}
+                  <td className="px-3 py-3 whitespace-nowrap text-xs font-bold text-green-700 font-mono text-right">
+                    {editMode ? (
+                      <input type="number" step="1000" className="px-2 py-1 border rounded text-right text-xs w-24" defaultValue={f.costo ?? ''} onChange={e=>handleChange(f.id,'costo',e.target.value)} />
+                    ) : (f.costo != null ? `$${Number(f.costo).toLocaleString('es-CL')}` : '-')}
+                  </td>
+                  
+                  {/* AIRFRAME */}
+                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
+                    {/* Calculado automáticamente - no editable */}
+                    {f.airframe_total != null ? Number(f.airframe_total).toFixed(1) : '-'}
+                  </td>
+                  
+                  {/* ENGINE */}
+                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
+                    {/* Calculado automáticamente - no editable */}
+                    {f.engine_total != null ? Number(f.engine_total).toFixed(1) : '-'}
+                  </td>
+                  
+                  {/* PROPELLER */}
+                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
+                    {/* Calculado automáticamente - no editable */}
+                    {f.propeller_total != null ? Number(f.propeller_total).toFixed(1) : '-'}
+                  </td>
+                  
+                  {/* Detalle */}
+                  <td className="px-4 py-3 text-xs text-slate-600 max-w-xs truncate">
+                    {editMode ? (
+                      <input type="text" className="px-2 py-1 border rounded text-xs w-full" defaultValue={f.detalle || ''} onChange={e=>handleChange(f.id,'detalle',e.target.value)} />
+                    ) : (f.detalle || '-')}
+                  </td>
+                  
+                  {/* Año */}
+                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 text-center font-medium">
+                    {año}
+                  </td>
+                  
+                  {/* Mes */}
+                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 text-center">
+                    {mes}
+                  </td>
                 </tr>
               );
             })}
