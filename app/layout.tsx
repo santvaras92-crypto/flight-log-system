@@ -59,6 +59,13 @@ export default function RootLayout({
                   <span className="sm:hidden">Valid.</span>
                 </Link>
                 <Link 
+                  href="/admin/counters" 
+                  className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-blue-100 hover:text-white hover:bg-white/15 rounded-lg transition-all"
+                >
+                  <span className="hidden lg:inline">Contadores</span>
+                  <span className="lg:hidden">📊</span>
+                </Link>
+                <Link 
                   href="/pilots/new" 
                   className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-blue-100 hover:text-white hover:bg-white/15 rounded-lg transition-all"
                 >
