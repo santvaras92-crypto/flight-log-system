@@ -62,15 +62,10 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     
-    const pilotoCodigo = formData.get("pilotoCodigo") as string;
-    const pilotoNombre = formData.get("pilotoNombre") as string;
+    const pilotoId = Number(formData.get("pilotoId"));
     const matricula = formData.get("matricula") as string || "CC-AQI";
     const hobbsManual = formData.get("hobbsManual") as string;
     const tachManual = formData.get("tachManual") as string;
-    let hobbsInicial = formData.get("hobbsInicial") as string;
-    let tachInicial = formData.get("tachInicial") as string;
-    const deltaHobbs = formData.get("deltaHobbs") as string;
-    const deltaTach = formData.get("deltaTach") as string;
     const fechaVuelo = formData.get("fechaVuelo") as string | null;
     const cliente = formData.get("cliente") as string | null;
     const copiloto = formData.get("copiloto") as string | null;
@@ -79,7 +74,7 @@ export async function POST(request: NextRequest) {
     const tachImage = formData.get("tachImage") as File | null;
 
     // Validaciones básicas
-    if (!pilotoCodigo || !pilotoNombre) {
+    if (!pilotoId) {
       return NextResponse.json(
         { error: "Piloto es requerido" },
         { status: 400 }
@@ -103,77 +98,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Obtener últimos HOBBS/TACH del Excel (flight_entries) para alinear lógica con "Registrar vuelo"
-    let lastHobbs: number | null = null;
-    let lastTach: number | null = null;
-
-    const excelState = await prisma.sheetState.findUnique({
-      where: { key: 'flight_entries' }
+    // Obtener los contadores del último vuelo por fecha
+    const lastFlight = await prisma.flight.findFirst({
+      where: { aircraftId: matricula },
+      orderBy: { fecha: "desc" },
+      select: { hobbs_fin: true, tach_fin: true },
     });
 
-    const parseExcelNumber = (val: any): number | null => {
-      if (val === null || val === undefined || val === '') return null;
-      const str = String(val).replace(',', '.').trim();
-      const num = parseFloat(str);
-      return isNaN(num) ? null : num;
-    };
+    const lastHobbs = lastFlight?.hobbs_fin ? Number(lastFlight.hobbs_fin) : 0;
+    const lastTach = lastFlight?.tach_fin ? Number(lastFlight.tach_fin) : 0;
 
-    if (excelState?.matrix && Array.isArray(excelState.matrix) && (excelState.matrix as any[]).length > 1) {
-      const lastFlight = (excelState.matrix as any[])[1];
-      lastHobbs = parseExcelNumber(lastFlight[5]); // HOBBS F (col 5)
-      lastTach = parseExcelNumber(lastFlight[2]);  // TACH F (col 2)
+    if (hobbsNum <= lastHobbs) {
+      return NextResponse.json(
+        { error: `El Hobbs (${hobbsNum}) debe ser mayor a ${lastHobbs}` },
+        { status: 400 }
+      );
     }
 
-    // Si no vienen iniciales en el formulario, usar los últimos del Excel
-    if (!hobbsInicial && lastHobbs !== null) {
-      hobbsInicial = String(lastHobbs);
-    }
-    if (!tachInicial && lastTach !== null) {
-      tachInicial = String(lastTach);
-    }
-
-    // Validar que el piloto existe en el Excel Pilot Directory
-    const pilotDirExcel = await prisma.sheetState.findUnique({
-      where: { key: 'pilot_directory' }
-    });
-
-    let pilotoEmail = `${pilotoCodigo}@piloto.local`;
-    
-    if (pilotDirExcel?.matrix && Array.isArray(pilotDirExcel.matrix)) {
-      const pilotRows = (pilotDirExcel.matrix as any[][]).slice(1);
-      const pilotRow = pilotRows.find(row => {
-        const codigo = row[0] ? String(row[0]).trim() : null;
-        const nombre = row[1] ? String(row[1]).trim() : null;
-        return codigo === pilotoCodigo || nombre === pilotoNombre;
-      });
-      
-      if (pilotRow && pilotRow[2]) {
-        pilotoEmail = String(pilotRow[2]).trim();
-      }
+    if (tachNum <= lastTach) {
+      return NextResponse.json(
+        { error: `El Tach (${tachNum}) debe ser mayor a ${lastTach}` },
+        { status: 400 }
+      );
     }
 
-    // Buscar o crear piloto en DB (necesario para submissions)
-    let piloto = await prisma.user.findFirst({
-      where: { 
-        OR: [
-          { codigo: pilotoCodigo },
-          { nombre: pilotoNombre }
-        ]
-      }
+    // Obtener el piloto
+    const piloto = await prisma.user.findUnique({
+      where: { id: pilotoId },
+      select: { id: true, nombre: true, email: true, codigo: true, tarifa_hora: true },
     });
 
     if (!piloto) {
-      // Crear piloto básico en DB si no existe (solo para submissions)
-      piloto = await prisma.user.create({
-        data: {
-          nombre: pilotoNombre,
-          codigo: pilotoCodigo,
-          email: pilotoEmail,
-          rol: "PILOTO",
-          tarifa_hora: 0,
-          password: "" // No se usa para login
-        }
-      });
+      return NextResponse.json(
+        { error: "Piloto no encontrado" },
+        { status: 400 }
+      );
     }
 
     // Guardar imágenes si se proporcionaron
@@ -190,7 +149,7 @@ export async function POST(request: NextRequest) {
       
       if (hobbsImage) {
         const hobbsExt = hobbsImage.name.split(".").pop();
-        const hobbsFileName = `hobbs-${pilotoCodigo}-${timestamp}.${hobbsExt}`;
+        const hobbsFileName = `hobbs-${pilotoId}-${timestamp}.${hobbsExt}`;
         const hobbsPath = join(uploadDir, hobbsFileName);
         await writeFile(hobbsPath, Buffer.from(await hobbsImage.arrayBuffer()));
         hobbsImageUrl = `/uploads/${hobbsFileName}`;
@@ -198,7 +157,7 @@ export async function POST(request: NextRequest) {
 
       if (tachImage) {
         const tachExt = tachImage.name.split(".").pop();
-        const tachFileName = `tach-${pilotoCodigo}-${timestamp}.${tachExt}`;
+        const tachFileName = `tach-${pilotoId}-${timestamp}.${tachExt}`;
         const tachPath = join(uploadDir, tachFileName);
         await writeFile(tachPath, Buffer.from(await tachImage.arrayBuffer()));
         tachImageUrl = `/uploads/${tachFileName}`;
@@ -208,16 +167,12 @@ export async function POST(request: NextRequest) {
     // Crear la submission en estado ESPERANDO_APROBACION
     const submission = await prisma.flightSubmission.create({
       data: {
-        pilotoId: piloto.id,
+        pilotoId,
         aircraftId: matricula,
         estado: "ESPERANDO_APROBACION",
         fechaVuelo: fechaVuelo ? new Date(fechaVuelo) : new Date(),
-        hobbsInicial: hobbsInicial ? new Decimal(hobbsInicial) : (lastHobbs !== null ? new Decimal(lastHobbs) : null),
         hobbsFinal: new Decimal(hobbsNum),
-        deltaHobbs: deltaHobbs ? new Decimal(deltaHobbs) : null,
-        tachInicial: tachInicial ? new Decimal(tachInicial) : (lastTach !== null ? new Decimal(lastTach) : null),
         tachFinal: new Decimal(tachNum),
-        deltaTach: deltaTach ? new Decimal(deltaTach) : null,
         cliente: cliente || null,
         copiloto: copiloto || null,
         detalle: detalle || null,
@@ -232,12 +187,6 @@ export async function POST(request: NextRequest) {
 
     // Enviar correo de notificación
     await sendNotificationEmail(submission, piloto);
-
-    console.log('📝 Submission creada:', {
-      id: submission.id,
-      piloto: pilotoNombre,
-      estado: submission.estado
-    });
 
     return NextResponse.json({
       success: true,

@@ -222,47 +222,29 @@ async function main() {
     }
     // Si aún no existe, crear con el código del cliente si hay, si no con uno derivado
     if (!piloto) {
-      const codigoNuevo = (codigoCliente || extractPilotCode(pilotoStr) || 'UNK');
-      const nombrePiloto = (pilotoStr || codigoNuevo).replace(/\s+/g,' ').trim();
-      try {
-        piloto = await prisma.user.create({
-          data: {
-            nombre: nombrePiloto,
-            codigo: codigoNuevo,
-            email: `${codigoNuevo}@piloto.local`,
-            rol: 'PILOTO',
-            saldo_cuenta: 0,
-            tarifa_hora: (parseNumber(fields[11]) ?? 0),
-            password: '',
-          }
-        });
-        pilotosByCode.set(codigoNuevo, piloto);
-      } catch (e) {
-        if (skipped < 10) console.log(`⚠️  Línea ${i}: No se pudo crear piloto ${codigoNuevo}`);
-        skipped++;
-        continue;
+      // Buscar/crear piloto genérico DESCONOCIDO
+      let pilotoDesconocido = pilotosByCode.get('DESCONOCIDO');
+      if (!pilotoDesconocido) {
+        try {
+          pilotoDesconocido = await prisma.user.create({
+            data: {
+              nombre: 'DESCONOCIDO',
+              codigo: 'DESCONOCIDO',
+              email: 'desconocido@piloto.local',
+              rol: 'PILOTO',
+              saldo_cuenta: 0,
+              tarifa_hora: 0,
+              password: '',
+            }
+          });
+          pilotosByCode.set('DESCONOCIDO', pilotoDesconocido);
+        } catch (e) {
+          // Si ya existe, buscarlo
+          pilotoDesconocido = await prisma.user.findFirst({ where: { codigo: 'DESCONOCIDO' } });
+          if (pilotoDesconocido) pilotosByCode.set('DESCONOCIDO', pilotoDesconocido);
+        }
       }
-    }
-    if (!piloto) {
-      const nombrePiloto = pilotoStr.replace(/\s+/g,' ').trim();
-      try {
-        piloto = await prisma.user.create({
-          data: {
-            nombre: nombrePiloto,
-            codigo: codigoPiloto,
-            email: `${codigoPiloto}@piloto.local`,
-            rol: 'PILOTO',
-            saldo_cuenta: 0,
-            tarifa_hora: parseNumber(tarifaStr) || 0,
-            password: '',
-          }
-        });
-        pilotosByCode.set(codigoPiloto, piloto);
-      } catch (e) {
-        if (skipped < 10) console.log(`⚠️  Línea ${i}: No se pudo crear piloto ${codigoPiloto} - ${nombrePiloto}`);
-        skipped++;
-        continue;
-      }
+      piloto = pilotoDesconocido;
     }
     
     // Importar tal cual: usar valores de CSV sin reconstrucciones; permitir nulos
