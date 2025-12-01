@@ -5,50 +5,66 @@ import { randomUUID } from 'crypto';
 
 const prisma = new PrismaClient();
 
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ';' && !inQuotes) {
+      result.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current);
+  return result;
+}
+
 async function importPilots() {
   try {
-    const csvPath = path.join(process.cwd(), 'Base de dato pilotos', 'Base de dato pilotos.csv');
+    const csvPath = path.join(process.cwd(), 'Base de dato AQI.csv');
     const content = fs.readFileSync(csvPath, 'utf-8');
     const lines = content.split('\n').filter(l => l.trim());
     
-    // Skip header
-    const dataLines = lines.slice(1);
+    const pilotCodesSet = new Set<string>();
+    const pilotNames: Record<string, string> = {};
     
-    console.log(`📋 Found ${dataLines.length} pilots to import`);
+    // Saltar header, extraer códigos únicos
+    for (let i = 1; i < lines.length; i++) {
+      const fields = parseCSVLine(lines[i]);
+      const pilotIdStr = (fields[9] || '').trim().toUpperCase();
+      const pilotName = (fields[7] || '').trim();
+      
+      if (pilotIdStr && pilotIdStr !== '') {
+        pilotCodesSet.add(pilotIdStr);
+        if (pilotName && !pilotNames[pilotIdStr]) {
+          pilotNames[pilotIdStr] = pilotName;
+        }
+      }
+    }
+    
+    const pilotCodes = Array.from(pilotCodesSet).sort();
+    console.log(`📋 Códigos únicos encontrados: ${pilotCodes.length}\n`);
     
     let imported = 0;
     let skipped = 0;
     
-    for (const line of dataLines) {
-      const parts = line.split(';');
-      if (parts.length < 2) continue;
-      
-      const codigo = parts[0].trim();
-      const nombre = parts[1].trim();
-      
-      if (!codigo || !nombre) continue;
+    for (const codigo of pilotCodes) {
+      const nombre = pilotNames[codigo] || codigo;
+      const email = `${codigo.toLowerCase()}@piloto.local`;
       
       // Check if pilot already exists
       const existing = await prisma.user.findFirst({
-        where: {
-          OR: [
-            { codigo: codigo },
-            { nombre: nombre }
-          ]
-        }
+        where: { codigo: codigo }
       });
       
       if (existing) {
-        // Update codigo if missing
-        if (!existing.codigo && codigo) {
-          await prisma.user.update({
-            where: { id: existing.id },
-            data: { codigo: codigo }
-          });
-          console.log(`✏️  Updated codigo for: ${nombre} -> ${codigo}`);
-        } else {
-          console.log(`⏭️  Skipped (exists): ${codigo} - ${nombre}`);
-        }
+        console.log(`⏭️  Ya existe: ${codigo} - ${existing.nombre}`);
         skipped++;
         continue;
       }
@@ -58,25 +74,25 @@ async function importPilots() {
         data: {
           codigo: codigo,
           nombre: nombre,
-          email: `${codigo.toLowerCase()}@aeroclub.com`,
+          email: email,
           rol: 'PILOTO',
           saldo_cuenta: 0,
-          tarifa_hora: 170000,
+          tarifa_hora: 175,
           password: randomUUID(),
         }
       });
       
       imported++;
-      console.log(`✅ Imported: ${codigo} - ${nombre}`);
+      console.log(`✅ Importado: ${codigo} - ${nombre}`);
     }
     
-    console.log(`\n✨ Import complete!`);
-    console.log(`   Imported: ${imported}`);
-    console.log(`   Skipped: ${skipped}`);
-    console.log(`   Total: ${dataLines.length}`);
+    console.log(`\n✨ Importación completa!`);
+    console.log(`   Importados: ${imported}`);
+    console.log(`   Ya existían: ${skipped}`);
+    console.log(`   Total: ${pilotCodes.length}`);
     
   } catch (error) {
-    console.error('❌ Error importing pilots:', error);
+    console.error('❌ Error importando pilotos:', error);
     throw error;
   } finally {
     await prisma.$disconnect();

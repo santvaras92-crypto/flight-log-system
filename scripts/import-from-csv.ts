@@ -163,7 +163,7 @@ async function main() {
     const diff_hobbs = parseDecimal(fields[6]);
     const pilotoStr = fields[7];
     const copilotoStr = fields[8] || null;
-    const clienteStr = fields[9] || null;
+    const pilotIdStr = fields[9] || null; // Pilot ID (código)
     const tarifaCSV = parseNumber(fields[10]) ?? 0;
     const instructorCSV = parseNumber(fields[11]) ?? 0;
     const totalCSV = parseNumber(fields[12]) ?? null;
@@ -197,30 +197,9 @@ async function main() {
       console.log(`Línea ${i}: fechaStr="${fechaStr}", year="${yearStr}", month="${monthStr}", fecha=${fecha.toISOString()}`);
     }
     
-    // Pilot mapping: usar el Client Code como código canónico del piloto
-    const codigoCliente = (clienteStr || '').trim().toUpperCase() || null;
-    let piloto = codigoCliente ? pilotosByCode.get(codigoCliente) : undefined;
-    if (!piloto) {
-      // Fallback: intentar extraer desde el nombre del piloto
-      let codigoPiloto = extractPilotCode(pilotoStr) || null;
-      if (!codigoPiloto && pilotoStr) {
-        const m = pilotoStr.match(/([A-ZÁÉÍÓÚÑ])[\.]\s*([A-Za-zÁÉÍÓÚÑáéíóúñ]+)/);
-        if (m) {
-          const initial = m[1].toUpperCase();
-          const apellido = m[2].normalize('NFD').replace(/[^A-Za-z]/g, '').substring(0,2).toUpperCase();
-          codigoPiloto = `${initial}${apellido}`;
-        }
-      }
-      if (!codigoPiloto && pilotoStr) {
-        const label = (pilotoStr || '').trim();
-        const dictionary: Record<string,string> = {
-          'AEROMUNDO': 'AERO', 'AIRC': 'AIRC', 'RUN UP': 'RUN', 'RUIZ': 'RUI', 'MAYKOL J': 'MJ', 'JORGE M.': 'JM2'
-        };
-        const key = label.toUpperCase();
-        codigoPiloto = dictionary[key] || (key.replace(/[^A-Z0-9]/g,'').substring(0,4) || 'UNK');
-      }
-      if (codigoPiloto) piloto = pilotosByCode.get(codigoPiloto);
-    }
+    // Pilot mapping: usar Pilot ID (columna 9) como código del piloto
+    const codigoPiloto = (pilotIdStr || '').trim().toUpperCase() || null;
+    let piloto = codigoPiloto ? pilotosByCode.get(codigoPiloto) : undefined;
     // Si aún no existe, crear con el código del cliente si hay, si no con uno derivado
     if (!piloto) {
       // Buscar/crear piloto genérico DESCONOCIDO
@@ -271,7 +250,7 @@ async function main() {
       pilotoId: piloto?.id ?? null,
       aircraftId: MATRICULA,
       copiloto: copilotoStr,
-      cliente: clienteStr,
+      cliente: pilotIdStr, // Pilot ID como cliente
       instructor: null,
       detalle: detalleStr,
       airframe_hours: airframeHours,
