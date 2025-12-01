@@ -72,7 +72,17 @@ export default function FlightUploadForm({
   // Campos obligatorios
   const [hobbsManual, setHobbsManual] = useState<string>("");
   const [tachManual, setTachManual] = useState<string>("");
-  const [fechaVuelo, setFechaVuelo] = useState<string>(new Date().toISOString().split("T")[0]);
+  
+  // Inicializar fecha con zona horaria local (YYYY-MM-DD)
+  const getLocalDate = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  const [fechaVuelo, setFechaVuelo] = useState<string>(getLocalDate());
   
   // Nuevos campos
   const [copiloto, setCopiloto] = useState<string>("");
