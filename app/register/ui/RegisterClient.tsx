@@ -54,6 +54,30 @@ export default function RegisterClient({
     return isNaN(val) || val <= 0 ? null : Number(val.toFixed(1));
   }, [mode, tachFin, lastCounters.tach]);
 
+  // Validar ratio entre deltaHobbs y deltaTach (esperado: ~1.3x)
+  const hobbsTachRatio = useMemo(() => {
+    if (deltaHobbs === null || deltaTach === null || deltaTach === 0) return null;
+    return deltaHobbs / deltaTach;
+  }, [deltaHobbs, deltaTach]);
+
+  // El ratio esperado es 1.3 ± 0.2 (rango: 1.1 - 1.5)
+  const ratioWarning = useMemo(() => {
+    if (hobbsTachRatio === null) return null;
+    const expectedRatio = 1.3;
+    const tolerance = 0.2;
+    const minRatio = expectedRatio - tolerance;
+    const maxRatio = expectedRatio + tolerance;
+    
+    if (hobbsTachRatio < minRatio || hobbsTachRatio > maxRatio) {
+      return {
+        ratio: hobbsTachRatio,
+        expected: expectedRatio,
+        outOfRange: true
+      };
+    }
+    return null;
+  }, [hobbsTachRatio]);
+
   // Calcular nuevas horas de componentes para vista previa
   const newComponents = useMemo(() => {
     if (!deltaTach) return null;
@@ -259,6 +283,28 @@ export default function RegisterClient({
                       )}
                     </div>
                   </div>
+
+                  {/* Alerta de ratio HOBBS/TACH fuera de rango */}
+                  {ratioWarning && (
+                    <div className="mt-4 rounded-xl p-4 bg-red-50 border-2 border-red-400">
+                      <div className="flex items-start gap-3">
+                        <svg className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <div className="flex-1">
+                          <h4 className="text-sm font-bold text-red-900 mb-1">⚠️ RATIO HOBBS/TACH FUERA DE RANGO</h4>
+                          <p className="text-sm text-red-800 mb-2">
+                            El ratio calculado es <strong className="font-mono">{ratioWarning.ratio.toFixed(2)}x</strong> 
+                            {' '}(Δ HOBBS: {deltaHobbs?.toFixed(1)} hrs ÷ Δ TACH: {deltaTach?.toFixed(1)} hrs)
+                          </p>
+                          <p className="text-sm text-red-800">
+                            Se espera un ratio de aproximadamente <strong className="font-mono">1.30x ± 0.20</strong> (rango: 1.10 - 1.50).
+                            Por favor verifica que los valores ingresados sean correctos.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Vista previa de la bitácora */}
