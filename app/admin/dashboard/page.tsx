@@ -236,7 +236,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           const lines = content.split('\n').filter(l => l.trim());
           const header = lines[0].split(';');
           const COL_CUENTA = 1; // Code
-          const COL_MONTO = 4; // Monto con $
+          const COL_MONTO = 3; // Monto (column 3)
           for (let i = 1; i < lines.length; i++) {
             const parts = lines[i].split(';');
             const code = (parts[COL_CUENTA] || '').trim().toUpperCase();
@@ -262,8 +262,8 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
             const parts = lines[i].split(';');
             const code = (parts[1] || '').trim().toUpperCase();
             const fecha = (parts[0] || '').trim();
-            const litrosStr = (parts[3] || '').trim().replace(',', '.');
-            const montoStr = (parts[4] || '').trim();
+            const litrosStr = (parts[2] || '').trim().replace(',', '.');
+            const montoStr = (parts[3] || '').trim();
             if (!code) continue;
             const litros = parseFloat(litrosStr) || 0;
             const cleaned = montoStr.replace(/\$/g, '').replace(/\./g, '').replace(',', '.');
