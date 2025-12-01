@@ -179,7 +179,7 @@ export default function AdminSubmissions({ initialData }: { initialData: Submiss
                   color: estilo.color,
                   borderColor: estilo.border
                 }}>
-                  {s.estado === 'ESPERANDO_APROBACION' ? 'Esperando Aprobación' : s.estado}
+                  {s.estado === 'PENDIENTE' ? 'Esperando Aprobación' : s.estado}
                 </span>
               </div>
 
@@ -234,7 +234,7 @@ export default function AdminSubmissions({ initialData }: { initialData: Submiss
               )}
 
               {/* Panel de aprobación */}
-              {s.estado === "ESPERANDO_APROBACION" && (
+              {s.estado === "PENDIENTE" && (
                 <div className="rounded-lg p-4 sm:p-5 border-2" style={{ background: 'rgba(168, 85, 247, 0.1)', borderColor: '#A78BFA' }}>
                   <h4 className="text-sm font-bold mb-3 sm:mb-4 uppercase tracking-wide" style={{ color: '#A78BFA' }}>Aprobar Vuelo</h4>
                   
