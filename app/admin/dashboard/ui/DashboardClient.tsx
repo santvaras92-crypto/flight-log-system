@@ -927,19 +927,19 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                   {/* AIRFRAME */}
                   <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
                     {/* Calculado automáticamente - no editable */}
-                    {f.airframe_total != null ? Number(f.airframe_total).toFixed(1) : '-'}
+                    {f.airframe_hours != null ? Number(f.airframe_hours).toFixed(1) : '-'}
                   </td>
                   
                   {/* ENGINE */}
                   <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
                     {/* Calculado automáticamente - no editable */}
-                    {f.engine_total != null ? Number(f.engine_total).toFixed(1) : '-'}
+                    {f.engine_hours != null ? Number(f.engine_hours).toFixed(1) : '-'}
                   </td>
                   
                   {/* PROPELLER */}
                   <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
                     {/* Calculado automáticamente - no editable */}
-                    {f.propeller_total != null ? Number(f.propeller_total).toFixed(1) : '-'}
+                    {f.propeller_hours != null ? Number(f.propeller_hours).toFixed(1) : '-'}
                   </td>
                   
                   {/* Detalle */}

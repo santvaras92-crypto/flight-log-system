@@ -35,6 +35,9 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         aircraftId: true,
         piloto_raw: true,
         pilotoId: true,
+        airframe_hours: true,
+        engine_hours: true,
+        propeller_hours: true,
       }
     }),
     // All flights with complete data for client filtering in FlightsTable
@@ -59,6 +62,9 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         aircraftId: true,
         piloto_raw: true,
         pilotoId: true,
+        airframe_hours: true,
+        engine_hours: true,
+        propeller_hours: true,
       } 
     }),
     prisma.flight.findMany({ orderBy: { fecha: "desc" }, select: { id: true, fecha: true, cliente: true, diff_hobbs: true, costo: true } }), // Lightweight for Active Pilots calculation

@@ -155,23 +155,24 @@ async function main() {
     const fields = parseCSVLine(lines[i]);
     
     const fechaStr = fields[0];
-    const tach_i = parseDecimal(fields[2]);
-    const tach_f = parseDecimal(fields[3]);
-    const diff_tach = parseDecimal(fields[4]);
-    const hobbs_i = parseDecimal(fields[5]);
-    const hobbs_f = parseDecimal(fields[6]);
-    const diff_hobbs = parseDecimal(fields[7]);
-    const pilotoStr = fields[8];
-    const copilotoStr = fields[9] || null;
-    const clienteStr = fields[10] || null;
-    const tarifaCSV = parseNumber(fields[11]) ?? 0;
-    const instructorCSV = (fields[12] || '').trim();
-    const airframeHours = parseDecimal(fields[14]) ?? null;
-    const engineHours = parseDecimal(fields[15]) ?? null;
-    const propellerHours = parseDecimal(fields[16]) ?? null;
-    const detalleStr = fields[17] || null;
-    const yearStr = fields[18];
-    const monthStr = fields[19];
+    const tach_i = parseDecimal(fields[1]);
+    const tach_f = parseDecimal(fields[2]);
+    const diff_tach = parseDecimal(fields[3]);
+    const hobbs_i = parseDecimal(fields[4]);
+    const hobbs_f = parseDecimal(fields[5]);
+    const diff_hobbs = parseDecimal(fields[6]);
+    const pilotoStr = fields[7];
+    const copilotoStr = fields[8] || null;
+    const clienteStr = fields[9] || null;
+    const tarifaCSV = parseNumber(fields[10]) ?? 0;
+    const instructorCSV = parseNumber(fields[11]) ?? 0;
+    const totalCSV = parseNumber(fields[12]) ?? null;
+    const airframeHours = parseDecimal(fields[13]) ?? null;
+    const engineHours = parseDecimal(fields[14]) ?? null;
+    const propellerHours = parseDecimal(fields[15]) ?? null;
+    const detalleStr = fields[16] || null;
+    const yearStr = fields[17];
+    const monthStr = fields[18];
     
     // Usar año y mes de las columnas finales si están disponibles
     let fecha = parseDate(fechaStr);
@@ -254,7 +255,8 @@ async function main() {
     const tach_fin = tach_f ?? null;
     const diff_h = diff_hobbs ?? (hobbs_inicio != null && hobbs_fin != null ? (hobbs_fin - hobbs_inicio) : null);
     const diff_t = diff_tach ?? (tach_inicio != null && tach_fin != null ? (tach_fin - tach_inicio) : null);
-    const costoCalc = (tarifaCSV != null && diff_h != null) ? (diff_h * tarifaCSV) : null;
+    // Usar Total del CSV si existe, sino calcular
+    const costoCalc = totalCSV ?? ((tarifaCSV != null && diff_h != null) ? (diff_h * tarifaCSV) : null);
     
     // Preparar datos para batch
     flightBatch.push({
@@ -270,11 +272,13 @@ async function main() {
       aircraftId: MATRICULA,
       copiloto: copilotoStr,
       cliente: clienteStr,
-      instructor: instructorCSV,
+      instructor: null,
       detalle: detalleStr,
       airframe_hours: airframeHours,
       engine_hours: engineHours,
       propeller_hours: propellerHours,
+      tarifa: tarifaCSV > 0 ? tarifaCSV : null,
+      instructor_rate: instructorCSV > 0 ? instructorCSV : null,
     });
     
     transactionBatch.push({
