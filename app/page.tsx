@@ -83,7 +83,7 @@ export default async function Home() {
   let lastPropeller = null;
 
   if (excelState?.matrix && Array.isArray(excelState.matrix) && excelState.matrix.length > 1) {
-    const lastFlight = (excelState.matrix as any[])[1]; // Primera fila de datos (después del header)
+    const lastFlight = (excelState.matrix as any[])[1]; // Fila 1: Primera fila de datos (fila 0 es el header)
     // Columnas: ["Fecha","TACH I","TACH F","Δ TACH","HOBBS I","HOBBS F","Δ HOBBS",
     //           "Piloto","Copiloto/Instructor","Cliente","Rate","Instructor/SP Rate",
     //           "Total","AIRFRAME","ENGINE","PROPELLER","Detalle"]

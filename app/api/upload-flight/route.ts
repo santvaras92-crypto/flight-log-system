@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
     let lastTach = 0;
 
     if (excelState?.matrix && Array.isArray(excelState.matrix) && excelState.matrix.length > 1) {
-      const lastFlight = (excelState.matrix as any[])[1]; // Primera fila de datos
+      const lastFlight = (excelState.matrix as any[])[1]; // Fila 1: Primera fila de datos (fila 0 es header)
       // Columnas: ["Fecha","TACH I","TACH F","Δ TACH","HOBBS I","HOBBS F","Δ HOBBS",...]
       lastHobbs = lastFlight[5] ? Number(lastFlight[5]) : 0; // HOBBS F (columna 5)
       lastTach = lastFlight[2] ? Number(lastFlight[2]) : 0;  // TACH F (columna 2)

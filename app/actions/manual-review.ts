@@ -101,7 +101,7 @@ async function autoRegisterFlightForReview(submissionId: number) {
     let lastEngine = 0;
     let lastPropeller = 0;
 
-    // Si hay datos en el Excel, usar el primer vuelo (fila 1, después del header)
+    // Si hay datos en el Excel, usar el vuelo más reciente (fila 1: primera fila de datos, fila 0 es header)
     if (excelState?.matrix && Array.isArray(excelState.matrix) && excelState.matrix.length > 1) {
       const lastRow = (excelState.matrix as any[])[1];
       // Columnas: ["Fecha","TACH I","TACH F","Δ TACH","HOBBS I","HOBBS F","Δ HOBBS",
@@ -174,7 +174,7 @@ async function autoRegisterFlightForReview(submissionId: number) {
        "Total","AIRFRAME","ENGINE","PROPELLER","Detalle"]
     ];
 
-    // Insertar nueva fila en posición 1 (vuelos más recientes arriba)
+    // Insertar nueva fila en posición 1 (después del header en fila 0, vuelos más recientes arriba)
     matrix.splice(1, 0, newRow);
 
     // Guardar Excel actualizado
