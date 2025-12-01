@@ -348,7 +348,6 @@ export default function FlightUploadForm({
                     </div>
                   )}
                 </div>
-                </div>
               </div>
 
               {/* Warning de relación Hobbs/Tach */}
