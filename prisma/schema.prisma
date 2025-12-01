@@ -154,6 +154,8 @@ model User {
   FlightSubmission FlightSubmission[]
   Session          Session[]
   Transaction      Transaction[]
+  Deposit          Deposit[]
+  FuelLog          FuelLog[]
 }
 
 model VerificationToken {
@@ -162,4 +164,31 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+// New: Deposits linked to pilots, optional image
+model Deposit {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  fecha     DateTime @default(now())
+  monto     Decimal
+  imageUrl  String?
+  detalle   String?
+  createdAt DateTime @default(now())
+
+  User      User     @relation(fields: [userId], references: [id])
+}
+
+// New: Fuel logs linked to pilots, optional image
+model FuelLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  fecha     DateTime @default(now())
+  litros    Decimal
+  monto     Decimal
+  imageUrl  String?
+  detalle   String?
+  createdAt DateTime @default(now())
+
+  User      User     @relation(fields: [userId], references: [id])
 }
