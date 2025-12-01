@@ -117,9 +117,16 @@ export async function POST(request: NextRequest) {
 
     if (excelState?.matrix && Array.isArray(excelState.matrix) && excelState.matrix.length > 1) {
       const lastFlight = (excelState.matrix as any[])[1]; // Fila 1: Primera fila de datos (fila 0 es header)
+      
+      console.log('🔍 DEBUG - Última fila del Excel:', lastFlight);
+      console.log('🔍 DEBUG - lastFlight[5] (HOBBS F):', lastFlight[5]);
+      console.log('🔍 DEBUG - lastFlight[2] (TACH F):', lastFlight[2]);
+      
       // Columnas: ["Fecha","TACH I","TACH F","Δ TACH","HOBBS I","HOBBS F","Δ HOBBS",...]
       lastHobbs = parseExcelNumber(lastFlight[5]); // HOBBS F (columna 5)
       lastTach = parseExcelNumber(lastFlight[2]);  // TACH F (columna 2)
+      
+      console.log('✅ Contadores parseados - Hobbs:', lastHobbs, 'Tach:', lastTach);
     } else {
       // Si Excel vacío, usar valores del Aircraft
       const aircraft = await prisma.aircraft.findUnique({
@@ -128,6 +135,10 @@ export async function POST(request: NextRequest) {
       lastHobbs = aircraft?.hobbs_actual ? Number(aircraft.hobbs_actual) : 0;
       lastTach = aircraft?.tach_actual ? Number(aircraft.tach_actual) : 0;
     }
+
+    console.log('📊 Validando contadores:');
+    console.log('  - Hobbs ingresado:', hobbsNum, '| Último Hobbs:', lastHobbs);
+    console.log('  - Tach ingresado:', tachNum, '| Último Tach:', lastTach);
 
     if (hobbsNum <= lastHobbs) {
       return NextResponse.json(
