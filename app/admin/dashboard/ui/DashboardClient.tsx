@@ -95,67 +95,6 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
 
   return (
     <div className={`min-h-screen ${palette.bg} -mx-6 -my-8 px-4 sm:px-6 py-6 sm:py-8`}>
-      {/* Filters Bar - Compact and Visible */}
-      <div className="bg-white rounded-xl shadow-md border border-slate-200 p-4 mb-6 sm:mb-8">
-        <div className="flex flex-col gap-4">
-          {/* Controls Row */}
-          <div className="flex items-center justify-end gap-3">
-            <button
-              className="px-3 py-2 sm:px-4 sm:py-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg font-semibold text-sm shadow-sm flex items-center gap-2 transition-colors"
-              onClick={()=>setEditMode(e=>!e)}
-              title={editMode ? "Salir de edición" : "Modo edición"}
-              style={{ color: editMode ? '#f59e0b' : '#475569' }}
-            >
-              {editMode ? (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              )}
-              <span className="hidden sm:inline">{editMode ? "Unlocked" : "Locked"}</span>
-            </button>
-          </div>
-
-          {/* Filters Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <input 
-              value={yearFilter}
-              onChange={e=>setYearFilter(e.target.value)}
-              list="years"
-              placeholder="All years" 
-              className="px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-500 font-medium focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm"
-            />
-            <datalist id="years">
-              {Array.from(new Set(initialData.flights.map(f=>new Date(f.fecha).getFullYear()).sort((a,b)=>b-a))).map(y=>
-                <option key={y} value={y.toString()}/>
-              )}
-            </datalist>
-            
-            <input
-              type="date"
-              value={startDate}
-              onChange={e=>{ setStartDate(e.target.value); setCurrentPage(1); }}
-              className="px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-medium focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm"
-            />
-            <input
-              type="date"
-              value={endDate}
-              onChange={e=>{ setEndDate(e.target.value); setCurrentPage(1); }}
-              className="px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-medium focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm"
-            />
-            <button
-              onClick={()=>setSortOrder(sortOrder==='desc'?'asc':'desc')}
-              className="px-3 py-2.5 bg-blue-600 hover:bg-blue-700 border border-blue-700 rounded-lg text-white font-semibold transition-all shadow-sm flex items-center justify-center gap-2 text-sm"
-            >
-              {sortOrder==='desc' ? 'Newest first' : 'Oldest first'}
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* Navigation Tabs - Mobile Responsive */}
       <nav className="mb-6 sm:mb-8 flex flex-wrap gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-xl border border-slate-200 shadow-sm">
         {[
