@@ -32,7 +32,7 @@ export async function approveFlightSubmission(
         return { success: false, error: "Submission no encontrado" };
       }
 
-      if (submission.estado !== "ESPERANDO_APROBACION") {
+      if (submission.estado !== "PENDIENTE" && submission.estado !== "ESPERANDO_APROBACION") {
         return { success: false, error: `El submission no está esperando aprobación (estado: ${submission.estado})` };
       }
 
