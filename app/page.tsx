@@ -137,14 +137,7 @@ export default async function Home() {
       <ExecutiveHeader 
         title="Registrar Vuelo"
         subtitle="Flight Operations • Upload and validate Hobbs/Tach"
-        actions={
-          <a
-            href="/pilot/select"
-            className="btn-executive btn-executive-secondary text-sm px-3 py-2 sm:text-base sm:px-4 sm:py-2.5"
-          >
-            Mi Cuenta
-          </a>
-        }
+        actions={undefined}
       />
       {/** Tabs removed under header per request */}
 
