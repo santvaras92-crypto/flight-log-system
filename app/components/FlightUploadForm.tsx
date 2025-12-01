@@ -159,7 +159,8 @@ export default function FlightUploadForm({
 
     try {
       const formData = new FormData();
-      formData.append("pilotoId", pilotoId);
+      formData.append("pilotoCodigo", pilotoId); // Código del piloto del Excel
+      formData.append("pilotoNombre", selectedPilot?.nombre || ""); // Nombre del piloto
       formData.append("matricula", "CC-AQI"); // Siempre CC-AQI
       formData.append("fechaVuelo", fechaVuelo);
       formData.append("hobbsManual", hobbsManual);
