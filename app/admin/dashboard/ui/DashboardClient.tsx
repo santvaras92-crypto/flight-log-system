@@ -31,7 +31,7 @@ type PaginationInfo = { page: number; pageSize: number; total: number };
 export default function DashboardClient({ initialData, pagination, allowedPilotCodes, registeredPilotCodes, csvPilotNames }: { initialData: InitialData; pagination?: PaginationInfo; allowedPilotCodes?: string[]; registeredPilotCodes?: string[]; csvPilotNames?: Record<string, string> }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [tab, setTab] = useState("overview");
+  const [tab, setTab] = useState("flights");
   const [pilotSubTab, setPilotSubTab] = useState<"accounts" | "directory">("accounts");
   const [filterAircraft, setFilterAircraft] = useState("");
   const [filterPilot, setFilterPilot] = useState("");
@@ -99,8 +99,7 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
       <div className="bg-white rounded-xl shadow-md border border-slate-200 p-4 mb-6 sm:mb-8">
         <div className="flex flex-col gap-4">
           {/* Controls Row */}
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg sm:text-xl font-bold text-slate-900">Dashboard Filters</h2>
+          <div className="flex items-center justify-end gap-3">
             <button
               className="px-3 py-2 sm:px-4 sm:py-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg font-semibold text-sm shadow-sm flex items-center gap-2 transition-colors"
               onClick={()=>setEditMode(e=>!e)}
@@ -160,7 +159,6 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
       {/* Navigation Tabs - Mobile Responsive */}
       <nav className="mb-6 sm:mb-8 flex flex-wrap gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-xl border border-slate-200 shadow-sm">
         {[
-          { id: "overview", label: "Overview", icon: "M4 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 16a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1v-2zM14 16a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1v-2z" },
           { id: "flights", label: "Flights", icon: "M12 19l9 2-9-18-9 18 9-2zm0 0v-8" },
           { id: "pilots", label: "Pilots", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" },
           { id: "maintenance", label: "Mx", icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" },
@@ -183,7 +181,6 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
         ))}
       </nav>
 
-      {tab === "overview" && <Overview data={initialData} flights={flights} palette={palette} allowedPilotCodes={allowedPilotCodes} activeDaysLimit={activeDaysLimit} showActivePilots={showActivePilots} setShowActivePilots={setShowActivePilots} />}
       {tab === "flights" && (
         <>
           <FlightsTable 
