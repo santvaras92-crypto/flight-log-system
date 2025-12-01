@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function RegistroPage() {
   const pilots = await prisma.user.findMany({
+    where: { rol: 'PILOTO' },
     select: { id: true, nombre: true, codigo: true },
     orderBy: [{ nombre: 'asc' }],
   });
