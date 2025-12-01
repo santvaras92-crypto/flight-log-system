@@ -116,7 +116,7 @@ export default function RegisterClient({
         const file = formData.get('file') as File | null;
         await createFuel({
           pilotoId: resolvedPilotId,
-          fecha: String(formData.get('fecha')),
+          fecha: fecha, // Use state instead of formData
           litros: Number(formData.get('litros') || 0),
           monto: Number(formData.get('monto') || 0),
           detalle: String(formData.get('detalle') || '') || undefined,
@@ -126,7 +126,7 @@ export default function RegisterClient({
         const file = formData.get('file') as File | null;
         await createDeposit({
           pilotoId: resolvedPilotId,
-          fecha: String(formData.get('fecha')),
+          fecha: fecha, // Use state instead of formData
           monto: Number(formData.get('monto') || 0),
           detalle: String(formData.get('detalle') || '') || undefined,
           file,
