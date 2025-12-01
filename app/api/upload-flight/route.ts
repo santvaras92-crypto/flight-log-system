@@ -67,8 +67,8 @@ export async function POST(request: NextRequest) {
     const matricula = formData.get("matricula") as string || "CC-AQI";
     const hobbsManual = formData.get("hobbsManual") as string;
     const tachManual = formData.get("tachManual") as string;
-    const hobbsInicial = formData.get("hobbsInicial") as string;
-    const tachInicial = formData.get("tachInicial") as string;
+    let hobbsInicial = formData.get("hobbsInicial") as string;
+    let tachInicial = formData.get("tachInicial") as string;
     const deltaHobbs = formData.get("deltaHobbs") as string;
     const deltaTach = formData.get("deltaTach") as string;
     const fechaVuelo = formData.get("fechaVuelo") as string | null;
@@ -101,6 +101,35 @@ export async function POST(request: NextRequest) {
         { error: "Los valores deben ser números válidos" },
         { status: 400 }
       );
+    }
+
+    // Obtener últimos HOBBS/TACH del Excel (flight_entries) para alinear lógica con "Registrar vuelo"
+    let lastHobbs: number | null = null;
+    let lastTach: number | null = null;
+
+    const excelState = await prisma.sheetState.findUnique({
+      where: { key: 'flight_entries' }
+    });
+
+    const parseExcelNumber = (val: any): number | null => {
+      if (val === null || val === undefined || val === '') return null;
+      const str = String(val).replace(',', '.').trim();
+      const num = parseFloat(str);
+      return isNaN(num) ? null : num;
+    };
+
+    if (excelState?.matrix && Array.isArray(excelState.matrix) && (excelState.matrix as any[]).length > 1) {
+      const lastFlight = (excelState.matrix as any[])[1];
+      lastHobbs = parseExcelNumber(lastFlight[5]); // HOBBS F (col 5)
+      lastTach = parseExcelNumber(lastFlight[2]);  // TACH F (col 2)
+    }
+
+    // Si no vienen iniciales en el formulario, usar los últimos del Excel
+    if (!hobbsInicial && lastHobbs !== null) {
+      hobbsInicial = String(lastHobbs);
+    }
+    if (!tachInicial && lastTach !== null) {
+      tachInicial = String(lastTach);
     }
 
     // Validar que el piloto existe en el Excel Pilot Directory
@@ -183,10 +212,10 @@ export async function POST(request: NextRequest) {
         aircraftId: matricula,
         estado: "ESPERANDO_APROBACION",
         fechaVuelo: fechaVuelo ? new Date(fechaVuelo) : new Date(),
-        hobbsInicial: hobbsInicial ? new Decimal(hobbsInicial) : null,
+        hobbsInicial: hobbsInicial ? new Decimal(hobbsInicial) : (lastHobbs !== null ? new Decimal(lastHobbs) : null),
         hobbsFinal: new Decimal(hobbsNum),
         deltaHobbs: deltaHobbs ? new Decimal(deltaHobbs) : null,
-        tachInicial: tachInicial ? new Decimal(tachInicial) : null,
+        tachInicial: tachInicial ? new Decimal(tachInicial) : (lastTach !== null ? new Decimal(lastTach) : null),
         tachFinal: new Decimal(tachNum),
         deltaTach: deltaTach ? new Decimal(deltaTach) : null,
         cliente: cliente || null,
