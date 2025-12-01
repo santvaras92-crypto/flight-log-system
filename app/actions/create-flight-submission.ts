@@ -23,12 +23,16 @@ export async function createFlightSubmission(input: Input) {
     throw new Error('HOBBS F y TACH F son obligatorios.');
   }
 
+  // Parse fecha as local date at noon to avoid timezone issues
+  const [year, month, day] = input.fecha.split('-').map(Number);
+  const fechaVuelo = new Date(year, month - 1, day, 12, 0, 0);
+
   const submission = await prisma.flightSubmission.create({
     data: {
       pilotoId: input.pilotoId,
       aircraftId: 'CC-AQI',
       estado: 'PENDIENTE',
-      fechaVuelo: new Date(input.fecha),
+      fechaVuelo,
       copiloto: input.copiloto,
       detalle: input.detalle,
       hobbsFinal: input.hobbs_fin,
