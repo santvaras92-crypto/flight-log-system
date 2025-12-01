@@ -1,4 +1,6 @@
 import FlightUploadForm from "./components/FlightUploadForm";
+import ExecutiveHeader from "@/app/components/ExecutiveHeader";
+import ExecutiveNav from "@/app/components/ExecutiveNav";
 import { prisma } from "../lib/prisma";
 import fs from "fs";
 import path from "path";
@@ -99,21 +101,24 @@ export default async function Home() {
   };
 
   return (
-    <div className="relative">
-      {/* Botón de acceso para pilotos */}
-      <div className="absolute top-4 right-4 z-10">
-        <a
-          href="/pilot/select"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-lg transition-all"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-          Mi Cuenta
-        </a>
+    <div className="min-h-screen">
+      <ExecutiveHeader 
+        title="Registrar Vuelo"
+        subtitle="Flight Operations • Upload and validate Hobbs/Tach"
+        actions={
+          <a
+            href="/pilot/select"
+            className="btn-executive btn-executive-secondary"
+          >
+            Mi Cuenta
+          </a>
+        }
+      />
+      <ExecutiveNav />
+
+      <div className="px-6 py-8">
+        <FlightUploadForm pilots={pilotDirectoryPilots} lastCounters={lastCounters} lastComponents={lastComponents} />
       </div>
-      
-      <FlightUploadForm pilots={pilotDirectoryPilots} lastCounters={lastCounters} lastComponents={lastComponents} />
     </div>
   );
 }
