@@ -53,6 +53,9 @@ export default async function Home() {
     // Ordenar por nombre
     pilotDirectoryPilots.sort((a, b) => a.nombre.localeCompare(b.nombre));
     
+    console.log('👥 Pilotos cargados del Excel:', pilotDirectoryPilots.length);
+    console.log('📋 Primeros 3 pilotos:', pilotDirectoryPilots.slice(0, 3));
+    
   } catch (e) {
     console.error("Error cargando Pilot Directory:", e);
   }

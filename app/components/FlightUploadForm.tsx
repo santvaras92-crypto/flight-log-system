@@ -61,6 +61,8 @@ export default function FlightUploadForm({
   lastCounters?: LastCounters;
   lastComponents?: LastComponents;
 }) {
+  console.log('🎯 FlightUploadForm recibió pilotos:', pilots.length, pilots.slice(0, 3));
+  
   const [pilotoId, setPilotoId] = useState(pilots.length ? String(pilots[0].id) : "");
   const [hobbsImage, setHobbsImage] = useState<File | null>(null);
   const [tachImage, setTachImage] = useState<File | null>(null);
