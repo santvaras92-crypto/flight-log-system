@@ -60,7 +60,7 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
         const after = startDate ? new Date(startDate).getTime() : -Infinity;
         const before = endDate ? new Date(endDate).getTime() : Infinity;
         return d >= after && d <= before;
-      })
+      });
     const sorted = filtered.slice().sort((a,b)=>{
       const da = new Date(a.fecha).getTime();
       const db = new Date(b.fecha).getTime();
@@ -72,7 +72,7 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
       return sorted.slice(start, start+pageSize);
     }
     return sorted;
-  }, [initialData.flights, filterAircraft, yearFilter, sortOrder, startDate, endDate, currentPage]);
+  }, [initialData.flights, filterAircraft, yearFilter, sortOrder, startDate, endDate, currentPage, pageSize, pagination]);
 
   const submissions = useMemo(() => {
     return initialData.submissions.filter(s => {
@@ -105,6 +105,7 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
           { id: "finance", label: "Finance", icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
           { id: "corregir", label: "Corregir Depósito", icon: "M12 4v16m8-8H4", href: "/admin/deposits", color: "text-yellow-700 hover:text-yellow-900 hover:bg-yellow-100 bg-yellow-50 border border-yellow-300" },
         ].map(t => (
+          t.href ? (
             <a
               key={t.id}
               href={t.href}
