@@ -553,6 +553,36 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
 
   const hasActiveFilters = filterStartDate || filterEndDate || filterClient || filterYear || filterMonth;
 
+  // Calculate pilot balance summary when client filter is active
+  const pilotBalanceSummary = useMemo(() => {
+    if (!filterClient) return null;
+
+    const code = filterClient.toUpperCase();
+    const clientName = csvPilotNames?.[code] || code;
+    
+    const totalHours = filteredFlights.reduce((sum, f) => sum + (Number(f.diff_hobbs) || 0), 0);
+    const totalSpent = filteredFlights.reduce((sum, f) => sum + (Number(f.costo) || 0), 0);
+    const totalDeposits = depositsByCode?.[code] || 0;
+    const totalFuel = fuelByCode?.[code] || 0;
+    const balance = totalDeposits - totalSpent + totalFuel;
+
+    const deposits = depositsDetailsByCode?.[code] || [];
+    const fuelCredits = fuelDetailsByCode?.[code] || [];
+
+    return {
+      code,
+      name: clientName,
+      totalFlights: filteredFlights.length,
+      totalHours,
+      totalSpent,
+      totalDeposits,
+      totalFuel,
+      balance,
+      deposits,
+      fuelCredits,
+    };
+  }, [filterClient, filteredFlights, depositsByCode, fuelByCode, depositsDetailsByCode, fuelDetailsByCode, csvPilotNames]);
+
   return (
     <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
       <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
@@ -661,6 +691,120 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
           )}
         </div>
       </div>
+
+      {/* Pilot Balance Summary Preview */}
+      {pilotBalanceSummary && (
+        <div className="bg-gradient-to-br from-slate-50 to-blue-50 px-6 py-6 border-b-2 border-blue-200">
+          <div className="mb-4">
+            <h4 className="text-lg font-bold text-slate-900 mb-1">{pilotBalanceSummary.name}</h4>
+            <p className="text-sm text-slate-600">Pilot ID: {pilotBalanceSummary.code}</p>
+          </div>
+
+          {/* Summary Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div className="bg-white rounded-lg p-3 border border-blue-200 shadow-sm">
+              <div className="text-xs text-slate-500 font-medium mb-1">Total Flights</div>
+              <div className="text-2xl font-bold text-blue-600">{pilotBalanceSummary.totalFlights}</div>
+            </div>
+            <div className="bg-white rounded-lg p-3 border border-emerald-200 shadow-sm">
+              <div className="text-xs text-slate-500 font-medium mb-1">Total Hours</div>
+              <div className="text-2xl font-bold text-emerald-600">{pilotBalanceSummary.totalHours.toFixed(1)}</div>
+            </div>
+            <div className="bg-white rounded-lg p-3 border border-amber-200 shadow-sm">
+              <div className="text-xs text-slate-500 font-medium mb-1">Total Spent</div>
+              <div className="text-xl font-bold text-amber-700">${pilotBalanceSummary.totalSpent.toLocaleString('es-CL')}</div>
+            </div>
+            <div className={`bg-white rounded-lg p-3 border-2 shadow-md ${pilotBalanceSummary.balance >= 0 ? 'border-emerald-400' : 'border-red-400'}`}>
+              <div className="text-xs text-slate-500 font-medium mb-1">Balance</div>
+              <div className={`text-2xl font-bold ${pilotBalanceSummary.balance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                ${pilotBalanceSummary.balance.toLocaleString('es-CL')}
+              </div>
+            </div>
+          </div>
+
+          {/* Financial Breakdown */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Deposits */}
+            <div className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <h5 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Deposits
+                </h5>
+                <span className="text-lg font-bold text-emerald-600">${pilotBalanceSummary.totalDeposits.toLocaleString('es-CL')}</span>
+              </div>
+              <div className="max-h-32 overflow-y-auto text-xs space-y-1">
+                {pilotBalanceSummary.deposits.length > 0 ? (
+                  pilotBalanceSummary.deposits.map((d, i) => (
+                    <div key={i} className="flex justify-between text-slate-600 border-b border-slate-100 pb-1">
+                      <span className="truncate mr-2">{d.fecha}: {d.descripcion}</span>
+                      <span className="font-semibold whitespace-nowrap">${d.monto.toLocaleString('es-CL')}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-slate-400 italic">No deposits</p>
+                )}
+              </div>
+            </div>
+
+            {/* Fuel Credits */}
+            <div className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <h5 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Fuel Credits
+                </h5>
+                <span className="text-lg font-bold text-amber-600">${pilotBalanceSummary.totalFuel.toLocaleString('es-CL')}</span>
+              </div>
+              <div className="max-h-32 overflow-y-auto text-xs space-y-1">
+                {pilotBalanceSummary.fuelCredits.length > 0 ? (
+                  pilotBalanceSummary.fuelCredits.map((f, i) => (
+                    <div key={i} className="flex justify-between text-slate-600 border-b border-slate-100 pb-1">
+                      <span className="truncate mr-2">{f.fecha}: {f.litros}L</span>
+                      <span className="font-semibold whitespace-nowrap">${f.monto.toLocaleString('es-CL')}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-slate-400 italic">No fuel credits</p>
+                )}
+              </div>
+            </div>
+
+            {/* Account Summary */}
+            <div className="bg-gradient-to-br from-slate-100 to-blue-100 rounded-lg p-4 border-2 border-blue-300 shadow-md">
+              <h5 className="text-sm font-bold text-slate-800 mb-3">Account Summary</h5>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Deposits:</span>
+                  <span className="font-semibold text-emerald-700">+${pilotBalanceSummary.totalDeposits.toLocaleString('es-CL')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Fuel Credits:</span>
+                  <span className="font-semibold text-amber-700">+${pilotBalanceSummary.totalFuel.toLocaleString('es-CL')}</span>
+                </div>
+                <div className="flex justify-between border-t border-slate-300 pt-2">
+                  <span className="text-slate-600">Total Credit:</span>
+                  <span className="font-bold text-blue-700">${(pilotBalanceSummary.totalDeposits + pilotBalanceSummary.totalFuel).toLocaleString('es-CL')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Flight Charges:</span>
+                  <span className="font-semibold text-red-600">-${pilotBalanceSummary.totalSpent.toLocaleString('es-CL')}</span>
+                </div>
+                <div className={`flex justify-between border-t-2 pt-2 ${pilotBalanceSummary.balance >= 0 ? 'border-emerald-400' : 'border-red-400'}`}>
+                  <span className="font-bold text-slate-800">Balance:</span>
+                  <span className={`font-bold text-lg ${pilotBalanceSummary.balance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    ${pilotBalanceSummary.balance.toLocaleString('es-CL')}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-200">
