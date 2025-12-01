@@ -78,7 +78,8 @@ export default function RegisterClient({
       }
       
       if (mode === 'flight') {
-        await createFlightSubmission({
+        console.log('Creating flight submission:', { resolvedPilotId, fecha, hobbsFin, tachFin });
+        const result = await createFlightSubmission({
           pilotoId: resolvedPilotId,
           fecha,
           hobbs_fin: Number(hobbsFin) || NaN,
@@ -86,6 +87,7 @@ export default function RegisterClient({
           copiloto: copiloto || undefined,
           detalle: detalle || undefined,
         });
+        console.log('Flight submission created:', result);
       } else if (mode === 'fuel') {
         const file = formData.get('file') as File | null;
         await createFuel({

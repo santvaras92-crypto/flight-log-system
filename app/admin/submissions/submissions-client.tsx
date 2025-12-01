@@ -67,7 +67,7 @@ const estadoStyles: Record<string, { bg: string; color: string; border: string }
 
 export default function AdminSubmissions({ initialData }: { initialData: SubmissionDto[] }) {
   const [data, setData] = useState(initialData);
-  const [filter, setFilter] = useState<string>("ESPERANDO_APROBACION");
+  const [filter, setFilter] = useState<string>("PENDIENTE");
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
   const [rates, setRates] = useState<Record<number, string>>({});
@@ -132,7 +132,7 @@ export default function AdminSubmissions({ initialData }: { initialData: Submiss
             onChange={(e) => setFilter(e.target.value)}
             className="executive-input w-full sm:w-auto"
           >
-            <option value="ESPERANDO_APROBACION">Esperando Aprobación</option>
+            <option value="PENDIENTE">Esperando Aprobación</option>
             <option value="ALL">Todos</option>
             <option value="COMPLETADO">Completados</option>
             <option value="ERROR">Errores</option>
