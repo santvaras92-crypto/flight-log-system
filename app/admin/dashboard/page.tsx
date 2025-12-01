@@ -9,7 +9,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
   const page = Number(searchParams?.page || 1);
   const pageSize = Number(searchParams?.pageSize || 200);
   const skip = (page - 1) * pageSize;
-  const [users, aircraft, flights, allFlightsComplete, allFlightsLight, submissions, components, transactions, totalFlights] = await Promise.all([
+  const [users, aircraft, flights, allFlightsComplete, allFlightsLight, submissions, components, transactions, totalFlights, depositsFromDB] = await Promise.all([
     prisma.user.findMany(),
     prisma.aircraft.findMany(),
     prisma.flight.findMany({
@@ -81,6 +81,10 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     prisma.component.findMany(),
     prisma.transaction.findMany({ orderBy: { createdAt: "desc" }, take: 500 }),
     prisma.flight.count(),
+    prisma.deposit.findMany({ 
+      include: { User: { select: { codigo: true } } },
+      orderBy: { fecha: "desc" }
+    }),
   ]);
 
   // Read allowed pilot codes from official CSV (Base de dato pilotos)
@@ -260,12 +264,12 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     csvPilotStats,
     depositsByCode: (() => {
       const map: Record<string, number> = {};
+      // 1. Read from CSV
       try {
         const depositsPath = path.join(process.cwd(), 'Pago pilotos', 'Pago pilotos.csv');
         if (fs.existsSync(depositsPath)) {
           const content = fs.readFileSync(depositsPath, 'utf-8');
           const lines = content.split('\n').filter(l => l.trim());
-          // Header: Fecha;Descripción;ingreso;Cliente
           const COL_INGRESO = 2;
           const COL_CLIENTE = 3;
           for (let i = 1; i < lines.length; i++) {
@@ -279,11 +283,20 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           }
         }
       } catch {}
+      // 2. Add from database
+      depositsFromDB.forEach(dep => {
+        const code = dep.User?.codigo?.toUpperCase();
+        if (code && dep.monto) {
+          const monto = typeof dep.monto === 'number' ? dep.monto : parseFloat(dep.monto.toString());
+          map[code] = (map[code] || 0) + monto;
+        }
+      });
       return map;
     })(),
     // Detailed deposit records by code for PDF
     depositsDetailsByCode: (() => {
       const map: Record<string, { fecha: string; descripcion: string; monto: number }[]> = {};
+      // 1. Read from CSV
       try {
         const depositsPath = path.join(process.cwd(), 'Pago pilotos', 'Pago pilotos.csv');
         if (fs.existsSync(depositsPath)) {
@@ -303,6 +316,19 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           }
         }
       } catch {}
+      // 2. Add from database
+      depositsFromDB.forEach(dep => {
+        const code = dep.User?.codigo?.toUpperCase();
+        if (code) {
+          if (!map[code]) map[code] = [];
+          const monto = typeof dep.monto === 'number' ? dep.monto : parseFloat(dep.monto.toString());
+          map[code].push({ 
+            fecha: dep.fecha.toISOString().split('T')[0], 
+            descripcion: dep.detalle || 'Depósito (BD)', 
+            monto 
+          });
+        }
+      });
       return map;
     })(),
     pilotDirectory: {
