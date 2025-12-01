@@ -17,10 +17,10 @@ export default function MaintenancePage() {
         <ExcelGrid 
           gridKey="maintenance"
           initialData={[
-            ["Matrícula", "Componente", "Horas Acumuladas", "Límite TBO", "Horas Restantes TBO", "% Usado", "Tipo Inspección", "Última Inspección (Tach)", "Intervalo", "Próxima Inspección", "Hrs a Próxima", "Estado"],
-            ["CC-AQI", "AIRFRAME", "2722.8", "30000", "=D2-C2", "=(C2/D2)*100", "100 Hrs", "492.8", "100", "=H2+I2", "=J2-C2", "=IF(F2>90,\"CRÍTICO\",IF(F2>75,\"ADVERTENCIA\",\"OK\"))"],
-            ["CC-AQI", "ENGINE", "569.6", "2000", "=D3-C3", "=(C3/D3)*100", "Cambio Aceite", "540.1", "50", "=H3+I3", "=J3-C3", "=IF(F3>90,\"CRÍTICO\",IF(F3>75,\"ADVERTENCIA\",\"OK\"))"],
-            ["CC-AQI", "PROPELLER", "1899.0", "2000", "=D4-C4", "=(C4/D4)*100", "100 Hrs", "492.8", "100", "=H4+I4", "=J4-C4", "=IF(F4>90,\"CRÍTICO\",IF(F4>75,\"ADVERTENCIA\",\"OK\"))"]
+            ["Matrícula", "Componente", "Horas Acumuladas", "Límite TBO", "Horas Restantes TBO", "% Usado", "Tipo Inspección", "Intervalo (hrs)", "Última Inspección (Tach)", "Horas desde última", "Próxima Inspección (hrs)", "Estado"],
+            ["CC-AQI", "AIRFRAME", "2722.8", "30000", "=D2-C2", "=(C2/D2)*100", "100hrs", "100", "492.8", "=C2-I2", "=H2-(C2-I2)", "=IF(F2>90,\"CRÍTICO\",IF(F2>75,\"ADVERTENCIA\",\"OK\"))"],
+            ["CC-AQI", "ENGINE", "569.6", "2000", "=D3-C3", "=(C3/D3)*100", "Cambio Aceite", "50", "540.1", "=C3-I3", "=H3-(C3-I3)", "=IF(F3>90,\"CRÍTICO\",IF(F3>75,\"ADVERTENCIA\",\"OK\"))"],
+            ["CC-AQI", "PROPELLER", "1899.0", "2000", "=D4-C4", "=(C4/D4)*100", "100hrs", "100", "492.8", "=C4-I4", "=H4-(C4-I4)", "=IF(F4>90,\"CRÍTICO\",IF(F4>75,\"ADVERTENCIA\",\"OK\"))"]
           ]}
         />
       </div>
