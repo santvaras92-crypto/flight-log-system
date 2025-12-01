@@ -95,29 +95,20 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
 
   return (
     <div className={`min-h-screen ${palette.bg} -mx-6 -my-8 px-4 sm:px-6 py-6 sm:py-8`}>
-      {/* Simplified Header - Mobile Friendly */}
-      <div className="dashboard-header shadow-xl mb-6 sm:mb-8">
+      {/* Filters Bar - Compact and Visible */}
+      <div className="bg-white rounded-xl shadow-md border border-slate-200 p-4 mb-6 sm:mb-8">
         <div className="flex flex-col gap-4">
-          {/* Title Row */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img 
-                src="/logo.png" 
-                alt="CC-AQI" 
-                className="h-12 w-auto sm:h-16"
-              />
-              <div>
-                <h1 className="text-xl sm:text-3xl font-bold text-white tracking-tight">Operations Dashboard</h1>
-                <p className="hidden sm:block mt-1 text-blue-100 text-sm font-medium">Flight Operations • Maintenance • Finance</p>
-              </div>
-            </div>
+          {/* Controls Row */}
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900">Dashboard Filters</h2>
             <button
-              className="px-3 py-2 sm:px-4 sm:py-2.5 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-lg text-white font-semibold text-sm shadow-lg flex items-center gap-2 hover:bg-white/20 transition-colors"
+              className="px-3 py-2 sm:px-4 sm:py-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg font-semibold text-sm shadow-sm flex items-center gap-2 transition-colors"
               onClick={()=>setEditMode(e=>!e)}
               title={editMode ? "Salir de edición" : "Modo edición"}
+              style={{ color: editMode ? '#f59e0b' : '#475569' }}
             >
               {editMode ? (
-                <svg className="w-5 h-5 text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
                 </svg>
               ) : (
@@ -129,14 +120,14 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
             </button>
           </div>
 
-          {/* Filters Row - Mobile Responsive Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+          {/* Filters Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <input 
               value={yearFilter}
               onChange={e=>setYearFilter(e.target.value)}
               list="years"
               placeholder="All years" 
-              className="px-3 py-2.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-blue-200 font-medium focus:bg-white/20 focus:border-white/40 transition-all text-sm"
+              className="px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-500 font-medium focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm"
             />
             <datalist id="years">
               {Array.from(new Set(initialData.flights.map(f=>new Date(f.fecha).getFullYear()).sort((a,b)=>b-a))).map(y=>
@@ -148,19 +139,17 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
               type="date"
               value={startDate}
               onChange={e=>{ setStartDate(e.target.value); setCurrentPage(1); }}
-              className="px-3 py-2.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white font-medium focus:bg-white/20 focus:border-white/40 transition-all text-sm"
-              placeholder="dd-mm-yyyy"
+              className="px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-medium focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm"
             />
             <input
               type="date"
               value={endDate}
               onChange={e=>{ setEndDate(e.target.value); setCurrentPage(1); }}
-              className="px-3 py-2.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white font-medium focus:bg-white/20 focus:border-white/40 transition-all text-sm"
-              placeholder="dd-mm-yyyy"
+              className="px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-medium focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm"
             />
             <button
               onClick={()=>setSortOrder(sortOrder==='desc'?'asc':'desc')}
-              className="px-3 py-2.5 bg-white/15 hover:bg-white/25 border border-white/30 rounded-lg text-white font-semibold transition-all shadow-sm flex items-center justify-center gap-2 text-sm"
+              className="px-3 py-2.5 bg-blue-600 hover:bg-blue-700 border border-blue-700 rounded-lg text-white font-semibold transition-all shadow-sm flex items-center justify-center gap-2 text-sm"
             >
               {sortOrder==='desc' ? 'Newest first' : 'Oldest first'}
             </button>
