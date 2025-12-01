@@ -1,7 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { saveUpload } from './_utils/save-upload';
+import { saveUpload, PlainUpload } from './_utils/save-upload';
 
 type Input = {
   pilotoId: number;
@@ -9,11 +9,11 @@ type Input = {
   litros: number;
   monto: number;
   detalle?: string;
-  file?: File | null;
+  file?: PlainUpload | null;
 };
 
 export async function createFuel(input: Input) {
-  const imageUrl = input.file && input.file.size > 0 ? await saveUpload(input.file, 'fuel') : undefined;
+  const imageUrl = input.file && input.file.base64 ? await saveUpload(input.file, 'fuel') : undefined;
 
   // Parse fecha as local date at noon to avoid timezone issues
   const [year, month, day] = input.fecha.split('-').map(Number);

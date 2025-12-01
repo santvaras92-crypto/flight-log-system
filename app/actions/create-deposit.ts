@@ -1,14 +1,14 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { saveUpload } from './_utils/save-upload';
+import { saveUpload, PlainUpload } from './_utils/save-upload';
 
 type Input = {
   pilotoId: number;
   fecha: string;
   monto: number;
   detalle?: string;
-  file?: File | null;
+  file?: PlainUpload | null;
 };
 
 export async function createDeposit(input: Input): Promise<{ ok: boolean; id?: number; error?: string }> {
@@ -38,14 +38,7 @@ export async function createDeposit(input: Input): Promise<{ ok: boolean; id?: n
     return { ok: false, error: 'Formato de fecha inválido' };
   }
 
-  let imageUrl: string | undefined;
-  try {
-    if (input.file && typeof (input.file as any).size === 'number' && (input.file as any).size > 0) {
-      imageUrl = await saveUpload(input.file, 'deposit');
-    }
-  } catch (e: any) {
-    console.warn('[createDeposit] file upload skipped:', e?.message);
-  }
+  const imageUrl = input.file && input.file.base64 ? await saveUpload(input.file, 'deposit') : undefined;
 
   try {
     const row = await prisma.deposit.create({

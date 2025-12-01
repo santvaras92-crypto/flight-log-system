@@ -121,27 +121,63 @@ export default function RegisterClient({
           return;
         }
       } else if (mode === 'fuel') {
-        const file = formData.get('file') as File | null;
+        const rawFile = formData.get('file') as File | null;
+        let uploadPayload: { name: string; base64: string } | null = null;
+        if (rawFile) {
+          try {
+            const base64 = await new Promise<string>((resolve, reject) => {
+              const fr = new FileReader();
+              fr.onload = () => {
+                const res = fr.result as string; // data URL
+                const b64 = res.split(',')[1] || '';
+                resolve(b64);
+              };
+              fr.onerror = () => reject(fr.error);
+              fr.readAsDataURL(rawFile);
+            });
+            uploadPayload = { name: rawFile.name, base64 };
+          } catch (e) {
+            console.warn('Error leyendo archivo combustible, se omitirá:', e);
+          }
+        }
         const result = await createFuel({
           pilotoId: resolvedPilotId,
           fecha: fecha,
           litros: Number(formData.get('litros') || 0),
           monto: Number(formData.get('monto') || 0),
           detalle: String(formData.get('detalle') || '') || undefined,
-          file,
+          file: uploadPayload,
         });
         if (!result.ok) {
           setFormError(result.error || 'Error creando registro de combustible');
           return;
         }
       } else {
-        const file = formData.get('file') as File | null;
+        const rawFile = formData.get('file') as File | null;
+        let uploadPayload: { name: string; base64: string } | null = null;
+        if (rawFile) {
+          try {
+            const base64 = await new Promise<string>((resolve, reject) => {
+              const fr = new FileReader();
+              fr.onload = () => {
+                const res = fr.result as string; // data URL
+                const b64 = res.split(',')[1] || '';
+                resolve(b64);
+              };
+              fr.onerror = () => reject(fr.error);
+              fr.readAsDataURL(rawFile);
+            });
+            uploadPayload = { name: rawFile.name, base64 };
+          } catch (e) {
+            console.warn('Error leyendo archivo depósito, se omitirá:', e);
+          }
+        }
         const result = await createDeposit({
           pilotoId: resolvedPilotId,
           fecha: fecha,
           monto: Number(formData.get('monto') || 0),
           detalle: String(formData.get('detalle') || '') || undefined,
-          file,
+          file: uploadPayload,
         });
         if (!result.ok) {
           setFormError(result.error || 'Error creando depósito');
