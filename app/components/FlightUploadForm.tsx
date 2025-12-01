@@ -216,23 +216,6 @@ export default function FlightUploadForm({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-[#003D82] to-[#0A2F5F] shadow-xl">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center gap-4">
-            <img 
-              src="/LOGO_BLANCO.png?v=3" 
-              alt="CC-AQI" 
-              className="h-[3.358rem] w-auto"
-            />
-            <div>
-              <h1 className="text-3xl font-bold text-white tracking-tight">Flight Log Entry</h1>
-              <p className="text-blue-50 text-sm font-medium mt-1">Sistema de Registro de Vuelos CC-AQI</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Main Form */}
         <form onSubmit={handleSubmit} className="bg-white/95 backdrop-blur-sm shadow-2xl rounded-2xl overflow-hidden mb-8">

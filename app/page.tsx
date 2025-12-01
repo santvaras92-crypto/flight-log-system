@@ -114,7 +114,7 @@ export default async function Home() {
           </a>
         }
       />
-      <ExecutiveNav />
+      {/** Tabs removed under header per request */}
 
       <div className="px-6 py-8">
         <FlightUploadForm pilots={pilotDirectoryPilots} lastCounters={lastCounters} lastComponents={lastComponents} />
