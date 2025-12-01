@@ -23,16 +23,18 @@ interface SubmissionDto {
   errorMessage: string | null;
   createdAt: string;
   fechaVuelo: string | null;
+  hobbsInicial: any;
   hobbsFinal: any;
+  deltaHobbs: any;
+  tachInicial: any;
   tachFinal: any;
+  deltaTach: any;
   cliente: string | null;
   copiloto: string | null;
   detalle: string | null;
   instructorRate: any;
   piloto: { id: number; nombre: string; codigo: string | null; tarifa_hora: any };
   aircraft: { matricula: string };
-  lastHobbs: any;
-  lastTach: any;
   imageLogs: ImageLogDto[];
   flight: null | { id: number; diff_hobbs: any; diff_tach: any; costo: any };
 }
@@ -141,10 +143,8 @@ export default function AdminSubmissions({ initialData }: { initialData: Submiss
         {filtered.map((s) => {
           const hobbsFinal = safeNum(s.hobbsFinal);
           const tachFinal = safeNum(s.tachFinal);
-          const lastHobbs = safeNum(s.lastHobbs);
-          const blockTime = hobbsFinal != null && lastHobbs != null && hobbsFinal > lastHobbs
-            ? Number((hobbsFinal - lastHobbs).toFixed(1))
-            : null;
+          const deltaHobbs = safeNum(s.deltaHobbs); // Usar el delta que viene del formulario
+          const blockTime = deltaHobbs; // Tiempo en vuelo = Delta Hobbs
           const pilotoTarifa = safeNum(s.piloto.tarifa_hora) || 0;
           const estadoClass = estadoColors[s.estado] || "bg-gray-100 text-gray-800";
           

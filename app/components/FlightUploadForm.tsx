@@ -163,8 +163,19 @@ export default function FlightUploadForm({
       formData.append("pilotoNombre", selectedPilot?.nombre || ""); // Nombre del piloto
       formData.append("matricula", "CC-AQI"); // Siempre CC-AQI
       formData.append("fechaVuelo", fechaVuelo);
+      
+      // Contadores finales
       formData.append("hobbsManual", hobbsManual);
       formData.append("tachManual", tachManual);
+      
+      // Contadores iniciales (últimos registrados)
+      formData.append("hobbsInicial", lastCounters.hobbs?.toString() || "0");
+      formData.append("tachInicial", lastCounters.tach?.toString() || "0");
+      
+      // Deltas calculados
+      formData.append("deltaHobbs", deltaHobbs?.toString() || "0");
+      formData.append("deltaTach", deltaTach?.toString() || "0");
+      
       formData.append("copiloto", copiloto);
       formData.append("detalle", detalle);
       

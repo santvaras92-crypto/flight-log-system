@@ -67,6 +67,10 @@ export async function POST(request: NextRequest) {
     const matricula = formData.get("matricula") as string || "CC-AQI";
     const hobbsManual = formData.get("hobbsManual") as string;
     const tachManual = formData.get("tachManual") as string;
+    const hobbsInicial = formData.get("hobbsInicial") as string;
+    const tachInicial = formData.get("tachInicial") as string;
+    const deltaHobbs = formData.get("deltaHobbs") as string;
+    const deltaTach = formData.get("deltaTach") as string;
     const fechaVuelo = formData.get("fechaVuelo") as string | null;
     const cliente = formData.get("cliente") as string | null;
     const copiloto = formData.get("copiloto") as string | null;
@@ -179,8 +183,12 @@ export async function POST(request: NextRequest) {
         aircraftId: matricula,
         estado: "ESPERANDO_APROBACION",
         fechaVuelo: fechaVuelo ? new Date(fechaVuelo) : new Date(),
+        hobbsInicial: hobbsInicial ? new Decimal(hobbsInicial) : null,
         hobbsFinal: new Decimal(hobbsNum),
+        deltaHobbs: deltaHobbs ? new Decimal(deltaHobbs) : null,
+        tachInicial: tachInicial ? new Decimal(tachInicial) : null,
         tachFinal: new Decimal(tachNum),
+        deltaTach: deltaTach ? new Decimal(deltaTach) : null,
         cliente: cliente || null,
         copiloto: copiloto || null,
         detalle: detalle || null,
