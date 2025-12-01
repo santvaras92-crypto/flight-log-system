@@ -50,5 +50,34 @@ export default async function RegistroPage() {
 
   const allPilots = [...csvPilotOpts, ...registeredPilotOpts];
 
-  return <RegisterClient pilots={allPilots} />;
+  // Obtener los últimos contadores Hobbs y Tach del vuelo más reciente para CC-AQI
+  const lastFlight = await prisma.flight.findFirst({
+    where: { aircraftId: "CC-AQI" },
+    orderBy: { fecha: "desc" },
+    select: { hobbs_fin: true, tach_fin: true },
+  });
+
+  const lastCounters = {
+    hobbs: lastFlight?.hobbs_fin ? Number(lastFlight.hobbs_fin) : null,
+    tach: lastFlight?.tach_fin ? Number(lastFlight.tach_fin) : null,
+  };
+
+  // Obtener horas acumuladas de componentes para vista previa
+  const components = await prisma.component.findMany({
+    where: { aircraftId: "CC-AQI" },
+    select: { tipo: true, horas_acumuladas: true },
+  });
+
+  const getComp = (tipo: string) => {
+    const c = components.find((x) => x.tipo.toUpperCase() === tipo);
+    return c?.horas_acumuladas ? Number(c.horas_acumuladas) : null;
+  };
+
+  const lastComponents = {
+    airframe: getComp("AIRFRAME"),
+    engine: getComp("ENGINE"),
+    propeller: getComp("PROPELLER"),
+  };
+
+  return <RegisterClient pilots={allPilots} lastCounters={lastCounters} lastComponents={lastComponents} />;
 }

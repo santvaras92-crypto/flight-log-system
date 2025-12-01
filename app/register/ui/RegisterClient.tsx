@@ -8,11 +8,61 @@ import { findOrCreatePilotByCode } from '@/app/actions/find-or-create-pilot';
 
 type PilotOpt = { id: string | number; value: string; label: string };
 
-export default function RegisterClient({ pilots }: { pilots: PilotOpt[] }) {
+interface LastCounters {
+  hobbs: number | null;
+  tach: number | null;
+}
+
+interface LastComponents {
+  airframe: number | null;
+  engine: number | null;
+  propeller: number | null;
+}
+
+export default function RegisterClient({ 
+  pilots,
+  lastCounters = { hobbs: null, tach: null },
+  lastComponents = { airframe: null, engine: null, propeller: null }
+}: { 
+  pilots: PilotOpt[];
+  lastCounters?: LastCounters;
+  lastComponents?: LastComponents;
+}) {
   const [pilotValue, setPilotValue] = useState<string>('');
   const [mode, setMode] = useState<'flight' | 'fuel' | 'deposit'>('flight');
   const [submitting, setSubmitting] = useState(false);
+  
+  // Flight form fields
+  const [fecha, setFecha] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [hobbsFin, setHobbsFin] = useState<string>('');
+  const [tachFin, setTachFin] = useState<string>('');
+  const [copiloto, setCopiloto] = useState<string>('');
+  const [detalle, setDetalle] = useState<string>('');
+  
   const selectedPilot = useMemo(() => pilots.find(p => p.value === pilotValue), [pilotValue, pilots]);
+
+  // Calcular deltas en tiempo real para modo flight
+  const deltaHobbs = useMemo(() => {
+    if (mode !== 'flight' || !hobbsFin || lastCounters.hobbs === null) return null;
+    const val = parseFloat(hobbsFin) - lastCounters.hobbs;
+    return isNaN(val) || val <= 0 ? null : Number(val.toFixed(1));
+  }, [mode, hobbsFin, lastCounters.hobbs]);
+
+  const deltaTach = useMemo(() => {
+    if (mode !== 'flight' || !tachFin || lastCounters.tach === null) return null;
+    const val = parseFloat(tachFin) - lastCounters.tach;
+    return isNaN(val) || val <= 0 ? null : Number(val.toFixed(1));
+  }, [mode, tachFin, lastCounters.tach]);
+
+  // Calcular nuevas horas de componentes para vista previa
+  const newComponents = useMemo(() => {
+    if (!deltaTach) return null;
+    return {
+      airframe: lastComponents.airframe !== null ? lastComponents.airframe + deltaTach : null,
+      engine: lastComponents.engine !== null ? lastComponents.engine + deltaTach : null,
+      propeller: lastComponents.propeller !== null ? lastComponents.propeller + deltaTach : null,
+    };
+  }, [deltaTach, lastComponents]);
 
   const onSubmit = async (formData: FormData) => {
     if (!pilotValue) return;
@@ -27,21 +77,20 @@ export default function RegisterClient({ pilots }: { pilots: PilotOpt[] }) {
         resolvedPilotId = Number(pilotValue);
       }
       
-      const fecha = String(formData.get('fecha'));
       if (mode === 'flight') {
         await createFlightSubmission({
           pilotoId: resolvedPilotId,
           fecha,
-          hobbs_fin: Number(formData.get('hobbs_fin') || '') || NaN,
-          tach_fin: Number(formData.get('tach_fin') || '') || NaN,
-          copiloto: String(formData.get('copiloto') || '') || undefined,
-          detalle: String(formData.get('detalle') || '') || undefined,
+          hobbs_fin: Number(hobbsFin) || NaN,
+          tach_fin: Number(tachFin) || NaN,
+          copiloto: copiloto || undefined,
+          detalle: detalle || undefined,
         });
       } else if (mode === 'fuel') {
         const file = formData.get('file') as File | null;
         await createFuel({
           pilotoId: resolvedPilotId,
-          fecha,
+          fecha: String(formData.get('fecha')),
           litros: Number(formData.get('litros') || 0),
           monto: Number(formData.get('monto') || 0),
           detalle: String(formData.get('detalle') || '') || undefined,
@@ -51,13 +100,20 @@ export default function RegisterClient({ pilots }: { pilots: PilotOpt[] }) {
         const file = formData.get('file') as File | null;
         await createDeposit({
           pilotoId: resolvedPilotId,
-          fecha,
+          fecha: String(formData.get('fecha')),
           monto: Number(formData.get('monto') || 0),
           detalle: String(formData.get('detalle') || '') || undefined,
           file,
         });
       }
       alert('Registro enviado a validación.');
+      // Reset form
+      setPilotValue('');
+      setFecha(new Date().toISOString().split('T')[0]);
+      setHobbsFin('');
+      setTachFin('');
+      setCopiloto('');
+      setDetalle('');
       (document.getElementById('registro-form') as HTMLFormElement)?.reset();
     } catch (e) {
       console.error(e);
@@ -106,7 +162,13 @@ export default function RegisterClient({ pilots }: { pilots: PilotOpt[] }) {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <label className="flex flex-col text-sm">
                 <span className="mb-1 font-medium">Fecha</span>
-                <input name="fecha" type="date" required className="rounded-xl border px-3 py-3 bg-slate-50" />
+                <input 
+                  value={fecha}
+                  onChange={(e) => setFecha(e.target.value)}
+                  type="date" 
+                  required 
+                  className="rounded-xl border px-3 py-3 bg-slate-50" 
+                />
               </label>
               {mode === 'flight' && (
                 <div className="text-sm text-slate-600 flex items-end">Avión: <span className="ml-1 font-medium">CC-AQI</span></div>
@@ -115,24 +177,165 @@ export default function RegisterClient({ pilots }: { pilots: PilotOpt[] }) {
 
             {mode === 'flight' && (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                {/* Últimos contadores registrados */}
+                {(lastCounters.hobbs !== null || lastCounters.tach !== null) && (
+                  <div className="rounded-xl p-4 bg-amber-50 border border-amber-200">
+                    <h3 className="text-sm font-bold text-amber-900 mb-2 flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      ÚLTIMOS CONTADORES REGISTRADOS
+                    </h3>
+                    <div className="flex gap-6">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-slate-600">HOBBS:</span>
+                        <span className="font-mono font-bold text-blue-600">
+                          {lastCounters.hobbs !== null ? lastCounters.hobbs.toFixed(1) : "N/A"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-slate-600">TACH:</span>
+                        <span className="font-mono font-bold text-blue-600">
+                          {lastCounters.tach !== null ? lastCounters.tach.toFixed(1) : "N/A"}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-amber-700 mt-2">Los nuevos valores deben ser mayores a estos</p>
+                  </div>
+                )}
+
+                {/* Contadores finales */}
+                <div className="rounded-xl p-4 bg-emerald-50 border border-emerald-200">
+                  <h3 className="text-sm font-bold text-emerald-900 mb-3 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    CONTADORES FINALES (OBLIGATORIO)
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold uppercase tracking-wide text-slate-700">
+                        Hobbs Final *
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={hobbsFin}
+                        onChange={(e) => setHobbsFin(e.target.value)}
+                        min={lastCounters.hobbs !== null ? lastCounters.hobbs + 0.1 : 0}
+                        placeholder={lastCounters.hobbs !== null ? `Mayor a ${lastCounters.hobbs.toFixed(1)}` : "Ej: 2058.5"}
+                        required
+                        className="w-full rounded-xl border px-3 py-3 bg-white font-mono font-bold text-lg"
+                      />
+                      {deltaHobbs !== null && (
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-100">
+                          <span className="text-xs font-bold uppercase text-blue-700">Δ Hobbs:</span>
+                          <span className="font-mono font-bold text-blue-600">{deltaHobbs.toFixed(1)} hrs</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold uppercase tracking-wide text-slate-700">
+                        Tach Final *
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={tachFin}
+                        onChange={(e) => setTachFin(e.target.value)}
+                        min={lastCounters.tach !== null ? lastCounters.tach + 0.1 : 0}
+                        placeholder={lastCounters.tach !== null ? `Mayor a ${lastCounters.tach.toFixed(1)}` : "Ej: 570.5"}
+                        required
+                        className="w-full rounded-xl border px-3 py-3 bg-white font-mono font-bold text-lg"
+                      />
+                      {deltaTach !== null && (
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-100">
+                          <span className="text-xs font-bold uppercase text-blue-700">Δ Tach:</span>
+                          <span className="font-mono font-bold text-blue-600">{deltaTach.toFixed(1)} hrs</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Vista previa de la bitácora */}
+                {deltaHobbs !== null && deltaTach !== null && hobbsFin && tachFin && (
+                  <div className="rounded-xl border-2 border-blue-500 p-4 bg-blue-50">
+                    <h3 className="text-sm font-bold text-blue-900 mb-3 flex items-center gap-2">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      VISTA PREVIA - BITÁCORA CC-AQI
+                    </h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-slate-700 text-white">
+                            <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>DATE</th>
+                            <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>HOBBS</th>
+                            <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>BLOCK<br/>TIME</th>
+                            <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>TAC</th>
+                            <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>TACH.<br/>TIME</th>
+                            <th className="border border-slate-400 px-2 py-2 text-center font-bold" colSpan={3}>TOTAL TIME IN SERVICE</th>
+                            <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>PILOT<br/>LICENSE</th>
+                            <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>INSTRUCTOR/<br/>COPILOT</th>
+                            <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>ROUTE</th>
+                            <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>REMARKS<br/>SIGNATURE</th>
+                          </tr>
+                          <tr className="bg-slate-700 text-white">
+                            <th className="border border-slate-400 px-2 py-1 text-center text-[10px]">AIRFRAME</th>
+                            <th className="border border-slate-400 px-2 py-1 text-center text-[10px]">ENGINE</th>
+                            <th className="border border-slate-400 px-2 py-1 text-center text-[10px]">PROPELLER</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white">
+                          <tr className="hover:bg-gray-50">
+                            <td className="border border-slate-300 px-2 py-2 text-center font-mono whitespace-nowrap">{fecha}</td>
+                            <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold">{hobbsFin}</td>
+                            <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold text-blue-600">{deltaHobbs.toFixed(1)}</td>
+                            <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold">{tachFin}</td>
+                            <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold text-blue-600">{deltaTach.toFixed(1)}</td>
+                            <td className="border border-slate-300 px-2 py-2 text-center font-mono">{newComponents?.airframe?.toFixed(1) || '--'}</td>
+                            <td className="border border-slate-300 px-2 py-2 text-center font-mono">{newComponents?.engine?.toFixed(1) || '--'}</td>
+                            <td className="border border-slate-300 px-2 py-2 text-center font-mono">{newComponents?.propeller?.toFixed(1) || '--'}</td>
+                            <td className="border border-slate-300 px-2 py-2 text-center">{selectedPilot?.label.split('(')[1]?.replace(')', '') || '--'}</td>
+                            <td className="border border-slate-300 px-2 py-2 text-center">{copiloto || '--'}</td>
+                            <td className="border border-slate-300 px-2 py-2 text-center">LOCAL</td>
+                            <td className="border border-slate-300 px-2 py-2 text-center text-[10px]">{detalle || 'S/Obs'}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="text-xs text-blue-700 mt-2">
+                      * Los valores mostrados son una vista previa. Se confirmarán al aprobar el vuelo.
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Base A/E/P: {lastComponents.airframe?.toFixed(1) || 'N/A'} / {lastComponents.engine?.toFixed(1) || 'N/A'} / {lastComponents.propeller?.toFixed(1) || 'N/A'} 
+                      &nbsp;Δ Tach usado: {deltaTach.toFixed(1)} &nbsp;Δ Hobbs: {deltaHobbs.toFixed(1)}
+                    </p>
+                  </div>
+                )}
+
+                {/* Información adicional */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="flex flex-col text-sm">
-                    <span className="mb-1">Hobbs F</span>
-                    <input name="hobbs_fin" type="number" step="0.1" required className="rounded-xl border px-3 py-3 bg-slate-50" />
+                    <span className="mb-1">Copiloto / Instructor (opcional)</span>
+                    <input 
+                      value={copiloto}
+                      onChange={(e) => setCopiloto(e.target.value)}
+                      className="rounded-xl border px-3 py-3 bg-slate-50" 
+                    />
                   </label>
                   <label className="flex flex-col text-sm">
-                    <span className="mb-1">Tach F</span>
-                    <input name="tach_fin" type="number" step="0.1" required className="rounded-xl border px-3 py-3 bg-slate-50" />
-                  </label>
-                  <label className="flex flex-col text-sm">
-                    <span className="mb-1">Copiloto (opcional)</span>
-                    <input name="copiloto" className="rounded-xl border px-3 py-3 bg-slate-50" />
+                    <span className="mb-1">Detalle (opcional)</span>
+                    <input 
+                      value={detalle}
+                      onChange={(e) => setDetalle(e.target.value)}
+                      className="rounded-xl border px-3 py-3 bg-slate-50" 
+                    />
                   </label>
                 </div>
-                <label className="flex flex-col text-sm">
-                  <span className="mb-1">Detalle (opcional)</span>
-                  <input name="detalle" className="rounded-xl border px-3 py-3 bg-slate-50" />
-                </label>
                 <p className="text-xs text-slate-500">Tras enviar, pasa a Validación para ingresar Airplane Rate e Instructor/SP Rate.</p>
               </>
             )}
