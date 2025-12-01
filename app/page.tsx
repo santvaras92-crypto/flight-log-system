@@ -76,6 +76,13 @@ export default async function Home() {
     where: { key: 'flight_entries' }
   });
 
+  console.log('📊 Excel State:', {
+    exists: !!excelState,
+    hasMatrix: !!excelState?.matrix,
+    isArray: Array.isArray(excelState?.matrix),
+    length: excelState?.matrix ? (excelState.matrix as any[]).length : 0
+  });
+
   let lastHobbs = null;
   let lastTach = null;
   let lastAirframe = null;
@@ -84,6 +91,8 @@ export default async function Home() {
 
   if (excelState?.matrix && Array.isArray(excelState.matrix) && excelState.matrix.length > 1) {
     const lastFlight = (excelState.matrix as any[])[1]; // Fila 1: Primera fila de datos (fila 0 es el header)
+    console.log('🛫 Last Flight Row:', lastFlight);
+    
     // Columnas: ["Fecha","TACH I","TACH F","Δ TACH","HOBBS I","HOBBS F","Δ HOBBS",
     //           "Piloto","Copiloto/Instructor","Cliente","Rate","Instructor/SP Rate",
     //           "Total","AIRFRAME","ENGINE","PROPELLER","Detalle"]
@@ -92,6 +101,8 @@ export default async function Home() {
     lastAirframe = lastFlight[13] ? Number(lastFlight[13]) : null; // AIRFRAME (columna 13)
     lastEngine = lastFlight[14] ? Number(lastFlight[14]) : null;   // ENGINE (columna 14)
     lastPropeller = lastFlight[15] ? Number(lastFlight[15]) : null; // PROPELLER (columna 15)
+    
+    console.log('📍 Parsed Counters:', { lastHobbs, lastTach, lastAirframe, lastEngine, lastPropeller });
   }
 
   // Si el Excel está vacío, usar valores iniciales del Aircraft
