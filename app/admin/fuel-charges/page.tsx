@@ -56,7 +56,6 @@ export default function FuelChargesPage() {
       
       <ExecutiveNav />
 
-      <div className="p-8">
       <div className="mt-8">
         {/* Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
