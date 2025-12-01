@@ -140,7 +140,7 @@ export default function RegisterClient({
             console.warn('Error leyendo archivo combustible, se omitirá:', e);
           }
         }
-        const result = await createFuel({
+        const result: { ok: boolean; id?: number; error?: string } = await createFuel({
           pilotoId: resolvedPilotId,
           fecha: fecha,
           litros: Number(formData.get('litros') || 0),
@@ -154,23 +154,29 @@ export default function RegisterClient({
         }
       } else {
         const rawFile = formData.get('file') as File | null;
+        if (!rawFile) {
+          setFormError('Debe adjuntar imagen del comprobante.');
+          setSubmitting(false);
+          return;
+        }
         let uploadPayload: { name: string; base64: string } | null = null;
-        if (rawFile) {
-          try {
-            const base64 = await new Promise<string>((resolve, reject) => {
-              const fr = new FileReader();
-              fr.onload = () => {
-                const res = fr.result as string; // data URL
-                const b64 = res.split(',')[1] || '';
-                resolve(b64);
-              };
-              fr.onerror = () => reject(fr.error);
-              fr.readAsDataURL(rawFile);
-            });
-            uploadPayload = { name: rawFile.name, base64 };
-          } catch (e) {
-            console.warn('Error leyendo archivo depósito, se omitirá:', e);
-          }
+        try {
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const fr = new FileReader();
+            fr.onload = () => {
+              const res = fr.result as string; // data URL
+              const b64 = res.split(',')[1] || '';
+              resolve(b64);
+            };
+            fr.onerror = () => reject(fr.error);
+            fr.readAsDataURL(rawFile);
+          });
+          uploadPayload = { name: rawFile.name, base64 };
+        } catch (e) {
+          console.warn('Error leyendo archivo depósito:', e);
+          setFormError('No se pudo leer la imagen del comprobante');
+          setSubmitting(false);
+          return;
         }
         const result = await createDeposit({
           pilotoId: resolvedPilotId,
@@ -475,23 +481,24 @@ export default function RegisterClient({
             )}
 
             {mode === 'deposit' && (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <label className="flex flex-col text-sm">
-                    <span className="mb-1">Monto</span>
-                    <input name="monto" type="number" step="0.001" required className="rounded-xl border px-3 py-3 bg-slate-50" />
-                  </label>
-                  <label className="flex flex-col text-sm">
-                    <span className="mb-1">Comprobante (imagen) - Opcional</span>
-                    <input name="file" type="file" accept="image/*" className="rounded-xl border px-3 py-2 bg-slate-50" />
-                  </label>
-                </div>
-                <label className="flex flex-col text-sm">
-                  <span className="mb-1">Detalle (opcional)</span>
-                  <input name="detalle" className="rounded-xl border px-3 py-3 bg-slate-50" />
-                </label>
-              </>
-            )}
+                          <>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <label className="flex flex-col text-sm">
+                                <span className="mb-1">Monto</span>
+                                <input name="monto" type="number" step="0.001" required className="rounded-xl border px-3 py-3 bg-slate-50" />
+                              </label>
+                              <label className="flex flex-col text-sm">
+                                <span className="mb-1 font-medium">Comprobante (imagen) *</span>
+                                <input name="file" type="file" accept="image/*" required className="rounded-xl border px-3 py-2 bg-slate-50" />
+                                <span className="mt-1 text-[11px] text-slate-500">La imagen del comprobante es obligatoria.</span>
+                              </label>
+                            </div>
+                            <label className="flex flex-col text-sm">
+                              <span className="mb-1">Detalle (opcional)</span>
+                              <input name="detalle" className="rounded-xl border px-3 py-3 bg-slate-50" />
+                            </label>
+                          </>
+                        )}
 
             <div className="pt-2">
               <button type="submit" disabled={!pilotValue || submitting} className="rounded-xl px-4 py-3 bg-blue-600 text-white w-full sm:w-auto disabled:opacity-60">

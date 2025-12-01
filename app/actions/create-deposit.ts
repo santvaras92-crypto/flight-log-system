@@ -8,7 +8,7 @@ type Input = {
   fecha: string;
   monto: number;
   detalle?: string;
-  file?: PlainUpload | null;
+  file: PlainUpload | null; // ahora obligatorio en validación
 };
 
 export async function createDeposit(input: Input): Promise<{ ok: boolean; id?: number; error?: string }> {
@@ -38,7 +38,12 @@ export async function createDeposit(input: Input): Promise<{ ok: boolean; id?: n
     return { ok: false, error: 'Formato de fecha inválido' };
   }
 
-  const imageUrl = input.file && input.file.base64 ? await saveUpload(input.file, 'deposit') : undefined;
+  // Validar presencia de imagen (file obligatorio)
+  if (!input.file || !input.file.base64) {
+    return { ok: false, error: 'Comprobante (imagen) es obligatorio' };
+  }
+
+  const imageUrl = await saveUpload(input.file, 'deposit');
 
   try {
     const row = await prisma.deposit.create({
