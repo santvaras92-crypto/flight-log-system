@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import ExecutiveHeader from "@/app/components/ExecutiveHeader";
-import ExecutiveNav from "@/app/components/ExecutiveNav";
 
 export default function NewPilotPublicPage() {
   const [form, setForm] = useState({
@@ -69,7 +68,7 @@ export default function NewPilotPublicPage() {
         title="Pilot Registration"
         subtitle="Register your details to join the system"
       />
-      <ExecutiveNav />
+      {/** Nav tabs removed per request to declutter this page */}
 
       <div className="max-w-3xl mx-auto px-6 py-8">
         <div className="executive-card p-8">

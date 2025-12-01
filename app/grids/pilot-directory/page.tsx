@@ -1,6 +1,7 @@
 import ExecutiveHeader from "@/app/components/ExecutiveHeader";
 import ExecutiveNav from "@/app/components/ExecutiveNav";
 import ExcelGrid from "@/app/components/ExcelGrid";
+import Link from "next/link";
 
 export default function PilotDirectoryGridPage() {
   return (
@@ -18,6 +19,11 @@ export default function PilotDirectoryGridPage() {
           <p className="text-sm text-gray-600">
             Gestione información de pilotos directamente en la tabla. Las modificaciones se guardan automáticamente.
           </p>
+          <div className="mt-4">
+            <Link href="/pilots/new" className="btn-executive btn-executive-primary">
+              Registrar nuevo piloto
+            </Link>
+          </div>
         </div>
         
         <ExcelGrid 
