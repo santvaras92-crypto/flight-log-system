@@ -1,18 +1,54 @@
 import { prisma } from '@/lib/prisma';
 import RegisterClient from './ui/RegisterClient';
+import fs from 'fs';
+import path from 'path';
 
 export const dynamic = 'force-dynamic';
 
 export default async function RegistroPage() {
-  const pilots = await prisma.user.findMany({
-    where: { rol: 'PILOTO' },
-    select: { id: true, nombre: true, codigo: true },
-    orderBy: [{ nombre: 'asc' }],
-  });
-  const opts = pilots.map(p => ({
-    id: p.id,
-    value: String(p.id),
-    label: p.codigo ? `${p.nombre} (${p.codigo})` : p.nombre,
+  const users = await prisma.user.findMany();
+  
+  // Read allowed pilot codes from official CSV (Base de dato pilotos)
+  let allowedPilotCodes: string[] = [];
+  let csvPilots: { code: string; name: string }[] = [];
+  try {
+    const csvPath = path.join(process.cwd(), "Base de dato pilotos", "Base de dato pilotos.csv");
+    if (fs.existsSync(csvPath)) {
+      const content = fs.readFileSync(csvPath, "utf-8");
+      const lines = content.split("\n").filter(l => l.trim());
+      const entries = lines.slice(1).map(l => {
+        const [code, name] = l.split(";");
+        return { code: (code || '').trim().toUpperCase(), name: (name || '').trim() };
+      }).filter(e => e.code);
+      allowedPilotCodes = Array.from(new Set(entries.map(e => e.code)));
+      csvPilots = entries;
+    }
+  } catch (e) {
+    // Ignore CSV errors
+    allowedPilotCodes = [];
+  }
+
+  // Build pilot options: CSV pilots + registered pilots not in CSV
+  const csvPilotOpts = csvPilots.map(p => ({
+    id: p.code,
+    value: p.code,
+    label: `${p.name} (${p.code})`,
   }));
-  return <RegisterClient pilots={opts} />;
+
+  const registeredPilotOpts = users
+    .filter(u => {
+      if (u.rol !== 'PILOTO') return false;
+      const code = (u.codigo || '').toUpperCase();
+      // Only include pilots NOT in CSV AND have real email (not @piloto.local)
+      return code && !allowedPilotCodes.includes(code) && u.email && !u.email.endsWith('@piloto.local');
+    })
+    .map(u => ({
+      id: String(u.id),
+      value: String(u.id),
+      label: `${u.nombre} (${u.codigo})`,
+    }));
+
+  const allPilots = [...csvPilotOpts, ...registeredPilotOpts];
+
+  return <RegisterClient pilots={allPilots} />;
 }

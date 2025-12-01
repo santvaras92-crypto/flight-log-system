@@ -4,23 +4,33 @@ import { useMemo, useState } from 'react';
 import { createFlightSubmission } from '@/app/actions/create-flight-submission';
 import { createFuel } from '@/app/actions/create-fuel';
 import { createDeposit } from '@/app/actions/create-deposit';
+import { findOrCreatePilotByCode } from '@/app/actions/find-or-create-pilot';
 
-type PilotOpt = { id: number; value: string; label: string };
+type PilotOpt = { id: string | number; value: string; label: string };
 
 export default function RegisterClient({ pilots }: { pilots: PilotOpt[] }) {
-  const [pilotId, setPilotId] = useState<number | null>(null);
+  const [pilotValue, setPilotValue] = useState<string>('');
   const [mode, setMode] = useState<'flight' | 'fuel' | 'deposit'>('flight');
   const [submitting, setSubmitting] = useState(false);
-  const selectedPilot = useMemo(() => pilots.find(p => p.id === (pilotId ?? -1)), [pilotId, pilots]);
+  const selectedPilot = useMemo(() => pilots.find(p => p.value === pilotValue), [pilotValue, pilots]);
 
   const onSubmit = async (formData: FormData) => {
-    if (!pilotId) return;
+    if (!pilotValue) return;
     setSubmitting(true);
     try {
+      // Resolve pilot ID (if it's a code from CSV, find or create the user)
+      let resolvedPilotId: number;
+      if (isNaN(Number(pilotValue))) {
+        // It's a code, need to find or create
+        resolvedPilotId = await findOrCreatePilotByCode(pilotValue);
+      } else {
+        resolvedPilotId = Number(pilotValue);
+      }
+      
       const fecha = String(formData.get('fecha'));
       if (mode === 'flight') {
         await createFlightSubmission({
-          pilotoId: pilotId,
+          pilotoId: resolvedPilotId,
           fecha,
           hobbs_fin: Number(formData.get('hobbs_fin') || '') || NaN,
           tach_fin: Number(formData.get('tach_fin') || '') || NaN,
@@ -30,7 +40,7 @@ export default function RegisterClient({ pilots }: { pilots: PilotOpt[] }) {
       } else if (mode === 'fuel') {
         const file = formData.get('file') as File | null;
         await createFuel({
-          pilotoId: pilotId,
+          pilotoId: resolvedPilotId,
           fecha,
           litros: Number(formData.get('litros') || 0),
           monto: Number(formData.get('monto') || 0),
@@ -40,7 +50,7 @@ export default function RegisterClient({ pilots }: { pilots: PilotOpt[] }) {
       } else {
         const file = formData.get('file') as File | null;
         await createDeposit({
-          pilotoId: pilotId,
+          pilotoId: resolvedPilotId,
           fecha,
           monto: Number(formData.get('monto') || 0),
           detalle: String(formData.get('detalle') || '') || undefined,
@@ -71,11 +81,11 @@ export default function RegisterClient({ pilots }: { pilots: PilotOpt[] }) {
               <span className="mb-1 font-medium">Piloto</span>
               <select
                 className="rounded-xl border px-3 py-3 bg-slate-50"
-                value={pilotId ?? ''}
-                onChange={e => setPilotId(Number(e.target.value))}
+                value={pilotValue}
+                onChange={e => setPilotValue(e.target.value)}
               >
                 <option value="" disabled>Selecciona piloto</option>
-                {pilots.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+                {pilots.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
               </select>
             </label>
 
@@ -170,7 +180,7 @@ export default function RegisterClient({ pilots }: { pilots: PilotOpt[] }) {
             )}
 
             <div className="pt-2">
-              <button type="submit" disabled={!pilotId || submitting} className="rounded-xl px-4 py-3 bg-blue-600 text-white w-full sm:w-auto disabled:opacity-60">
+              <button type="submit" disabled={!pilotValue || submitting} className="rounded-xl px-4 py-3 bg-blue-600 text-white w-full sm:w-auto disabled:opacity-60">
                 {submitting ? 'Enviando...' : 'Enviar a validación'}
               </button>
             </div>
