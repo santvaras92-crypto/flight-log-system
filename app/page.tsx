@@ -7,8 +7,8 @@ export const revalidate = 0;
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  // Cargar pilotos del Excel Pilot Directory
-  let pilotDirectoryPilots: { id: number; nombre: string; email: string }[] = [];
+  // Cargar pilotos directamente del Excel Pilot Directory (sin DB)
+  let pilotDirectoryPilots: { id: string; nombre: string; email: string }[] = [];
   
   try {
     // Leer Excel Pilot Directory
@@ -24,29 +24,24 @@ export default async function Home() {
       // Columna B (índice 1): Nombre
       // Columna C (índice 2): Email
       
+      let index = 0;
       for (const row of pilotRows) {
         const codigo = row[0] ? String(row[0]).trim() : null;
         const nombre = row[1] ? String(row[1]).trim() : null;
         const email = row[2] ? String(row[2]).trim() : null;
         
-        if (!codigo || !nombre) continue;
+        if (!nombre) continue; // Solo requerimos el nombre
         
-        // Buscar el piloto en la DB por código para obtener su ID
-        const piloto = await prisma.user.findFirst({
-          where: { 
-            codigo: codigo,
-            rol: "PILOTO"
-          },
-          select: { id: true }
+        // Usar el código como ID, o un índice si no hay código
+        const id = codigo || `pilot_${index}`;
+        
+        pilotDirectoryPilots.push({
+          id: id,
+          nombre: nombre,
+          email: email || `${id}@piloto.local`
         });
         
-        if (piloto) {
-          pilotDirectoryPilots.push({
-            id: piloto.id,
-            nombre: nombre,
-            email: email || `${codigo}@piloto.local`
-          });
-        }
+        index++;
       }
     }
     

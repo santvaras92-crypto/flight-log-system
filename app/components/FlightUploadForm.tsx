@@ -39,7 +39,7 @@ interface SubmissionStatus {
   } | null;
 }
 
-type PilotOption = { id: number; nombre: string; email: string };
+type PilotOption = { id: string; nombre: string; email: string };
 
 interface LastCounters {
   hobbs: number | null;
