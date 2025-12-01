@@ -107,8 +107,9 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   // Add logo if loaded
   if (logoBase64) {
     try {
-      console.log('🖼️ Adding logo to PDF at position (15, 8)');
-      doc.addImage(logoBase64, 'PNG', 15, 8, 30, 30);
+      console.log('🖼️ Adding logo to PDF');
+      // Adjust logo size to maintain aspect ratio - make it wider and shorter
+      doc.addImage(logoBase64, 'PNG', 15, 10, 50, 25);
       console.log('✅ Logo added successfully');
     } catch (e) {
       console.error('❌ Could not add logo to PDF:', e);
@@ -118,7 +119,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   }
   
   // Title (offset to account for logo)
-  const titleX = logoBase64 ? 50 : 20;
+  const titleX = logoBase64 ? 72 : 20;
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(24);
   doc.setFont('helvetica', 'bold');
