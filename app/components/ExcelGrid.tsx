@@ -37,7 +37,7 @@ export default function ExcelGrid({ gridKey, initialData, initialNamedExpression
   }, [gridKey]);
 
   async function saveAll() {
-    const hot = hotRef.current?.hotInstance as Handsontable;
+    const hot = hotRef.current?.hotInstance;
     if (!hot) return;
     
     const all = hot.getData();
@@ -69,25 +69,25 @@ export default function ExcelGrid({ gridKey, initialData, initialNamedExpression
           💾 Guardar
         </button>
         <button className="btn-executive btn-executive-secondary" onClick={() => {
-          const hot = hotRef.current?.hotInstance as Handsontable;
+          const hot = hotRef.current?.hotInstance;
           hot?.alter("insert_row_below", hot.countRows()-1);
         }}>
           ➕ Fila
         </button>
         <button className="btn-executive btn-executive-secondary" onClick={() => {
-          const hot = hotRef.current?.hotInstance as Handsontable;
+          const hot = hotRef.current?.hotInstance;
           hot?.alter("insert_col_end");
         }}>
           ➕ Columna
         </button>
         <button className="btn-executive btn-executive-secondary" onClick={() => {
-          const hot = hotRef.current?.hotInstance as Handsontable;
+          const hot = hotRef.current?.hotInstance;
           hot?.undo();
         }}>
           ↩️ Deshacer
         </button>
         <button className="btn-executive btn-executive-secondary" onClick={() => {
-          const hot = hotRef.current?.hotInstance as Handsontable;
+          const hot = hotRef.current?.hotInstance;
           hot?.redo();
         }}>
           ↪️ Rehacer
