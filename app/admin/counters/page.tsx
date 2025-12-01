@@ -52,7 +52,8 @@ export default async function CountersPage() {
 
         <CountersClient 
           lastFlight={lastFlight ? {
-            ...lastFlight,
+            id: lastFlight.id,
+            fecha: lastFlight.fecha,
             hobbs_inicio: lastFlight.hobbs_inicio?.toString() || null,
             hobbs_fin: lastFlight.hobbs_fin?.toString() || null,
             tach_inicio: lastFlight.tach_inicio?.toString() || null,
@@ -62,6 +63,7 @@ export default async function CountersPage() {
             airframe_hours: lastFlight.airframe_hours?.toString() || null,
             engine_hours: lastFlight.engine_hours?.toString() || null,
             propeller_hours: lastFlight.propeller_hours?.toString() || null,
+            User: lastFlight.User || null,
           } : null}
           aircraft={aircraft ? {
             ...aircraft,
