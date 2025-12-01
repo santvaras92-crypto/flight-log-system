@@ -64,6 +64,7 @@ async function loadImageAsBase64(url: string): Promise<string> {
 }
 
 export async function generateAccountStatementPDF(data: AccountData): Promise<void> {
+  console.log('🔵 Generating PDF with dashboard theme - v2.0');
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -71,9 +72,11 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   // Load logo
   let logoBase64: string | null = null;
   try {
+    console.log('📸 Loading logo from /LOGO_BLANCO.png');
     logoBase64 = await loadImageAsBase64('/LOGO_BLANCO.png');
+    console.log('✅ Logo loaded successfully');
   } catch (e) {
-    console.warn('Could not load logo:', e);
+    console.error('❌ Could not load logo:', e);
   }
   
   // Dashboard hybrid theme colors
@@ -82,6 +85,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   const lightBg = '#F8FAFC'; // slate-50
   const textPrimary = '#0F172A'; // slate-900
   const textSecondary = '#64748B'; // slate-500
+  console.log('🎨 Using dashboard colors:', { slateBlue, accentBlue, lightBg });
   
   // Helper function to format currency
   const formatCurrency = (value: number) => `$${Math.round(value).toLocaleString('es-CL')}`;
@@ -96,16 +100,21 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
 
   // === HEADER ===
   // Gradient header bar (slate-800 to blue-900)
+  console.log('🎨 Setting header color to slate-800');
   doc.setFillColor(30, 41, 59); // #1E293B slate-800
   doc.rect(0, 0, pageWidth, 45, 'F');
   
   // Add logo if loaded
   if (logoBase64) {
     try {
+      console.log('🖼️ Adding logo to PDF at position (15, 8)');
       doc.addImage(logoBase64, 'PNG', 15, 8, 30, 30);
+      console.log('✅ Logo added successfully');
     } catch (e) {
-      console.warn('Could not add logo to PDF:', e);
+      console.error('❌ Could not add logo to PDF:', e);
     }
+  } else {
+    console.warn('⚠️ Logo not loaded, skipping');
   }
   
   // Title (offset to account for logo)
