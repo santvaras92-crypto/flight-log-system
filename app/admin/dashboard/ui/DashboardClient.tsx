@@ -576,6 +576,92 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
         </h3>
       </div>
 
+      {/* Filter and PDF Generation Bar */}
+      <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-sm font-semibold text-slate-600">Pilot ID:</span>
+          
+          <select
+            value={filterClient}
+            onChange={e => setFilterClient(e.target.value)}
+            className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[200px]"
+          >
+            <option value="">All Pilots</option>
+            {(clientOptions || []).map(c => (
+              <option key={c.code} value={c.code}>{c.name} ({c.code})</option>
+            ))}
+          </select>
+
+          {filterClient && (
+            <>
+              <button
+                onClick={clearFilters}
+                className="px-3 py-2 text-sm bg-slate-200 text-slate-700 hover:bg-slate-300 rounded-lg font-medium transition-colors"
+              >
+                Clear
+              </button>
+              
+              <button
+                onClick={async () => {
+                  const code = filterClient.toUpperCase();
+                  const clientName = csvPilotNames?.[code] || code;
+                  
+                  const totalHours = filteredFlights.reduce((sum, f) => sum + (Number(f.diff_hobbs) || 0), 0);
+                  const totalSpent = filteredFlights.reduce((sum, f) => sum + (Number(f.costo) || 0), 0);
+                  const totalDeposits = depositsByCode?.[code] || 0;
+                  const totalFuel = fuelByCode?.[code] || 0;
+                  const balance = totalDeposits - totalSpent + totalFuel;
+
+                  const clientDeposits = (depositsDetailsByCode?.[code] || []).map(d => ({
+                    fecha: d.fecha,
+                    descripcion: d.descripcion,
+                    monto: d.monto,
+                  }));
+                  const clientFuel = (fuelDetailsByCode?.[code] || []).map(f => ({
+                    fecha: f.fecha,
+                    descripcion: `${f.litros} litros`,
+                    monto: f.monto,
+                  }));
+
+                  await generateAccountStatementPDF({
+                    clientCode: code,
+                    clientName: clientName,
+                    flights: filteredFlights.map(f => ({
+                      id: f.id,
+                      fecha: f.fecha,
+                      diff_hobbs: Number(f.diff_hobbs) || 0,
+                      costo: Number(f.costo) || 0,
+                      tarifa: f.tarifa ? Number(f.tarifa) : undefined,
+                      instructor_rate: f.instructor_rate ? Number(f.instructor_rate) : undefined,
+                      detalle: f.detalle || '',
+                      piloto_raw: f.piloto_raw || '',
+                    })),
+                    deposits: clientDeposits,
+                    fuelCredits: clientFuel,
+                    totalFlights: filteredFlights.length,
+                    totalHours,
+                    totalSpent,
+                    totalDeposits,
+                    totalFuel,
+                    balance,
+                    dateRange: {
+                      start: filterStartDate || undefined,
+                      end: filterEndDate || undefined,
+                    },
+                  });
+                }}
+                className="px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-semibold transition-colors flex items-center gap-2 shadow-md"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Generate Account Statement PDF
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
