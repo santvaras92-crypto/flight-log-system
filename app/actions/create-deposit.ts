@@ -11,32 +11,43 @@ type Input = {
   file?: File | null;
 };
 
-export async function createDeposit(input: Input) {
+export async function createDeposit(input: Input): Promise<{ ok: boolean; id?: number; error?: string }> {
+  console.log('[createDeposit] start', {
+    pilotoId: input.pilotoId,
+    fecha: input.fecha,
+    monto: input.monto,
+    detalleLen: input.detalle?.length,
+  });
+  // Basic validation
+  if (!input.pilotoId || isNaN(input.pilotoId)) {
+    return { ok: false, error: 'ID de piloto inválido' };
+  }
+  if (!input.fecha || input.fecha.trim() === '') {
+    return { ok: false, error: 'Fecha es requerida' };
+  }
+  if (!input.monto || isNaN(input.monto) || input.monto <= 0) {
+    return { ok: false, error: 'Monto debe ser mayor a 0' };
+  }
+
+  let fecha: Date;
   try {
-    console.log('createDeposit input:', input);
-    
-    // Validar datos requeridos
-    if (!input.pilotoId || isNaN(input.pilotoId)) {
-      throw new Error('ID de piloto inválido');
-    }
-    if (!input.fecha || input.fecha.trim() === '') {
-      throw new Error('Fecha es requerida');
-    }
-    if (!input.monto || isNaN(input.monto) || input.monto <= 0) {
-      throw new Error('Monto debe ser mayor a 0');
-    }
-    
-    const imageUrl = input.file && input.file.size > 0 ? await saveUpload(input.file, 'deposit') : undefined;
-
-    // Parse fecha as local date at noon to avoid timezone issues
     const [year, month, day] = input.fecha.split('-').map(Number);
-    if (isNaN(year) || isNaN(month) || isNaN(day)) {
-      throw new Error('Fecha inválida');
+    fecha = new Date(year, month - 1, day, 12, 0, 0);
+    if (isNaN(fecha.getTime())) throw new Error('Fecha inválida');
+  } catch (e: any) {
+    return { ok: false, error: 'Formato de fecha inválido' };
+  }
+
+  let imageUrl: string | undefined;
+  try {
+    if (input.file && typeof (input.file as any).size === 'number' && (input.file as any).size > 0) {
+      imageUrl = await saveUpload(input.file, 'deposit');
     }
-    const fecha = new Date(year, month - 1, day, 12, 0, 0);
+  } catch (e: any) {
+    console.warn('[createDeposit] file upload skipped:', e?.message);
+  }
 
-    console.log('Creating deposit with:', { userId: input.pilotoId, fecha, monto: input.monto, imageUrl, detalle: input.detalle });
-
+  try {
     const row = await prisma.deposit.create({
       data: {
         userId: input.pilotoId,
@@ -47,11 +58,10 @@ export async function createDeposit(input: Input) {
       },
       select: { id: true },
     });
-    
-    console.log('Deposit created:', row);
+    console.log('[createDeposit] success id', row.id);
     return { ok: true, id: row.id };
-  } catch (error: any) {
-    console.error('Error creating deposit:', error);
-    throw new Error(`Error al crear depósito: ${error.message}`);
+  } catch (e: any) {
+    console.error('[createDeposit] prisma error', e);
+    return { ok: false, error: e?.message || 'Error BD creando depósito' };
   }
 }

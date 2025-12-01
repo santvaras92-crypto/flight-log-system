@@ -38,6 +38,8 @@ export default function RegisterClient({
   const [tachFin, setTachFin] = useState<string>('');
   const [copiloto, setCopiloto] = useState<string>('');
   const [detalle, setDetalle] = useState<string>('');
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formSuccess, setFormSuccess] = useState<string | null>(null);
   
   const selectedPilot = useMemo(() => pilots.find(p => p.value === pilotValue), [pilotValue, pilots]);
 
@@ -91,6 +93,8 @@ export default function RegisterClient({
   const onSubmit = async (formData: FormData) => {
     if (!pilotValue) return;
     setSubmitting(true);
+    setFormError(null);
+    setFormSuccess(null);
     try {
       // Resolve pilot ID (if it's a code from CSV, find or create the user)
       let resolvedPilotId: number;
@@ -112,27 +116,39 @@ export default function RegisterClient({
           detalle: detalle || undefined,
         });
         console.log('Flight submission created:', result);
+        if (!result.ok) {
+          setFormError('Error creando vuelo');
+          return;
+        }
       } else if (mode === 'fuel') {
         const file = formData.get('file') as File | null;
-        await createFuel({
+        const result = await createFuel({
           pilotoId: resolvedPilotId,
-          fecha: fecha, // Use state instead of formData
+          fecha: fecha,
           litros: Number(formData.get('litros') || 0),
           monto: Number(formData.get('monto') || 0),
           detalle: String(formData.get('detalle') || '') || undefined,
           file,
         });
+        if (!result.ok) {
+          setFormError(result.error || 'Error creando registro de combustible');
+          return;
+        }
       } else {
         const file = formData.get('file') as File | null;
-        await createDeposit({
+        const result = await createDeposit({
           pilotoId: resolvedPilotId,
-          fecha: fecha, // Use state instead of formData
+          fecha: fecha,
           monto: Number(formData.get('monto') || 0),
           detalle: String(formData.get('detalle') || '') || undefined,
           file,
         });
+        if (!result.ok) {
+          setFormError(result.error || 'Error creando depósito');
+          return;
+        }
       }
-      alert('Registro enviado a validación.');
+      setFormSuccess('Registro enviado correctamente.');
       // Reset form
       setPilotValue('');
       setFecha(new Date().toISOString().split('T')[0]);
@@ -143,7 +159,7 @@ export default function RegisterClient({
       (document.getElementById('registro-form') as HTMLFormElement)?.reset();
     } catch (e: any) {
       console.error('Error guardando registro:', e);
-      alert(`Hubo un error guardando el registro: ${e.message || 'Error desconocido'}`);
+      setFormError(e.message || 'Error desconocido guardando registro');
     } finally {
       setSubmitting(false);
     }
@@ -185,6 +201,16 @@ export default function RegisterClient({
           </div>
 
           <form id="registro-form" action={onSubmit} className="space-y-4">
+            {formError && (
+              <div className="rounded-lg p-3 border border-red-400 bg-red-50 text-sm text-red-800 font-medium">
+                ⚠️ {formError}
+              </div>
+            )}
+            {formSuccess && (
+              <div className="rounded-lg p-3 border border-green-500 bg-green-50 text-sm text-green-800 font-medium">
+                ✅ {formSuccess}
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <label className="flex flex-col text-sm">
                 <span className="mb-1 font-medium">Fecha</span>
