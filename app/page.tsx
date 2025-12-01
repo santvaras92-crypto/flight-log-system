@@ -2,67 +2,53 @@ import FlightUploadForm from "./components/FlightUploadForm";
 import ExecutiveHeader from "@/app/components/ExecutiveHeader";
 import ExecutiveNav from "@/app/components/ExecutiveNav";
 import { prisma } from "../lib/prisma";
-import fs from "fs";
-import path from "path";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  // Cargar pilotos del Pilot Directory (misma lógica que el Dashboard)
-  // El Pilot Directory incluye:
-  // 1. Pilotos del CSV que están registrados en DB
-  // 2. Pilotos registrados en DB que NO están en CSV (nuevos registros con email real)
-  
+  // Cargar pilotos del Excel Pilot Directory
   let pilotDirectoryPilots: { id: number; nombre: string; email: string }[] = [];
   
   try {
-    // Leer CSV para obtener códigos permitidos y nombres
-    const csvPath = path.join(process.cwd(), "Base de dato pilotos", "Base de dato pilotos.csv");
-    const allowedPilotCodes: string[] = [];
-    const csvPilotNames = new Map<string, string>();
-    
-    if (fs.existsSync(csvPath)) {
-      const content = fs.readFileSync(csvPath, "utf-8");
-      const lines = content.split("\n").filter(l => l.trim());
-      lines.slice(1).forEach(l => {
-        const [code, name] = l.split(";");
-        if (code && name) {
-          const upperCode = code.trim().toUpperCase();
-          allowedPilotCodes.push(upperCode);
-          csvPilotNames.set(upperCode, name.trim());
-        }
-      });
-    }
-    
-    // Buscar todos los pilotos registrados en la DB
-    const allPilots = await prisma.user.findMany({
-      where: { 
-        rol: "PILOTO",
-        codigo: { not: null }
-      },
-      select: { id: true, nombre: true, email: true, codigo: true },
+    // Leer Excel Pilot Directory
+    const pilotDirExcel = await prisma.sheetState.findUnique({
+      where: { key: 'pilot_directory' }
     });
-    
-    // Construir lista del Pilot Directory:
-    allPilots.forEach(p => {
-      if (!p.codigo) return;
+
+    if (pilotDirExcel?.matrix && Array.isArray(pilotDirExcel.matrix) && pilotDirExcel.matrix.length > 1) {
+      const pilotRows = (pilotDirExcel.matrix as any[][]).slice(1); // Omitir header (fila 0)
       
-      const upperCode = p.codigo.toUpperCase();
-      const isInCSV = allowedPilotCodes.includes(upperCode);
-      const hasRealEmail = p.email && !p.email.endsWith("@piloto.local");
+      // Estructura del Excel: ["Código","Nombre","Email","Teléfono","Estado","Observaciones"]
+      // Columna A (índice 0): Código
+      // Columna B (índice 1): Nombre
+      // Columna C (índice 2): Email
       
-      // Incluir si:
-      // - Está en el CSV (initial del Pilot Directory)
-      // - O NO está en CSV pero tiene email real (registered del Pilot Directory)
-      if (isInCSV || (!isInCSV && hasRealEmail)) {
-        pilotDirectoryPilots.push({
-          id: p.id,
-          nombre: csvPilotNames.get(upperCode) || p.nombre, // Preferir nombre del CSV
-          email: p.email
+      for (const row of pilotRows) {
+        const codigo = row[0] ? String(row[0]).trim() : null;
+        const nombre = row[1] ? String(row[1]).trim() : null;
+        const email = row[2] ? String(row[2]).trim() : null;
+        
+        if (!codigo || !nombre) continue;
+        
+        // Buscar el piloto en la DB por código para obtener su ID
+        const piloto = await prisma.user.findFirst({
+          where: { 
+            codigo: codigo,
+            rol: "PILOTO"
+          },
+          select: { id: true }
         });
+        
+        if (piloto) {
+          pilotDirectoryPilots.push({
+            id: piloto.id,
+            nombre: nombre,
+            email: email || `${codigo}@piloto.local`
+          });
+        }
       }
-    });
+    }
     
     // Ordenar por nombre
     pilotDirectoryPilots.sort((a, b) => a.nombre.localeCompare(b.nombre));
