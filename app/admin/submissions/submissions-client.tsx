@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { approveFlightSubmission } from "@/app/actions/approve-flight";
 import { cancelFlightSubmission } from "@/app/actions/cancel-submission";
 
@@ -78,6 +78,31 @@ export default function AdminSubmissions({ initialData }: { initialData: Submiss
     if (filter === "ALL") return true;
     return s.estado === filter;
   });
+
+  // Initialize default rates for pending submissions
+  useEffect(() => {
+    const newRates: Record<number, string> = {};
+    const newInstructorRates: Record<number, string> = {};
+    
+    filtered.forEach((s) => {
+      if (s.estado === "PENDIENTE") {
+        // Set defaults only if not already set
+        if (!(s.id in rates)) {
+          newRates[s.id] = "185000";
+        }
+        if (!(s.id in instructorRates)) {
+          newInstructorRates[s.id] = "30000";
+        }
+      }
+    });
+    
+    if (Object.keys(newRates).length > 0) {
+      setRates((prev) => ({ ...prev, ...newRates }));
+    }
+    if (Object.keys(newInstructorRates).length > 0) {
+      setInstructorRates((prev) => ({ ...prev, ...newInstructorRates }));
+    }
+  }, [filtered.length, filter]);
 
   async function handleApprove(submissionId: number) {
     setMessage(null);
