@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Image from "next/image";
 import Link from "next/link";
+import NavLinks from "./NavLinks";
 
 export const metadata: Metadata = {
   title: "Flight Log System · CC-AQI",
@@ -38,41 +39,7 @@ export default function RootLayout({
               </Link>
               
               {/* Navigation Links - Mobile Responsive */}
-              <div className="flex items-center gap-1 sm:gap-2">
-                <Link 
-                  href="/" 
-                  className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-blue-100 hover:text-white hover:bg-white/15 rounded-lg transition-all"
-                >
-                  Registro
-                </Link>
-                <Link 
-                  href="/admin/dashboard" 
-                  className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-blue-100 hover:text-white hover:bg-white/15 rounded-lg transition-all"
-                >
-                  Dashboard
-                </Link>
-                <Link 
-                  href="/admin/submissions" 
-                  className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-blue-100 hover:text-white hover:bg-white/15 rounded-lg transition-all"
-                >
-                  <span className="hidden sm:inline">Validación</span>
-                  <span className="sm:hidden">Valid.</span>
-                </Link>
-                <Link 
-                  href="/admin/counters" 
-                  className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-blue-100 hover:text-white hover:bg-white/15 rounded-lg transition-all"
-                >
-                  <span className="hidden lg:inline">Contadores</span>
-                  <span className="lg:hidden">📊</span>
-                </Link>
-                <Link 
-                  href="/pilots/new" 
-                  className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-blue-100 hover:text-white hover:bg-white/15 rounded-lg transition-all"
-                >
-                  <span className="hidden sm:inline">Nuevo Piloto</span>
-                  <span className="sm:hidden">Piloto</span>
-                </Link>
-              </div>
+              <NavLinks />
             </div>
           </div>
         </nav>
