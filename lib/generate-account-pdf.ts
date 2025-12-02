@@ -518,7 +518,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   doc.setTextColor(...colors.white);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.text('WIRE TRANSFER INFORMATION', 24, footerY + 4.5);
+  doc.text('INFORMACIÓN DE TRANSFERENCIA BANCARIA', 24, footerY + 4.5);
   
   // Bank details - professional layout
   doc.setFont('helvetica', 'normal');
@@ -526,10 +526,10 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   doc.setTextColor(...colors.textPrimary);
   
   const bankInfo = [
-    'Account Holder: SANTIAGO NICOLAS VARAS SAAVEDRA',
-    'Tax ID (RUT): 18.166.515-7',
-    'Banco Santander - Checking Account #: 0-000-75-79256-5',
-    'Email: santvaras92@gmail.com',
+    'Titular de la cuenta: SANTIAGO NICOLÁS VARAS SAAVEDRA',
+    'RUT: 18.166.515-7',
+    'Banco Santander - Cuenta corriente Nº: 0-000-75-79256-5',
+    'Correo: santvaras92@gmail.com',
   ];
   
   let infoY = footerY + 13;
