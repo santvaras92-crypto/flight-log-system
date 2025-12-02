@@ -1508,6 +1508,12 @@ function PilotDirectory({ directory }: { directory?: { initial: { code: string; 
               {saving ? 'Guardando...' : '💾 Guardar Cambios'}
             </button>
           )}
+          <a
+            href="/pilots/new"
+            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-bold text-sm transition-colors"
+          >
+            ➕ Nuevo Piloto
+          </a>
           <button
             onClick={() => {
               setEditMode(!editMode);
