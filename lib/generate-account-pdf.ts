@@ -104,10 +104,13 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   doc.setFillColor(...colors.navy);
   doc.rect(0, 0, pageWidth, 50, 'F');
   
-  // Add logo
+  // Add logo with correct proportions based on the provided image
   if (logoBase64) {
     try {
-      doc.addImage(logoBase64, 'PNG', 15, 12, 45, 26);
+      // Logo dimensions scaled to maintain aspect ratio (~7:1 width to height)
+      const logoWidth = 56;
+      const logoHeight = 8;
+      doc.addImage(logoBase64, 'PNG', 15, 20, logoWidth, logoHeight);
     } catch (e) {
       console.error('Could not add logo to PDF:', e);
     }
@@ -117,12 +120,12 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   doc.setTextColor(...colors.white);
   doc.setFontSize(22);
   doc.setFont('helvetica', 'bold');
-  doc.text('ESTADO DE CUENTA', 68, 24);
+  doc.text('ESTADO DE CUENTA', 78, 24);
   
   // Subtitle
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text('CC-AQI • Flight Operations', 68, 33);
+  doc.text('CC-AQI • Flight Operations', 78, 33);
   
   // Date on the right
   doc.setFontSize(9);
