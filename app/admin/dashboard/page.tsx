@@ -9,7 +9,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
   const page = Number(searchParams?.page || 1);
   const pageSize = Number(searchParams?.pageSize || 200);
   const skip = (page - 1) * pageSize;
-  const [users, aircraft, flights, allFlightsComplete, allFlightsLight, submissions, components, transactions, totalFlights, depositsFromDB] = await Promise.all([
+  const [users, aircraft, flights, allFlightsComplete, allFlightsLight, submissions, components, transactions, totalFlights, depositsFromDB, overviewMetrics] = await Promise.all([
     prisma.user.findMany(),
     prisma.aircraft.findMany(),
     prisma.flight.findMany({
@@ -85,6 +85,64 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       include: { User: { select: { codigo: true } } },
       orderBy: { fecha: "desc" }
     }),
+    // Overview metrics
+    (async () => {
+      // Calculate total fuel consumed from CSV
+      let totalFuelLitersCSV = 0;
+      try {
+        const fuelPath = path.join(process.cwd(), 'Combustible', 'Planilla control combustible.csv');
+        if (fs.existsSync(fuelPath)) {
+          const content = fs.readFileSync(fuelPath, 'utf-8');
+          const lines = content.split('\n').filter(l => l.trim());
+          for (let i = 1; i < lines.length; i++) {
+            const parts = lines[i].split(';');
+            const litrosStr = (parts[2] || '').trim().replace(',', '.');
+            const litros = parseFloat(litrosStr);
+            if (!isNaN(litros) && litros > 0) {
+              totalFuelLitersCSV += litros;
+            }
+          }
+        }
+      } catch {}
+
+      const [totalHours, totalRevenue, fuelConsumedDB, activePilots, pendingBalance, thisMonth] = await Promise.all([
+        prisma.flight.aggregate({ _sum: { diff_hobbs: true } }),
+        prisma.flight.aggregate({ _sum: { costo: true } }),
+        // Try to get fuel from DB if table exists, otherwise use 0
+        (async () => {
+          try {
+            const result = await (prisma as any).fuelLog?.aggregate({ _sum: { litros: true } });
+            return result?._sum?.litros || 0;
+          } catch {
+            return 0;
+          }
+        })(),
+        prisma.flight.findMany({
+          where: { fecha: { gte: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000) } },
+          select: { pilotoId: true, piloto_raw: true },
+          distinct: ['pilotoId']
+        }),
+        prisma.deposit.aggregate({ _sum: { monto: true } }),
+        prisma.flight.findMany({
+          where: {
+            fecha: {
+              gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+            }
+          },
+          select: { diff_hobbs: true }
+        })
+      ]);
+      return {
+        totalHours: Number(totalHours._sum.diff_hobbs) || 0,
+        totalFlights: await prisma.flight.count(),
+        totalRevenue: Number(totalRevenue._sum.costo) || 0,
+        fuelConsumed: totalFuelLitersCSV + Number(fuelConsumedDB),
+        activePilots: activePilots.length,
+        pendingBalance: Number(pendingBalance._sum.monto) || 0,
+        thisMonthFlights: thisMonth.length,
+        thisMonthHours: thisMonth.reduce((sum, f) => sum + (Number(f.diff_hobbs) || 0), 0)
+      };
+    })(),
   ]);
 
   // Read allowed pilot codes from official CSV (Base de dato pilotos)
@@ -348,9 +406,9 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           createdAt: u.createdAt,
           fechaNacimiento: u.fechaNacimiento || null,
           telefono: u.telefono || null,
-          numeroLicencia: (u as any).licencia || null,
-          tipoDocumento: (u as any).tipoDocumento || null,
-          documento: (u as any).documento || null
+          numeroLicencia: u.licencia || null,
+          tipoDocumento: null,
+          documento: null
         }))
     }
   };
@@ -358,7 +416,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
   return (
     <div className="min-h-screen w-full">
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <DashboardClient initialData={data} pagination={{ page, pageSize, total: totalFlights }} allowedPilotCodes={allowedPilotCodes} registeredPilotCodes={registeredPilotCodes} csvPilotNames={csvPilotNames} />
+        <DashboardClient initialData={data} overviewMetrics={overviewMetrics} pagination={{ page, pageSize, total: totalFlights }} allowedPilotCodes={allowedPilotCodes} registeredPilotCodes={registeredPilotCodes} csvPilotNames={csvPilotNames} />
       </div>
     </div>
   );
