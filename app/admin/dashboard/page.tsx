@@ -92,26 +92,20 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
       const [
-        totalHours,
         totalFlights,
         totalRevenue,
-        hoursSinceSep2020,
         fuelSinceSep2020,
         activePilots,
         pendingBalance,
-        thisMonth
+        thisMonth,
+        // Fetch flights needed to compute hours with fallback
+        flightsForHoursAllTime,
+        flightsForHoursSinceSep
       ] = await Promise.all([
-        // Total hours (all time)
-        prisma.flight.aggregate({ _sum: { diff_hobbs: true } }),
         // Total flights count
         prisma.flight.count(),
         // Total revenue (all time)
         prisma.flight.aggregate({ _sum: { costo: true } }),
-        // Hours since Sep 9, 2020
-        prisma.flight.aggregate({
-          where: { fecha: { gte: sep9_2020 } },
-          _sum: { diff_hobbs: true }
-        }),
         // Fuel consumed since Sep 9, 2020 (CSV historical + new DB entries)
         (async () => {
           // Get CSV fuel (historical baseline)
@@ -180,10 +174,39 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         prisma.flight.findMany({
           where: { fecha: { gte: firstDayOfMonth } },
           select: { diff_hobbs: true }
-        })
+        }),
+        // All flights minimal data to compute total hours robustly
+        prisma.flight.findMany({ select: { hobbs_inicio: true, hobbs_fin: true, diff_hobbs: true } }),
+        // Flights since Sep 9, 2020 to compute hours robustly
+        prisma.flight.findMany({ where: { fecha: { gte: sep9_2020 } }, select: { hobbs_inicio: true, hobbs_fin: true, diff_hobbs: true } })
       ]);
 
-      const totalHoursSinceSep2020 = Number(hoursSinceSep2020._sum.diff_hobbs || 0);
+      // Compute hours with fallback: use diff_hobbs if present, else hobbs_fin - hobbs_inicio
+      const toNumber = (v: any) => {
+        if (v === null || v === undefined) return null;
+        if (typeof v === 'number') return v;
+        // Prisma Decimal
+        if (typeof v === 'object' && v !== null && 'toNumber' in v && typeof (v as any).toNumber === 'function') {
+          try { return (v as any).toNumber(); } catch { return Number(v as any) || null; }
+        }
+        const n = Number(v);
+        return isNaN(n) ? null : n;
+      };
+
+      const computeHours = (rows: { hobbs_inicio: any; hobbs_fin: any; diff_hobbs: any }[]) => {
+        let sum = 0;
+        for (const r of rows) {
+          const dh = toNumber(r.diff_hobbs);
+          const hi = toNumber(r.hobbs_inicio);
+          const hf = toNumber(r.hobbs_fin);
+          const d = dh !== null ? dh : (hi !== null && hf !== null ? (hf - hi) : 0);
+          if (!isNaN(d) && d > 0) sum += d;
+        }
+        return Number(sum.toFixed(1));
+      };
+
+      const totalHoursAllTime = computeHours(flightsForHoursAllTime);
+      const totalHoursSinceSep2020 = computeHours(flightsForHoursSinceSep);
       const totalFuelSinceSep2020 = Number(fuelSinceSep2020);
       
       // Apply 10% idle adjustment: divide by 90% of hours
@@ -192,7 +215,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       const gallonsPerHour = litersPerHour > 0 ? Number((litersPerHour / 3.78541).toFixed(2)) : 0;
       
       return {
-        totalHours: Number(totalHours._sum.diff_hobbs || 0),
+        totalHours: totalHoursAllTime,
         totalFlights: totalFlights,
         totalRevenue: Number(totalRevenue._sum.costo || 0),
         fuelConsumed: totalFuelSinceSep2020,
