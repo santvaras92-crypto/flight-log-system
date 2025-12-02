@@ -132,22 +132,22 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     }
   }
   
-  // CC-AQI title - executive typography
+  // PILOT ACCOUNT STATEMENT - main title at top center
   doc.setTextColor(...colors.white);
-  doc.setFontSize(24);
+  doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text('CC-AQI', 56, 18);
+  doc.text('PILOT ACCOUNT STATEMENT', pageWidth / 2, 14, { align: 'center' });
   
-  // FLIGHT OPERATIONS subtitle - elegant spacing
+  // CC-AQI title - centered below main title
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  doc.text('CC-AQI', pageWidth / 2, 24, { align: 'center' });
+  
+  // FLIGHT OPERATIONS subtitle - centered below CC-AQI
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   const subtitle = 'F L I G H T   O P E R A T I O N S';
-  doc.text(subtitle, 56, 24);
-  
-  // PILOT ACCOUNT STATEMENT - centered below
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text('PILOT ACCOUNT STATEMENT', pageWidth / 2, 32, { align: 'center' });
+  doc.text(subtitle, pageWidth / 2, 30, { align: 'center' });
   
   // Metadata panel - clean and professional
   doc.setFontSize(7.5);
