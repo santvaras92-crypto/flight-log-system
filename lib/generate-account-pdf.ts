@@ -85,8 +85,9 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     textSecondary: [96, 96, 96] as [number, number, number], // #606060 - Gray
     lightGray: [245, 245, 245] as [number, number, number], // #F5F5F5 - Light background
     border: [220, 220, 220] as [number, number, number],   // #DCDCDC - Border gray
-    success: [16, 124, 16] as [number, number, number],    // #107C10 - Green for positive
-    warning: [202, 80, 16] as [number, number, number],    // #CA5010 - Orange for negative
+    success: [34, 139, 34] as [number, number, number],    // #228B22 - Green for positive
+    danger: [220, 53, 69] as [number, number, number],     // #DC3545 - Red for negative
+    warning: [255, 193, 7] as [number, number, number],    // #FFC107 - Yellow for deposits/warnings
   };
   
   // Helper functions
@@ -107,10 +108,10 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   // Add logo with correct proportions based on the provided image
   if (logoBase64) {
     try {
-      // Logo dimensions scaled to maintain aspect ratio (~7:1 width to height)
-      const logoWidth = 56;
-      const logoHeight = 8;
-      doc.addImage(logoBase64, 'PNG', 15, 20, logoWidth, logoHeight);
+      // Logo dimensions scaled to maintain aspect ratio (~20:1 width to height)
+      const logoWidth = 35;
+      const logoHeight = 1.75;
+      doc.addImage(logoBase64, 'PNG', 15, 22, logoWidth, logoHeight);
     } catch (e) {
       console.error('Could not add logo to PDF:', e);
     }
@@ -120,12 +121,12 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   doc.setTextColor(...colors.white);
   doc.setFontSize(22);
   doc.setFont('helvetica', 'bold');
-  doc.text('ESTADO DE CUENTA', 78, 24);
+  doc.text('ESTADO DE CUENTA', 58, 24);
   
   // Subtitle
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text('CC-AQI • Flight Operations', 78, 33);
+  doc.text('CC-AQI • Flight Operations', 58, 33);
   
   // Date on the right
   doc.setFontSize(9);
@@ -166,8 +167,8 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   const summaryItems = [
     { label: 'Total Vuelos', value: data.totalFlights.toString(), color: colors.accent },
     { label: 'Horas Voladas', value: `${data.totalHours.toFixed(1)} hrs`, color: colors.accent },
-    { label: 'Total Gastado', value: formatCurrency(data.totalSpent), color: colors.accent },
-    { label: 'Balance', value: formatCurrency(data.balance), color: data.balance >= 0 ? colors.success : colors.warning },
+    { label: 'Total Gastado', value: formatCurrency(data.totalSpent), color: colors.danger },
+    { label: 'Balance', value: formatCurrency(data.balance), color: data.balance >= 0 ? colors.success : colors.danger },
   ];
 
   summaryItems.forEach((item, i) => {
@@ -248,8 +249,21 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     didParseCell: function(data) {
       // Add border to last row (balance)
       if (data.row.index === 3) {
-        data.cell.styles.lineWidth = { top: 0.5, bottom: 0.5, left: 0, right: 0 };
-        data.cell.styles.lineColor = colors.accent;
+        data.cell.styles.lineWidth = { bottom: 0.5 };
+        data.cell.styles.fontStyle = 'bold';
+      }
+      // Color code amounts
+      if (data.column.index === 1) {
+        if (data.row.index === 0) {
+          data.cell.styles.textColor = colors.warning; // Deposits - yellow
+        } else if (data.row.index === 1 || data.row.index === 2) {
+          data.cell.styles.textColor = colors.danger; // Fuel/Spent - red
+        } else if (data.row.index === 3) {
+          // Balance row - check the actual value from financialData
+          const balanceValue = financialData[3][1];
+          const isNegative = balanceValue.includes('-');
+          data.cell.styles.textColor = isNegative ? colors.danger : colors.success;
+        }
       }
     },
   });
@@ -282,8 +296,8 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
       theme: 'grid',
       margin: { left: 15, right: 15 },
       headStyles: {
-        fillColor: colors.accent,
-        textColor: colors.white,
+        fillColor: colors.warning,
+        textColor: [60, 60, 60],
         fontStyle: 'bold',
         fontSize: 8,
         halign: 'left',
@@ -300,7 +314,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
       columnStyles: {
         0: { cellWidth: 28, halign: 'left' },
         1: { cellWidth: 'auto', halign: 'left' },
-        2: { cellWidth: 32, halign: 'right', fontStyle: 'bold' },
+        2: { cellWidth: 32, halign: 'right', fontStyle: 'bold', textColor: colors.success },
       },
       styles: {
         lineColor: colors.border,
@@ -343,7 +357,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
       theme: 'grid',
       margin: { left: 15, right: 15 },
       headStyles: {
-        fillColor: colors.accent,
+        fillColor: colors.danger,
         textColor: colors.white,
         fontStyle: 'bold',
         fontSize: 8,
@@ -361,7 +375,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
       columnStyles: {
         0: { cellWidth: 28, halign: 'left' },
         1: { cellWidth: 'auto', halign: 'left' },
-        2: { cellWidth: 32, halign: 'right', fontStyle: 'bold' },
+        2: { cellWidth: 32, halign: 'right', fontStyle: 'bold', textColor: colors.danger },
       },
       styles: {
         lineColor: colors.border,
@@ -444,9 +458,9 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
       columnStyles: {
         0: { cellWidth: 24, halign: 'left' },
         1: { cellWidth: 16, halign: 'right' },
-        2: { cellWidth: 26, halign: 'right', fontStyle: 'normal' },
-        3: { cellWidth: 28, halign: 'right', fontStyle: 'normal' },
-        4: { cellWidth: 26, halign: 'right', fontStyle: 'bold' },
+        2: { cellWidth: 26, halign: 'right', fontStyle: 'normal', textColor: colors.accent },
+        3: { cellWidth: 28, halign: 'right', fontStyle: 'normal', textColor: colors.accent },
+        4: { cellWidth: 26, halign: 'right', fontStyle: 'bold', textColor: colors.accent },
         5: { cellWidth: 'auto', halign: 'left' },
       },
       styles: {
