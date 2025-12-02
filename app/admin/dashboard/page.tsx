@@ -214,6 +214,47 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       const litersPerHour = effectiveHours > 0 ? Number((totalFuelSinceSep2020 / effectiveHours).toFixed(2)) : 0;
       const gallonsPerHour = litersPerHour > 0 ? Number((litersPerHour / 3.78541).toFixed(2)) : 0;
       
+      // Compute Next Inspections (Oil Change and 100-hour)
+      const OIL_INTERVAL = 50;
+      const INSPECT_100_INTERVAL = 100;
+      
+      const getCurrentTach = async (): Promise<number | null> => {
+        const latest = await prisma.flight.findFirst({
+          orderBy: { fecha: 'desc' },
+          select: { tach_fin: true, tach_inicio: true, diff_tach: true }
+        });
+        if (!latest) return null;
+        const fin = toNumber(latest.tach_fin);
+        const ini = toNumber(latest.tach_inicio);
+        const diff = toNumber(latest.diff_tach);
+        if (fin != null) return fin;
+        if (ini != null && diff != null) return ini + diff;
+        return ini;
+      };
+      
+      const getLastTachForDetalle = async (keyword: string): Promise<number | null> => {
+        const flight = await prisma.flight.findFirst({
+          where: { detalle: { contains: keyword, mode: 'insensitive' } },
+          orderBy: { fecha: 'desc' },
+          select: { tach_inicio: true, tach_fin: true, diff_tach: true }
+        });
+        if (!flight) return null;
+        const ini = toNumber(flight.tach_inicio);
+        const fin = toNumber(flight.tach_fin);
+        const diff = toNumber(flight.diff_tach);
+        return ini != null ? ini : (fin != null && diff != null ? fin - diff : null);
+      };
+      
+      const currentTach = await getCurrentTach();
+      const oilTachBase = await getLastTachForDetalle('CAMBIO DE ACEITE');
+      const inspectTachBase = await getLastTachForDetalle('REVISION 100 HRS');
+      
+      const oilUsed = oilTachBase != null && currentTach != null ? (currentTach - oilTachBase) : (currentTach != null ? (currentTach % OIL_INTERVAL) : 0);
+      const inspectUsed = inspectTachBase != null && currentTach != null ? (currentTach - inspectTachBase) : (currentTach != null ? (currentTach % INSPECT_100_INTERVAL) : 0);
+      
+      const oilChangeRemaining = Math.max(0, OIL_INTERVAL - (oilUsed < 0 ? 0 : oilUsed));
+      const hundredHourRemaining = Math.max(0, INSPECT_100_INTERVAL - (inspectUsed < 0 ? 0 : inspectUsed));
+      
       return {
         totalHours: totalHoursAllTime,
         totalFlights: totalFlights,
@@ -225,7 +266,11 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         activePilots: activePilots.length,
         pendingBalance: Number(pendingBalance._sum.monto || 0),
         thisMonthFlights: thisMonth.length,
-        thisMonthHours: thisMonth.reduce((sum, f) => sum + (Number(f.diff_hobbs) || 0), 0)
+        thisMonthHours: thisMonth.reduce((sum, f) => sum + (Number(f.diff_hobbs) || 0), 0),
+        nextInspections: {
+          oilChangeRemaining: Number(oilChangeRemaining.toFixed(1)),
+          hundredHourRemaining: Number(hundredHourRemaining.toFixed(1)),
+        },
       };
     })(),
   ]);
