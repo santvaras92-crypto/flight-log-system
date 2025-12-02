@@ -138,16 +138,16 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   doc.setFont('helvetica', 'bold');
   doc.text('PILOT ACCOUNT STATEMENT', pageWidth / 2, 14, { align: 'center' });
   
-  // CC-AQI title - centered below main title
-  doc.setFontSize(20);
+  // CC-AQI title - positioned near bottom of header
+  doc.setFontSize(19);
   doc.setFont('helvetica', 'bold');
-  doc.text('CC-AQI', pageWidth / 2, 24, { align: 'center' });
+  doc.text('CC-AQI', pageWidth / 2, 28, { align: 'center' });
   
-  // FLIGHT OPERATIONS subtitle - centered below CC-AQI
+  // FLIGHT OPERATIONS subtitle - just above bottom edge
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   const subtitle = 'F L I G H T   O P E R A T I O N S';
-  doc.text(subtitle, pageWidth / 2, 30, { align: 'center' });
+  doc.text(subtitle, pageWidth / 2, 33, { align: 'center' });
   
   // Metadata panel - clean and professional
   doc.setFontSize(7.5);
