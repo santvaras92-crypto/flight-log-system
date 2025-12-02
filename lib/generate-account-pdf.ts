@@ -104,101 +104,98 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     return d.toLocaleDateString('es-CL');
   };
 
-  // === MODERN HEADER ===
-  // Slate background header
-  doc.setFillColor(...colors.slate950);
+  // === DASHBOARD-STYLE HEADER ===
+  // White background like dashboard
+  doc.setFillColor(...colors.white);
   doc.rect(0, 0, pageWidth, 50, 'F');
+  
+  // Add subtle bottom border
+  doc.setDrawColor(...colors.zinc200);
+  doc.setLineWidth(1);
+  doc.line(0, 50, pageWidth, 50);
   
   // Add logo with correct proportions
   if (logoBase64) {
     try {
       const logoWidth = 35;
       const logoHeight = 4.5;
-      doc.addImage(logoBase64, 'PNG', 15, 21, logoWidth, logoHeight);
+      doc.addImage(logoBase64, 'PNG', 15, 23, logoWidth, logoHeight);
     } catch (e) {
       console.error('Could not add logo to PDF:', e);
     }
   }
   
-  // Title - positioned after logo with proper spacing
-  doc.setTextColor(...colors.white);
-  doc.setFontSize(22);
+  // Title - positioned after logo (dark text on white background)
+  doc.setTextColor(...colors.zinc700);
+  doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.text('ESTADO DE CUENTA', 58, 24);
+  doc.text('Estado de Cuenta', 58, 26);
   
   // Subtitle
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('CC-AQI • Flight Operations', 58, 33);
+  doc.setTextColor(...colors.zinc500);
+  doc.text('CC-AQI • Flight Operations', 58, 34);
   
   // Date on the right
-  doc.setFontSize(9);
-  doc.text(`Generado: ${new Date().toLocaleDateString('es-CL')}`, pageWidth - 15, 24, { align: 'right' });
+  doc.setFontSize(8);
+  doc.text(`Generado: ${new Date().toLocaleDateString('es-CL')}`, pageWidth - 15, 26, { align: 'right' });
   
   // Date range if provided
   if (data.dateRange?.start || data.dateRange?.end) {
     const rangeText = `Período: ${data.dateRange.start || 'Inicio'} - ${data.dateRange.end || 'Actual'}`;
-    doc.text(rangeText, pageWidth - 15, 33, { align: 'right' });
+    doc.text(rangeText, pageWidth - 15, 34, { align: 'right' });
   }
 
   // === CLIENT INFO SECTION ===
-  // Clean white box with subtle border
-  doc.setDrawColor(...colors.zinc200);
-  doc.setFillColor(...colors.white);
-  doc.setLineWidth(0.5);
-  doc.roundedRect(15, 58, pageWidth - 30, 24, 2, 2, 'FD');
+  // Minimal style - no box, just text
   
   // Client name - prominent
   doc.setTextColor(...colors.zinc700);
   doc.setFontSize(13);
   doc.setFont('helvetica', 'bold');
-  doc.text('Cliente:', 20, 68);
-  doc.text(data.clientName, 42, 68);
+  doc.text('Cliente:', 15, 64);
+  doc.text(data.clientName, 37, 64);
   
   // Client code - smaller, gray
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...colors.zinc500);
-  doc.text(`Código: ${data.clientCode}`, 20, 76);
+  doc.text(`Código: ${data.clientCode}`, 15, 72);
 
-  // === KEY METRICS CARDS - PROFESSIONAL STYLE ===
-  const cardY = 90;
-  const cardHeight = 28;
+  // === KEY METRICS CARDS - DASHBOARD STYLE ===
+  const cardY = 80;
+  const cardHeight = 32;
   const cardWidth = (pageWidth - 40) / 4;
   const cardGap = 3;
 
   const summaryItems = [
-    { label: 'Total Vuelos', value: data.totalFlights.toString(), color: colors.blue600 },
-    { label: 'Horas Voladas', value: `${data.totalHours.toFixed(1)} hrs`, color: colors.blue600 },
-    { label: 'Total Gastado', value: formatCurrency(data.totalSpent), color: colors.rose600 },
-    { label: 'Balance', value: formatCurrency(data.balance), color: data.balance >= 0 ? colors.emerald600 : colors.rose600 },
+    { label: 'Total Flights', value: data.totalFlights.toString(), color: colors.blue600, borderColor: colors.blue600 },
+    { label: 'Total Hours', value: `${data.totalHours.toFixed(1)}`, color: colors.emerald600, borderColor: colors.emerald600 },
+    { label: 'Total Spent', value: formatCurrency(data.totalSpent), color: colors.amber600, borderColor: colors.amber600 },
+    { label: 'Balance', value: formatCurrency(data.balance), color: data.balance >= 0 ? colors.emerald600 : colors.rose600, borderColor: data.balance >= 0 ? colors.emerald600 : colors.rose600 },
   ];
 
   summaryItems.forEach((item, i) => {
     const x = 15 + i * (cardWidth + cardGap);
     
-    // Card background - modern zinc with subtle border
-    doc.setDrawColor(...colors.zinc200);
-    doc.setFillColor(...colors.zinc100);
-    doc.setLineWidth(0.5);
-    doc.roundedRect(x, cardY, cardWidth, cardHeight, 2, 2, 'FD');
+    // Card background - white with colored border (matching dashboard)
+    doc.setDrawColor(...item.borderColor);
+    doc.setFillColor(...colors.white);
+    doc.setLineWidth(1.5);
+    doc.roundedRect(x, cardY, cardWidth, cardHeight, 3, 3, 'FD');
     
-    // Left accent bar - thicker and more prominent
-    doc.setFillColor(...item.color);
-    doc.rect(x, cardY, 3, cardHeight, 'F');
-    
-    // Label - modern typography
+    // Label - small gray text
     doc.setTextColor(...colors.zinc500);
     doc.setFontSize(7);
-    doc.setFont('helvetica', 'bold');
-    const labelText = item.label.toUpperCase();
-    doc.text(labelText, x + cardWidth / 2, cardY + 10, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.text(item.label, x + 6, cardY + 8);
     
-    // Value - large and prominent
-    doc.setTextColor(...colors.zinc700);
-    doc.setFontSize(11);
+    // Value - large colored text
+    doc.setTextColor(...item.color);
+    doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text(item.value, x + cardWidth / 2, cardY + 20, { align: 'center' });
+    doc.text(item.value, x + 6, cardY + 22);
   });
 
   // === FINANCIAL SUMMARY - CLEAN TABLE ===
