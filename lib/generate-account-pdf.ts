@@ -85,9 +85,9 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     textSecondary: [96, 96, 96] as [number, number, number], // #606060 - Gray
     lightGray: [245, 245, 245] as [number, number, number], // #F5F5F5 - Light background
     border: [220, 220, 220] as [number, number, number],   // #DCDCDC - Border gray
-    success: [34, 139, 34] as [number, number, number],    // #228B22 - Green for positive
-    danger: [220, 53, 69] as [number, number, number],     // #DC3545 - Red for negative
-    warning: [255, 193, 7] as [number, number, number],    // #FFC107 - Yellow for deposits/warnings
+    success: [21, 87, 36] as [number, number, number],     // #155724 - Dark green for positive
+    danger: [153, 27, 27] as [number, number, number],     // #991B1B - Dark red for negative
+    warning: [180, 83, 9] as [number, number, number],     // #B45309 - Dark amber for deposits
   };
   
   // Helper functions
@@ -108,9 +108,9 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   // Add logo with correct proportions based on the provided image
   if (logoBase64) {
     try {
-      // Logo dimensions scaled to maintain aspect ratio (~20:1 width to height)
+      // Logo dimensions scaled to maintain aspect ratio (~10:1 width to height)
       const logoWidth = 35;
-      const logoHeight = 1.75;
+      const logoHeight = 3.5;
       doc.addImage(logoBase64, 'PNG', 15, 22, logoWidth, logoHeight);
     } catch (e) {
       console.error('Could not add logo to PDF:', e);
@@ -297,7 +297,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
       margin: { left: 15, right: 15 },
       headStyles: {
         fillColor: colors.warning,
-        textColor: [60, 60, 60],
+        textColor: colors.white,
         fontStyle: 'bold',
         fontSize: 8,
         halign: 'left',
