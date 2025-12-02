@@ -118,13 +118,13 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   };
 
   // === EXECUTIVE AVIATION HEADER ===
-  // Premium aviation blue background
-  doc.setFillColor(...colors.aviationBlue500);
-  doc.rect(0, 0, pageWidth, 34, 'F');
+  // Navy blue background
+  doc.setFillColor(...colors.aviationBlue900);
+  doc.rect(0, 0, pageWidth, 38, 'F');
   
   // Subtle darker bottom accent (simulated gradient)
-  doc.setFillColor(...colors.aviationBlue700);
-  doc.rect(0, 30, pageWidth, 4, 'F');
+  doc.setFillColor(...colors.aviationBlue800);
+  doc.rect(0, 34, pageWidth, 4, 'F');
   
   // Logo - premium positioning
   if (logoBase64) {
@@ -149,8 +149,14 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   const subtitle = 'F L I G H T   O P E R A T I O N S';
   doc.text(subtitle, 56, 24);
   
+  // PILOT ACCOUNT STATEMENT - centered below
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('PILOT ACCOUNT STATEMENT', pageWidth / 2, 32, { align: 'center' });
+  
   // Metadata panel - clean and professional
   doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'normal');
   doc.text(`Generado: ${new Date().toLocaleDateString('es-CL')}`, pageWidth - 18, 16, { align: 'right' });
   
   if (data.dateRange?.start || data.dateRange?.end) {
@@ -159,43 +165,24 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   }
 
   // === CLIENT INFO CARD - EXECUTIVE STYLE ===
-  const clientCardY = 44;
+  const clientCardY = 48;
   
   // Clean card with border
   doc.setDrawColor(...colors.gray300);
   doc.setFillColor(...colors.white);
   doc.setLineWidth(0.4);
-  doc.roundedRect(18, clientCardY, pageWidth - 36, 22, 3, 3, 'FD');
+  doc.roundedRect(18, clientCardY, pageWidth - 36, 18, 3, 3, 'FD');
   
-  // Estado de Cuenta title with accent
-  doc.setTextColor(...colors.aviationBlue700);
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.text('ESTADO DE CUENTA', 24, clientCardY + 8);
-  
-  // Client info - two column layout
+  // Client info - centered layout
   doc.setTextColor(...colors.gray500);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.text('Cliente:', 24, clientCardY + 15);
+  doc.text('Piloto:', 24, clientCardY + 8);
   
   doc.setTextColor(...colors.gray900);
-  doc.setFontSize(10);
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text(data.clientName, 24, clientCardY + 20);
-  
-  // Client code badge style
-  doc.setTextColor(...colors.gray500);
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Código:', pageWidth - 65, clientCardY + 15);
-  
-  doc.setFillColor(...colors.aviationBlue500);
-  doc.roundedRect(pageWidth - 50, clientCardY + 11, 28, 7, 2, 2, 'F');
-  doc.setTextColor(...colors.white);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.text(data.clientCode, pageWidth - 36, clientCardY + 16.5, { align: 'center' });
+  doc.text(data.clientName, 24, clientCardY + 14);
 
   // === EXECUTIVE METRICS CARDS - PREMIUM DASHBOARD STYLE ===
   const cardY = 75;
