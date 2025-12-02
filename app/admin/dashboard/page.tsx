@@ -98,6 +98,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         activePilots,
         depositsFromDB,
         paymentsFromCSV,
+        fuelChargesNonStratus,
         thisMonth,
         // Fetch flights needed to compute hours with fallback
         flightsForHoursAllTime,
@@ -198,6 +199,14 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           } catch {}
           return csvPayments;
         })(),
+        // Fuel charges from DB (excluding Stratus user ID 96, from Dec 2, 2025 onwards)
+        prisma.fuelLog.aggregate({
+          where: { 
+            userId: { not: 96 },
+            fecha: { gte: new Date('2025-12-02') }
+          },
+          _sum: { monto: true }
+        }),
         // This month flights
         prisma.flight.findMany({
           where: { fecha: { gte: firstDayOfMonth } },
@@ -286,6 +295,9 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       // Calculate total payments (CSV + DB deposits)
       const totalPayments = paymentsFromCSV + Number(depositsFromDB._sum.monto || 0);
       
+      // Fuel charges (non-Stratus users)
+      const fuelCharges = Number(fuelChargesNonStratus._sum.monto || 0);
+      
       // Fixed adjustment for pending balance
       const FIXED_ADJUSTMENT = 22471361;
       
@@ -298,7 +310,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         fuelRateLph: litersPerHour,
         fuelRateGph: gallonsPerHour,
         activePilots: activePilots.length,
-        pendingBalance: Number(totalRevenue._sum.costo || 0) - totalPayments - FIXED_ADJUSTMENT,
+        pendingBalance: Number(totalRevenue._sum.costo || 0) - totalPayments - fuelCharges - FIXED_ADJUSTMENT,
         thisMonthFlights: thisMonth.length,
         thisMonthHours: thisMonth.reduce((sum, f) => sum + (Number(f.diff_hobbs) || 0), 0),
         nextInspections: {

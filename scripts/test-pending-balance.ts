@@ -28,19 +28,27 @@ const prisma = new PrismaClient();
   }
   
   // Get DB data
-  const [totalRevenue, totalDeposits] = await Promise.all([
+  const [totalRevenue, totalDeposits, fuelChargesNonStratus] = await Promise.all([
     prisma.flight.aggregate({ _sum: { costo: true } }),
-    prisma.deposit.aggregate({ _sum: { monto: true } })
+    prisma.deposit.aggregate({ _sum: { monto: true } }),
+    prisma.fuelLog.aggregate({
+      where: { 
+        userId: { not: 96 }, // Exclude Stratus (ID 96)
+        fecha: { gte: new Date('2025-12-02') } // From Dec 2, 2025 onwards
+      },
+      _sum: { monto: true }
+    })
   ]);
   
   const totalCosto = Number(totalRevenue._sum.costo || 0);
   const dbDeposits = Number(totalDeposits._sum.monto || 0);
   const totalPayments = csvPayments + dbDeposits;
+  const fuelCharges = Number(fuelChargesNonStratus._sum.monto || 0);
   const FIXED_ADJUSTMENT = 22471361;
-  const pendingBalance = totalCosto - totalPayments - FIXED_ADJUSTMENT;
+  const pendingBalance = totalCosto - totalPayments - fuelCharges - FIXED_ADJUSTMENT;
   
   console.log('');
-  console.log('💰 CÁLCULO DE PENDING BALANCE (CSV + DB + AJUSTE)');
+  console.log('💰 CÁLCULO DE PENDING BALANCE');
   console.log('━'.repeat(60));
   console.log('Total a cobrar (vuelos):       $' + totalCosto.toLocaleString('es-CL'));
   console.log('');
@@ -49,6 +57,7 @@ const prisma = new PrismaClient();
   console.log('                               ' + '─'.repeat(30));
   console.log('Total depositado:              $' + totalPayments.toLocaleString('es-CL'));
   console.log('');
+  console.log('Combustible (no Stratus):      $' + fuelCharges.toLocaleString('es-CL'));
   console.log('Ajuste fijo:                   $' + FIXED_ADJUSTMENT.toLocaleString('es-CL'));
   console.log('━'.repeat(60));
   console.log('PENDING BALANCE:               $' + pendingBalance.toLocaleString('es-CL'));
