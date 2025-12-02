@@ -1548,63 +1548,20 @@ function DepositsTable({ depositsDetailsByCode, csvPilotNames }: { depositsDetai
   const [sortBy, setSortBy] = useState<"date" | "pilot" | "amount">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-  // Helper to parse and normalize dates from CSV format (dd-MMM-yy)
-  const parseCSVDate = (dateStr: string): Date => {
-    // If already in ISO format, use directly
-    if (dateStr.includes('-') && dateStr.length > 10) {
-      return new Date(dateStr);
-    }
-    
-    // Parse dd-MMM-yy format (e.g., "30-Dec-24")
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-      const day = parseInt(parts[0]);
-      const monthMap: Record<string, number> = {
-        'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
-        'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
-      };
-      const month = monthMap[parts[1]];
-      let year = parseInt(parts[2]);
-      // Assume years 00-50 are 2000s, 51-99 are 1900s
-      if (year <= 50) year += 2000;
-      else if (year < 100) year += 1900;
-      
-      return new Date(year, month, day);
-    }
-    
-    // Fallback
-    return new Date(dateStr);
-  };
-
-  // Helper to format date for display
-  const formatDate = (dateStr: string): string => {
-    const date = parseCSVDate(dateStr);
-    return date.toLocaleDateString('es-CL');
-  };
-
   const allDeposits = useMemo(() => {
-    const deposits: { code: string; pilotName: string; fecha: string; fechaDisplay: string; fechaSort: number; descripcion: string; monto: number }[] = [];
+    const deposits: { code: string; pilotName: string; fecha: string; descripcion: string; monto: number }[] = [];
     if (!depositsDetailsByCode) return deposits;
 
     Object.entries(depositsDetailsByCode).forEach(([code, records]) => {
       const pilotName = csvPilotNames?.[code] || code;
       records.forEach(r => {
-        const parsedDate = parseCSVDate(r.fecha);
-        deposits.push({ 
-          code, 
-          pilotName, 
-          fecha: r.fecha,
-          fechaDisplay: parsedDate.toLocaleDateString('es-CL'),
-          fechaSort: parsedDate.getTime(),
-          descripcion: r.descripcion, 
-          monto: r.monto 
-        });
+        deposits.push({ code, pilotName, fecha: r.fecha, descripcion: r.descripcion, monto: r.monto });
       });
     });
 
     return deposits.sort((a, b) => {
       if (sortBy === "date") {
-        const diff = b.fechaSort - a.fechaSort;
+        const diff = new Date(b.fecha).getTime() - new Date(a.fecha).getTime();
         return sortOrder === "desc" ? diff : -diff;
       }
       if (sortBy === "pilot") {
@@ -1671,7 +1628,7 @@ function DepositsTable({ depositsDetailsByCode, csvPilotNames }: { depositsDetai
           <tbody className="divide-y divide-slate-200">
             {allDeposits.map((d, idx) => (
               <tr key={idx} className="hover:bg-blue-50 transition">
-                <td className="px-6 py-4 text-slate-700 font-medium">{d.fechaDisplay}</td>
+                <td className="px-6 py-4 text-slate-700 font-medium">{d.fecha}</td>
                 <td className="px-6 py-4 text-slate-900 font-semibold">
                   {d.pilotName}
                   <span className="ml-2 text-xs text-slate-500 font-normal">({d.code})</span>
