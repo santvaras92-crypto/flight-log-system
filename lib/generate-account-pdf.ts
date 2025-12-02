@@ -104,67 +104,68 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     return d.toLocaleDateString('es-CL');
   };
 
-  // === DASHBOARD-STYLE HEADER ===
-  // White background like dashboard
-  doc.setFillColor(...colors.white);
-  doc.rect(0, 0, pageWidth, 50, 'F');
+  // === BLUE HEADER - CC-AQI FLIGHT OPERATIONS ===
+  // Blue background matching screenshot (rgb(67, 97, 238))
+  const headerBlue = [67, 97, 238] as [number, number, number];
+  doc.setFillColor(...headerBlue);
+  doc.rect(0, 0, pageWidth, 28, 'F');
   
-  // Add subtle bottom border
-  doc.setDrawColor(...colors.zinc200);
-  doc.setLineWidth(1);
-  doc.line(0, 50, pageWidth, 50);
-  
-  // Add logo with correct proportions
+  // Add logo (white version)
   if (logoBase64) {
     try {
-      const logoWidth = 35;
-      const logoHeight = 4.5;
-      doc.addImage(logoBase64, 'PNG', 15, 23, logoWidth, logoHeight);
+      const logoWidth = 30;
+      const logoHeight = 3.9;
+      doc.addImage(logoBase64, 'PNG', 15, 12, logoWidth, logoHeight);
     } catch (e) {
       console.error('Could not add logo to PDF:', e);
     }
   }
   
-  // Title - positioned after logo (dark text on white background)
-  doc.setTextColor(...colors.zinc700);
-  doc.setFontSize(18);
+  // CC-AQI title - white text
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(22);
   doc.setFont('helvetica', 'bold');
-  doc.text('Estado de Cuenta', 58, 26);
+  doc.text('CC-AQI', 52, 16);
   
-  // Subtitle
+  // FLIGHT OPERATIONS subtitle
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...colors.zinc500);
-  doc.text('CC-AQI • Flight Operations', 58, 34);
+  // Manual letter spacing by splitting characters
+  const subtitle = 'F L I G H T   O P E R A T I O N S';
+  doc.text(subtitle, 52, 21);
   
-  // Date on the right
+  // Date on the right (white text)
   doc.setFontSize(8);
-  doc.text(`Generado: ${new Date().toLocaleDateString('es-CL')}`, pageWidth - 15, 26, { align: 'right' });
+  doc.text(`Generado: ${new Date().toLocaleDateString('es-CL')}`, pageWidth - 15, 14, { align: 'right' });
   
   // Date range if provided
   if (data.dateRange?.start || data.dateRange?.end) {
     const rangeText = `Período: ${data.dateRange.start || 'Inicio'} - ${data.dateRange.end || 'Actual'}`;
-    doc.text(rangeText, pageWidth - 15, 34, { align: 'right' });
+    doc.text(rangeText, pageWidth - 15, 20, { align: 'right' });
   }
 
+  // === ESTADO DE CUENTA TITLE ===
+  doc.setTextColor(...colors.zinc700);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Estado de Cuenta', 15, 42);
+
   // === CLIENT INFO SECTION ===
-  // Minimal style - no box, just text
-  
   // Client name - prominent
   doc.setTextColor(...colors.zinc700);
   doc.setFontSize(13);
   doc.setFont('helvetica', 'bold');
-  doc.text('Cliente:', 15, 64);
-  doc.text(data.clientName, 37, 64);
+  doc.text('Cliente:', 15, 54);
+  doc.text(data.clientName, 37, 54);
   
   // Client code - smaller, gray
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...colors.zinc500);
-  doc.text(`Código: ${data.clientCode}`, 15, 72);
+  doc.text(`Código: ${data.clientCode}`, 15, 62);
 
   // === KEY METRICS CARDS - DASHBOARD STYLE ===
-  const cardY = 80;
+  const cardY = 70;
   const cardHeight = 32;
   const cardWidth = (pageWidth - 40) / 4;
   const cardGap = 3;
