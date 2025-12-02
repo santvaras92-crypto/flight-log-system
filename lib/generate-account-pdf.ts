@@ -108,13 +108,13 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   };
   
   // Helper functions
-  const formatCurrency = (value: number) => `$${Math.round(value).toLocaleString('es-CL')}`;
+  const formatCurrency = (value: number) => `$${Math.round(value).toLocaleString('en-US')}`;
   const formatDate = (date: string | Date) => {
     if (typeof date === 'string' && date.includes('-') && date.length <= 12) {
       return date;
     }
     const d = new Date(date);
-    return d.toLocaleDateString('es-CL');
+    return d.toLocaleDateString('en-US');
   };
 
   // === EXECUTIVE AVIATION HEADER ===
@@ -157,10 +157,10 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   // Metadata panel - clean and professional
   doc.setFontSize(7.5);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Generado: ${new Date().toLocaleDateString('es-CL')}`, pageWidth - 18, 16, { align: 'right' });
+  doc.text(`Generated: ${new Date().toLocaleDateString('en-US')}`, pageWidth - 18, 16, { align: 'right' });
   
   if (data.dateRange?.start || data.dateRange?.end) {
-    const rangeText = `Período: ${data.dateRange.start || 'Inicio'} - ${data.dateRange.end || 'Actual'}`;
+    const rangeText = `Period: ${data.dateRange.start || 'Start'} - ${data.dateRange.end || 'Current'}`;
     doc.text(rangeText, pageWidth - 18, 22, { align: 'right' });
   }
 
@@ -177,7 +177,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   doc.setTextColor(...colors.gray500);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.text('Piloto:', 24, clientCardY + 8);
+  doc.text('Pilot:', 24, clientCardY + 8);
   
   doc.setTextColor(...colors.gray900);
   doc.setFontSize(11);
@@ -191,9 +191,9 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   const cardGap = 4;
 
   const summaryItems = [
-    { label: 'Total Vuelos', value: data.totalFlights.toString(), color: colors.aviationBlue600, bgColor: colors.gray50 },
-    { label: 'Horas Totales', value: `${data.totalHours.toFixed(1)}h`, color: colors.info, bgColor: colors.gray50 },
-    { label: 'Total Gastado', value: formatCurrency(data.totalSpent), color: colors.warning, bgColor: colors.gray50 },
+    { label: 'Total Flights', value: data.totalFlights.toString(), color: colors.aviationBlue600, bgColor: colors.gray50 },
+    { label: 'Total Hours', value: `${data.totalHours.toFixed(1)}h`, color: colors.info, bgColor: colors.gray50 },
+    { label: 'Total Spent', value: formatCurrency(data.totalSpent), color: colors.warning, bgColor: colors.gray50 },
     { label: 'Balance', value: formatCurrency(data.balance), color: data.balance >= 0 ? colors.success : colors.danger, bgColor: colors.gray50 },
   ];
 
@@ -234,15 +234,15 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   doc.setTextColor(...colors.white);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text('RESUMEN FINANCIERO', 24, currentY + 5.5);
+  doc.text('FINANCIAL SUMMARY', 24, currentY + 5.5);
   currentY += 13;
   
   // Financial details table - clean professional styling
   const financialData = [
-    ['Total Depósitos', formatCurrency(data.totalDeposits)],
-    ['Crédito Combustible', formatCurrency(data.totalFuel)],
-    ['Total Consumido', formatCurrency(data.totalSpent)],
-    ['Balance Actual', formatCurrency(data.balance)],
+    ['Total Deposits', formatCurrency(data.totalDeposits)],
+    ['Fuel Credit', formatCurrency(data.totalFuel)],
+    ['Total Spent', formatCurrency(data.totalSpent)],
+    ['Current Balance', formatCurrency(data.balance)],
   ];
 
   autoTable(doc, {
@@ -304,7 +304,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     doc.setTextColor(...colors.white);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text(`DEPÓSITOS (${data.deposits.length})`, 24, currentY + 5.5);
+    doc.text(`DEPOSITS (${data.deposits.length})`, 24, currentY + 5.5);
     currentY += 12;
 
     const depositRows = data.deposits.map(d => [
@@ -315,7 +315,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
 
     autoTable(doc, {
       startY: currentY,
-      head: [['Fecha', 'Descripción', 'Monto']],
+      head: [['Date', 'Description', 'Amount']],
       body: depositRows,
       theme: 'striped',
       margin: { left: 18, right: 18 },
@@ -364,7 +364,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     doc.setTextColor(...colors.white);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text(`CRÉDITOS DE COMBUSTIBLE (${data.fuelCredits.length})`, 24, currentY + 5.5);
+    doc.text(`FUEL CREDITS (${data.fuelCredits.length})`, 24, currentY + 5.5);
     currentY += 12;
 
     const fuelRows = data.fuelCredits.map(f => [
@@ -375,7 +375,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
 
     autoTable(doc, {
       startY: currentY,
-      head: [['Fecha', 'Litros', 'Monto']],
+      head: [['Date', 'Liters', 'Amount']],
       body: fuelRows,
       theme: 'striped',
       margin: { left: 18, right: 18 },
@@ -423,7 +423,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   doc.setTextColor(...colors.white);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text(`DETALLE DE VUELOS (${data.flights.length})`, 24, currentY + 5.5);
+  doc.text(`FLIGHT DETAILS (${data.flights.length})`, 24, currentY + 5.5);
   currentY += 12;
 
   if (data.flights.length > 0) {
@@ -457,7 +457,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
 
     autoTable(doc, {
       startY: currentY,
-      head: [['Fecha', 'Horas', 'Avión', 'Instructor/SP', 'Total', 'Detalle']],
+      head: [['Date', 'Hours', 'Aircraft', 'Instructor/SP', 'Total', 'Details']],
       body: flightRows,
       theme: 'striped',
       margin: { left: 18, right: 18 },
@@ -523,7 +523,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   doc.setTextColor(...colors.white);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.text('INFORMACIÓN PARA TRANSFERENCIAS', 24, footerY + 4.5);
+  doc.text('WIRE TRANSFER INFORMATION', 24, footerY + 4.5);
   
   // Bank details - clean professional layout
   doc.setFont('helvetica', 'normal');
@@ -531,9 +531,9 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   doc.setTextColor(...colors.gray700);
   
   const bankInfo = [
-    'Titular: SANTIAGO NICOLAS VARAS SAAVEDRA',
-    'RUT: 18.166.515-7',
-    'Banco Santander - Cuenta Corriente N° 0-000-75-79256-5',
+    'Account Holder: SANTIAGO NICOLAS VARAS SAAVEDRA',
+    'Tax ID (RUT): 18.166.515-7',
+    'Banco Santander - Checking Account #: 0-000-75-79256-5',
     'Email: santvaras92@gmail.com',
   ];
   
@@ -557,11 +557,11 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
     doc.text('CC-AQI Flight Operations', 18, pageHeight - 4);
-    doc.text(`Página ${i} de ${pagesCount}`, pageWidth - 18, pageHeight - 4, { align: 'right' });
+    doc.text(`Page ${i} of ${pagesCount}`, pageWidth - 18, pageHeight - 4, { align: 'right' });
   }
 
   // Save the PDF with professional filename
-  const fileName = `Estado_Cuenta_${data.clientCode}_${new Date().toISOString().split('T')[0]}.pdf`;
+  const fileName = `Account_Statement_${data.clientCode}_${new Date().toISOString().split('T')[0]}.pdf`;
   doc.save(fileName);
 }
 
