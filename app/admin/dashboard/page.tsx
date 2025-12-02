@@ -87,19 +87,42 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     }),
     // Overview metrics
     (async () => {
-      // Calculate total fuel consumed from CSV
+      // Calculate total fuel consumed from CSV since Sep 9, 2020
       let totalFuelLitersCSV = 0;
       try {
         const fuelPath = path.join(process.cwd(), 'Combustible', 'Planilla control combustible.csv');
         if (fs.existsSync(fuelPath)) {
           const content = fs.readFileSync(fuelPath, 'utf-8');
           const lines = content.split('\n').filter(l => l.trim());
+          const cutoffDate = new Date('2020-09-09');
+          
           for (let i = 1; i < lines.length; i++) {
             const parts = lines[i].split(';');
-            const litrosStr = (parts[2] || '').trim().replace(',', '.');
-            const litros = parseFloat(litrosStr);
-            if (!isNaN(litros) && litros > 0) {
-              totalFuelLitersCSV += litros;
+            const dateStr = (parts[0] || '').trim();
+            
+            if (!dateStr) continue;
+            
+            // Parse date (DD-MM-YY format)
+            const dateParts = dateStr.split('-');
+            if (dateParts.length !== 3) continue;
+            
+            const day = parseInt(dateParts[0]);
+            const month = parseInt(dateParts[1]);
+            let year = parseInt(dateParts[2]);
+            
+            // Convert 2-digit year to 4-digit
+            if (year < 100) {
+              year = year < 50 ? 2000 + year : 1900 + year;
+            }
+            
+            const fuelDate = new Date(year, month - 1, day);
+            
+            if (fuelDate >= cutoffDate) {
+              const litrosStr = (parts[2] || '').trim().replace(',', '.');
+              const litros = parseFloat(litrosStr);
+              if (!isNaN(litros) && litros > 0) {
+                totalFuelLitersCSV += litros;
+              }
             }
           }
         }
@@ -135,10 +158,13 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       const [totalHours, totalRevenue, fuelConsumedDB, hoursSinceSep2020DB, activePilots, pendingBalance, thisMonth] = await Promise.all([
         prisma.flight.aggregate({ _sum: { diff_hobbs: true } }),
         prisma.flight.aggregate({ _sum: { costo: true } }),
-        // Try to get fuel from DB if table exists, otherwise use 0
+        // Try to get fuel from DB if table exists, filter since Sep 9, 2020
         (async () => {
           try {
-            const result = await (prisma as any).fuelLog?.aggregate({ _sum: { litros: true } });
+            const result = await (prisma as any).fuelLog?.aggregate({ 
+              where: { fecha: { gte: new Date('2020-09-09') } },
+              _sum: { litros: true } 
+            });
             return result?._sum?.litros || 0;
           } catch {
             return 0;
