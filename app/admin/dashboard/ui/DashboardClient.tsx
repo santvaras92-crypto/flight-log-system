@@ -32,6 +32,7 @@ type OverviewMetrics = {
   totalFlights: number;
   totalRevenue: number;
   fuelConsumed: number;
+  hoursSinceSep2020: number;
   activePilots: number;
   pendingBalance: number;
   thisMonthFlights: number;
@@ -161,13 +162,13 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">Fuel Consumption Rate</h3>
               <div className="space-y-1">
                 <div className="text-3xl font-bold text-slate-900">
-                  {overviewMetrics.fuelConsumed > 0 ? (overviewMetrics.fuelConsumed / 1204.9).toFixed(2) : '0.00'} <span className="text-xl text-slate-600">L/H</span>
+                  {overviewMetrics.fuelConsumed > 0 && overviewMetrics.hoursSinceSep2020 > 0 ? (overviewMetrics.fuelConsumed / overviewMetrics.hoursSinceSep2020).toFixed(2) : '0.00'} <span className="text-xl text-slate-600">L/H</span>
                 </div>
                 <div className="text-xl font-semibold text-amber-600">
-                  {overviewMetrics.fuelConsumed > 0 ? (overviewMetrics.fuelConsumed / 1204.9 / 3.78541).toFixed(2) : '0.00'} <span className="text-base text-slate-600">GAL/H</span>
+                  {overviewMetrics.fuelConsumed > 0 && overviewMetrics.hoursSinceSep2020 > 0 ? (overviewMetrics.fuelConsumed / overviewMetrics.hoursSinceSep2020 / 3.78541).toFixed(2) : '0.00'} <span className="text-base text-slate-600">GAL/H</span>
                 </div>
               </div>
-              <p className="text-xs text-slate-500 mt-3">Since Aug 27, 2020</p>
+              <p className="text-xs text-slate-500 mt-3">Since Sep 9, 2020</p>
             </div>
 
             {/* Total Hours Card */}
@@ -224,7 +225,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                 <div className="text-3xl font-bold text-slate-900">{overviewMetrics.fuelConsumed.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-lg text-slate-600">L</span></div>
                 <div className="text-xl font-semibold text-orange-600">{(overviewMetrics.fuelConsumed / 3.78541).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-base text-slate-600">GAL</span></div>
               </div>
-              <p className="text-xs text-slate-500 mt-3">Since Aug 27, 2020</p>
+              <p className="text-xs text-slate-500 mt-3">Since Sep 9, 2020</p>
             </div>
 
             {/* Active Pilots Card */}

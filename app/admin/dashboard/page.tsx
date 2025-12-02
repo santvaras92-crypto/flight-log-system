@@ -105,7 +105,34 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         }
       } catch {}
 
-      const [totalHours, totalRevenue, fuelConsumedDB, activePilots, pendingBalance, thisMonth] = await Promise.all([
+      // Calculate hours since Sep 9, 2020 from CSV
+      let hoursSinceSep2020CSV = 0;
+      try {
+        const csvPath = path.join(process.cwd(), 'Base de dato AQI.csv');
+        if (fs.existsSync(csvPath)) {
+          const content = fs.readFileSync(csvPath, 'utf-8');
+          const lines = content.split('\n').filter(l => l.trim());
+          for (let i = 1; i < lines.length; i++) {
+            const parts = lines[i].split(';');
+            const dateStr = (parts[0] || '').trim();
+            if (!dateStr) continue;
+            
+            const [day, month, year] = dateStr.split('-').map(Number);
+            const fullYear = year < 100 ? (year < 50 ? 2000 + year : 1900 + year) : year;
+            const flightDate = new Date(fullYear, month - 1, day);
+            
+            if (flightDate >= new Date('2020-09-09')) {
+              const hobbsStr = (parts[6] || '').trim().replace(',', '.');
+              const hobbs = parseFloat(hobbsStr);
+              if (!isNaN(hobbs) && hobbs > 0) {
+                hoursSinceSep2020CSV += hobbs;
+              }
+            }
+          }
+        }
+      } catch {}
+
+      const [totalHours, totalRevenue, fuelConsumedDB, hoursSinceSep2020DB, activePilots, pendingBalance, thisMonth] = await Promise.all([
         prisma.flight.aggregate({ _sum: { diff_hobbs: true } }),
         prisma.flight.aggregate({ _sum: { costo: true } }),
         // Try to get fuel from DB if table exists, otherwise use 0
@@ -117,6 +144,11 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
             return 0;
           }
         })(),
+        // Get hours since Sep 9, 2020 from DB
+        prisma.flight.aggregate({
+          where: { fecha: { gte: new Date('2020-09-09') } },
+          _sum: { diff_hobbs: true }
+        }),
         prisma.flight.findMany({
           where: { fecha: { gte: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000) } },
           select: { pilotoId: true, piloto_raw: true },
@@ -132,11 +164,15 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           select: { diff_hobbs: true }
         })
       ]);
+      
+      const totalHoursSinceSep2020 = hoursSinceSep2020CSV + Number(hoursSinceSep2020DB._sum.diff_hobbs || 0);
+      
       return {
         totalHours: Number(totalHours._sum.diff_hobbs) || 0,
         totalFlights: await prisma.flight.count(),
         totalRevenue: Number(totalRevenue._sum.costo) || 0,
         fuelConsumed: totalFuelLitersCSV + Number(fuelConsumedDB),
+        hoursSinceSep2020: totalHoursSinceSep2020,
         activePilots: activePilots.length,
         pendingBalance: Number(pendingBalance._sum.monto) || 0,
         thisMonthFlights: thisMonth.length,

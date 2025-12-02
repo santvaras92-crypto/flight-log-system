@@ -19,9 +19,9 @@ const records = parse(content, {
   delimiter: ';'
 }) as any[];
 
-console.log(`📅 Calculating hours since 27-08-2020...\n`);
+console.log(`📅 Calculating hours since 09-09-2020...\n`);
 
-const cutoffDate = new Date('2020-08-27');
+const cutoffDate = new Date('2020-09-09');
 let totalHoursSince = 0;
 let countSince = 0;
 
@@ -74,8 +74,8 @@ records.forEach((row) => {
   }
 });
 
-console.log(`Flights since 27-08-2020: ${countSince}`);
-console.log(`Total hours since 27-08-2020: ${totalHoursSince.toFixed(1)} hrs`);
+console.log(`Flights since 09-09-2020: ${countSince}`);
+console.log(`Total hours since 09-09-2020: ${totalHoursSince.toFixed(1)} hrs`);
 
 // Calculate fuel consumption rate
 const totalLiters = 28724.184; // From sum-all-liters.ts
