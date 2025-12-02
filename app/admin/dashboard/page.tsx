@@ -191,14 +191,21 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         })
       ]);
       
-      const totalHoursSinceSep2020 = hoursSinceSep2020CSV + Number(hoursSinceSep2020DB._sum.diff_hobbs || 0);
+      const totalHoursSinceSep2020 = Number((hoursSinceSep2020CSV + Number(hoursSinceSep2020DB._sum.diff_hobbs || 0)).toFixed(1));
+      const totalFuelSinceSep2020 = Number(totalFuelLitersCSV + Number(fuelConsumedDB));
+      // Apply 10% idle adjustment: divide by 90% of hours
+      const effectiveHours = totalHoursSinceSep2020 > 0 ? totalHoursSinceSep2020 * 0.9 : 0;
+      const litersPerHourSinceSep2020 = effectiveHours > 0 ? Number((totalFuelSinceSep2020 / effectiveHours).toFixed(2)) : 0;
+      const gallonsPerHourSinceSep2020 = litersPerHourSinceSep2020 > 0 ? Number((litersPerHourSinceSep2020 / 3.78541).toFixed(2)) : 0;
       
       return {
         totalHours: Number(totalHours._sum.diff_hobbs) || 0,
         totalFlights: await prisma.flight.count(),
         totalRevenue: Number(totalRevenue._sum.costo) || 0,
-        fuelConsumed: totalFuelLitersCSV + Number(fuelConsumedDB),
+        fuelConsumed: totalFuelSinceSep2020,
         hoursSinceSep2020: totalHoursSinceSep2020,
+        fuelRateLph: litersPerHourSinceSep2020,
+        fuelRateGph: gallonsPerHourSinceSep2020,
         activePilots: activePilots.length,
         pendingBalance: Number(pendingBalance._sum.monto) || 0,
         thisMonthFlights: thisMonth.length,
