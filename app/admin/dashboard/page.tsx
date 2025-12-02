@@ -85,119 +85,122 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       include: { User: { select: { codigo: true } } },
       orderBy: { fecha: "desc" }
     }),
-    // Overview metrics
+    // Overview metrics - All dynamic from DB
     (async () => {
-      // Calculate total fuel consumed from CSV since Sep 9, 2020
-      let totalFuelLitersCSV = 0;
-      try {
-        const fuelPath = path.join(process.cwd(), 'Combustible', 'Planilla control combustible.csv');
-        if (fs.existsSync(fuelPath)) {
-          const content = fs.readFileSync(fuelPath, 'utf-8');
-          const lines = content.split('\n').filter(l => l.trim());
-          const cutoffDate = new Date('2020-09-09');
-          
-          for (let i = 1; i < lines.length; i++) {
-            const parts = lines[i].split(';');
-            const dateStr = (parts[0] || '').trim();
-            
-            if (!dateStr) continue;
-            
-            // Parse date (DD-MM-YY format)
-            const dateParts = dateStr.split('-');
-            if (dateParts.length !== 3) continue;
-            
-            const day = parseInt(dateParts[0]);
-            const month = parseInt(dateParts[1]);
-            let year = parseInt(dateParts[2]);
-            
-            // Convert 2-digit year to 4-digit
-            if (year < 100) {
-              year = year < 50 ? 2000 + year : 1900 + year;
-            }
-            
-            const fuelDate = new Date(year, month - 1, day);
-            
-            if (fuelDate >= cutoffDate) {
-              const litrosStr = (parts[2] || '').trim().replace(',', '.');
-              const litros = parseFloat(litrosStr);
-              if (!isNaN(litros) && litros > 0) {
-                totalFuelLitersCSV += litros;
-              }
-            }
-          }
-        }
-      } catch {}
+      const sep9_2020 = new Date('2020-09-09');
+      const sixMonthsAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
+      const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
-      // Calculate hours since Sep 9, 2020 from CSV
-      let hoursSinceSep2020CSV = 0;
-      try {
-        const csvPath = path.join(process.cwd(), 'Base de dato AQI.csv');
-        if (fs.existsSync(csvPath)) {
-          const content = fs.readFileSync(csvPath, 'utf-8');
-          const lines = content.split('\n').filter(l => l.trim());
-          for (let i = 1; i < lines.length; i++) {
-            const parts = lines[i].split(';');
-            const dateStr = (parts[0] || '').trim();
-            if (!dateStr) continue;
-            
-            const [day, month, year] = dateStr.split('-').map(Number);
-            const fullYear = year < 100 ? (year < 50 ? 2000 + year : 1900 + year) : year;
-            const flightDate = new Date(fullYear, month - 1, day);
-            
-            if (flightDate >= new Date('2020-09-09')) {
-              const hobbsStr = (parts[6] || '').trim().replace(',', '.');
-              const hobbs = parseFloat(hobbsStr);
-              if (!isNaN(hobbs) && hobbs > 0) {
-                hoursSinceSep2020CSV += hobbs;
-              }
-            }
-          }
-        }
-      } catch {}
-
-      const [totalHours, totalRevenue, hoursSinceSep2020DB, activePilots, pendingBalance, thisMonth] = await Promise.all([
+      const [
+        totalHours,
+        totalFlights,
+        totalRevenue,
+        hoursSinceSep2020,
+        fuelSinceSep2020,
+        activePilots,
+        pendingBalance,
+        thisMonth
+      ] = await Promise.all([
+        // Total hours (all time)
         prisma.flight.aggregate({ _sum: { diff_hobbs: true } }),
+        // Total flights count
+        prisma.flight.count(),
+        // Total revenue (all time)
         prisma.flight.aggregate({ _sum: { costo: true } }),
-        // TODO: Re-enable DB fuel when FuelLog table is created without duplicates
-        // For now, use only CSV to avoid double-counting
-        // Get hours since Sep 9, 2020 from DB
+        // Hours since Sep 9, 2020
         prisma.flight.aggregate({
-          where: { fecha: { gte: new Date('2020-09-09') } },
+          where: { fecha: { gte: sep9_2020 } },
           _sum: { diff_hobbs: true }
         }),
+        // Fuel consumed since Sep 9, 2020 (CSV historical + new DB entries)
+        (async () => {
+          // Get CSV fuel (historical baseline)
+          let csvFuel = 0;
+          let csvLatestDate: Date | null = null;
+          try {
+            const fuelPath = path.join(process.cwd(), 'Combustible', 'Planilla control combustible.csv');
+            if (fs.existsSync(fuelPath)) {
+              const content = fs.readFileSync(fuelPath, 'utf-8');
+              const lines = content.split('\n').filter(l => l.trim());
+              
+              for (let i = 1; i < lines.length; i++) {
+                const parts = lines[i].split(';');
+                const dateStr = (parts[0] || '').trim();
+                if (!dateStr) continue;
+                
+                const dateParts = dateStr.split('-');
+                if (dateParts.length !== 3) continue;
+                
+                const day = parseInt(dateParts[0]);
+                const month = parseInt(dateParts[1]);
+                let year = parseInt(dateParts[2]);
+                if (year < 100) year = year < 50 ? 2000 + year : 1900 + year;
+                
+                const fuelDate = new Date(year, month - 1, day);
+                
+                if (fuelDate >= sep9_2020) {
+                  const litrosStr = (parts[2] || '').trim().replace(',', '.');
+                  const litros = parseFloat(litrosStr);
+                  if (!isNaN(litros) && litros > 0) {
+                    csvFuel += litros;
+                    if (!csvLatestDate || fuelDate > csvLatestDate) {
+                      csvLatestDate = fuelDate;
+                    }
+                  }
+                }
+              }
+            }
+          } catch {}
+          
+          // Get new DB fuel entries after CSV cutoff date
+          let newDbFuel = 0;
+          try {
+            const cutoffDate = csvLatestDate || new Date('2024-01-01'); // Safe fallback
+            const fuelData = await prisma.fuelLog.aggregate({
+              where: { 
+                fecha: { gt: cutoffDate } // Only entries AFTER CSV
+              },
+              _sum: { litros: true }
+            });
+            newDbFuel = Number(fuelData._sum.litros || 0);
+          } catch {}
+          
+          // Return CSV baseline + new DB entries
+          return csvFuel + newDbFuel;
+        })(),
+        // Active pilots (last 6 months, unique pilotoId)
         prisma.flight.findMany({
-          where: { fecha: { gte: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000) } },
-          select: { pilotoId: true, piloto_raw: true },
+          where: { fecha: { gte: sixMonthsAgo } },
+          select: { pilotoId: true },
           distinct: ['pilotoId']
         }),
+        // Pending balance (total deposits)
         prisma.deposit.aggregate({ _sum: { monto: true } }),
+        // This month flights
         prisma.flight.findMany({
-          where: {
-            fecha: {
-              gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-            }
-          },
+          where: { fecha: { gte: firstDayOfMonth } },
           select: { diff_hobbs: true }
         })
       ]);
+
+      const totalHoursSinceSep2020 = Number(hoursSinceSep2020._sum.diff_hobbs || 0);
+      const totalFuelSinceSep2020 = Number(fuelSinceSep2020);
       
-      const totalHoursSinceSep2020 = Number((hoursSinceSep2020CSV + Number(hoursSinceSep2020DB._sum.diff_hobbs || 0)).toFixed(1));
-      const totalFuelSinceSep2020 = Number(totalFuelLitersCSV); // Use CSV only until DB is properly seeded
       // Apply 10% idle adjustment: divide by 90% of hours
       const effectiveHours = totalHoursSinceSep2020 > 0 ? totalHoursSinceSep2020 * 0.9 : 0;
-      const litersPerHourSinceSep2020 = effectiveHours > 0 ? Number((totalFuelSinceSep2020 / effectiveHours).toFixed(2)) : 0;
-      const gallonsPerHourSinceSep2020 = litersPerHourSinceSep2020 > 0 ? Number((litersPerHourSinceSep2020 / 3.78541).toFixed(2)) : 0;
+      const litersPerHour = effectiveHours > 0 ? Number((totalFuelSinceSep2020 / effectiveHours).toFixed(2)) : 0;
+      const gallonsPerHour = litersPerHour > 0 ? Number((litersPerHour / 3.78541).toFixed(2)) : 0;
       
       return {
-        totalHours: Number(totalHours._sum.diff_hobbs) || 0,
-        totalFlights: await prisma.flight.count(),
-        totalRevenue: Number(totalRevenue._sum.costo) || 0,
+        totalHours: Number(totalHours._sum.diff_hobbs || 0),
+        totalFlights: totalFlights,
+        totalRevenue: Number(totalRevenue._sum.costo || 0),
         fuelConsumed: totalFuelSinceSep2020,
         hoursSinceSep2020: totalHoursSinceSep2020,
-        fuelRateLph: litersPerHourSinceSep2020,
-        fuelRateGph: gallonsPerHourSinceSep2020,
+        fuelRateLph: litersPerHour,
+        fuelRateGph: gallonsPerHour,
         activePilots: activePilots.length,
-        pendingBalance: Number(pendingBalance._sum.monto) || 0,
+        pendingBalance: Number(pendingBalance._sum.monto || 0),
         thisMonthFlights: thisMonth.length,
         thisMonthHours: thisMonth.reduce((sum, f) => sum + (Number(f.diff_hobbs) || 0), 0)
       };
