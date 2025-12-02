@@ -155,21 +155,11 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         }
       } catch {}
 
-      const [totalHours, totalRevenue, fuelConsumedDB, hoursSinceSep2020DB, activePilots, pendingBalance, thisMonth] = await Promise.all([
+      const [totalHours, totalRevenue, hoursSinceSep2020DB, activePilots, pendingBalance, thisMonth] = await Promise.all([
         prisma.flight.aggregate({ _sum: { diff_hobbs: true } }),
         prisma.flight.aggregate({ _sum: { costo: true } }),
-        // Try to get fuel from DB if table exists, filter since Sep 9, 2020
-        (async () => {
-          try {
-            const result = await (prisma as any).fuelLog?.aggregate({ 
-              where: { fecha: { gte: new Date('2020-09-09') } },
-              _sum: { litros: true } 
-            });
-            return result?._sum?.litros || 0;
-          } catch {
-            return 0;
-          }
-        })(),
+        // TODO: Re-enable DB fuel when FuelLog table is created without duplicates
+        // For now, use only CSV to avoid double-counting
         // Get hours since Sep 9, 2020 from DB
         prisma.flight.aggregate({
           where: { fecha: { gte: new Date('2020-09-09') } },
@@ -192,7 +182,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       ]);
       
       const totalHoursSinceSep2020 = Number((hoursSinceSep2020CSV + Number(hoursSinceSep2020DB._sum.diff_hobbs || 0)).toFixed(1));
-      const totalFuelSinceSep2020 = Number(totalFuelLitersCSV + Number(fuelConsumedDB));
+      const totalFuelSinceSep2020 = Number(totalFuelLitersCSV); // Use CSV only until DB is properly seeded
       // Apply 10% idle adjustment: divide by 90% of hours
       const effectiveHours = totalHoursSinceSep2020 > 0 ? totalHoursSinceSep2020 * 0.9 : 0;
       const litersPerHourSinceSep2020 = effectiveHours > 0 ? Number((totalFuelSinceSep2020 / effectiveHours).toFixed(2)) : 0;

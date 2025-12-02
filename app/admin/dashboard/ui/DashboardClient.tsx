@@ -174,7 +174,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                     : '0,00'} <span className="text-base text-slate-600">GAL/H</span>
                 </div>
               </div>
-              <p className="text-xs text-slate-500 mt-3">Since Sep 9, 2020</p>
+              <p className="text-xs text-slate-500 mt-3">Since Sep 9, 2020 • Excludes 10% idle time</p>
             </div>
 
             {/* Total Hours Card */}
