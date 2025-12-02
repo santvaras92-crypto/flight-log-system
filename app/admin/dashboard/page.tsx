@@ -96,7 +96,8 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         totalRevenue,
         fuelSinceSep2020,
         activePilots,
-        pendingBalance,
+        depositsFromDB,
+        paymentsFromCSV,
         thisMonth,
         // Fetch flights needed to compute hours with fallback
         flightsForHoursAllTime,
@@ -168,8 +169,35 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           select: { pilotoId: true },
           distinct: ['pilotoId']
         }),
-        // Pending balance (total deposits)
+        // Total deposits from DB
         prisma.deposit.aggregate({ _sum: { monto: true } }),
+        // Total payments from CSV (Pago pilotos.csv)
+        (async () => {
+          let csvPayments = 0;
+          try {
+            const paymentsPath = path.join(process.cwd(), 'Pago pilotos', 'Pago pilotos.csv');
+            if (fs.existsSync(paymentsPath)) {
+              const raw = fs.readFileSync(paymentsPath, 'utf-8');
+              const lines = raw.split('\n').filter(l => l.trim());
+              
+              const parseCurrency = (value?: string) => {
+                if (!value) return 0;
+                const cleaned = value.replace(/[^0-9,-]/g, '').replace(/\./g, '').replace(',', '.');
+                if (!cleaned) return 0;
+                const num = Number(cleaned);
+                return Number.isFinite(num) ? num : 0;
+              };
+              
+              // Skip header, sum column 3 (ingreso)
+              lines.slice(1).forEach(line => {
+                const cols = line.split(';');
+                const amount = parseCurrency(cols[2]);
+                csvPayments += amount;
+              });
+            }
+          } catch {}
+          return csvPayments;
+        })(),
         // This month flights
         prisma.flight.findMany({
           where: { fecha: { gte: firstDayOfMonth } },
@@ -255,6 +283,12 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       const oilChangeRemaining = Math.max(0, OIL_INTERVAL - (oilUsed < 0 ? 0 : oilUsed));
       const hundredHourRemaining = Math.max(0, INSPECT_100_INTERVAL - (inspectUsed < 0 ? 0 : inspectUsed));
       
+      // Calculate total payments (CSV + DB deposits)
+      const totalPayments = paymentsFromCSV + Number(depositsFromDB._sum.monto || 0);
+      
+      // Fixed adjustment for pending balance
+      const FIXED_ADJUSTMENT = 22471361;
+      
       return {
         totalHours: totalHoursAllTime,
         totalFlights: totalFlights,
@@ -264,7 +298,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         fuelRateLph: litersPerHour,
         fuelRateGph: gallonsPerHour,
         activePilots: activePilots.length,
-        pendingBalance: Number(pendingBalance._sum.monto || 0),
+        pendingBalance: Number(totalRevenue._sum.costo || 0) - totalPayments - FIXED_ADJUSTMENT,
         thisMonthFlights: thisMonth.length,
         thisMonthHours: thisMonth.reduce((sum, f) => sum + (Number(f.diff_hobbs) || 0), 0),
         nextInspections: {
