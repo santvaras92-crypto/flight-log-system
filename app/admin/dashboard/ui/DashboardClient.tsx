@@ -32,7 +32,7 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState("flights");
-  const [pilotSubTab, setPilotSubTab] = useState<"accounts" | "directory">("accounts");
+  const [pilotSubTab, setPilotSubTab] = useState<"accounts" | "directory" | "deposits">("accounts");
   const [filterAircraft, setFilterAircraft] = useState("");
   const [filterPilot, setFilterPilot] = useState("");
   const [theme, setTheme] = useState<string>('hybrid');
@@ -274,9 +274,20 @@ export default function DashboardClient({ initialData, pagination, allowedPilotC
             >
               Pilot Directory
             </button>
+            <button
+              onClick={() => setPilotSubTab("deposits")}
+              className={`px-6 py-3 rounded-xl font-bold uppercase tracking-wide text-sm transition-all ${
+                pilotSubTab === "deposits"
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl'
+                  : 'bg-white/50 text-slate-600 hover:bg-white/80 border-2 border-slate-200'
+              }`}
+            >
+              Deposits
+            </button>
           </div>
           {pilotSubTab === "accounts" && <PilotsTable users={initialData.users} flights={initialData.allFlights || initialData.flights} transactions={initialData.transactions} fuelByCode={initialData.fuelByCode} depositsByCode={initialData.depositsByCode} csvPilotStats={initialData.csvPilotStats} allowedPilotCodes={allowedPilotCodes} registeredPilotCodes={registeredPilotCodes} csvPilotNames={csvPilotNames} />}
           {pilotSubTab === "directory" && <PilotDirectory directory={initialData.pilotDirectory} />}
+          {pilotSubTab === "deposits" && <DepositsTable depositsDetailsByCode={initialData.depositsDetailsByCode} csvPilotNames={csvPilotNames} />}
         </>
       )}
       {tab === "maintenance" && <MaintenanceTable components={initialData.components} aircraft={initialData.aircraft} />}
@@ -1528,6 +1539,108 @@ function FinanceCharts({ flights, transactions, palette }: { flights: any[]; tra
       </div>
       <div className="p-8">
         <canvas ref={barRef} height={160} />
+      </div>
+    </div>
+  );
+}
+
+function DepositsTable({ depositsDetailsByCode, csvPilotNames }: { depositsDetailsByCode?: Record<string, { fecha: string; descripcion: string; monto: number }[]>; csvPilotNames?: Record<string, string> }) {
+  const [sortBy, setSortBy] = useState<"date" | "pilot" | "amount">("date");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  const allDeposits = useMemo(() => {
+    const deposits: { code: string; pilotName: string; fecha: string; descripcion: string; monto: number }[] = [];
+    if (!depositsDetailsByCode) return deposits;
+
+    Object.entries(depositsDetailsByCode).forEach(([code, records]) => {
+      const pilotName = csvPilotNames?.[code] || code;
+      records.forEach(r => {
+        deposits.push({ code, pilotName, fecha: r.fecha, descripcion: r.descripcion, monto: r.monto });
+      });
+    });
+
+    return deposits.sort((a, b) => {
+      if (sortBy === "date") {
+        const diff = new Date(b.fecha).getTime() - new Date(a.fecha).getTime();
+        return sortOrder === "desc" ? diff : -diff;
+      }
+      if (sortBy === "pilot") {
+        const diff = a.pilotName.localeCompare(b.pilotName);
+        return sortOrder === "desc" ? -diff : diff;
+      }
+      if (sortBy === "amount") {
+        const diff = b.monto - a.monto;
+        return sortOrder === "desc" ? diff : -diff;
+      }
+      return 0;
+    });
+  }, [depositsDetailsByCode, csvPilotNames, sortBy, sortOrder]);
+
+  const totalAmount = useMemo(() => allDeposits.reduce((sum, d) => sum + d.monto, 0), [allDeposits]);
+
+  const toggleSort = (column: "date" | "pilot" | "amount") => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === "desc" ? "asc" : "desc");
+    } else {
+      setSortBy(column);
+      setSortOrder("desc");
+    }
+  };
+
+  return (
+    <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-2xl shadow-lg overflow-hidden">
+      <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
+        <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+          All Deposits — {allDeposits.length} records
+        </h3>
+        <p className="text-blue-200 text-sm mt-2">Total: ${totalAmount.toLocaleString('es-CL')}</p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-100 border-b-2 border-slate-300">
+            <tr>
+              <th 
+                className="px-6 py-4 text-left font-bold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-slate-200 transition"
+                onClick={() => toggleSort("date")}
+              >
+                Date {sortBy === "date" && (sortOrder === "desc" ? "↓" : "↑")}
+              </th>
+              <th 
+                className="px-6 py-4 text-left font-bold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-slate-200 transition"
+                onClick={() => toggleSort("pilot")}
+              >
+                Pilot {sortBy === "pilot" && (sortOrder === "desc" ? "↓" : "↑")}
+              </th>
+              <th className="px-6 py-4 text-left font-bold text-slate-700 uppercase tracking-wider">
+                Description
+              </th>
+              <th 
+                className="px-6 py-4 text-right font-bold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-slate-200 transition"
+                onClick={() => toggleSort("amount")}
+              >
+                Amount {sortBy === "amount" && (sortOrder === "desc" ? "↓" : "↑")}
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200">
+            {allDeposits.map((d, idx) => (
+              <tr key={idx} className="hover:bg-blue-50 transition">
+                <td className="px-6 py-4 text-slate-700 font-medium">{d.fecha}</td>
+                <td className="px-6 py-4 text-slate-900 font-semibold">
+                  {d.pilotName}
+                  <span className="ml-2 text-xs text-slate-500 font-normal">({d.code})</span>
+                </td>
+                <td className="px-6 py-4 text-slate-600">{d.descripcion}</td>
+                <td className="px-6 py-4 text-right text-green-700 font-bold">
+                  ${d.monto.toLocaleString('es-CL')}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
