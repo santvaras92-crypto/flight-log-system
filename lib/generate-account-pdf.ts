@@ -139,7 +139,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   doc.text('PILOT ACCOUNT STATEMENT', pageWidth / 2, 14, { align: 'center' });
   
   // CC-AQI title - just below PILOT ACCOUNT STATEMENT
-  doc.setFontSize(18);
+  doc.setFontSize(15);
   doc.setFont('helvetica', 'bold');
   doc.text('CC-AQI', pageWidth / 2, 21, { align: 'center' });
   
