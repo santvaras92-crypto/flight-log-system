@@ -76,35 +76,30 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     console.error('Could not load logo:', e);
   }
   
-  // Aviation Corporate Color Palette
+  // Professional PDF Color Palette - High contrast for print
   const colors = {
-    // Aviation Blues - Azules aeronáuticos profesionales
-    aviationBlue900: [12, 34, 63] as [number, number, number],      // #0C223F - Más oscuro, headers principales
-    aviationBlue800: [20, 52, 89] as [number, number, number],      // #143459 - Backgrounds premium
-    aviationBlue700: [28, 71, 120] as [number, number, number],     // #1C4778 - Elementos destacados
-    aviationBlue600: [37, 89, 152] as [number, number, number],     // #255998 - Primary interactive
-    aviationBlue500: [67, 97, 238] as [number, number, number],     // #4361EE - Accent principal (header actual)
+    // Navy Blue - Header principal
+    navy: [11, 31, 59] as [number, number, number],              // #0B1F3B - Navy principal
+    navyLight: [16, 42, 67] as [number, number, number],         // #102A43 - Navy variante
     
-    // Neutrals - Grises corporativos
-    gray900: [17, 24, 39] as [number, number, number],              // #111827 - Texto principal
-    gray800: [31, 41, 55] as [number, number, number],              // #1F2937 - Texto secundario
-    gray700: [55, 65, 81] as [number, number, number],              // #374151 - Texto suave
-    gray600: [75, 85, 99] as [number, number, number],              // #4B5563 - Texto muted
-    gray500: [107, 114, 128] as [number, number, number],           // #6B7280 - Labels
-    gray400: [156, 163, 175] as [number, number, number],           // #9CA3AF - Borders suaves
-    gray300: [209, 213, 219] as [number, number, number],           // #D1D5DB - Borders light
-    gray200: [229, 231, 235] as [number, number, number],           // #E5E7EB - Backgrounds light
-    gray100: [243, 244, 246] as [number, number, number],           // #F3F4F6 - Backgrounds muy light
-    gray50: [249, 250, 251] as [number, number, number],            // #F9FAFB - Casi blanco
+    // Backgrounds - Limpios y profesionales
+    bgPrimary: [248, 250, 252] as [number, number, number],      // #F8FAFC - Fondo principal casi blanco
+    white: [255, 255, 255] as [number, number, number],          // #FFFFFF - Tarjetas/bloques
     
-    // Accent Colors - Colores de estado
-    success: [16, 185, 129] as [number, number, number],            // #10B981 - Verde success
-    warning: [245, 158, 11] as [number, number, number],            // #F59E0B - Amarillo warning
-    danger: [239, 68, 68] as [number, number, number],              // #EF4444 - Rojo danger
-    info: [6, 182, 212] as [number, number, number],                // #06B6D4 - Cyan info
+    // Neutrals - Alto contraste para impresión
+    textPrimary: [17, 24, 39] as [number, number, number],       // #111827 - Texto principal
+    textSecondary: [75, 85, 99] as [number, number, number],     // #4B5563 - Texto secundario
+    textMuted: [156, 163, 175] as [number, number, number],      // #9CA3AF - Texto muted
+    border: [229, 231, 235] as [number, number, number],         // #E5E7EB - Bordes
+    tableAlt: [243, 244, 246] as [number, number, number],       // #F3F4F6 - Filas alternadas
+    cardBg: [249, 250, 251] as [number, number, number],         // #F9FAFB - Fondo cards
     
-    // Base
-    white: [255, 255, 255] as [number, number, number],
+    // Accent Colors - Solo para cifras clave
+    primary: [37, 99, 235] as [number, number, number],          // #2563EB - Blue primary/totales
+    success: [5, 150, 105] as [number, number, number],          // #059669 - Verde depósitos/saldo+
+    warning: [217, 119, 6] as [number, number, number],          // #D97706 - Naranjo combustible/gastos
+    danger: [220, 38, 38] as [number, number, number],           // #DC2626 - Rojo saldo negativo
+    info: [14, 165, 233] as [number, number, number],            // #0EA5E9 - Celeste horas/métricas
   };
   
   // Helper functions
@@ -118,12 +113,12 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   };
 
   // === EXECUTIVE AVIATION HEADER ===
-  // Navy blue background
-  doc.setFillColor(...colors.aviationBlue900);
+  // Navy blue background (#0B1F3B)
+  doc.setFillColor(...colors.navy);
   doc.rect(0, 0, pageWidth, 38, 'F');
   
-  // Subtle darker bottom accent (simulated gradient)
-  doc.setFillColor(...colors.aviationBlue800);
+  // Subtle darker bottom accent
+  doc.setFillColor(...colors.navyLight);
   doc.rect(0, 34, pageWidth, 4, 'F');
   
   // Logo - premium positioning
@@ -168,18 +163,18 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   const clientCardY = 48;
   
   // Clean card with border
-  doc.setDrawColor(...colors.gray300);
+  doc.setDrawColor(...colors.border);
   doc.setFillColor(...colors.white);
   doc.setLineWidth(0.4);
   doc.roundedRect(18, clientCardY, pageWidth - 36, 18, 3, 3, 'FD');
   
   // Client info - centered layout
-  doc.setTextColor(...colors.gray500);
+  doc.setTextColor(...colors.textMuted);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.text('Pilot:', 24, clientCardY + 8);
   
-  doc.setTextColor(...colors.gray900);
+  doc.setTextColor(...colors.textPrimary);
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.text(data.clientName, 24, clientCardY + 14);
@@ -191,17 +186,17 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   const cardGap = 4;
 
   const summaryItems = [
-    { label: 'Total Flights', value: data.totalFlights.toString(), color: colors.aviationBlue600, bgColor: colors.gray50 },
-    { label: 'Total Hours', value: `${data.totalHours.toFixed(1)}h`, color: colors.info, bgColor: colors.gray50 },
-    { label: 'Total Spent', value: formatCurrency(data.totalSpent), color: colors.warning, bgColor: colors.gray50 },
-    { label: 'Balance', value: formatCurrency(data.balance), color: data.balance >= 0 ? colors.success : colors.danger, bgColor: colors.gray50 },
+    { label: 'Total Flights', value: data.totalFlights.toString(), color: colors.primary, bgColor: colors.cardBg },
+    { label: 'Total Hours', value: `${data.totalHours.toFixed(1)}h`, color: colors.info, bgColor: colors.cardBg },
+    { label: 'Total Spent', value: formatCurrency(data.totalSpent), color: colors.warning, bgColor: colors.cardBg },
+    { label: 'Balance', value: formatCurrency(data.balance), color: data.balance >= 0 ? colors.success : colors.danger, bgColor: colors.cardBg },
   ];
 
   summaryItems.forEach((item, i) => {
     const x = 18 + i * (cardWidth + cardGap);
     
-    // Card background - light gray with border
-    doc.setDrawColor(...colors.gray300);
+    // Card background - white with border
+    doc.setDrawColor(...colors.border);
     doc.setFillColor(...item.bgColor);
     doc.setLineWidth(0.4);
     doc.roundedRect(x, cardY, cardWidth, cardHeight, 4, 4, 'FD');
@@ -210,8 +205,8 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     doc.setFillColor(...item.color);
     doc.roundedRect(x, cardY, cardWidth, 3, 4, 4, 'F');
     
-    // Label - uppercase, small, gray
-    doc.setTextColor(...colors.gray500);
+    // Label - uppercase, small, muted
+    doc.setTextColor(...colors.textMuted);
     doc.setFontSize(6.5);
     doc.setFont('helvetica', 'bold');
     const labelUpper = item.label.toUpperCase();
@@ -227,8 +222,8 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   // === FINANCIAL SUMMARY - EXECUTIVE CARD ===
   let currentY = cardY + cardHeight + 18;
   
-  // Section title - aviation style
-  doc.setFillColor(...colors.aviationBlue900);
+  // Section title - navy style
+  doc.setFillColor(...colors.navy);
   doc.roundedRect(18, currentY, pageWidth - 36, 8, 2, 2, 'F');
   
   doc.setTextColor(...colors.white);
@@ -254,19 +249,19 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     styles: {
       fontSize: 9,
       cellPadding: 4,
-      lineColor: colors.gray300,
+      lineColor: colors.border,
       lineWidth: 0.15,
     },
     columnStyles: {
       0: { 
         fontStyle: 'normal', 
-        textColor: colors.gray600,
+        textColor: colors.textSecondary,
         cellWidth: 70,
       },
       1: { 
         fontStyle: 'bold', 
         halign: 'right', 
-        textColor: colors.gray900,
+        textColor: colors.textPrimary,
         cellWidth: 50,
       },
     },
@@ -278,12 +273,12 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
         data.cell.styles.fontStyle = 'bold';
         data.cell.styles.fontSize = 10;
       }
-      // Color code amounts with aviation palette
+      // Color code amounts with specific accents
       if (data.column.index === 1) {
         if (data.row.index === 0) {
           data.cell.styles.textColor = colors.success; // Deposits - green
         } else if (data.row.index === 1 || data.row.index === 2) {
-          data.cell.styles.textColor = colors.warning; // Fuel/Spent - warning
+          data.cell.styles.textColor = colors.warning; // Fuel/Spent - orange
         } else if (data.row.index === 3) {
           const balanceValue = financialData[3][1];
           const isNegative = balanceValue.includes('-');
@@ -297,8 +292,8 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   currentY = (doc as any).lastAutoTable?.finalY + 18 || currentY + 50;
   
   if (data.deposits.length > 0) {
-    // Section header - success green
-    doc.setFillColor(...colors.success);
+    // Section header - navy
+    doc.setFillColor(...colors.navy);
     doc.roundedRect(18, currentY, pageWidth - 36, 8, 2, 2, 'F');
     
     doc.setTextColor(...colors.white);
@@ -320,7 +315,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
       theme: 'striped',
       margin: { left: 18, right: 18 },
       headStyles: {
-        fillColor: colors.aviationBlue700,
+        fillColor: colors.navy,
         textColor: colors.white,
         fontStyle: 'bold',
         fontSize: 8,
@@ -329,19 +324,19 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
       },
       bodyStyles: {
         fontSize: 8,
-        textColor: colors.gray800,
+        textColor: colors.textPrimary,
         cellPadding: 4,
       },
       alternateRowStyles: {
-        fillColor: colors.gray100,
+        fillColor: colors.tableAlt,
       },
       columnStyles: {
         0: { cellWidth: 28, halign: 'left' },
-        1: { cellWidth: 'auto', halign: 'left', textColor: colors.gray600 },
+        1: { cellWidth: 'auto', halign: 'left', textColor: colors.textSecondary },
         2: { cellWidth: 35, halign: 'right', fontStyle: 'bold', textColor: colors.success },
       },
       styles: {
-        lineColor: colors.gray300,
+        lineColor: colors.border,
         lineWidth: 0.2,
       },
     });
@@ -357,8 +352,8 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
       currentY = 24;
     }
 
-    // Section header - warning orange
-    doc.setFillColor(...colors.warning);
+    // Section header - navy
+    doc.setFillColor(...colors.navy);
     doc.roundedRect(18, currentY, pageWidth - 36, 8, 2, 2, 'F');
     
     doc.setTextColor(...colors.white);
@@ -380,7 +375,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
       theme: 'striped',
       margin: { left: 18, right: 18 },
       headStyles: {
-        fillColor: colors.aviationBlue700,
+        fillColor: colors.navy,
         textColor: colors.white,
         fontStyle: 'bold',
         fontSize: 8,
@@ -389,19 +384,19 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
       },
       bodyStyles: {
         fontSize: 8,
-        textColor: colors.gray800,
+        textColor: colors.textPrimary,
         cellPadding: 4,
       },
       alternateRowStyles: {
-        fillColor: colors.gray100,
+        fillColor: colors.tableAlt,
       },
       columnStyles: {
         0: { cellWidth: 28, halign: 'left' },
-        1: { cellWidth: 'auto', halign: 'left', textColor: colors.gray600 },
+        1: { cellWidth: 'auto', halign: 'left', textColor: colors.textSecondary },
         2: { cellWidth: 35, halign: 'right', fontStyle: 'bold', textColor: colors.warning },
       },
       styles: {
-        lineColor: colors.gray300,
+        lineColor: colors.border,
         lineWidth: 0.2,
       },
     });
@@ -416,8 +411,8 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     currentY = 24;
   }
   
-  // Section header - aviation blue primary
-  doc.setFillColor(...colors.aviationBlue600);
+  // Section header - navy
+  doc.setFillColor(...colors.navy);
   doc.roundedRect(18, currentY, pageWidth - 36, 8, 2, 2, 'F');
   
   doc.setTextColor(...colors.white);
@@ -462,7 +457,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
       theme: 'striped',
       margin: { left: 18, right: 18 },
       headStyles: {
-        fillColor: colors.aviationBlue700,
+        fillColor: colors.navy,
         textColor: colors.white,
         fontStyle: 'bold',
         fontSize: 8,
@@ -471,22 +466,22 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
       },
       bodyStyles: {
         fontSize: 7.5,
-        textColor: colors.gray800,
+        textColor: colors.textPrimary,
         cellPadding: 3.5,
       },
       alternateRowStyles: {
-        fillColor: colors.gray100,
+        fillColor: colors.tableAlt,
       },
       columnStyles: {
         0: { cellWidth: 24, halign: 'left' },
         1: { cellWidth: 16, halign: 'right', textColor: colors.info },
-        2: { cellWidth: 26, halign: 'right', fontStyle: 'normal', textColor: colors.aviationBlue600 },
-        3: { cellWidth: 28, halign: 'right', fontStyle: 'normal', textColor: colors.aviationBlue600 },
-        4: { cellWidth: 26, halign: 'right', fontStyle: 'bold', textColor: colors.gray900 },
-        5: { cellWidth: 'auto', halign: 'left', textColor: colors.gray600 },
+        2: { cellWidth: 26, halign: 'right', fontStyle: 'normal', textColor: colors.warning },
+        3: { cellWidth: 28, halign: 'right', fontStyle: 'normal', textColor: colors.warning },
+        4: { cellWidth: 26, halign: 'right', fontStyle: 'bold', textColor: colors.primary },
+        5: { cellWidth: 'auto', halign: 'left', textColor: colors.textSecondary },
       },
       styles: {
-        lineColor: colors.gray300,
+        lineColor: colors.border,
         lineWidth: 0.2,
       },
     });
@@ -505,19 +500,19 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     footerY = 24;
   }
   
-  // Separator line - elegant aviation blue
-  doc.setDrawColor(...colors.aviationBlue600);
+  // Separator line - navy blue
+  doc.setDrawColor(...colors.navy);
   doc.setLineWidth(0.6);
   doc.line(18, footerY - 6, pageWidth - 18, footerY - 6);
   
-  // Bank details card - premium style
-  doc.setDrawColor(...colors.gray300);
-  doc.setFillColor(...colors.gray50);
+  // Bank details card - clean white
+  doc.setDrawColor(...colors.border);
+  doc.setFillColor(...colors.white);
   doc.setLineWidth(0.4);
   doc.roundedRect(18, footerY, pageWidth - 36, 36, 3, 3, 'FD');
   
-  // Title for bank section with accent
-  doc.setFillColor(...colors.aviationBlue700);
+  // Title for bank section - navy accent
+  doc.setFillColor(...colors.navy);
   doc.roundedRect(18, footerY, pageWidth - 36, 7, 3, 3, 'F');
   
   doc.setTextColor(...colors.white);
@@ -525,10 +520,10 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   doc.setFont('helvetica', 'bold');
   doc.text('WIRE TRANSFER INFORMATION', 24, footerY + 4.5);
   
-  // Bank details - clean professional layout
+  // Bank details - professional layout
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
-  doc.setTextColor(...colors.gray700);
+  doc.setTextColor(...colors.textPrimary);
   
   const bankInfo = [
     'Account Holder: SANTIAGO NICOLAS VARAS SAAVEDRA',
@@ -543,16 +538,16 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     infoY += 5;
   });
   
-  // Footer bar on all pages - aviation blue premium
+  // Footer bar on all pages - navy blue
   const pagesCount = doc.internal.pages.length - 1;
   for (let i = 1; i <= pagesCount; i++) {
     doc.setPage(i);
     
-    // Footer background - aviation blue dark
-    doc.setFillColor(...colors.aviationBlue800);
+    // Footer background - navy
+    doc.setFillColor(...colors.navy);
     doc.rect(0, pageHeight - 10, pageWidth, 10, 'F');
     
-    // Footer text - white, elegant
+    // Footer text - white
     doc.setTextColor(...colors.white);
     doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
