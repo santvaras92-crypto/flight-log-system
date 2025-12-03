@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import path from 'path';
 import { promises as fs } from 'fs';
+import { deleteFuelLog } from '@/app/actions/delete-fuel-log';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,6 +63,7 @@ export default async function FuelChargesPage() {
               <th className="px-3 py-2 border">Monto</th>
               <th className="px-3 py-2 border">Detalle</th>
               <th className="px-3 py-2 border">Boleta</th>
+              <th className="px-3 py-2 border">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -88,6 +90,12 @@ export default async function FuelChargesPage() {
                   ) : (
                     '-'
                   )}
+                </td>
+                <td className="px-3 py-2 border">
+                  <form action={deleteFuelLog} onSubmit={(e)=>{ if(!confirm(`¿Eliminar registro ${l.id}?`)) { e.preventDefault(); } }}>
+                    <input type="hidden" name="fuelLogId" value={l.id} />
+                    <button type="submit" className="px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700">Eliminar</button>
+                  </form>
                 </td>
               </tr>
             ))}
