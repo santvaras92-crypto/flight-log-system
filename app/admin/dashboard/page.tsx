@@ -589,7 +589,22 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       });
       return map;
     })(),
-    fuelLogs: fuelLogs.map(l => ({ ...l, litros: Number(l.litros), monto: Number(l.monto), User: l.User })),
+    fuelLogs: await (async () => {
+      const pathMod = await import('path');
+      const fsMod = await import('fs');
+      const logsWithExists = await Promise.all(
+        fuelLogs.map(async (l: any) => {
+          const filename = l.imageUrl?.startsWith('/uploads/fuel/') ? l.imageUrl.split('/').pop() || '' : '';
+          const filePath = filename ? pathMod.join(process.cwd(), 'public', 'uploads', 'fuel', filename) : '';
+          let exists = false;
+          try {
+            if (filePath && fsMod.existsSync(filePath)) exists = true;
+          } catch {}
+          return { ...l, litros: Number(l.litros), monto: Number(l.monto), User: l.User, exists };
+        })
+      );
+      return logsWithExists;
+    })(),
     pilotDirectory: {
       initial: csvPilots,
       registered: users

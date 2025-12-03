@@ -1454,9 +1454,9 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
                           : l.imageUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-blue-600 hover:text-blue-800 underline font-medium"
+                        className={`underline font-medium ${l.exists ? 'text-blue-600 hover:text-blue-800' : 'text-slate-400 pointer-events-none'}`}
                       >
-                        Ver
+                        {l.exists ? 'Ver' : 'No disponible'}
                       </a>
                     ) : (
                       <span className="text-slate-400">-</span>

@@ -1,9 +1,11 @@
 import { prisma } from '@/lib/prisma';
+import path from 'path';
+import { promises as fs } from 'fs';
 
 export const dynamic = 'force-dynamic';
 
 export default async function FuelChargesPage() {
-  const logs = await prisma.fuelLog.findMany({
+  const logsRaw = await prisma.fuelLog.findMany({
     orderBy: { fecha: 'desc' },
     select: {
       id: true,
@@ -16,6 +18,20 @@ export default async function FuelChargesPage() {
       User: { select: { nombre: true, codigo: true } },
     },
   });
+  const logs = await Promise.all(
+    logsRaw.map(async (l) => {
+      const filename = l.imageUrl?.startsWith('/uploads/fuel/') ? l.imageUrl.split('/').pop() || '' : '';
+      const filePath = filename ? path.join(process.cwd(), 'public', 'uploads', 'fuel', filename) : '';
+      let exists = false;
+      try {
+        if (filePath) {
+          await fs.access(filePath);
+          exists = true;
+        }
+      } catch {}
+      return { ...l, exists };
+    })
+  );
 
   return (
     <div className="p-6">
@@ -50,9 +66,9 @@ export default async function FuelChargesPage() {
                         : l.imageUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-blue-600 underline"
+                      className={`underline ${l.exists ? 'text-blue-600' : 'text-slate-400 pointer-events-none'}`}
                     >
-                      Ver
+                      {l.exists ? 'Ver' : 'No disponible'}
                     </a>
                   ) : (
                     '-'
