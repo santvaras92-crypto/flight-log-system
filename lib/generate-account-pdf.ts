@@ -76,11 +76,12 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     console.error('Could not load logo:', e);
   }
   
-  // Professional PDF Color Palette - High contrast for print
+  // Professional PDF Color Palette - Matching Dashboard Theme
   const colors = {
-    // Navy Blue - Header principal
-    navy: [11, 31, 59] as [number, number, number],              // #0B1F3B - Navy principal
-    navyLight: [16, 42, 67] as [number, number, number],         // #102A43 - Navy variante
+    // Blue gradient from dashboard header (from-blue-700 via-blue-800 to-indigo-900)
+    navy: [30, 64, 175] as [number, number, number],             // #1e40af - blue-800 (main header)
+    navyLight: [29, 78, 216] as [number, number, number],        // #1d4ed8 - blue-700
+    navyDark: [49, 46, 129] as [number, number, number],         // #312e81 - indigo-900
     
     // Backgrounds - Limpios y profesionales
     bgPrimary: [248, 250, 252] as [number, number, number],      // #F8FAFC - Fondo principal casi blanco
@@ -112,13 +113,13 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     return d.toLocaleDateString('en-US');
   };
 
-  // === EXECUTIVE AVIATION HEADER ===
-  // Navy blue background (#0B1F3B)
+  // === EXECUTIVE AVIATION HEADER - Matching Dashboard Gradient ===
+  // Main header - blue-800 (#1e40af)
   doc.setFillColor(...colors.navy);
   doc.rect(0, 0, pageWidth, 38, 'F');
   
-  // Subtle darker bottom accent
-  doc.setFillColor(...colors.navyLight);
+  // Subtle bottom accent - indigo-900 (#312e81)
+  doc.setFillColor(...colors.navyDark);
   doc.rect(0, 34, pageWidth, 4, 'F');
   
   // Logo - premium positioning
