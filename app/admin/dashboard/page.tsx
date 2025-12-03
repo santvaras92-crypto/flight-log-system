@@ -199,11 +199,11 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           } catch {}
           return csvPayments;
         })(),
-        // Fuel charges from DB (excluding Stratus user ID 96, from Dec 2, 2025 onwards)
-        prisma.fuelLog.aggregate({
+        // Fuel charges from DB transactions (tipo FUEL, excluding Stratus user ID 96)
+        prisma.transaction.aggregate({
           where: { 
-            userId: { not: 96 },
-            fecha: { gte: new Date('2025-12-02') }
+            tipo: 'FUEL',
+            userId: { not: 96 }
           },
           _sum: { monto: true }
         }),
@@ -446,6 +446,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     transactions: transactions.map(t => ({ ...t, monto: Number(t.monto) })),
     fuelByCode: (() => {
       const map: Record<string, number> = {};
+      // 1. Read CSV historical fuel
       try {
         const fuelPath = path.join(process.cwd(), 'Combustible', 'Planilla control combustible.csv');
         if (fs.existsSync(fuelPath)) {
@@ -465,6 +466,16 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           }
         }
       } catch {}
+      // 2. Add DB Transaction tipo FUEL, mapped by user codigo
+      transactions.forEach(t => {
+        if (t.tipo === 'FUEL' && t.userId) {
+          const user = users.find(u => u.id === t.userId);
+          const code = user?.codigo?.toUpperCase();
+          if (code) {
+            map[code] = (map[code] || 0) + Number(t.monto);
+          }
+        }
+      });
       return map;
     })(),
     // Detailed fuel records by code for PDF
