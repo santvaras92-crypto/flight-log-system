@@ -43,7 +43,16 @@ export default async function FuelChargesPage() {
                 <td className="px-3 py-2 border">{l.detalle || ''}</td>
                 <td className="px-3 py-2 border">
                   {l.imageUrl ? (
-                    <a href={l.imageUrl} target="_blank" rel="noreferrer" className="text-blue-600 underline">Ver</a>
+                    <a
+                      href={l.imageUrl.startsWith('/uploads/fuel/')
+                        ? `/api/uploads/fuel/${l.imageUrl.split('/').pop()}`
+                        : l.imageUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-600 underline"
+                    >
+                      Ver
+                    </a>
                   ) : (
                     '-'
                   )}
