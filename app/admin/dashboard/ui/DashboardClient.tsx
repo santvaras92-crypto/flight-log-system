@@ -16,6 +16,7 @@ type InitialData = {
   submissions: any[];
   components: any[];
   transactions: any[];
+  fuelLogs?: any[];
   fuelByCode?: Record<string, number>;
   fuelDetailsByCode?: Record<string, { fecha: string; litros: number; monto: number }[]>;
   csvPilotStats?: Record<string, { flights: number; hours: number; spent: number }>;
@@ -388,6 +389,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           { id: "flights", label: "Flights", icon: "M12 19l9 2-9-18-9 18 9-2zm0 0v-8" },
           { id: "pilots", label: "Pilots", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" },
           { id: "register", label: "Registro", icon: "M12 4v16m8-8H4", href: "/register" },
+          { id: "fuel", label: "Fuel", icon: "M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" },
           { id: "maintenance", label: "Mx", icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" },
         ].map(t => (
           t.href ? (
@@ -584,6 +586,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           {pilotSubTab === "deposits" && <DepositsTable depositsDetailsByCode={initialData.depositsDetailsByCode} csvPilotNames={csvPilotNames} />}
         </>
       )}
+      {tab === "fuel" && <FuelTable logs={initialData.fuelLogs || []} />}
       {tab === "maintenance" && <MaintenanceTable components={initialData.components} aircraft={initialData.aircraft} />}
       {tab === "finance" && <FinanceCharts flights={initialData.flights} transactions={initialData.transactions} palette={palette} />}
     </div>
@@ -1407,6 +1410,66 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
     </div>
   );
 }
+
+  function FuelTable({ logs }: { logs: any[] }) {
+    return (
+      <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
+        <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
+          <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+            </svg>
+            Registros de Combustible
+          </h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-200">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">ID</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Piloto</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Litros</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Monto</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Detalle</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Boleta</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-slate-100">
+              {logs.map((l) => (
+                <tr key={l.id} className="hover:bg-blue-50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-600">{l.id}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{new Date(l.fecha).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">
+                    {l.User ? `${l.User.nombre} (${l.User.codigo || '#'+l.userId})` : `#${l.userId}`}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{Number(l.litros).toFixed(1)} L</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">${Number(l.monto).toLocaleString('es-CL')}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600">{l.detalle || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    {l.imageUrl ? (
+                      <a
+                        href={l.imageUrl.startsWith('/uploads/fuel/')
+                          ? `/api/uploads/fuel/${l.imageUrl.split('/').pop()}`
+                          : l.imageUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-blue-600 hover:text-blue-800 underline font-medium"
+                      >
+                        Ver
+                      </a>
+                    ) : (
+                      <span className="text-slate-400">-</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
 
 function PilotDirectory({ directory }: { directory?: { initial: { code: string; name: string }[]; registered: { id: number; code: string; name: string; email: string; createdAt: string | Date; fechaNacimiento?: string | Date | null; telefono?: string | null; numeroLicencia?: string | null; tipoDocumento?: string | null; documento?: string | null }[] } }) {
   const [editMode, setEditMode] = useState(false);

@@ -9,7 +9,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
   const page = Number(searchParams?.page || 1);
   const pageSize = Number(searchParams?.pageSize || 200);
   const skip = (page - 1) * pageSize;
-  const [users, aircraft, flights, allFlightsComplete, allFlightsLight, submissions, components, transactions, totalFlights, depositsFromDB, overviewMetrics] = await Promise.all([
+  const [users, aircraft, flights, allFlightsComplete, allFlightsLight, submissions, components, transactions, totalFlights, depositsFromDB, fuelLogs, overviewMetrics] = await Promise.all([
     prisma.user.findMany(),
     prisma.aircraft.findMany(),
     prisma.flight.findMany({
@@ -84,6 +84,19 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     prisma.deposit.findMany({ 
       include: { User: { select: { codigo: true } } },
       orderBy: { fecha: "desc" }
+    }),
+    prisma.fuelLog.findMany({
+      orderBy: { fecha: 'desc' },
+      select: {
+        id: true,
+        fecha: true,
+        litros: true,
+        monto: true,
+        detalle: true,
+        imageUrl: true,
+        userId: true,
+        User: { select: { nombre: true, codigo: true } },
+      },
     }),
     // Overview metrics - All dynamic from DB
     (async () => {
@@ -576,6 +589,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       });
       return map;
     })(),
+    fuelLogs: fuelLogs.map(l => ({ ...l, litros: Number(l.litros), monto: Number(l.monto), User: l.User })),
     pilotDirectory: {
       initial: csvPilots,
       registered: users
