@@ -126,7 +126,9 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
     shadow: 'shadow-lg'
   };
 
-  // Drag and drop handlers for Overview cards
+  // Drag and drop handlers for Overview cards (mouse and touch)
+  const [touchStartPos, setTouchStartPos] = useState<{ x: number; y: number } | null>(null);
+
   const handleDragStart = (cardId: string) => {
     setDraggedCard(cardId);
   };
@@ -162,18 +164,64 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
     setDraggedCard(null);
   };
 
+  // Touch handlers for mobile
+  const handleTouchStart = (e: React.TouchEvent, cardId: string) => {
+    const touch = e.touches[0];
+    setTouchStartPos({ x: touch.clientX, y: touch.clientY });
+    setDraggedCard(cardId);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!draggedCard || !touchStartPos) return;
+    
+    const touch = e.touches[0];
+    const deltaY = Math.abs(touch.clientY - touchStartPos.y);
+    
+    // If moved more than 10px, prevent default scrolling
+    if (deltaY > 10) {
+      e.preventDefault();
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent, targetCardId: string) => {
+    if (!draggedCard) return;
+    
+    const touch = e.changedTouches[0];
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    
+    // Find the card element
+    let cardElement = element;
+    while (cardElement && !cardElement.getAttribute('data-card-id')) {
+      cardElement = cardElement.parentElement;
+    }
+    
+    const droppedOnCardId = cardElement?.getAttribute('data-card-id');
+    
+    if (droppedOnCardId && droppedOnCardId !== draggedCard) {
+      handleDrop(droppedOnCardId);
+    } else {
+      setDraggedCard(null);
+    }
+    
+    setTouchStartPos(null);
+  };
+
   // Render individual metric card with drag-and-drop
   const renderCard = (cardId: string, content: JSX.Element) => {
     const isDragging = draggedCard === cardId;
     return (
       <div
         key={cardId}
+        data-card-id={cardId}
         draggable
         onDragStart={() => handleDragStart(cardId)}
         onDragOver={handleDragOver}
         onDrop={() => handleDrop(cardId)}
         onDragEnd={handleDragEnd}
-        className={`${isDragging ? 'opacity-50 scale-95' : 'opacity-100'} transition-all duration-150 cursor-move`}
+        onTouchStart={(e) => handleTouchStart(e, cardId)}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={(e) => handleTouchEnd(e, cardId)}
+        className={`${isDragging ? 'opacity-50 scale-95' : 'opacity-100'} transition-all duration-150 cursor-move touch-none`}
       >
         {content}
       </div>
