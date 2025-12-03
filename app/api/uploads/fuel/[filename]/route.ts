@@ -8,8 +8,29 @@ export async function GET(
 ) {
   try {
     const filename = params.filename;
-    const filePath = path.join(process.cwd(), 'public', 'uploads', 'fuel', filename);
-    const data = await fs.readFile(filePath);
+    
+    // Try Railway volume first, fallback to public/uploads
+    const volumePath = process.env.RAILWAY_VOLUME_MOUNT_PATH
+      ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'fuel', filename)
+      : null;
+    
+    const publicPath = path.join(process.cwd(), 'public', 'uploads', 'fuel', filename);
+    
+    let data: Buffer;
+    let filePath = publicPath;
+    
+    if (volumePath) {
+      try {
+        data = await fs.readFile(volumePath);
+        filePath = volumePath;
+      } catch {
+        // Fallback to public if volume file not found
+        data = await fs.readFile(publicPath);
+      }
+    } else {
+      data = await fs.readFile(publicPath);
+    }
+    
     const ext = filename.split('.').pop()?.toLowerCase();
     const contentType = ext === 'png'
       ? 'image/png'
@@ -19,7 +40,7 @@ export async function GET(
       ? 'image/gif'
       : 'image/jpeg';
 
-    return new NextResponse(data, {
+    return new NextResponse(data as any, {
       status: 200,
       headers: {
         'Content-Type': contentType,

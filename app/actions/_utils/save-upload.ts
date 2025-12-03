@@ -14,9 +14,14 @@ export async function saveUpload(file: PlainUpload, subdir: 'fuel' | 'deposit') 
   const buf = Buffer.from(file.base64, 'base64');
   const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
   const name = `${Date.now()}-${randomUUID()}.${ext}`;
-  const dir = path.join(process.cwd(), 'public', 'uploads', subdir);
-  await fs.mkdir(dir, { recursive: true });
-  const full = path.join(dir, name);
+  
+  // Use Railway volume in production, local public in dev
+  const baseDir = process.env.RAILWAY_VOLUME_MOUNT_PATH 
+    ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, subdir)
+    : path.join(process.cwd(), 'public', 'uploads', subdir);
+  
+  await fs.mkdir(baseDir, { recursive: true });
+  const full = path.join(baseDir, name);
   await fs.writeFile(full, buf);
   return `/uploads/${subdir}/${name}`;
 }

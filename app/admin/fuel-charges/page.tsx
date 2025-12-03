@@ -21,14 +21,29 @@ export default async function FuelChargesPage() {
   const logs = await Promise.all(
     logsRaw.map(async (l) => {
       const filename = l.imageUrl?.startsWith('/uploads/fuel/') ? l.imageUrl.split('/').pop() || '' : '';
-      const filePath = filename ? path.join(process.cwd(), 'public', 'uploads', 'fuel', filename) : '';
       let exists = false;
-      try {
-        if (filePath) {
-          await fs.access(filePath);
-          exists = true;
-        }
-      } catch {}
+      if (filename) {
+        try {
+          // Check volume first, then public
+          const volumePath = process.env.RAILWAY_VOLUME_MOUNT_PATH
+            ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'fuel', filename)
+            : null;
+          const publicPath = path.join(process.cwd(), 'public', 'uploads', 'fuel', filename);
+          
+          if (volumePath) {
+            try {
+              await fs.access(volumePath);
+              exists = true;
+            } catch {
+              await fs.access(publicPath);
+              exists = true;
+            }
+          } else {
+            await fs.access(publicPath);
+            exists = true;
+          }
+        } catch {}
+      }
       return { ...l, exists };
     })
   );

@@ -595,11 +595,22 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       const logsWithExists = await Promise.all(
         fuelLogs.map(async (l: any) => {
           const filename = l.imageUrl?.startsWith('/uploads/fuel/') ? l.imageUrl.split('/').pop() || '' : '';
-          const filePath = filename ? pathMod.join(process.cwd(), 'public', 'uploads', 'fuel', filename) : '';
           let exists = false;
-          try {
-            if (filePath && fsMod.existsSync(filePath)) exists = true;
-          } catch {}
+          if (filename) {
+            try {
+              // Check volume first, then public
+              const volumePath = process.env.RAILWAY_VOLUME_MOUNT_PATH
+                ? pathMod.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'fuel', filename)
+                : null;
+              const publicPath = pathMod.join(process.cwd(), 'public', 'uploads', 'fuel', filename);
+              
+              if (volumePath && fsMod.existsSync(volumePath)) {
+                exists = true;
+              } else if (fsMod.existsSync(publicPath)) {
+                exists = true;
+              }
+            } catch {}
+          }
           return { ...l, litros: Number(l.litros), monto: Number(l.monto), User: l.User, exists };
         })
       );
