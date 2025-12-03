@@ -50,22 +50,14 @@ export async function createFuel(input: Input): Promise<{ ok: boolean; id?: numb
         monto: input.monto,
         imageUrl,
         detalle: input.detalle,
+        estado: 'PENDIENTE', // Requiere validación admin
       },
-      select: { id: true, fecha: true, monto: true, userId: true },
+      select: { id: true },
     });
 
-    // Desde 2025-11-29 en adelante, cargar como crédito/transaction
-    const cutoff = new Date(2025, 10, 29, 0, 0, 0); // months are 0-based
-    if (row.fecha >= cutoff) {
-      await prisma.transaction.create({
-        data: {
-          tipo: 'FUEL',
-          userId: row.userId,
-          monto: row.monto,
-        },
-        select: { id: true },
-      });
-    }
+    // La Transaction FUEL se crea cuando el admin aprueba el registro
+    // Ver: app/actions/validate-fuel.ts
+    
     return { ok: true, id: row.id };
   } catch (e: any) {
     console.error('[createFuel] prisma/saveUpload error', e);

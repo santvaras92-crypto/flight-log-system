@@ -53,10 +53,13 @@ export async function createDeposit(input: Input): Promise<{ ok: boolean; id?: n
         monto: input.monto,
         imageUrl,
         detalle: input.detalle,
+        estado: 'PENDIENTE', // Requiere validación admin
       },
       select: { id: true },
     });
     console.log('[createDeposit] success id', row.id);
+    // La Transaction ABONO se crea cuando el admin aprueba el depósito
+    // Ver: app/actions/validate-deposit.ts
     return { ok: true, id: row.id };
   } catch (e: any) {
     console.error('[createDeposit] prisma error', e);
