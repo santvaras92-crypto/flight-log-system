@@ -9,6 +9,8 @@ type Input = {
   tach_fin: number;    // REQUIRED
   copiloto?: string;   // optional
   detalle?: string;    // optional
+  aerodromoSalida?: string;  // default SCCV
+  aerodromoDestino?: string; // default SCCV
 };
 
 export async function createFlightSubmission(input: Input) {
@@ -37,6 +39,8 @@ export async function createFlightSubmission(input: Input) {
       detalle: input.detalle,
       hobbsFinal: input.hobbs_fin,
       tachFinal: input.tach_fin,
+      aerodromoSalida: input.aerodromoSalida || 'SCCV',
+      aerodromoDestino: input.aerodromoDestino || 'SCCV',
     },
     select: { id: true },
   });

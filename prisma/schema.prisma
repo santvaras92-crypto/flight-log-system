@@ -72,6 +72,8 @@ model Flight {
   piloto_raw       String?
   tarifa           Decimal?
   instructor_rate  Decimal?
+  aerodromoSalida  String?
+  aerodromoDestino String?
   Aircraft         Aircraft          @relation(fields: [aircraftId], references: [matricula])
   User             User?             @relation(fields: [pilotoId], references: [id])
   FlightSubmission FlightSubmission? @relation(fields: [submissionId], references: [id])
@@ -93,10 +95,12 @@ model FlightSubmission {
   hobbsFinal     Decimal?
   instructorRate Decimal?
   notificado     Boolean    @default(false)
-  tachFinal      Decimal?
-  rate           Decimal?
-  Flight         Flight?
-  Aircraft       Aircraft   @relation(fields: [aircraftId], references: [matricula])
+  tachFinal        Decimal?
+  rate             Decimal?
+  aerodromoSalida  String?
+  aerodromoDestino String?
+  Flight           Flight?
+  Aircraft         Aircraft   @relation(fields: [aircraftId], references: [matricula])
   User           User       @relation(fields: [pilotoId], references: [id])
   ImageLog       ImageLog[]
 }

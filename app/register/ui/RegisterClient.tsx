@@ -22,11 +22,13 @@ interface LastComponents {
 export default function RegisterClient({ 
   pilots,
   lastCounters = { hobbs: null, tach: null },
-  lastComponents = { airframe: null, engine: null, propeller: null }
+  lastComponents = { airframe: null, engine: null, propeller: null },
+  lastAerodromoDestino = 'SCCV'
 }: { 
   pilots: PilotOpt[];
   lastCounters?: LastCounters;
   lastComponents?: LastComponents;
+  lastAerodromoDestino?: string;
 }) {
   const [pilotValue, setPilotValue] = useState<string>('');
   const [mode, setMode] = useState<'flight' | 'fuel' | 'deposit'>('flight');
@@ -38,6 +40,8 @@ export default function RegisterClient({
   const [tachFin, setTachFin] = useState<string>('');
   const [copiloto, setCopiloto] = useState<string>('');
   const [detalle, setDetalle] = useState<string>('');
+  const [aerodromoSalida, setAerodromoSalida] = useState<string>(lastAerodromoDestino);
+  const [aerodromoDestino, setAerodromoDestino] = useState<string>('SCCV');
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   
@@ -106,7 +110,7 @@ export default function RegisterClient({
       }
       
       if (mode === 'flight') {
-        console.log('Creating flight submission:', { resolvedPilotId, fecha, hobbsFin, tachFin });
+        console.log('Creating flight submission:', { resolvedPilotId, fecha, hobbsFin, tachFin, aerodromoSalida, aerodromoDestino });
         const result = await createFlightSubmission({
           pilotoId: resolvedPilotId,
           fecha,
@@ -114,6 +118,8 @@ export default function RegisterClient({
           tach_fin: Number(tachFin) || NaN,
           copiloto: copiloto || undefined,
           detalle: detalle || undefined,
+          aerodromoSalida: aerodromoSalida || 'SCCV',
+          aerodromoDestino: aerodromoDestino || 'SCCV',
         });
         console.log('Flight submission created:', result);
         if (!result.ok) {
@@ -198,6 +204,9 @@ export default function RegisterClient({
       setTachFin('');
       setCopiloto('');
       setDetalle('');
+      // Después de enviar, el nuevo aeródromo de salida es el destino que acabamos de registrar
+      setAerodromoSalida(aerodromoDestino);
+      setAerodromoDestino('SCCV');
       (document.getElementById('registro-form') as HTMLFormElement)?.reset();
     } catch (e: any) {
       console.error('Error guardando registro:', e);
@@ -272,6 +281,49 @@ export default function RegisterClient({
 
             {mode === 'flight' && (
               <>
+                {/* Aeródromos */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <label className="flex flex-col text-sm">
+                    <span className="mb-1 font-medium">Aeródromo de Salida</span>
+                    <input 
+                      value={aerodromoSalida}
+                      onChange={(e) => setAerodromoSalida(e.target.value.toUpperCase())}
+                      placeholder="SCCV"
+                      className="rounded-xl border px-3 py-3 bg-slate-50 font-mono uppercase" 
+                    />
+                    <span className="text-xs text-slate-500 mt-1">Destino del último vuelo: {lastAerodromoDestino}</span>
+                  </label>
+                  <label className="flex flex-col text-sm">
+                    <span className="mb-1 font-medium">Aeródromo de Destino</span>
+                    <input 
+                      value={aerodromoDestino}
+                      onChange={(e) => setAerodromoDestino(e.target.value.toUpperCase())}
+                      placeholder="SCCV"
+                      className="rounded-xl border px-3 py-3 bg-slate-50 font-mono uppercase" 
+                    />
+                  </label>
+                </div>
+
+                {/* Copiloto / Detalle */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <label className="flex flex-col text-sm">
+                    <span className="mb-1">Copiloto / Instructor (opcional)</span>
+                    <input 
+                      value={copiloto}
+                      onChange={(e) => setCopiloto(e.target.value)}
+                      className="rounded-xl border px-3 py-3 bg-slate-50" 
+                    />
+                  </label>
+                  <label className="flex flex-col text-sm">
+                    <span className="mb-1">Detalle (opcional)</span>
+                    <input 
+                      value={detalle}
+                      onChange={(e) => setDetalle(e.target.value)}
+                      className="rounded-xl border px-3 py-3 bg-slate-50" 
+                    />
+                  </label>
+                </div>
+
                 {/* Últimos contadores registrados */}
                 {(lastCounters.hobbs !== null || lastCounters.tach !== null) && (
                   <div className="rounded-xl p-4 bg-amber-50 border border-amber-200">
@@ -418,7 +470,7 @@ export default function RegisterClient({
                             <td className="border border-slate-300 px-2 py-2 text-center font-mono">{newComponents?.propeller?.toFixed(1) || '--'}</td>
                             <td className="border border-slate-300 px-2 py-2 text-center">{selectedPilot?.label.split('(')[0]?.trim() || '--'}</td>
                             <td className="border border-slate-300 px-2 py-2 text-center">{copiloto || '--'}</td>
-                            <td className="border border-slate-300 px-2 py-2 text-center">LOCAL</td>
+                            <td className="border border-slate-300 px-2 py-2 text-center font-mono">{aerodromoSalida || 'SCCV'}-{aerodromoDestino || 'SCCV'}</td>
                             <td className="border border-slate-300 px-2 py-2 text-center text-[10px]">{detalle || 'S/Obs'}</td>
                           </tr>
                         </tbody>
@@ -434,25 +486,6 @@ export default function RegisterClient({
                   </div>
                 )}
 
-                {/* Información adicional */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <label className="flex flex-col text-sm">
-                    <span className="mb-1">Copiloto / Instructor (opcional)</span>
-                    <input 
-                      value={copiloto}
-                      onChange={(e) => setCopiloto(e.target.value)}
-                      className="rounded-xl border px-3 py-3 bg-slate-50" 
-                    />
-                  </label>
-                  <label className="flex flex-col text-sm">
-                    <span className="mb-1">Detalle (opcional)</span>
-                    <input 
-                      value={detalle}
-                      onChange={(e) => setDetalle(e.target.value)}
-                      className="rounded-xl border px-3 py-3 bg-slate-50" 
-                    />
-                  </label>
-                </div>
                 <p className="text-xs text-slate-500">Tras enviar, pasa a Validación para ingresar Airplane Rate e Instructor/SP Rate.</p>
               </>
             )}

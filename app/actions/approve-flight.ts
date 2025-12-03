@@ -109,6 +109,8 @@ export async function approveFlightSubmission(
           cliente: submission.User?.codigo || null,
           copiloto: submission.copiloto,
           detalle: submission.detalle,
+          aerodromoSalida: submission.aerodromoSalida || 'SCCV',
+          aerodromoDestino: submission.aerodromoDestino || 'SCCV',
         },
       });
 

@@ -1134,6 +1134,8 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
               <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">AIRFRAME</th>
               <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">ENGINE</th>
               <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">PROPELLER</th>
+              <th className="px-3 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">AD Salida</th>
+              <th className="px-3 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">AD Destino</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Detalle</th>
               <th className="px-3 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">Año</th>
               <th className="px-3 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">Mes</th>
@@ -1260,6 +1262,16 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                   <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
                     {/* Calculado automáticamente - no editable */}
                     {f.propeller_hours != null ? Number(f.propeller_hours).toFixed(1) : '-'}
+                  </td>
+                  
+                  {/* AD Salida */}
+                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600">
+                    {f.aerodromoSalida || '-'}
+                  </td>
+                  
+                  {/* AD Destino */}
+                  <td className="px-3 py-3 whitespace-nowrap text-xs text-slate-600">
+                    {f.aerodromoDestino || '-'}
                   </td>
                   
                   {/* Detalle */}

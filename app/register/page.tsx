@@ -59,7 +59,8 @@ export default async function RegistroPage() {
       tach_fin: true,
       airframe_hours: true,
       engine_hours: true,
-      propeller_hours: true
+      propeller_hours: true,
+      aerodromoDestino: true,
     },
   });
 
@@ -75,5 +76,8 @@ export default async function RegistroPage() {
     propeller: lastFlight?.propeller_hours ? Number(lastFlight.propeller_hours) : null,
   };
 
-  return <RegisterClient pilots={allPilots} lastCounters={lastCounters} lastComponents={lastComponents} />;
+  // El aeródromo de salida por defecto es el destino del último vuelo (o SCCV)
+  const lastAerodromoDestino = lastFlight?.aerodromoDestino || 'SCCV';
+
+  return <RegisterClient pilots={allPilots} lastCounters={lastCounters} lastComponents={lastComponents} lastAerodromoDestino={lastAerodromoDestino} />;
 }
