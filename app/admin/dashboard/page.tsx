@@ -494,6 +494,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     // Detailed fuel records by code for PDF
     fuelDetailsByCode: (() => {
       const map: Record<string, { fecha: string; litros: number; monto: number }[]> = {};
+      // 1. Read CSV historical fuel
       try {
         const fuelPath = path.join(process.cwd(), 'Combustible', 'Planilla control combustible.csv');
         if (fs.existsSync(fuelPath)) {
@@ -517,6 +518,20 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           }
         }
       } catch {}
+      // 2. Add DB FuelLog entries
+      fuelLogs.forEach((log: any) => {
+        const code = log.User?.codigo?.toUpperCase();
+        if (!code) return;
+        const fecha = log.fecha instanceof Date 
+          ? `${String(log.fecha.getDate()).padStart(2,'0')}-${String(log.fecha.getMonth()+1).padStart(2,'0')}-${String(log.fecha.getFullYear()).slice(-2)}`
+          : String(log.fecha).split('T')[0];
+        const litros = typeof log.litros === 'number' ? log.litros : parseFloat(log.litros?.toString() || '0');
+        const monto = typeof log.monto === 'number' ? log.monto : parseFloat(log.monto?.toString() || '0');
+        if (!map[code]) map[code] = [];
+        if (monto > 0) {
+          map[code].push({ fecha, litros, monto });
+        }
+      });
       return map;
     })(),
     csvPilotStats,
