@@ -216,11 +216,24 @@ export default function NewPilotPublicPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
-                          {pilot.nombre} - <span className="text-xs opacity-75">Código: {pilot.codigo}</span>
+                          {/* Mostrar nombre completo usando el nombre ingresado + apellido detectado */}
+                          {(() => {
+                            const parts = (pilot.nombre || '').split(' ');
+                            const lastName = parts[parts.length - 1] || '';
+                            const displayName = `${form.nombre.trim() || parts[0] || ''} ${lastName}`.trim();
+                            return displayName;
+                          })()} 
+                          - <span className="text-xs opacity-75">Código: {pilot.codigo}</span>
                         </p>
-                        {pilot.email && (
+                        {/* Mostrar email solo si no es @piloto.local */}
+                        {pilot.email && !String(pilot.email).toLowerCase().endsWith('@piloto.local') && (
                           <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
                             {pilot.email}
+                          </p>
+                        )}
+                        {(!pilot.email || String(pilot.email).toLowerCase().endsWith('@piloto.local')) && (
+                          <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+                            Sin correo
                           </p>
                         )}
                       </div>
