@@ -51,8 +51,21 @@ export async function createFuel(input: Input): Promise<{ ok: boolean; id?: numb
         imageUrl,
         detalle: input.detalle,
       },
-      select: { id: true },
+      select: { id: true, fecha: true, monto: true, userId: true },
     });
+
+    // Desde 2025-11-29 en adelante, cargar como crédito/transaction
+    const cutoff = new Date(2025, 10, 29, 0, 0, 0); // months are 0-based
+    if (row.fecha >= cutoff) {
+      await prisma.transaction.create({
+        data: {
+          tipo: 'FUEL',
+          userId: row.userId,
+          monto: row.monto,
+        },
+        select: { id: true },
+      });
+    }
     return { ok: true, id: row.id };
   } catch (e: any) {
     console.error('[createFuel] prisma/saveUpload error', e);

@@ -13,6 +13,7 @@ export default async function FuelChargesPage() {
       detalle: true,
       imageUrl: true,
       userId: true,
+      User: { select: { nombre: true, codigo: true } },
     },
   });
 
@@ -37,7 +38,7 @@ export default async function FuelChargesPage() {
               <tr key={l.id}>
                 <td className="px-3 py-2 border">{l.id}</td>
                 <td className="px-3 py-2 border">{new Date(l.fecha).toLocaleDateString()}</td>
-                <td className="px-3 py-2 border">#{l.userId}</td>
+                <td className="px-3 py-2 border">{l.User ? `${l.User.nombre} (${l.User.codigo || '#'+l.userId})` : `#${l.userId}`}</td>
                 <td className="px-3 py-2 border">{Number(l.litros)}</td>
                 <td className="px-3 py-2 border">${Number(l.monto).toLocaleString()}</td>
                 <td className="px-3 py-2 border">{l.detalle || ''}</td>
