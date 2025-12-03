@@ -57,10 +57,9 @@ export async function rejectDeposit(formData: FormData): Promise<void> {
     throw new Error('Depósito no encontrado');
   }
 
-  // Update status to RECHAZADO
-  await prisma.deposit.update({
+  // Delete the rejected deposit from the database
+  await prisma.deposit.delete({
     where: { id: depositId },
-    data: { estado: 'RECHAZADO' },
   });
 
   revalidatePath('/admin/validacion');

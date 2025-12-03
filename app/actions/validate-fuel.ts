@@ -60,10 +60,9 @@ export async function rejectFuel(formData: FormData): Promise<void> {
     throw new Error('Registro no encontrado');
   }
 
-  // Update status to RECHAZADO
-  await prisma.fuelLog.update({
+  // Delete the rejected fuel log from the database
+  await prisma.fuelLog.delete({
     where: { id: fuelLogId },
-    data: { estado: 'RECHAZADO' },
   });
 
   revalidatePath('/admin/validacion');
