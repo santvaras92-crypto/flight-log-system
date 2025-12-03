@@ -216,14 +216,22 @@ export default function NewPilotPublicPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
-                          {/* Mostrar nombre completo usando el nombre ingresado + apellido detectado */}
                           {(() => {
-                            const parts = (pilot.nombre || '').split(' ');
-                            const lastName = parts[parts.length - 1] || '';
-                            const displayName = `${form.nombre.trim() || parts[0] || ''} ${lastName}`.trim();
-                            return displayName;
-                          })()} 
-                          - <span className="text-xs opacity-75">Código: {pilot.codigo}</span>
+                            const raw = String(pilot.nombre || '').trim();
+                            // Detect pattern like "S. Varas" or "J. Varas"
+                            const match = raw.match(/^([A-Za-z])\.?\s+(.*)$/);
+                            if (match) {
+                              const initial = match[1].toUpperCase();
+                              const lastName = match[2];
+                              const typed = (form.nombre || '').trim();
+                              if (typed && typed[0] && typed[0].toUpperCase() === initial) {
+                                return `${typed} ${lastName}`.trim();
+                              }
+                              return raw; // Keep DB value if initial doesn't match typed first letter
+                            }
+                            return raw; // Already full name or another format
+                          })()}
+                          {' '} - <span className="text-xs opacity-75">Código: {pilot.codigo}</span>
                         </p>
                         {/* Mostrar email solo si no es @piloto.local */}
                         {pilot.email && !String(pilot.email).toLowerCase().endsWith('@piloto.local') && (
