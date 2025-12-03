@@ -96,7 +96,7 @@ export default async function FuelChargesPage() {
                   )}
                 </td>
                 <td className="px-3 py-2 border">
-                  <form action={deleteFuelLog} onSubmit={(e)=>{ if(!confirm(`¿Eliminar registro ${l.id}?`)) { e.preventDefault(); } }}>
+                  <form action={deleteFuelLog}>
                     <input type="hidden" name="fuelLogId" value={l.id} />
                     <button type="submit" className="px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700">Eliminar</button>
                   </form>
