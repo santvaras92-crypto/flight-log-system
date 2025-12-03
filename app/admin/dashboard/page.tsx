@@ -494,6 +494,11 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     // Detailed fuel records by code for PDF
     fuelDetailsByCode: (() => {
       const map: Record<string, { fecha: string; litros: number; monto: number }[]> = {};
+      const seen: Record<string, Set<string>> = {}; // Track duplicates by code -> "fecha|monto"
+      
+      // Helper to create a unique key for deduplication
+      const makeKey = (fecha: string, monto: number) => `${fecha}|${Math.round(monto)}`;
+      
       // 1. Read CSV historical fuel
       try {
         const fuelPath = path.join(process.cwd(), 'Combustible', 'Planilla control combustible.csv');
@@ -511,14 +516,17 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
             const cleaned = montoStr.replace(/\$/g, '').replace(/\./g, '').replace(',', '.');
             const monto = parseFloat(cleaned) || 0;
             if (!map[code]) map[code] = [];
+            if (!seen[code]) seen[code] = new Set();
             // Include entry even if litros is 0 (some entries only have monto)
             if (monto > 0) {
+              const key = makeKey(fecha, monto);
+              seen[code].add(key);
               map[code].push({ fecha, litros, monto });
             }
           }
         }
       } catch {}
-      // 2. Add DB FuelLog entries
+      // 2. Add DB FuelLog entries (only if not already in CSV)
       fuelLogs.forEach((log: any) => {
         const code = log.User?.codigo?.toUpperCase();
         if (!code) return;
@@ -528,10 +536,32 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         const litros = typeof log.litros === 'number' ? log.litros : parseFloat(log.litros?.toString() || '0');
         const monto = typeof log.monto === 'number' ? log.monto : parseFloat(log.monto?.toString() || '0');
         if (!map[code]) map[code] = [];
+        if (!seen[code]) seen[code] = new Set();
         if (monto > 0) {
-          map[code].push({ fecha, litros, monto });
+          const key = makeKey(fecha, monto);
+          // Only add if not already seen (avoid duplicates)
+          if (!seen[code].has(key)) {
+            seen[code].add(key);
+            map[code].push({ fecha, litros, monto });
+          }
         }
       });
+      // 3. Sort each pilot's entries by date descending (most recent first)
+      for (const code of Object.keys(map)) {
+        map[code].sort((a, b) => {
+          // Parse DD-MM-YY format
+          const parseDate = (d: string) => {
+            const parts = d.split('-');
+            if (parts.length !== 3) return 0;
+            const day = parseInt(parts[0]) || 1;
+            const month = parseInt(parts[1]) || 1;
+            let year = parseInt(parts[2]) || 0;
+            if (year < 100) year = year < 50 ? 2000 + year : 1900 + year;
+            return new Date(year, month - 1, day).getTime();
+          };
+          return parseDate(b.fecha) - parseDate(a.fecha);
+        });
+      }
       return map;
     })(),
     csvPilotStats,
