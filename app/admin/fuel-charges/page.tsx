@@ -21,16 +21,18 @@ export default async function FuelChargesPage() {
   });
   const logs = await Promise.all(
     logsRaw.map(async (l) => {
+      // Determine existence safely: R2 URLs are assumed available; local files checked carefully
+      const isRemote = !!(l.imageUrl && /^https?:\/\//.test(l.imageUrl));
       const filename = l.imageUrl?.startsWith('/uploads/fuel/') ? l.imageUrl.split('/').pop() || '' : '';
       let exists = false;
-      if (filename) {
+      if (isRemote) {
+        exists = true;
+      } else if (filename) {
         try {
-          // Check volume first, then public
           const volumePath = process.env.RAILWAY_VOLUME_MOUNT_PATH
             ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'fuel', filename)
             : null;
           const publicPath = path.join(process.cwd(), 'public', 'uploads', 'fuel', filename);
-          
           if (volumePath) {
             try {
               await fs.access(volumePath);
@@ -43,7 +45,9 @@ export default async function FuelChargesPage() {
             await fs.access(publicPath);
             exists = true;
           }
-        } catch {}
+        } catch {
+          exists = false;
+        }
       }
       return { ...l, exists };
     })
