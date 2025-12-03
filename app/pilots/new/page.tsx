@@ -77,7 +77,7 @@ export default function NewPilotPublicPage() {
       } finally {
         setSearching(false);
       }
-    }, 500); // Debounce de 500ms
+    }, 300); // Debounce de 300ms (más rápido para feedback inmediato)
 
     return () => clearTimeout(timer);
   }, [form.nombre, form.apellido, form.documento]);
@@ -159,6 +159,19 @@ export default function NewPilotPublicPage() {
             <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-wide" style={{ color: 'var(--text-primary)' }}>Pilot Registration</h2>
             <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Complete the information to create a new pilot profile</p>
           </div>
+          
+          {/* Indicador de búsqueda */}
+          {searching && (
+            <div className="mb-4 p-3 rounded-lg flex items-center gap-2" style={{ 
+              background: 'rgba(59, 130, 246, 0.1)',
+              border: '1px solid rgba(59, 130, 246, 0.3)'
+            }}>
+              <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+              <span className="text-sm" style={{ color: 'var(--text-primary)' }}>
+                Buscando pilotos existentes...
+              </span>
+            </div>
+          )}
           
           {/* Match exacto por documento */}
           {duplicateCheck.exactMatch && duplicateCheck.pilot && (
@@ -243,7 +256,7 @@ export default function NewPilotPublicPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="block text-xs sm:text-sm font-bold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
-                  Nombre * {searching && <span className="text-xs opacity-50">(buscando...)</span>}
+                  Nombre *
                 </label>
                 <input className="executive-input" placeholder="Nombre" value={form.nombre} onChange={e=>setForm({ ...form, nombre: e.target.value })} required />
               </div>

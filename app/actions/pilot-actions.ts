@@ -48,13 +48,39 @@ export async function searchExistingPilots(
     return { exactMatch: false, matchType: undefined, pilot: null, suggestions: [] };
   }
 
-  const nameQuery = apellidoNormalized 
-    ? `${nombreNormalized} ${apellidoNormalized}`
-    : nombreNormalized;
+  // Buscar por:
+  // 1) Nombre completo + apellido: "Santiago Varas"
+  // 2) Solo apellido: "Varas" (para encontrar "S. Varas", "J. Varas", etc.)
+  // 3) Inicial + apellido: "S. Varas"
+  const firstInitial = nombreNormalized[0];
+  
+  const searchConditions = [];
+  
+  // Búsqueda por nombre completo + apellido
+  if (apellidoNormalized) {
+    searchConditions.push({
+      nombre: { contains: `${nombreNormalized} ${apellidoNormalized}`, mode: 'insensitive' as const }
+    });
+    
+    // Búsqueda por apellido solo (encuentra "S. Varas" cuando buscas "Santiago Varas")
+    searchConditions.push({
+      nombre: { contains: apellidoNormalized, mode: 'insensitive' as const }
+    });
+    
+    // Búsqueda por inicial + apellido (encuentra "S. Varas")
+    searchConditions.push({
+      nombre: { contains: `${firstInitial}. ${apellidoNormalized}`, mode: 'insensitive' as const }
+    });
+  } else {
+    // Solo nombre sin apellido
+    searchConditions.push({
+      nombre: { contains: nombreNormalized, mode: 'insensitive' as const }
+    });
+  }
 
   const suggestions = await prisma.user.findMany({
     where: {
-      nombre: { contains: nameQuery, mode: 'insensitive' }
+      OR: searchConditions
     },
     select: {
       id: true,
