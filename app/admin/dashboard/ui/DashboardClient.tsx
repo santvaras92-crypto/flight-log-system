@@ -1419,6 +1419,7 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Monto</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Detalle</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Boleta</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-slate-100">
@@ -1447,6 +1448,13 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
                     ) : (
                       <span className="text-slate-400">-</span>
                     )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    {/* Server action form imported via dynamic route action */}
+                    <form action={require('@/app/actions/delete-fuel-log').deleteFuelLog} onSubmit={(e)=>{ if(!confirm(`¿Eliminar registro ${l.id}?`)) { e.preventDefault(); } }}>
+                      <input type="hidden" name="fuelLogId" value={l.id} />
+                      <button type="submit" className="px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700">Eliminar</button>
+                    </form>
                   </td>
                 </tr>
               ))}
