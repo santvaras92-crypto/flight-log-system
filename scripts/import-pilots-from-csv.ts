@@ -5,91 +5,77 @@ import { randomUUID } from 'crypto';
 
 const prisma = new PrismaClient();
 
-function parseCSVLine(line: string): string[] {
-  const result: string[] = [];
-  let current = '';
-  let inQuotes = false;
-  
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"') {
-      inQuotes = !inQuotes;
-    } else if (char === ';' && !inQuotes) {
-      result.push(current);
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-  result.push(current);
-  return result;
-}
-
 async function importPilots() {
   try {
-    const csvPath = path.join(process.cwd(), 'Base de dato AQI.csv');
+    // Leer del CSV de pilotos directamente
+    const csvPath = path.join(process.cwd(), 'Base de dato pilotos', 'Base de dato pilotos.csv');
     const content = fs.readFileSync(csvPath, 'utf-8');
     const lines = content.split('\n').filter(l => l.trim());
     
-    const pilotCodesSet = new Set<string>();
-    const pilotNames: Record<string, string> = {};
-    
-    // Saltar header, extraer códigos únicos
-    for (let i = 1; i < lines.length; i++) {
-      const fields = parseCSVLine(lines[i]);
-      const pilotIdStr = (fields[9] || '').trim().toUpperCase();
-      const pilotName = (fields[7] || '').trim();
-      
-      if (pilotIdStr && pilotIdStr !== '') {
-        pilotCodesSet.add(pilotIdStr);
-        if (pilotName && !pilotNames[pilotIdStr]) {
-          pilotNames[pilotIdStr] = pilotName;
-        }
-      }
-    }
-    
-    const pilotCodes = Array.from(pilotCodesSet).sort();
-    console.log(`📋 Códigos únicos encontrados: ${pilotCodes.length}\n`);
+    console.log(`📋 Leyendo ${lines.length - 1} pilotos del CSV...\n`);
     
     let imported = 0;
+    let updated = 0;
     let skipped = 0;
     
-    for (const codigo of pilotCodes) {
-      const nombre = pilotNames[codigo] || codigo;
-      const email = `${codigo.toLowerCase()}@piloto.local`;
+    // Saltar header (primera línea)
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
       
-      // Check if pilot already exists
-      const existing = await prisma.user.findFirst({
-        where: { codigo: codigo }
-      });
+      // Formato: Codigo;Nombre Apellido
+      const [codigo, nombreCompleto] = line.split(';').map(s => s.trim());
       
-      if (existing) {
-        console.log(`⏭️  Ya existe: ${codigo} - ${existing.nombre}`);
-        skipped++;
+      if (!codigo || !nombreCompleto) {
+        console.log(`⚠️  Línea ${i + 1} incompleta: ${line}`);
         continue;
       }
       
-      // Create new pilot
+      const codigoUpper = codigo.toUpperCase();
+      const email = `${codigo.toLowerCase()}@piloto.local`;
+      
+      // Verificar si ya existe por código
+      const existing = await prisma.user.findFirst({
+        where: { codigo: codigoUpper }
+      });
+      
+      if (existing) {
+        // Si existe pero el nombre es diferente, actualizar
+        if (existing.nombre !== nombreCompleto) {
+          await prisma.user.update({
+            where: { id: existing.id },
+            data: { nombre: nombreCompleto }
+          });
+          console.log(`✏️  Actualizado: ${codigoUpper} - ${existing.nombre} → ${nombreCompleto}`);
+          updated++;
+        } else {
+          skipped++;
+        }
+        continue;
+      }
+      
+      // Crear nuevo piloto con el nombre completo del CSV
       await prisma.user.create({
         data: {
-          codigo: codigo,
-          nombre: nombre,
+          codigo: codigoUpper,
+          nombre: nombreCompleto,
           email: email,
           rol: 'PILOTO',
           saldo_cuenta: 0,
-          tarifa_hora: 175,
+          tarifa_hora: 175000,
           password: randomUUID(),
         }
       });
       
       imported++;
-      console.log(`✅ Importado: ${codigo} - ${nombre}`);
+      console.log(`✅ Importado: ${codigoUpper} - ${nombreCompleto}`);
     }
     
     console.log(`\n✨ Importación completa!`);
     console.log(`   Importados: ${imported}`);
-    console.log(`   Ya existían: ${skipped}`);
-    console.log(`   Total: ${pilotCodes.length}`);
+    console.log(`   Actualizados: ${updated}`);
+    console.log(`   Sin cambios: ${skipped}`);
+    console.log(`   Total procesados: ${lines.length - 1}`);
     
   } catch (error) {
     console.error('❌ Error importando pilotos:', error);

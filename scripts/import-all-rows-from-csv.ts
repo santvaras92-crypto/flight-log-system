@@ -60,24 +60,25 @@ async function run() {
   const header = parseCSVLine(lines[0]);
   console.log("Columnas detectadas:", header.slice(0, 13));
   
-  // Índices de columnas
+  // Índices de columnas (según el CSV real)
+  // Fecha;Tac. 1;Tac. 2;Dif. Taco;Hobbs I;Hobbs F;Dif. Hobbs;Piloto;Copiloto-instructor;Pilot ID;Airplane Rate;Instructor Rate;Total;AIRFRAME;ENGINE;PROPELLER;Detalle
   const COL_FECHA = 0;
-  const COL_TACH_I = 2;
-  const COL_TACH_F = 3;
-  const COL_DIFF_TACH = 4;
-  const COL_HOBBS_I = 5;
-  const COL_HOBBS_F = 6;
-  const COL_DIFF_HOBBS = 7;
-  const COL_PILOTO = 8;
-  const COL_COPILOTO = 9;
-  const COL_CLIENTE = 10;
-  const COL_TARIFA = 11;
-  const COL_INSTRUCTOR = 12;
-  const COL_TOTAL = 13;
-  const COL_AIRFRAME = 14;
-  const COL_ENGINE = 15;
-  const COL_PROPELLER = 16;
-  const COL_DETALLE = 17;
+  const COL_TACH_I = 1;      // Tac. 1
+  const COL_TACH_F = 2;      // Tac. 2
+  const COL_DIFF_TACH = 3;   // Dif. Taco
+  const COL_HOBBS_I = 4;     // Hobbs I
+  const COL_HOBBS_F = 5;     // Hobbs F
+  const COL_DIFF_HOBBS = 6;  // Dif. Hobbs
+  const COL_PILOTO = 7;      // Piloto (nombre)
+  const COL_COPILOTO = 8;    // Copiloto-instructor
+  const COL_CLIENTE = 9;     // Pilot ID (código del piloto)
+  const COL_TARIFA = 10;     // Airplane Rate
+  const COL_INSTRUCTOR = 11; // Instructor/ Safety Pilot Rate
+  const COL_TOTAL = 12;      // Total
+  const COL_AIRFRAME = 13;   // AIRFRAME
+  const COL_ENGINE = 14;     // ENGINE
+  const COL_PROPELLER = 15;  // PROPELLER
+  const COL_DETALLE = 16;    // Detalle
 
   const MATRICULA = "CC-AQI";
   

@@ -74,6 +74,7 @@ model Flight {
   instructor_rate  Decimal?
   aerodromoSalida  String?
   aerodromoDestino String?
+  aprobado         Boolean           @default(false)
   Aircraft         Aircraft          @relation(fields: [aircraftId], references: [matricula])
   User             User?             @relation(fields: [pilotoId], references: [id])
   FlightSubmission FlightSubmission? @relation(fields: [submissionId], references: [id])
@@ -140,7 +141,7 @@ model User {
   id               Int                @id @default(autoincrement())
   nombre           String
   codigo           String?            @unique
-  email            String             @unique
+  email            String?            @unique
   emailVerified    DateTime?
   rol              String
   saldo_cuenta     Decimal            @default(0.0)

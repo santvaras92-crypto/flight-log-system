@@ -1661,6 +1661,7 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
     setMessage(null);
     let successCount = 0;
     let errorCount = 0;
+    let lastError = '';
 
     for (const [idStr, changes] of Object.entries(editedRows)) {
       const id = Number(idStr);
@@ -1677,10 +1678,12 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
           successCount++;
         } else {
           errorCount++;
+          lastError = data.error || 'Error desconocido';
           console.error(`Error updating pilot ${id}:`, data.error);
         }
       } catch (e) {
         errorCount++;
+        lastError = 'Error de conexión';
         console.error(`Error updating pilot ${id}:`, e);
       }
     }
@@ -1692,7 +1695,7 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
       // Reload page to refresh data
       setTimeout(() => window.location.reload(), 1000);
     } else if (errorCount > 0) {
-      setMessage(`⚠ ${successCount} actualizados, ${errorCount} errores`);
+      setMessage(`⚠ ${errorCount === 1 ? lastError : `${successCount} actualizados, ${errorCount} errores: ${lastError}`}`);
     }
   };
 
@@ -1851,6 +1854,7 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
                         className="w-48 px-2 py-1 border rounded text-sm"
                         defaultValue={r.email !== '-' ? r.email : ''}
                         onChange={e => handleChange(r.id!, 'email', e.target.value)}
+                        placeholder="Email (opcional)"
                       />
                     ) : r.email}
                   </td>

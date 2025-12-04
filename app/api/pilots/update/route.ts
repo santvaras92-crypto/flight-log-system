@@ -27,11 +27,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Piloto no encontrado" }, { status: 404 });
     }
 
-    // Si se cambia el email, verificar que no esté en uso
-    if (email && email !== existing.email) {
-      const emailInUse = await prisma.user.findFirst({ where: { email, NOT: { id: Number(id) } } });
-      if (emailInUse) {
-        return NextResponse.json({ ok: false, error: "Email ya está en uso por otro usuario" }, { status: 409 });
+    // Si se cambia el email, verificar que no esté en uso (si no está vacío)
+    if (email !== undefined && email && email.trim() !== '') {
+      if (email !== existing.email) {
+        const emailInUse = await prisma.user.findFirst({ where: { email, NOT: { id: Number(id) } } });
+        if (emailInUse) {
+          return NextResponse.json({ ok: false, error: "Email ya está en uso por otro usuario" }, { status: 409 });
+        }
       }
     }
 
@@ -48,7 +50,7 @@ export async function POST(req: Request) {
     
     if (codigo !== undefined) updateData.codigo = codigo || null;
     if (nombre !== undefined) updateData.nombre = nombre;
-    if (email !== undefined) updateData.email = email;
+    if (email !== undefined) updateData.email = email?.trim() || null;
     if (telefono !== undefined) updateData.telefono = telefono || null;
     if (licencia !== undefined) updateData.licencia = licencia || null;
     if (tipoDocumento !== undefined) updateData.tipoDocumento = tipoDocumento || null;
