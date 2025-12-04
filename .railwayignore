@@ -1,2 +1,7 @@
+# Only ignore build artifacts and dependencies
 node_modules/
 .next/
+.git/
+
+# Keep everything else - especially source files
+# DO NOT ignore: app/, lib/, public/, prisma/
