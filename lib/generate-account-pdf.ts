@@ -78,31 +78,31 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   }
   
   // ═══════════════════════════════════════════════════════════════════════════
-  // CORPORATE AVIATION COLOR PALETTE - Muted/Subdued tones for print
-  // Based on: Lufthansa, NetJets, VistaJet, Executive Jet Management standards
+  // CORPORATE AVIATION COLOR PALETTE - Very muted/subdued tones for print
+  // Professional desaturated colors for executive documents
   // ═══════════════════════════════════════════════════════════════════════════
   const colors = {
-    // Primary Navy - Corporate Aviation Standard (matching dashboard header)
-    navy: [30, 58, 138] as [number, number, number],              // #1e3a8a - Primary brand (darker)
-    navyDark: [23, 37, 84] as [number, number, number],           // #172554 - Darker accent
-    navyLight: [71, 85, 105] as [number, number, number],         // #475569 - Muted blue-gray
+    // Primary Navy - Deep corporate blue
+    navy: [51, 65, 85] as [number, number, number],               // #334155 - slate-700 (very muted)
+    navyDark: [30, 41, 59] as [number, number, number],           // #1e293b - slate-800
+    navyLight: [100, 116, 139] as [number, number, number],       // #64748b - slate-500
     
     // Executive Neutrals - High contrast for print
     white: [255, 255, 255] as [number, number, number],           // #FFFFFF
     offWhite: [248, 250, 252] as [number, number, number],        // #f8fafc - Subtle backgrounds
     platinum: [241, 245, 249] as [number, number, number],        // #f1f5f9 - Table alternates
-    silver: [203, 213, 225] as [number, number, number],          // #cbd5e1 - Borders (slightly darker)
+    silver: [203, 213, 225] as [number, number, number],          // #cbd5e1 - Borders
     
     // Typography - Maximum readability
-    charcoal: [15, 23, 42] as [number, number, number],           // #0f172a - Primary text
+    charcoal: [30, 41, 59] as [number, number, number],           // #1e293b - Primary text
     slate: [71, 85, 105] as [number, number, number],             // #475569 - Secondary text
-    muted: [100, 116, 139] as [number, number, number],           // #64748b - Tertiary text (darker)
+    muted: [100, 116, 139] as [number, number, number],           // #64748b - Tertiary text
     
-    // Semantic Colors - Muted/Subdued for professional look
-    credit: [21, 128, 61] as [number, number, number],            // #15803d - Deposits/Credits (muted green)
-    debit: [153, 27, 27] as [number, number, number],             // #991b1b - Charges/Negative (muted red)
-    neutral: [30, 64, 175] as [number, number, number],           // #1e40af - Informational (muted blue)
-    accent: [180, 138, 6] as [number, number, number],            // #b48a06 - Fuel/Highlights (muted gold)
+    // Semantic Colors - Very muted/desaturated for professional look
+    credit: [34, 97, 64] as [number, number, number],             // #226140 - Very muted forest green
+    debit: [127, 29, 29] as [number, number, number],             // #7f1d1d - Very muted dark red
+    neutral: [51, 65, 85] as [number, number, number],            // #334155 - Same as navy (muted)
+    accent: [133, 105, 29] as [number, number, number],           // #85691d - Very muted olive/gold
   };
   
   // Helper functions
@@ -319,21 +319,24 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   if (data.flights.length > 0) {
     const flightRows = data.flights.map(f => {
       const horas = Number(f.diff_hobbs || 0);
+      const airplaneRate = f.tarifa ? formatCurrency(f.tarifa * horas) : '-';
+      const instructorRate = f.instructor_rate ? formatCurrency(f.instructor_rate * horas) : '-';
+      const detalle = (f.detalle || '-').substring(0, 25);
       return [
         formatDate(f.fecha),
         horas ? horas.toFixed(1) : '-',
-        f.copiloto || f.detalle?.substring(0, 20) || '-',
-        f.tarifa ? formatCurrency(f.tarifa * horas) : '-',
-        f.instructor_rate ? formatCurrency(f.instructor_rate * horas) : '-',
+        airplaneRate,
+        instructorRate,
         formatCurrency(f.costo),
+        detalle,
       ];
     });
 
     autoTable(doc, {
       startY: y,
-      head: [['FECHA', 'HRS', 'COPILOTO / DETALLE', 'AVIÓN', 'INSTR.', 'TOTAL']],
+      head: [['FECHA', 'HRS', 'AVIÓN', 'INSTRUCTOR', 'TOTAL', 'DETALLE']],
       body: flightRows,
-      foot: [['', data.totalHours.toFixed(1), '', '', '', formatCurrency(data.totalSpent)]],
+      foot: [['TOTAL', data.totalHours.toFixed(1), '', '', formatCurrency(data.totalSpent), '']],
       theme: 'plain',
       margin: { left: 14, right: 14 },
       headStyles: {
@@ -364,10 +367,10 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
       columnStyles: {
         0: { cellWidth: 22, halign: 'left' },
         1: { cellWidth: 14, halign: 'center', textColor: colors.neutral },
-        2: { cellWidth: 'auto', halign: 'left', textColor: colors.slate },
-        3: { cellWidth: 22, halign: 'right' },
-        4: { cellWidth: 22, halign: 'right' },
-        5: { cellWidth: 24, halign: 'right', fontStyle: 'bold', textColor: colors.debit },
+        2: { cellWidth: 24, halign: 'right' },
+        3: { cellWidth: 24, halign: 'right' },
+        4: { cellWidth: 26, halign: 'right', fontStyle: 'bold', textColor: colors.debit },
+        5: { cellWidth: 'auto', halign: 'left', textColor: colors.muted, fontSize: 7 },
       },
     });
     
@@ -509,55 +512,66 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // BANK TRANSFER INFORMATION
+  // BANK TRANSFER INFORMATION - Professional layout
   // ═══════════════════════════════════════════════════════════════════════════
   const totalPages = doc.internal.pages.length - 1;
   doc.setPage(totalPages);
   
   const lastY = (doc as any).lastAutoTable?.finalY || y;
-  let bankY = Math.max(lastY + 15, pageHeight - 48);
+  let bankY = Math.max(lastY + 12, pageHeight - 52);
   
-  if (bankY > pageHeight - 20) {
+  if (bankY > pageHeight - 25) {
     doc.addPage();
     bankY = 20;
   }
   
-  // Bank info card
-  doc.setFillColor(...colors.offWhite);
+  // Bank info card - wider with better spacing
+  doc.setFillColor(...colors.white);
   doc.setDrawColor(...colors.silver);
-  doc.setLineWidth(0.3);
-  doc.roundedRect(14, bankY, pageWidth - 28, 30, 2, 2, 'FD');
+  doc.setLineWidth(0.4);
+  doc.roundedRect(14, bankY, pageWidth - 28, 38, 3, 3, 'FD');
   
-  // Header
+  // Header bar
   doc.setFillColor(...colors.navy);
-  doc.roundedRect(14, bankY, pageWidth - 28, 7, 2, 2, 'F');
-  doc.rect(14, bankY + 5, pageWidth - 28, 2, 'F');
+  doc.roundedRect(14, bankY, pageWidth - 28, 9, 3, 3, 'F');
+  doc.rect(14, bankY + 6, pageWidth - 28, 3, 'F');
   
   doc.setTextColor(...colors.white);
-  doc.setFontSize(7);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.text('DATOS PARA TRANSFERENCIA BANCARIA', 20, bankY + 4.5);
+  doc.text('DATOS PARA TRANSFERENCIA BANCARIA', pageWidth / 2, bankY + 6, { align: 'center' });
   
-  // Bank details
-  doc.setTextColor(...colors.charcoal);
+  // Bank details - two column layout
+  const colLeft = 20;
+  const colRight = pageWidth / 2 + 5;
+  let detailY = bankY + 16;
+  
+  // Left column
+  doc.setTextColor(...colors.muted);
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
+  doc.text('Titular', colLeft, detailY);
+  doc.text('RUT', colLeft, detailY + 8);
   
-  const bankDetails = [
-    ['Titular:', 'SANTIAGO NICOLÁS VARAS SAAVEDRA'],
-    ['RUT:', '18.166.515-7'],
-    ['Banco:', 'Santander  •  Cuenta Corriente Nº 0-000-75-79256-5'],
-    ['Email:', 'santvaras92@gmail.com'],
-  ];
+  doc.setTextColor(...colors.charcoal);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('SANTIAGO NICOLÁS VARAS SAAVEDRA', colLeft, detailY + 4);
+  doc.text('18.166.515-7', colLeft, detailY + 12);
   
-  let detailY = bankY + 12;
-  bankDetails.forEach(([label, value]) => {
-    doc.setFont('helvetica', 'bold');
-    doc.text(label, 20, detailY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(value, 42, detailY);
-    detailY += 4.5;
-  });
+  // Right column
+  doc.setTextColor(...colors.muted);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Banco', colRight, detailY);
+  doc.text('Email', colRight, detailY + 8);
+  
+  doc.setTextColor(...colors.charcoal);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Santander • Cta. Cte. 0-000-75-79256-5', colRight, detailY + 4);
+  doc.setFont('helvetica', 'normal');
+  doc.text('santvaras92@gmail.com', colRight, detailY + 12);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // FOOTER ON ALL PAGES
