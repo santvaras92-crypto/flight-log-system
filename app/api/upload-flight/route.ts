@@ -188,6 +188,12 @@ export async function POST(request: NextRequest) {
     // Enviar correo de notificación
     await sendNotificationEmail(submission, piloto);
 
+    // Marcar como notificado
+    await prisma.flightSubmission.update({
+      where: { id: submission.id },
+      data: { notificado: true }
+    });
+
     return NextResponse.json({
       success: true,
       submissionId: submission.id,
