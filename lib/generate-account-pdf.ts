@@ -78,14 +78,14 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   }
   
   // ═══════════════════════════════════════════════════════════════════════════
-  // CORPORATE AVIATION COLOR PALETTE - Very muted/subdued tones for print
-  // Professional desaturated colors for executive documents
+  // CORPORATE AVIATION COLOR PALETTE - Blue Navy Aviation style
+  // Matches dashboard header (blue-800 gradient)
   // ═══════════════════════════════════════════════════════════════════════════
   const colors = {
-    // Primary Navy - Deep corporate blue
-    navy: [51, 65, 85] as [number, number, number],               // #334155 - slate-700 (very muted)
-    navyDark: [30, 41, 59] as [number, number, number],           // #1e293b - slate-800
-    navyLight: [100, 116, 139] as [number, number, number],       // #64748b - slate-500
+    // Primary Navy - Aviation Blue (matches header)
+    navy: [30, 64, 175] as [number, number, number],              // #1e40af - blue-800 (aviation navy)
+    navyDark: [30, 58, 138] as [number, number, number],          // #1e3a8a - blue-900
+    navyLight: [59, 130, 246] as [number, number, number],        // #3b82f6 - blue-500
     
     // Executive Neutrals - High contrast for print
     white: [255, 255, 255] as [number, number, number],           // #FFFFFF
@@ -98,11 +98,11 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     slate: [71, 85, 105] as [number, number, number],             // #475569 - Secondary text
     muted: [100, 116, 139] as [number, number, number],           // #64748b - Tertiary text
     
-    // Semantic Colors - Very muted/desaturated for professional look
-    credit: [34, 97, 64] as [number, number, number],             // #226140 - Very muted forest green
-    debit: [127, 29, 29] as [number, number, number],             // #7f1d1d - Very muted dark red
-    neutral: [51, 65, 85] as [number, number, number],            // #334155 - Same as navy (muted)
-    accent: [133, 105, 29] as [number, number, number],           // #85691d - Very muted olive/gold
+    // Semantic Colors - Professional look
+    credit: [34, 97, 64] as [number, number, number],             // #226140 - Forest green
+    debit: [127, 29, 29] as [number, number, number],             // #7f1d1d - Dark red
+    neutral: [30, 64, 175] as [number, number, number],           // #1e40af - Aviation navy (same as navy)
+    accent: [133, 105, 29] as [number, number, number],           // #85691d - Olive/gold
   };
   
   // Helper functions
