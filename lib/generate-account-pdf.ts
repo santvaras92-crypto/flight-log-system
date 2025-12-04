@@ -12,6 +12,7 @@ interface Flight {
   tach_fin?: number;
   tarifa?: number;
   instructor_rate?: number;
+  copiloto?: string;
 }
 
 interface Deposit {
@@ -76,497 +77,508 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     console.error('Could not load logo:', e);
   }
   
-  // Professional PDF Color Palette - Matching Dashboard Theme
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CORPORATE AVIATION COLOR PALETTE
+  // Based on: Lufthansa, NetJets, VistaJet, Executive Jet Management standards
+  // ═══════════════════════════════════════════════════════════════════════════
   const colors = {
-    // Blue gradient from dashboard header (from-blue-700 via-blue-800 to-indigo-900)
-    navy: [30, 64, 175] as [number, number, number],             // #1e40af - blue-800 (main header)
-    navyLight: [29, 78, 216] as [number, number, number],        // #1d4ed8 - blue-700
-    navyDark: [49, 46, 129] as [number, number, number],         // #312e81 - indigo-900
+    // Primary Navy - Corporate Aviation Standard (matching dashboard header)
+    navy: [30, 64, 175] as [number, number, number],              // #1e40af - Primary brand
+    navyDark: [30, 58, 138] as [number, number, number],          // #1e3a8a - Darker accent
+    navyLight: [59, 130, 246] as [number, number, number],        // #3b82f6 - Light accent
     
-    // Backgrounds - Limpios y profesionales
-    bgPrimary: [248, 250, 252] as [number, number, number],      // #F8FAFC - Fondo principal casi blanco
-    white: [255, 255, 255] as [number, number, number],          // #FFFFFF - Tarjetas/bloques
+    // Executive Neutrals - High contrast for print
+    white: [255, 255, 255] as [number, number, number],           // #FFFFFF
+    offWhite: [248, 250, 252] as [number, number, number],        // #f8fafc - Subtle backgrounds
+    platinum: [241, 245, 249] as [number, number, number],        // #f1f5f9 - Table alternates
+    silver: [226, 232, 240] as [number, number, number],          // #e2e8f0 - Borders
     
-    // Neutrals - Alto contraste para impresión
-    textPrimary: [17, 24, 39] as [number, number, number],       // #111827 - Texto principal
-    textSecondary: [75, 85, 99] as [number, number, number],     // #4B5563 - Texto secundario
-    textMuted: [156, 163, 175] as [number, number, number],      // #9CA3AF - Texto muted
-    border: [229, 231, 235] as [number, number, number],         // #E5E7EB - Bordes
-    tableAlt: [243, 244, 246] as [number, number, number],       // #F3F4F6 - Filas alternadas
-    cardBg: [249, 250, 251] as [number, number, number],         // #F9FAFB - Fondo cards
+    // Typography - Maximum readability
+    charcoal: [15, 23, 42] as [number, number, number],           // #0f172a - Primary text
+    slate: [71, 85, 105] as [number, number, number],             // #475569 - Secondary text
+    muted: [148, 163, 184] as [number, number, number],           // #94a3b8 - Tertiary text
     
-    // Accent Colors - Solo para cifras clave
-    primary: [37, 99, 235] as [number, number, number],          // #2563EB - Blue primary/totales
-    success: [5, 150, 105] as [number, number, number],          // #059669 - Verde depósitos/saldo+
-    warning: [217, 119, 6] as [number, number, number],          // #D97706 - Naranjo combustible/gastos
-    danger: [220, 38, 38] as [number, number, number],           // #DC2626 - Rojo saldo negativo
-    info: [14, 165, 233] as [number, number, number],            // #0EA5E9 - Celeste horas/métricas
+    // Semantic Colors - Financial statements standard
+    credit: [22, 163, 74] as [number, number, number],            // #16a34a - Deposits/Credits (green)
+    debit: [185, 28, 28] as [number, number, number],             // #b91c1c - Charges/Negative (red)
+    neutral: [37, 99, 235] as [number, number, number],           // #2563eb - Informational (blue)
+    accent: [234, 179, 8] as [number, number, number],            // #eab308 - Fuel/Highlights (gold)
   };
   
   // Helper functions
-  const formatCurrency = (value: number) => `$${Math.round(value).toLocaleString('en-US')}`;
+  const formatCurrency = (value: number) => {
+    const formatted = Math.abs(Math.round(value)).toLocaleString('es-CL');
+    return value < 0 ? `-$${formatted}` : `$${formatted}`;
+  };
+  
   const formatDate = (date: string | Date) => {
     if (typeof date === 'string' && date.includes('-') && date.length <= 12) {
       return date;
     }
     const d = new Date(date);
-    return d.toLocaleDateString('en-US');
+    const day = d.getDate().toString().padStart(2, '0');
+    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const month = months[d.getMonth()];
+    const year = d.getFullYear().toString().slice(-2);
+    return `${day}-${month}-${year}`;
   };
 
-  // === EXECUTIVE AVIATION HEADER - Matching Dashboard Gradient ===
-  // Main header - blue-800 (#1e40af)
+  // ═══════════════════════════════════════════════════════════════════════════
+  // HEADER - Corporate Aviation Style
+  // ═══════════════════════════════════════════════════════════════════════════
   doc.setFillColor(...colors.navy);
-  doc.rect(0, 0, pageWidth, 38, 'F');
+  doc.rect(0, 0, pageWidth, 32, 'F');
   
-  // Subtle bottom accent - indigo-900 (#312e81)
+  // Subtle bottom accent line
   doc.setFillColor(...colors.navyDark);
-  doc.rect(0, 34, pageWidth, 4, 'F');
+  doc.rect(0, 30, pageWidth, 2, 'F');
   
-  // Logo - premium positioning
+  // Logo - Left aligned
   if (logoBase64) {
     try {
-      const logoWidth = 32;
-      const logoHeight = 4.2;
-      doc.addImage(logoBase64, 'PNG', 18, 14.5, logoWidth, logoHeight);
+      doc.addImage(logoBase64, 'PNG', 14, 10, 28, 12);
     } catch (e) {
       console.error('Could not add logo to PDF:', e);
     }
   }
   
-  // PILOT ACCOUNT STATEMENT - main title at top center
+  // Title - Center
   doc.setTextColor(...colors.white);
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('PILOT ACCOUNT STATEMENT', pageWidth / 2, 14, { align: 'center' });
+  doc.text('PILOT ACCOUNT STATEMENT', pageWidth / 2, 15, { align: 'center' });
   
-  // CC-AQI title - just below PILOT ACCOUNT STATEMENT
-  doc.setFontSize(15);
-  doc.setFont('helvetica', 'bold');
-  doc.text('CC-AQI', pageWidth / 2, 21, { align: 'center' });
-  
-  // FLIGHT OPERATIONS subtitle - just above bottom edge
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  const subtitle = 'F L I G H T   O P E R A T I O N S';
-  doc.text(subtitle, pageWidth / 2, 33, { align: 'center' });
+  doc.text('CC-AQI  •  FLIGHT OPERATIONS', pageWidth / 2, 22, { align: 'center' });
   
-  // Metadata panel - clean and professional
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Generated: ${new Date().toLocaleDateString('en-US')}`, pageWidth - 18, 16, { align: 'right' });
-  
+  // Date - Right aligned
+  doc.setFontSize(8);
+  doc.text(new Date().toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }), pageWidth - 14, 15, { align: 'right' });
   if (data.dateRange?.start || data.dateRange?.end) {
-    const rangeText = `Period: ${data.dateRange.start || 'Start'} - ${data.dateRange.end || 'Current'}`;
-    doc.text(rangeText, pageWidth - 18, 22, { align: 'right' });
+    doc.text(`${data.dateRange.start || 'Inicio'} - ${data.dateRange.end || 'Actual'}`, pageWidth - 14, 21, { align: 'right' });
   }
 
-  // === CLIENT INFO CARD - EXECUTIVE STYLE ===
-  const clientCardY = 48;
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PILOT IDENTIFICATION BAR
+  // ═══════════════════════════════════════════════════════════════════════════
+  let y = 40;
   
-  // Clean card with border
-  doc.setDrawColor(...colors.border);
+  doc.setFillColor(...colors.offWhite);
+  doc.setDrawColor(...colors.silver);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(14, y, pageWidth - 28, 14, 2, 2, 'FD');
+  
+  doc.setTextColor(...colors.charcoal);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text(data.clientName.toUpperCase(), 20, y + 9);
+  
+  doc.setTextColor(...colors.slate);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`ID: ${data.clientCode}`, pageWidth - 20, y + 9, { align: 'right' });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // METRICS DASHBOARD - 4 Key Cards
+  // ═══════════════════════════════════════════════════════════════════════════
+  y = 60;
+  const cardWidth = (pageWidth - 38) / 4;
+  const cardHeight = 22;
+  const cardGap = 3;
+  
+  const metrics = [
+    { label: 'VUELOS', value: data.totalFlights.toString(), color: colors.neutral },
+    { label: 'HORAS', value: data.totalHours.toFixed(1), color: colors.navyLight },
+    { label: 'CARGOS', value: formatCurrency(data.totalSpent), color: colors.debit },
+    { label: 'BALANCE', value: formatCurrency(data.balance), color: data.balance >= 0 ? colors.credit : colors.debit },
+  ];
+  
+  metrics.forEach((metric, i) => {
+    const x = 14 + i * (cardWidth + cardGap);
+    
+    // Card background
+    doc.setFillColor(...colors.white);
+    doc.setDrawColor(...colors.silver);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(x, y, cardWidth, cardHeight, 2, 2, 'FD');
+    
+    // Top color bar
+    doc.setFillColor(...metric.color);
+    doc.roundedRect(x, y, cardWidth, 3, 2, 2, 'F');
+    doc.rect(x, y + 1.5, cardWidth, 1.5, 'F'); // Square off bottom of bar
+    
+    // Label
+    doc.setTextColor(...colors.muted);
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'bold');
+    doc.text(metric.label, x + cardWidth / 2, y + 9, { align: 'center' });
+    
+    // Value
+    doc.setTextColor(...metric.color);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text(metric.value, x + cardWidth / 2, y + 17, { align: 'center' });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FINANCIAL SUMMARY - Credits vs Debits
+  // ═══════════════════════════════════════════════════════════════════════════
+  y = 90;
+  const halfWidth = (pageWidth - 32) / 2;
+  
+  // Left: CRÉDITOS
   doc.setFillColor(...colors.white);
-  doc.setLineWidth(0.4);
-  doc.roundedRect(18, clientCardY, pageWidth - 36, 18, 3, 3, 'FD');
+  doc.setDrawColor(...colors.silver);
+  doc.roundedRect(14, y, halfWidth, 32, 2, 2, 'FD');
   
-  // Client info - centered layout
-  doc.setTextColor(...colors.textMuted);
+  doc.setFillColor(...colors.credit);
+  doc.roundedRect(14, y, halfWidth, 7, 2, 2, 'F');
+  doc.rect(14, y + 5, halfWidth, 2, 'F');
+  
+  doc.setTextColor(...colors.white);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('CRÉDITOS', 14 + halfWidth / 2, y + 5, { align: 'center' });
+  
+  doc.setTextColor(...colors.charcoal);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.text('Pilot:', 24, clientCardY + 8);
+  doc.text('Depósitos:', 20, y + 14);
+  doc.text('Combustible:', 20, y + 21);
+  doc.text('TOTAL:', 20, y + 28);
   
-  doc.setTextColor(...colors.textPrimary);
-  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text(data.clientName, 24, clientCardY + 14);
-
-  // === EXECUTIVE METRICS CARDS - PREMIUM DASHBOARD STYLE ===
-  const cardY = 75;
-  const cardHeight = 28;
-  const cardWidth = (pageWidth - 42) / 4;
-  const cardGap = 4;
-
-  const summaryItems = [
-    { label: 'Total Flights', value: data.totalFlights.toString(), color: colors.primary, bgColor: colors.cardBg },
-    { label: 'Total Hours', value: `${data.totalHours.toFixed(1)}h`, color: colors.info, bgColor: colors.cardBg },
-    { label: 'Total Spent', value: formatCurrency(data.totalSpent), color: colors.warning, bgColor: colors.cardBg },
-    { label: 'Balance', value: formatCurrency(data.balance), color: data.balance >= 0 ? colors.success : colors.danger, bgColor: colors.cardBg },
-  ];
-
-  summaryItems.forEach((item, i) => {
-    const x = 18 + i * (cardWidth + cardGap);
-    
-    // Card background - white with border
-    doc.setDrawColor(...colors.border);
-    doc.setFillColor(...item.bgColor);
-    doc.setLineWidth(0.4);
-    doc.roundedRect(x, cardY, cardWidth, cardHeight, 4, 4, 'FD');
-    
-    // Top accent bar - colored
-    doc.setFillColor(...item.color);
-    doc.roundedRect(x, cardY, cardWidth, 3, 4, 4, 'F');
-    
-    // Label - uppercase, small, muted
-    doc.setTextColor(...colors.textMuted);
-    doc.setFontSize(6.5);
-    doc.setFont('helvetica', 'bold');
-    const labelUpper = item.label.toUpperCase();
-    doc.text(labelUpper, x + 5, cardY + 11);
-    
-    // Value - large, bold, colored
-    doc.setTextColor(...item.color);
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text(item.value, x + 5, cardY + 21);
-  });
-
-  // === FINANCIAL SUMMARY - EXECUTIVE CARD ===
-  let currentY = cardY + cardHeight + 18;
+  doc.setTextColor(...colors.credit);
+  doc.text(`+${formatCurrency(data.totalDeposits)}`, 14 + halfWidth - 6, y + 14, { align: 'right' });
+  doc.text(`+${formatCurrency(data.totalFuel)}`, 14 + halfWidth - 6, y + 21, { align: 'right' });
+  doc.setFontSize(9);
+  doc.text(`+${formatCurrency(data.totalDeposits + data.totalFuel)}`, 14 + halfWidth - 6, y + 28, { align: 'right' });
   
-  // Section title - navy style
-  doc.setFillColor(...colors.navy);
-  doc.roundedRect(18, currentY, pageWidth - 36, 8, 2, 2, 'F');
+  // Right: CARGOS
+  doc.setFillColor(...colors.white);
+  doc.setDrawColor(...colors.silver);
+  doc.roundedRect(18 + halfWidth, y, halfWidth, 32, 2, 2, 'FD');
+  
+  doc.setFillColor(...colors.debit);
+  doc.roundedRect(18 + halfWidth, y, halfWidth, 7, 2, 2, 'F');
+  doc.rect(18 + halfWidth, y + 5, halfWidth, 2, 'F');
+  
+  doc.setTextColor(...colors.white);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('CARGOS', 18 + halfWidth + halfWidth / 2, y + 5, { align: 'center' });
+  
+  doc.setTextColor(...colors.charcoal);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Vuelos:', 24 + halfWidth, y + 14);
+  doc.text('', 24 + halfWidth, y + 21);
+  doc.text('TOTAL:', 24 + halfWidth, y + 28);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...colors.debit);
+  doc.text(`-${formatCurrency(data.totalSpent)}`, 14 + halfWidth * 2, y + 14, { align: 'right' });
+  doc.setFontSize(9);
+  doc.text(`-${formatCurrency(data.totalSpent)}`, 14 + halfWidth * 2, y + 28, { align: 'right' });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BALANCE DESTACADO
+  // ═══════════════════════════════════════════════════════════════════════════
+  y = 128;
+  const balanceColor = data.balance >= 0 ? colors.credit : colors.debit;
+  const balanceText = data.balance >= 0 ? 'SALDO A FAVOR' : 'SALDO PENDIENTE';
+  
+  doc.setFillColor(...balanceColor);
+  doc.roundedRect(14, y, pageWidth - 28, 14, 2, 2, 'F');
   
   doc.setTextColor(...colors.white);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text('FINANCIAL SUMMARY', 24, currentY + 5.5);
-  currentY += 13;
+  doc.text(balanceText, 20, y + 9);
   
-  // Financial details table - clean professional styling
-  const financialData = [
-    ['Total Deposits', formatCurrency(data.totalDeposits)],
-    ['Fuel Credit', formatCurrency(data.totalFuel)],
-    ['Total Spent', formatCurrency(data.totalSpent)],
-    ['Current Balance', formatCurrency(data.balance)],
-  ];
+  doc.setFontSize(12);
+  doc.text(formatCurrency(data.balance), pageWidth - 20, y + 9, { align: 'right' });
 
-  autoTable(doc, {
-    startY: currentY,
-    head: [],
-    body: financialData,
-    theme: 'plain',
-    margin: { left: 18, right: 18 },
-    styles: {
-      fontSize: 9,
-      cellPadding: 4,
-      lineColor: colors.border,
-      lineWidth: 0.15,
-    },
-    columnStyles: {
-      0: { 
-        fontStyle: 'normal', 
-        textColor: colors.textSecondary,
-        cellWidth: 70,
-      },
-      1: { 
-        fontStyle: 'bold', 
-        halign: 'right', 
-        textColor: colors.textPrimary,
-        cellWidth: 50,
-      },
-    },
-    tableWidth: 120,
-    didParseCell: function(data) {
-      // Highlight last row (balance)
-      if (data.row.index === 3) {
-        data.cell.styles.lineWidth = { top: 0.4, bottom: 0.4 };
-        data.cell.styles.fontStyle = 'bold';
-        data.cell.styles.fontSize = 10;
-      }
-      // Color code amounts with specific accents
-      if (data.column.index === 1) {
-        if (data.row.index === 0) {
-          data.cell.styles.textColor = colors.success; // Deposits - green
-        } else if (data.row.index === 1 || data.row.index === 2) {
-          data.cell.styles.textColor = colors.warning; // Fuel/Spent - orange
-        } else if (data.row.index === 3) {
-          const balanceValue = financialData[3][1];
-          const isNegative = balanceValue.includes('-');
-          data.cell.styles.textColor = isNegative ? colors.danger : colors.success;
-        }
-      }
-    },
-  });
-
-  // === DEPOSITS TABLE - EXECUTIVE DESIGN ===
-  currentY = (doc as any).lastAutoTable?.finalY + 18 || currentY + 50;
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FLIGHT HISTORY TABLE
+  // ═══════════════════════════════════════════════════════════════════════════
+  y = 150;
   
-  if (data.deposits.length > 0) {
-    // Section header - navy
-    doc.setFillColor(...colors.navy);
-    doc.roundedRect(18, currentY, pageWidth - 36, 8, 2, 2, 'F');
-    
-    doc.setTextColor(...colors.white);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`DEPOSITS (${data.deposits.length})`, 24, currentY + 5.5);
-    currentY += 12;
-
-    const depositRows = data.deposits.map(d => [
-      formatDate(d.fecha),
-      d.descripcion || '-',
-      formatCurrency(d.monto),
-    ]);
-
-    autoTable(doc, {
-      startY: currentY,
-      head: [['Date', 'Description', 'Amount']],
-      body: depositRows,
-      theme: 'striped',
-      margin: { left: 18, right: 18 },
-      headStyles: {
-        fillColor: colors.navy,
-        textColor: colors.white,
-        fontStyle: 'bold',
-        fontSize: 8,
-        halign: 'left',
-        cellPadding: 5,
-      },
-      bodyStyles: {
-        fontSize: 8,
-        textColor: colors.textPrimary,
-        cellPadding: 4,
-      },
-      alternateRowStyles: {
-        fillColor: colors.tableAlt,
-      },
-      columnStyles: {
-        0: { cellWidth: 28, halign: 'left' },
-        1: { cellWidth: 'auto', halign: 'left', textColor: colors.textSecondary },
-        2: { cellWidth: 35, halign: 'right', fontStyle: 'bold', textColor: colors.success },
-      },
-      styles: {
-        lineColor: colors.border,
-        lineWidth: 0.2,
-      },
-    });
-    
-    currentY = (doc as any).lastAutoTable?.finalY + 12 || currentY + 50;
-  }
-
-  // === FUEL CREDITS TABLE - EXECUTIVE DESIGN ===
-  if (data.fuelCredits.length > 0) {
-    // Check if we need a new page
-    if (currentY > pageHeight - 85) {
-      doc.addPage();
-      currentY = 24;
-    }
-
-    // Section header - navy
-    doc.setFillColor(...colors.navy);
-    doc.roundedRect(18, currentY, pageWidth - 36, 8, 2, 2, 'F');
-    
-    doc.setTextColor(...colors.white);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`FUEL CREDITS (${data.fuelCredits.length})`, 24, currentY + 5.5);
-    currentY += 12;
-
-    const fuelRows = data.fuelCredits.map(f => [
-      formatDate(f.fecha),
-      f.descripcion || '-',
-      formatCurrency(f.monto),
-    ]);
-
-    autoTable(doc, {
-      startY: currentY,
-      head: [['Date', 'Liters', 'Amount']],
-      body: fuelRows,
-      theme: 'striped',
-      margin: { left: 18, right: 18 },
-      headStyles: {
-        fillColor: colors.navy,
-        textColor: colors.white,
-        fontStyle: 'bold',
-        fontSize: 8,
-        halign: 'left',
-        cellPadding: 5,
-      },
-      bodyStyles: {
-        fontSize: 8,
-        textColor: colors.textPrimary,
-        cellPadding: 4,
-      },
-      alternateRowStyles: {
-        fillColor: colors.tableAlt,
-      },
-      columnStyles: {
-        0: { cellWidth: 28, halign: 'left' },
-        1: { cellWidth: 'auto', halign: 'left', textColor: colors.textSecondary },
-        2: { cellWidth: 35, halign: 'right', fontStyle: 'bold', textColor: colors.warning },
-      },
-      styles: {
-        lineColor: colors.border,
-        lineWidth: 0.2,
-      },
-    });
-    
-    currentY = (doc as any).lastAutoTable?.finalY + 12 || currentY + 50;
-  }
-
-  // === FLIGHTS TABLE - EXECUTIVE DESIGN ===
-  // Check if we need a new page
-  if (currentY > pageHeight - 85) {
-    doc.addPage();
-    currentY = 24;
-  }
-  
-  // Section header - navy
+  // Section header
   doc.setFillColor(...colors.navy);
-  doc.roundedRect(18, currentY, pageWidth - 36, 8, 2, 2, 'F');
+  doc.roundedRect(14, y, pageWidth - 28, 8, 2, 2, 'F');
   
   doc.setTextColor(...colors.white);
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.text(`FLIGHT DETAILS (${data.flights.length})`, 24, currentY + 5.5);
-  currentY += 12;
+  doc.text(`HISTORIAL DE VUELOS (${data.flights.length})`, 20, y + 5.5);
+  
+  y += 10;
 
   if (data.flights.length > 0) {
     const flightRows = data.flights.map(f => {
       const horas = Number(f.diff_hobbs || 0);
-      const nov25 = new Date('2025-11-25');
-      const flightDate = new Date(f.fecha);
-      let avion = 0;
-      let instructor = 0;
-      if ((f.tarifa != null) || (f.instructor_rate != null)) {
-        const rate = Number(f.tarifa || 0);
-        const ir = Number(f.instructor_rate || 0);
-        avion = horas * rate;
-        instructor = horas * ir;
-      } else if (flightDate < nov25 && f.costo) {
-        avion = Number(f.costo);
-        instructor = 0;
-      } else if (f.costo) {
-        avion = Number(f.costo);
-      }
-
       return [
         formatDate(f.fecha),
-        horas ? `${horas.toFixed(1)}` : '-',
-        avion ? formatCurrency(avion) : '-',
-        instructor ? formatCurrency(instructor) : '-',
-        f.costo ? formatCurrency(f.costo) : '-',
-        (f.detalle || '-').substring(0, 35),
+        horas ? horas.toFixed(1) : '-',
+        f.copiloto || f.detalle?.substring(0, 20) || '-',
+        f.tarifa ? formatCurrency(f.tarifa * horas) : '-',
+        f.instructor_rate ? formatCurrency(f.instructor_rate * horas) : '-',
+        formatCurrency(f.costo),
       ];
     });
 
     autoTable(doc, {
-      startY: currentY,
-      head: [['Date', 'Hours', 'Aircraft', 'Instructor/SP', 'Total', 'Details']],
+      startY: y,
+      head: [['FECHA', 'HRS', 'COPILOTO / DETALLE', 'AVIÓN', 'INSTR.', 'TOTAL']],
       body: flightRows,
-      theme: 'striped',
-      margin: { left: 18, right: 18 },
+      foot: [['', data.totalHours.toFixed(1), '', '', '', formatCurrency(data.totalSpent)]],
+      theme: 'plain',
+      margin: { left: 14, right: 14 },
       headStyles: {
+        fillColor: colors.platinum,
+        textColor: colors.slate,
+        fontStyle: 'bold',
+        fontSize: 7,
+        halign: 'left',
+        cellPadding: 3,
+      },
+      bodyStyles: {
+        fontSize: 7.5,
+        textColor: colors.charcoal,
+        cellPadding: 2.5,
+        lineColor: colors.silver,
+        lineWidth: 0.1,
+      },
+      footStyles: {
         fillColor: colors.navy,
         textColor: colors.white,
         fontStyle: 'bold',
         fontSize: 8,
+        cellPadding: 3,
+      },
+      alternateRowStyles: {
+        fillColor: colors.offWhite,
+      },
+      columnStyles: {
+        0: { cellWidth: 22, halign: 'left' },
+        1: { cellWidth: 14, halign: 'center', textColor: colors.neutral },
+        2: { cellWidth: 'auto', halign: 'left', textColor: colors.slate },
+        3: { cellWidth: 22, halign: 'right' },
+        4: { cellWidth: 22, halign: 'right' },
+        5: { cellWidth: 24, halign: 'right', fontStyle: 'bold', textColor: colors.debit },
+      },
+    });
+    
+    y = (doc as any).lastAutoTable?.finalY + 8 || y + 50;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DEPOSITS TABLE (if any)
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (data.deposits.length > 0) {
+    if (y > pageHeight - 60) {
+      doc.addPage();
+      y = 20;
+    }
+    
+    doc.setFillColor(...colors.navy);
+    doc.roundedRect(14, y, pageWidth - 28, 8, 2, 2, 'F');
+    
+    doc.setTextColor(...colors.white);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`HISTORIAL DE DEPÓSITOS (${data.deposits.length})`, 20, y + 5.5);
+    
+    y += 10;
+
+    const depositRows = data.deposits.map(d => [
+      formatDate(d.fecha),
+      d.descripcion || '-',
+      `+${formatCurrency(d.monto)}`,
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      head: [['FECHA', 'DESCRIPCIÓN', 'MONTO']],
+      body: depositRows,
+      foot: [['', 'TOTAL DEPÓSITOS', `+${formatCurrency(data.totalDeposits)}`]],
+      theme: 'plain',
+      margin: { left: 14, right: 14 },
+      headStyles: {
+        fillColor: colors.platinum,
+        textColor: colors.slate,
+        fontStyle: 'bold',
+        fontSize: 7,
         halign: 'left',
-        cellPadding: 5,
+        cellPadding: 3,
       },
       bodyStyles: {
         fontSize: 7.5,
-        textColor: colors.textPrimary,
-        cellPadding: 3.5,
+        textColor: colors.charcoal,
+        cellPadding: 2.5,
+        lineColor: colors.silver,
+        lineWidth: 0.1,
+      },
+      footStyles: {
+        fillColor: colors.credit,
+        textColor: colors.white,
+        fontStyle: 'bold',
+        fontSize: 8,
+        cellPadding: 3,
       },
       alternateRowStyles: {
-        fillColor: colors.tableAlt,
+        fillColor: colors.offWhite,
       },
       columnStyles: {
-        0: { cellWidth: 24, halign: 'left' },
-        1: { cellWidth: 16, halign: 'right', textColor: colors.info },
-        2: { cellWidth: 26, halign: 'right', fontStyle: 'normal', textColor: colors.warning },
-        3: { cellWidth: 28, halign: 'right', fontStyle: 'normal', textColor: colors.warning },
-        4: { cellWidth: 26, halign: 'right', fontStyle: 'bold', textColor: colors.primary },
-        5: { cellWidth: 'auto', halign: 'left', textColor: colors.textSecondary },
-      },
-      styles: {
-        lineColor: colors.border,
-        lineWidth: 0.2,
+        0: { cellWidth: 26, halign: 'left' },
+        1: { cellWidth: 'auto', halign: 'left', textColor: colors.slate },
+        2: { cellWidth: 32, halign: 'right', fontStyle: 'bold', textColor: colors.credit },
       },
     });
+    
+    y = (doc as any).lastAutoTable?.finalY + 8 || y + 30;
   }
 
-  // === EXECUTIVE FOOTER WITH BANK DETAILS ===
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FUEL CREDITS TABLE (if any)
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (data.fuelCredits.length > 0) {
+    if (y > pageHeight - 60) {
+      doc.addPage();
+      y = 20;
+    }
+    
+    doc.setFillColor(...colors.navy);
+    doc.roundedRect(14, y, pageWidth - 28, 8, 2, 2, 'F');
+    
+    doc.setTextColor(...colors.white);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`CRÉDITOS DE COMBUSTIBLE (${data.fuelCredits.length})`, 20, y + 5.5);
+    
+    y += 10;
+
+    const fuelRows = data.fuelCredits.map(f => [
+      formatDate(f.fecha),
+      f.descripcion || '-',
+      `+${formatCurrency(f.monto)}`,
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      head: [['FECHA', 'DETALLE', 'MONTO']],
+      body: fuelRows,
+      foot: [['', 'TOTAL COMBUSTIBLE', `+${formatCurrency(data.totalFuel)}`]],
+      theme: 'plain',
+      margin: { left: 14, right: 14 },
+      headStyles: {
+        fillColor: colors.platinum,
+        textColor: colors.slate,
+        fontStyle: 'bold',
+        fontSize: 7,
+        halign: 'left',
+        cellPadding: 3,
+      },
+      bodyStyles: {
+        fontSize: 7.5,
+        textColor: colors.charcoal,
+        cellPadding: 2.5,
+        lineColor: colors.silver,
+        lineWidth: 0.1,
+      },
+      footStyles: {
+        fillColor: colors.accent,
+        textColor: colors.charcoal,
+        fontStyle: 'bold',
+        fontSize: 8,
+        cellPadding: 3,
+      },
+      alternateRowStyles: {
+        fillColor: colors.offWhite,
+      },
+      columnStyles: {
+        0: { cellWidth: 26, halign: 'left' },
+        1: { cellWidth: 'auto', halign: 'left', textColor: colors.slate },
+        2: { cellWidth: 32, halign: 'right', fontStyle: 'bold', textColor: colors.accent },
+      },
+    });
+    
+    y = (doc as any).lastAutoTable?.finalY + 8 || y + 30;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BANK TRANSFER INFORMATION
+  // ═══════════════════════════════════════════════════════════════════════════
   const totalPages = doc.internal.pages.length - 1;
   doc.setPage(totalPages);
   
-  const lastY = (doc as any).lastAutoTable?.finalY || currentY + 50;
-  let footerY = Math.max(lastY + 22, pageHeight - 52);
+  const lastY = (doc as any).lastAutoTable?.finalY || y;
+  let bankY = Math.max(lastY + 15, pageHeight - 48);
   
-  // If footer would overflow, add new page
-  if (footerY > pageHeight - 18) {
+  if (bankY > pageHeight - 20) {
     doc.addPage();
-    footerY = 24;
+    bankY = 20;
   }
   
-  // Separator line - navy blue
-  doc.setDrawColor(...colors.navy);
-  doc.setLineWidth(0.6);
-  doc.line(18, footerY - 6, pageWidth - 18, footerY - 6);
+  // Bank info card
+  doc.setFillColor(...colors.offWhite);
+  doc.setDrawColor(...colors.silver);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(14, bankY, pageWidth - 28, 30, 2, 2, 'FD');
   
-  // Bank details card - clean white
-  doc.setDrawColor(...colors.border);
-  doc.setFillColor(...colors.white);
-  doc.setLineWidth(0.4);
-  doc.roundedRect(18, footerY, pageWidth - 36, 36, 3, 3, 'FD');
-  
-  // Title for bank section - navy accent
+  // Header
   doc.setFillColor(...colors.navy);
-  doc.roundedRect(18, footerY, pageWidth - 36, 7, 3, 3, 'F');
+  doc.roundedRect(14, bankY, pageWidth - 28, 7, 2, 2, 'F');
+  doc.rect(14, bankY + 5, pageWidth - 28, 2, 'F');
   
   doc.setTextColor(...colors.white);
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
-  doc.text('INFORMACIÓN DE TRANSFERENCIA BANCARIA', 24, footerY + 4.5);
+  doc.text('DATOS PARA TRANSFERENCIA BANCARIA', 20, bankY + 4.5);
   
-  // Bank details - professional layout
+  // Bank details
+  doc.setTextColor(...colors.charcoal);
+  doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(...colors.textPrimary);
   
-  const bankInfo = [
-    'Titular de la cuenta: SANTIAGO NICOLÁS VARAS SAAVEDRA',
-    'RUT: 18.166.515-7',
-    'Banco Santander - Cuenta corriente Nº: 0-000-75-79256-5',
-    'Correo: santvaras92@gmail.com',
+  const bankDetails = [
+    ['Titular:', 'SANTIAGO NICOLÁS VARAS SAAVEDRA'],
+    ['RUT:', '18.166.515-7'],
+    ['Banco:', 'Santander  •  Cuenta Corriente Nº 0-000-75-79256-5'],
+    ['Email:', 'santvaras92@gmail.com'],
   ];
   
-  let infoY = footerY + 13;
-  bankInfo.forEach((line) => {
-    doc.text(line, 24, infoY);
-    infoY += 5;
+  let detailY = bankY + 12;
+  bankDetails.forEach(([label, value]) => {
+    doc.setFont('helvetica', 'bold');
+    doc.text(label, 20, detailY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(value, 42, detailY);
+    detailY += 4.5;
   });
-  
-  // Footer bar on all pages - navy blue
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FOOTER ON ALL PAGES
+  // ═══════════════════════════════════════════════════════════════════════════
   const pagesCount = doc.internal.pages.length - 1;
   for (let i = 1; i <= pagesCount; i++) {
     doc.setPage(i);
     
-    // Footer background - navy
+    // Footer bar
     doc.setFillColor(...colors.navy);
-    doc.rect(0, pageHeight - 10, pageWidth, 10, 'F');
+    doc.rect(0, pageHeight - 8, pageWidth, 8, 'F');
     
-    // Footer text - white
+    // Footer text
     doc.setTextColor(...colors.white);
-    doc.setFontSize(7);
+    doc.setFontSize(6);
     doc.setFont('helvetica', 'normal');
-    doc.text('CC-AQI Flight Operations', 18, pageHeight - 4);
-    doc.text(`Page ${i} of ${pagesCount}`, pageWidth - 18, pageHeight - 4, { align: 'right' });
+    doc.text('CC-AQI  •  Flight Operations  •  AeroStratus', 14, pageHeight - 3);
+    doc.text(`Página ${i} de ${pagesCount}`, pageWidth - 14, pageHeight - 3, { align: 'right' });
   }
 
-  // Save the PDF with professional filename
-  const fileName = `Account_Statement_${data.clientCode}_${new Date().toISOString().split('T')[0]}.pdf`;
+  // Save PDF
+  const fileName = `Estado_Cuenta_${data.clientCode}_${new Date().toISOString().split('T')[0]}.pdf`;
   doc.save(fileName);
-}
-
-// Helper function to convert hex to RGB (kept for compatibility)
-function hexToRgb(hex: string): { r: number; g: number; b: number } {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? {
-    r: parseInt(result[1], 16),
-    g: parseInt(result[2], 16),
-    b: parseInt(result[3], 16),
-  } : { r: 0, g: 0, b: 0 };
 }
