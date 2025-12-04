@@ -1888,9 +1888,9 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
             <tbody className="bg-white divide-y divide-slate-100">
               {inspectionItems.map(item => {
                 const prediction = getPredictedDate(item.remaining);
-                const urgencyClass = prediction && prediction.daysRemaining < 30 
+                const urgencyClass = prediction && prediction.daysRemaining < 8 
                   ? 'bg-red-50 border-l-4 border-red-500' 
-                  : prediction && prediction.daysRemaining < 60 
+                  : prediction && prediction.daysRemaining < 20 
                     ? 'bg-amber-50 border-l-4 border-amber-500' 
                     : 'hover:bg-blue-50';
                 
@@ -1915,9 +1915,9 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {prediction ? (
                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
-                          prediction.daysRemaining < 30 ? 'bg-red-100 text-red-700' :
-                          prediction.daysRemaining < 60 ? 'bg-amber-100 text-amber-700' :
-                          prediction.daysRemaining < 90 ? 'bg-blue-100 text-blue-700' :
+                          prediction.daysRemaining < 8 ? 'bg-red-100 text-red-700' :
+                          prediction.daysRemaining < 20 ? 'bg-amber-100 text-amber-700' :
+                          prediction.daysRemaining < 30 ? 'bg-blue-100 text-blue-700' :
                           'bg-green-100 text-green-700'
                         }`}>
                           {prediction.daysRemaining} días
