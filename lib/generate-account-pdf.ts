@@ -78,31 +78,31 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   }
   
   // ═══════════════════════════════════════════════════════════════════════════
-  // CORPORATE AVIATION COLOR PALETTE
+  // CORPORATE AVIATION COLOR PALETTE - Muted/Subdued tones for print
   // Based on: Lufthansa, NetJets, VistaJet, Executive Jet Management standards
   // ═══════════════════════════════════════════════════════════════════════════
   const colors = {
     // Primary Navy - Corporate Aviation Standard (matching dashboard header)
-    navy: [30, 64, 175] as [number, number, number],              // #1e40af - Primary brand
-    navyDark: [30, 58, 138] as [number, number, number],          // #1e3a8a - Darker accent
-    navyLight: [59, 130, 246] as [number, number, number],        // #3b82f6 - Light accent
+    navy: [30, 58, 138] as [number, number, number],              // #1e3a8a - Primary brand (darker)
+    navyDark: [23, 37, 84] as [number, number, number],           // #172554 - Darker accent
+    navyLight: [71, 85, 105] as [number, number, number],         // #475569 - Muted blue-gray
     
     // Executive Neutrals - High contrast for print
     white: [255, 255, 255] as [number, number, number],           // #FFFFFF
     offWhite: [248, 250, 252] as [number, number, number],        // #f8fafc - Subtle backgrounds
     platinum: [241, 245, 249] as [number, number, number],        // #f1f5f9 - Table alternates
-    silver: [226, 232, 240] as [number, number, number],          // #e2e8f0 - Borders
+    silver: [203, 213, 225] as [number, number, number],          // #cbd5e1 - Borders (slightly darker)
     
     // Typography - Maximum readability
     charcoal: [15, 23, 42] as [number, number, number],           // #0f172a - Primary text
     slate: [71, 85, 105] as [number, number, number],             // #475569 - Secondary text
-    muted: [148, 163, 184] as [number, number, number],           // #94a3b8 - Tertiary text
+    muted: [100, 116, 139] as [number, number, number],           // #64748b - Tertiary text (darker)
     
-    // Semantic Colors - Financial statements standard
-    credit: [22, 163, 74] as [number, number, number],            // #16a34a - Deposits/Credits (green)
-    debit: [185, 28, 28] as [number, number, number],             // #b91c1c - Charges/Negative (red)
-    neutral: [37, 99, 235] as [number, number, number],           // #2563eb - Informational (blue)
-    accent: [234, 179, 8] as [number, number, number],            // #eab308 - Fuel/Highlights (gold)
+    // Semantic Colors - Muted/Subdued for professional look
+    credit: [21, 128, 61] as [number, number, number],            // #15803d - Deposits/Credits (muted green)
+    debit: [153, 27, 27] as [number, number, number],             // #991b1b - Charges/Negative (muted red)
+    neutral: [30, 64, 175] as [number, number, number],           // #1e40af - Informational (muted blue)
+    accent: [180, 138, 6] as [number, number, number],            // #b48a06 - Fuel/Highlights (muted gold)
   };
   
   // Helper functions
@@ -133,10 +133,10 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   doc.setFillColor(...colors.navyDark);
   doc.rect(0, 30, pageWidth, 2, 'F');
   
-  // Logo - Left aligned
+  // Logo - Left aligned (original dimensions 32x4.2 for banner-style logo)
   if (logoBase64) {
     try {
-      doc.addImage(logoBase64, 'PNG', 14, 10, 28, 12);
+      doc.addImage(logoBase64, 'PNG', 14, 13, 32, 4.2);
     } catch (e) {
       console.error('Could not add logo to PDF:', e);
     }
