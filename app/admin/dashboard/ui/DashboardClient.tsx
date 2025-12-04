@@ -1411,68 +1411,199 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
 }
 
   function FuelTable({ logs }: { logs: any[] }) {
+    const [filterPilot, setFilterPilot] = useState('');
+    const [filterSource, setFilterSource] = useState<'ALL' | 'CSV' | 'DB'>('ALL');
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = 50;
+    
+    // Get unique pilots for filter dropdown
+    const pilots = useMemo(() => {
+      const unique = new Map<string, string>();
+      logs.forEach(l => {
+        if (l.pilotCode && !unique.has(l.pilotCode)) {
+          unique.set(l.pilotCode, l.pilotName || l.pilotCode);
+        }
+      });
+      return Array.from(unique.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    }, [logs]);
+    
+    // Filter and paginate
+    const filteredLogs = useMemo(() => {
+      let result = logs;
+      if (filterPilot) {
+        result = result.filter(l => l.pilotCode === filterPilot);
+      }
+      if (filterSource !== 'ALL') {
+        result = result.filter(l => l.source === filterSource);
+      }
+      return result;
+    }, [logs, filterPilot, filterSource]);
+    
+    const totalPages = Math.ceil(filteredLogs.length / pageSize);
+    const paginatedLogs = filteredLogs.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+    
+    // Stats
+    const totalMonto = filteredLogs.reduce((sum, l) => sum + (l.monto || 0), 0);
+    const totalLitros = filteredLogs.reduce((sum, l) => sum + (l.litros || 0), 0);
+    
     return (
-      <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
-        <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
-          <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-            </svg>
-            Registros de Combustible
-          </h3>
+      <div className="space-y-4">
+        {/* Filters */}
+        <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-lg p-4">
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-slate-600">Piloto:</label>
+              <select 
+                value={filterPilot} 
+                onChange={e => { setFilterPilot(e.target.value); setCurrentPage(1); }}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              >
+                <option value="">Todos</option>
+                {pilots.map(([code, name]) => (
+                  <option key={code} value={code}>{code} - {name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-slate-600">Fuente:</label>
+              <select 
+                value={filterSource} 
+                onChange={e => { setFilterSource(e.target.value as any); setCurrentPage(1); }}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              >
+                <option value="ALL">Todas</option>
+                <option value="CSV">Histórico (CSV)</option>
+                <option value="DB">App (DB)</option>
+              </select>
+            </div>
+            <div className="ml-auto flex gap-4 text-sm">
+              <span className="px-3 py-2 bg-blue-100 text-blue-800 rounded-lg font-semibold">
+                {filteredLogs.length} registros
+              </span>
+              <span className="px-3 py-2 bg-green-100 text-green-800 rounded-lg font-semibold">
+                ${totalMonto.toLocaleString('es-CL')} total
+              </span>
+              <span className="px-3 py-2 bg-amber-100 text-amber-800 rounded-lg font-semibold">
+                {totalLitros.toFixed(1)} L total
+              </span>
+            </div>
+          </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">ID</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Piloto</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Litros</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Monto</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Detalle</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Boleta</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-slate-100">
-              {logs.map((l) => (
-                <tr key={l.id} className="hover:bg-blue-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-600">{l.id}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{new Date(l.fecha).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">
-                    {l.User ? `${l.User.nombre} (${l.User.codigo || '#'+l.userId})` : `#${l.userId}`}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{Number(l.litros).toFixed(1)} L</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">${Number(l.monto).toLocaleString('es-CL')}</td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{l.detalle || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {l.imageUrl ? (
-                      <a
-                        href={l.imageUrl.startsWith('/uploads/fuel/')
-                          ? `/api/uploads/fuel/${l.imageUrl.split('/').pop()}`
-                          : l.imageUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className={`underline font-medium ${l.exists ? 'text-blue-600 hover:text-blue-800' : 'text-slate-400 pointer-events-none'}`}
-                      >
-                        {l.exists ? 'Ver' : 'No disponible'}
-                      </a>
-                    ) : (
-                      <span className="text-slate-400">-</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {/* Server action form imported via dynamic route action */}
-                    <form action={require('@/app/actions/delete-fuel-log').deleteFuelLog} onSubmit={(e)=>{ if(!confirm(`¿Eliminar registro ${l.id}?`)) { e.preventDefault(); } }}>
-                      <input type="hidden" name="fuelLogId" value={l.id} />
-                      <button type="submit" className="px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700">Eliminar</button>
-                    </form>
-                  </td>
+        
+        {/* Table */}
+        <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
+          <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
+            <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+              </svg>
+              Registros de Combustible (Histórico + App)
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Piloto</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Código</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Litros</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Monto</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fuente</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Detalle</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Boleta</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-slate-100">
+                {paginatedLogs.map((l) => (
+                  <tr key={l.id} className={`hover:bg-blue-50 transition-colors ${l.source === 'CSV' ? 'bg-slate-50/50' : ''}`}>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-700">
+                      {new Date(l.fecha).toLocaleDateString('es-CL')}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-slate-900">
+                      {l.pilotName}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-mono text-indigo-600">
+                      {l.pilotCode || '-'}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600 font-mono">
+                      {l.litros > 0 ? `${l.litros.toFixed(1)} L` : '-'}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-green-600">
+                      ${l.monto.toLocaleString('es-CL')}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                        l.source === 'CSV' ? 'bg-slate-200 text-slate-700' : 'bg-blue-100 text-blue-700'
+                      }`}>
+                        {l.source === 'CSV' ? 'Histórico' : 'App'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-600 max-w-[200px] truncate">
+                      {l.detalle || '-'}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">
+                      {l.imageUrl ? (
+                        <a
+                          href={l.imageUrl.startsWith('/uploads/fuel/')
+                            ? `/api/uploads/fuel/${l.imageUrl.split('/').pop()}`
+                            : l.imageUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={`underline font-medium ${l.exists ? 'text-blue-600 hover:text-blue-800' : 'text-slate-400 pointer-events-none'}`}
+                        >
+                          {l.exists ? 'Ver' : 'No disponible'}
+                        </a>
+                      ) : (
+                        <span className="text-slate-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">
+                      {l.source === 'DB' && typeof l.id === 'number' ? (
+                        <form action={require('@/app/actions/delete-fuel-log').deleteFuelLog} onSubmit={(e)=>{ if(!confirm(`¿Eliminar registro ${l.id}?`)) { e.preventDefault(); } }}>
+                          <input type="hidden" name="fuelLogId" value={l.id} />
+                          <button type="submit" className="px-2 py-1 rounded-lg bg-red-600 text-white hover:bg-red-700 text-xs">
+                            Eliminar
+                          </button>
+                        </form>
+                      ) : (
+                        <span className="text-slate-400 text-xs">-</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+              <div className="text-sm text-slate-600">
+                Mostrando {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, filteredLogs.length)} de {filteredLogs.length}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 rounded border border-slate-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100"
+                >
+                  ← Anterior
+                </button>
+                <span className="px-3 py-1 text-sm">
+                  Página {currentPage} de {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 rounded border border-slate-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100"
+                >
+                  Siguiente →
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

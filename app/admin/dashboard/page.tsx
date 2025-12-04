@@ -668,29 +668,113 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     fuelLogs: await (async () => {
       const pathMod = await import('path');
       const fsMod = await import('fs');
-      const logsWithExists = await Promise.all(
-        fuelLogs.map(async (l: any) => {
-          const filename = l.imageUrl?.startsWith('/uploads/fuel/') ? l.imageUrl.split('/').pop() || '' : '';
-          let exists = false;
-          if (filename) {
-            try {
-              // Check volume first, then public
-              const volumePath = process.env.RAILWAY_VOLUME_MOUNT_PATH
-                ? pathMod.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'fuel', filename)
-                : null;
-              const publicPath = pathMod.join(process.cwd(), 'public', 'uploads', 'fuel', filename);
-              
-              if (volumePath && fsMod.existsSync(volumePath)) {
-                exists = true;
-              } else if (fsMod.existsSync(publicPath)) {
-                exists = true;
-              }
-            } catch {}
+      const allRecords: { id: number | string; fecha: Date; pilotCode: string; pilotName: string; litros: number; monto: number; detalle: string; imageUrl: string | null; source: 'CSV' | 'DB'; exists: boolean }[] = [];
+      const seen = new Set<string>(); // Track duplicates by "fecha|code|monto"
+      
+      // Helper to create a unique key for deduplication
+      const makeKey = (fecha: string, code: string, monto: number) => `${fecha}|${code}|${Math.round(monto)}`;
+      
+      // Helper to parse DD-MM-YY to Date
+      const parseDate = (d: string): Date => {
+        const parts = d.split('-');
+        if (parts.length !== 3) return new Date();
+        const day = parseInt(parts[0]) || 1;
+        const month = parseInt(parts[1]) || 1;
+        let year = parseInt(parts[2]) || 0;
+        if (year < 100) year = year < 50 ? 2000 + year : 1900 + year;
+        return new Date(year, month - 1, day);
+      };
+      
+      // 1. Read CSV historical fuel
+      try {
+        const fuelPath = pathMod.join(process.cwd(), 'Combustible', 'Planilla control combustible.csv');
+        if (fsMod.existsSync(fuelPath)) {
+          const content = fsMod.readFileSync(fuelPath, 'utf-8');
+          const lines = content.split('\n').filter(l => l.trim());
+          for (let i = 1; i < lines.length; i++) {
+            const parts = lines[i].split(';');
+            const fechaStr = (parts[0] || '').trim();
+            const code = (parts[1] || '').trim().toUpperCase();
+            const litrosStr = (parts[2] || '').trim().replace(',', '.');
+            const montoStr = (parts[3] || '').trim();
+            if (!code || !fechaStr) continue;
+            const litros = parseFloat(litrosStr) || 0;
+            const cleaned = montoStr.replace(/\$/g, '').replace(/\./g, '').replace(',', '.');
+            const monto = parseFloat(cleaned) || 0;
+            if (monto <= 0) continue;
+            
+            const key = makeKey(fechaStr, code, monto);
+            if (seen.has(key)) continue;
+            seen.add(key);
+            
+            // Find pilot name from users
+            const user = users.find(u => (u.codigo || '').toUpperCase() === code);
+            const pilotName = user?.nombre || code;
+            
+            allRecords.push({
+              id: `csv-${i}`,
+              fecha: parseDate(fechaStr),
+              pilotCode: code,
+              pilotName: pilotName,
+              litros,
+              monto,
+              detalle: 'Histórico CSV',
+              imageUrl: null,
+              source: 'CSV',
+              exists: false
+            });
           }
-          return { ...l, litros: Number(l.litros), monto: Number(l.monto), User: l.User, exists };
-        })
-      );
-      return logsWithExists;
+        }
+      } catch {}
+      
+      // 2. Add DB FuelLog entries
+      for (const l of fuelLogs) {
+        const code = (l.User?.codigo || '').toUpperCase();
+        const fecha = l.fecha instanceof Date ? l.fecha : new Date(l.fecha);
+        const fechaStr = `${String(fecha.getDate()).padStart(2,'0')}-${String(fecha.getMonth()+1).padStart(2,'0')}-${String(fecha.getFullYear()).slice(-2)}`;
+        const monto = Number(l.monto) || 0;
+        
+        const key = makeKey(fechaStr, code, monto);
+        // Skip if already in CSV (duplicate)
+        if (seen.has(key)) continue;
+        seen.add(key);
+        
+        // Check if image exists
+        const filename = l.imageUrl?.startsWith('/uploads/fuel/') ? l.imageUrl.split('/').pop() || '' : '';
+        let exists = false;
+        if (filename) {
+          try {
+            const volumePath = process.env.RAILWAY_VOLUME_MOUNT_PATH
+              ? pathMod.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'fuel', filename)
+              : null;
+            const publicPath = pathMod.join(process.cwd(), 'public', 'uploads', 'fuel', filename);
+            
+            if (volumePath && fsMod.existsSync(volumePath)) {
+              exists = true;
+            } else if (fsMod.existsSync(publicPath)) {
+              exists = true;
+            }
+          } catch {}
+        }
+        
+        allRecords.push({
+          id: l.id,
+          fecha: fecha,
+          pilotCode: code,
+          pilotName: l.User?.nombre || code || `#${l.userId}`,
+          litros: Number(l.litros) || 0,
+          monto: monto,
+          detalle: l.detalle || '',
+          imageUrl: l.imageUrl,
+          source: 'DB',
+          exists
+        });
+      }
+      
+      // Sort by date descending
+      allRecords.sort((a, b) => b.fecha.getTime() - a.fecha.getTime());
+      
+      return allRecords;
     })(),
     pilotDirectory: {
       initial: csvPilots,
