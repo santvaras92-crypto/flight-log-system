@@ -245,6 +245,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
   // Render individual metric card with drag-and-drop
   const renderCard = (cardId: string, content: JSX.Element) => {
     const isDragging = draggedCard === cardId;
+    const isBeingDragged = isDragEnabled && draggedCard === cardId;
     return (
       <div
         key={cardId}
@@ -257,7 +258,12 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         onTouchStart={(e) => handleTouchStart(e, cardId)}
         onTouchMove={handleTouchMove}
         onTouchEnd={(e) => handleTouchEnd(e, cardId)}
-        className={`${isDragging ? 'opacity-50 scale-95' : 'opacity-100'} transition-all duration-150 cursor-move touch-none`}
+        className={`${isDragging ? 'opacity-50 scale-95' : 'opacity-100'} transition-all duration-150 cursor-move select-none`}
+        style={{ 
+          WebkitUserSelect: 'none',
+          WebkitTouchCallout: 'none',
+          touchAction: isBeingDragged ? 'none' : 'auto'
+        }}
       >
         {content}
       </div>
