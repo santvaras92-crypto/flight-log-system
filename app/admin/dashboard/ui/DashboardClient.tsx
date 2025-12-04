@@ -130,6 +130,8 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
 
   // Drag and drop handlers for Overview cards (mouse and touch)
   const [touchStartPos, setTouchStartPos] = useState<{ x: number; y: number } | null>(null);
+  const [touchHoldTimer, setTouchHoldTimer] = useState<NodeJS.Timeout | null>(null);
+  const [isDragEnabled, setIsDragEnabled] = useState(false);
 
   const handleDragStart = (cardId: string) => {
     setDraggedCard(cardId);
@@ -166,27 +168,58 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
     setDraggedCard(null);
   };
 
-  // Touch handlers for mobile
+  // Touch handlers for mobile - require 300ms hold before drag activates
   const handleTouchStart = (e: React.TouchEvent, cardId: string) => {
     const touch = e.touches[0];
     setTouchStartPos({ x: touch.clientX, y: touch.clientY });
-    setDraggedCard(cardId);
+    
+    // Start a timer - only enable drag after 300ms hold
+    const timer = setTimeout(() => {
+      setDraggedCard(cardId);
+      setIsDragEnabled(true);
+      // Haptic feedback on supported devices
+      if (navigator.vibrate) navigator.vibrate(50);
+    }, 300);
+    
+    setTouchHoldTimer(timer);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!draggedCard || !touchStartPos) return;
+    if (!touchStartPos) return;
     
     const touch = e.touches[0];
+    const deltaX = Math.abs(touch.clientX - touchStartPos.x);
     const deltaY = Math.abs(touch.clientY - touchStartPos.y);
     
-    // If moved more than 10px, prevent default scrolling
-    if (deltaY > 10) {
+    // If moved before hold timer completes, cancel drag and allow scroll
+    if (!isDragEnabled && (deltaX > 10 || deltaY > 10)) {
+      if (touchHoldTimer) {
+        clearTimeout(touchHoldTimer);
+        setTouchHoldTimer(null);
+      }
+      setTouchStartPos(null);
+      return;
+    }
+    
+    // If drag is enabled, prevent scrolling
+    if (isDragEnabled && draggedCard) {
       e.preventDefault();
     }
   };
 
   const handleTouchEnd = (e: React.TouchEvent, targetCardId: string) => {
-    if (!draggedCard) return;
+    // Clear the hold timer
+    if (touchHoldTimer) {
+      clearTimeout(touchHoldTimer);
+      setTouchHoldTimer(null);
+    }
+    
+    if (!draggedCard || !isDragEnabled) {
+      setDraggedCard(null);
+      setIsDragEnabled(false);
+      setTouchStartPos(null);
+      return;
+    }
     
     const touch = e.changedTouches[0];
     const element = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -205,6 +238,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       setDraggedCard(null);
     }
     
+    setIsDragEnabled(false);
     setTouchStartPos(null);
   };
 
