@@ -588,7 +588,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
             const month = parseInt(parts[1]) || 1;
             let year = parseInt(parts[2]) || 0;
             if (year < 100) year = year < 50 ? 2000 + year : 1900 + year;
-            return new Date(year, month - 1, day).getTime();
+            return new Date(year, month - 1, day, 12, 0, 0).getTime();
           };
           return parseDate(b.fecha) - parseDate(a.fecha);
         });
@@ -674,7 +674,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       // Helper to create a unique key for deduplication
       const makeKey = (fecha: string, code: string, monto: number) => `${fecha}|${code}|${Math.round(monto)}`;
       
-      // Helper to parse DD-MM-YY to Date
+      // Helper to parse DD-MM-YY to Date (use noon to avoid timezone issues)
       const parseDate = (d: string): Date => {
         const parts = d.split('-');
         if (parts.length !== 3) return new Date();
@@ -682,7 +682,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         const month = parseInt(parts[1]) || 1;
         let year = parseInt(parts[2]) || 0;
         if (year < 100) year = year < 50 ? 2000 + year : 1900 + year;
-        return new Date(year, month - 1, day);
+        return new Date(year, month - 1, day, 12, 0, 0); // Use noon to avoid timezone offset issues
       };
       
       // 1. Read CSV historical fuel
