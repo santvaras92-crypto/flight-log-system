@@ -565,7 +565,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     doc.setTextColor(...colors.silver);
     doc.setFontSize(7);
     doc.setFont('AvenirNext', 'normal');
-    doc.text('CC-AQI  •  AeroStratus Aviation Solutions', 14, pageHeight - 6);
+    doc.text('CC-AQI  •  AeroStratus Aviation Solutions  •  https://aerostratus.cl/', 14, pageHeight - 6);
     doc.text(`Página ${i} de ${pagesCount}`, pageWidth - 14, pageHeight - 6, { align: 'right' });
   }
 
