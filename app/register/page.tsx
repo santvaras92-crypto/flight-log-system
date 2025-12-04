@@ -48,7 +48,10 @@ export default async function RegistroPage() {
       label: `${u.nombre} (${u.codigo})`,
     }));
 
-  const allPilots = [...csvPilotOpts, ...registeredPilotOpts];
+  // Combine and sort alphabetically by label
+  const allPilots = [...csvPilotOpts, ...registeredPilotOpts].sort((a, b) => 
+    a.label.localeCompare(b.label, 'es', { sensitivity: 'base' })
+  );
 
   // Obtener los últimos contadores Hobbs y Tach del vuelo más reciente para CC-AQI
   const lastFlight = await prisma.flight.findFirst({
