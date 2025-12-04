@@ -23,7 +23,7 @@ type InitialData = {
   depositsByCode?: Record<string, number>;
   depositsDetailsByCode?: Record<string, { fecha: string; descripcion: string; monto: number }[]>;
   pilotDirectory?: {
-    initial: { code: string; name: string }[];
+    initial: { id: number | null; code: string; name: string; email?: string; createdAt?: Date | null; fechaNacimiento?: Date | null; telefono?: string | null; numeroLicencia?: string | null; tipoDocumento?: string | null; documento?: string | null; source?: string }[];
     registered: { id: number; code: string; name: string; email: string; createdAt: string | Date; fechaNacimiento?: Date | null; telefono?: string | null; numeroLicencia?: string | null; tipoDocumento?: string | null; documento?: string | null }[];
   };
   aircraftYearlyStats?: { matricula: string; avgHoursPerYear: number; totalHours: number; yearsOfOperation: number }[];
@@ -1609,7 +1609,7 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
     );
   }
 
-function PilotDirectory({ directory }: { directory?: { initial: { code: string; name: string }[]; registered: { id: number; code: string; name: string; email: string; createdAt: string | Date; fechaNacimiento?: string | Date | null; telefono?: string | null; numeroLicencia?: string | null; tipoDocumento?: string | null; documento?: string | null }[] } }) {
+function PilotDirectory({ directory }: { directory?: { initial: { id: number | null; code: string; name: string; email?: string; createdAt?: Date | null; fechaNacimiento?: Date | null; telefono?: string | null; numeroLicencia?: string | null; tipoDocumento?: string | null; documento?: string | null; source?: string }[]; registered: { id: number; code: string; name: string; email: string; createdAt: string | Date; fechaNacimiento?: string | Date | null; telefono?: string | null; numeroLicencia?: string | null; tipoDocumento?: string | null; documento?: string | null }[] } }) {
   const [editMode, setEditMode] = useState(false);
   const [editedRows, setEditedRows] = useState<Record<number, any>>({});
   const [saving, setSaving] = useState(false);
@@ -1619,18 +1619,18 @@ function PilotDirectory({ directory }: { directory?: { initial: { code: string; 
 
   const rows = useMemo(() => {
     const init = (directory?.initial || []).map(p => ({ 
-      id: null as number | null, 
+      id: p.id, 
       code: p.code, 
       name: p.name, 
       source: 'CSV', 
-      email: '-', 
-      createdAt: '-', 
-      fechaNacimiento: null as string | null, 
-      fechaNacimientoDisplay: '-',
-      telefono: '', 
-      numeroLicencia: '', 
-      tipoDocumento: '', 
-      documento: '' 
+      email: p.email || '-', 
+      createdAt: p.createdAt ? new Date(p.createdAt as any).toLocaleDateString('es-CL') : '-', 
+      fechaNacimiento: p.fechaNacimiento ? new Date(p.fechaNacimiento as any).toISOString().split('T')[0] : null, 
+      fechaNacimientoDisplay: p.fechaNacimiento ? new Date(p.fechaNacimiento as any).toLocaleDateString('es-CL') : '-',
+      telefono: p.telefono || '', 
+      numeroLicencia: p.numeroLicencia || '', 
+      tipoDocumento: p.tipoDocumento || '', 
+      documento: p.documento || '' 
     }));
     const reg = (directory?.registered || []).map(p => ({ 
       id: p.id,

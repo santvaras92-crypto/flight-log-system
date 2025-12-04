@@ -777,7 +777,40 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       return allRecords;
     })(),
     pilotDirectory: {
-      initial: csvPilots,
+      // For CSV pilots, merge with DB data if available
+      initial: csvPilots.map(csvPilot => {
+        // Find matching user in DB by code
+        const dbUser = users.find(u => (u.codigo || '').toUpperCase() === csvPilot.code);
+        if (dbUser) {
+          return {
+            id: dbUser.id,
+            code: csvPilot.code,
+            name: dbUser.nombre || csvPilot.name, // Prefer DB name if available
+            email: dbUser.email || '',
+            createdAt: dbUser.createdAt,
+            fechaNacimiento: dbUser.fechaNacimiento || null,
+            telefono: dbUser.telefono || null,
+            numeroLicencia: dbUser.licencia || null,
+            tipoDocumento: null,
+            documento: null,
+            source: 'CSV' as const
+          };
+        }
+        // No DB record, return CSV-only data
+        return {
+          id: null,
+          code: csvPilot.code,
+          name: csvPilot.name,
+          email: '',
+          createdAt: null,
+          fechaNacimiento: null,
+          telefono: null,
+          numeroLicencia: null,
+          tipoDocumento: null,
+          documento: null,
+          source: 'CSV' as const
+        };
+      }),
       registered: users
         .filter(u => {
           if (u.rol !== 'PILOTO') return false;
