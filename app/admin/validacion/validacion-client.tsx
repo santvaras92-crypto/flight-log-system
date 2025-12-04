@@ -104,9 +104,11 @@ export default function ValidacionClient({
     { id: 'fuel' as Tab, label: 'Combustible', icon: '⛽', count: fuelData.length, color: 'amber' },
   ];
 
-  const handleApproveFlightSubmission = async (submissionId: number) => {
+  const handleApproveFlightSubmission = async (submissionId: number, hasCopiloto: boolean) => {
     const rate = parseFloat(rates[submissionId] || '185000');
-    const instructorRate = parseFloat(instructorRates[submissionId] || '0');
+    // Default instructor rate: 30000 si hay copiloto, 0 si no
+    const defaultInstRate = hasCopiloto ? '30000' : '0';
+    const instructorRate = parseFloat(instructorRates[submissionId] ?? defaultInstRate);
 
     startTransition(async () => {
       const result = await approveFlightSubmission(submissionId, rate, instructorRate);
@@ -186,8 +188,9 @@ export default function ValidacionClient({
                 const lastHobbs = parseFloat(flight.lastHobbs || '0');
                 const diffHobbs = hobbsFinal - lastHobbs;
                 const rate = parseFloat(rates[flight.id] || '185000');
-                const instRate = parseFloat(instructorRates[flight.id] || '0');
-                const estimatedCost = diffHobbs * rate + instRate;
+                const instRate = parseFloat(instructorRates[flight.id] ?? (flight.copiloto ? '30000' : '0'));
+                // Costo = horas * (tarifa + instructor_rate)
+                const estimatedCost = diffHobbs * (rate + instRate);
 
                 return (
                   <div key={flight.id} className="bg-white border-2 border-blue-200 rounded-xl shadow-lg overflow-hidden">
@@ -232,7 +235,7 @@ export default function ValidacionClient({
                       )}
 
                       {/* Flight Details */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                         <div>
                           <p className="text-xs text-slate-500 uppercase">Fecha Vuelo</p>
                           <p className="font-medium">{flight.fechaVuelo ? new Date(flight.fechaVuelo).toLocaleDateString('es-CL') : '-'}</p>
@@ -244,10 +247,6 @@ export default function ValidacionClient({
                         <div>
                           <p className="text-xs text-slate-500 uppercase">Tiempo Vuelo</p>
                           <p className="font-mono font-bold text-green-600">{diffHobbs.toFixed(1)} hrs</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-slate-500 uppercase">Cliente</p>
-                          <p className="font-medium">{flight.cliente || '-'}</p>
                         </div>
                       </div>
 
@@ -266,7 +265,7 @@ export default function ValidacionClient({
                           <label className="text-xs text-slate-500 uppercase block mb-1">Instructor/SP Rate</label>
                           <input
                             type="number"
-                            value={instructorRates[flight.id] || '0'}
+                            value={instructorRates[flight.id] ?? (flight.copiloto ? '30000' : '0')}
                             onChange={(e) => setInstructorRates({ ...instructorRates, [flight.id]: e.target.value })}
                             className="w-full px-3 py-2 border rounded-lg font-mono"
                           />
@@ -282,7 +281,7 @@ export default function ValidacionClient({
                       {/* Actions */}
                       <div className="flex gap-3 pt-4 border-t">
                         <button
-                          onClick={() => handleApproveFlightSubmission(flight.id)}
+                          onClick={() => handleApproveFlightSubmission(flight.id, !!flight.copiloto)}
                           disabled={isPending}
                           className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
                         >
