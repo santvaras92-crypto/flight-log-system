@@ -574,7 +574,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         </>
       )}
       {tab === "fuel" && <FuelTable logs={initialData.fuelLogs || []} />}
-      {tab === "maintenance" && <MaintenanceTable components={initialData.components} aircraft={initialData.aircraft} aircraftYearlyStats={initialData.aircraftYearlyStats || []} />}
+      {tab === "maintenance" && <MaintenanceTable components={initialData.components} aircraft={initialData.aircraft} aircraftYearlyStats={initialData.aircraftYearlyStats || []} overviewMetrics={overviewMetrics} />}
       {tab === "finance" && <FinanceCharts flights={initialData.flights} transactions={initialData.transactions} palette={palette} />}
     </div>
   );
@@ -1776,10 +1776,11 @@ function PilotDirectory({ directory }: { directory?: { initial: { code: string; 
   );
 }
 
-function MaintenanceTable({ components, aircraft, aircraftYearlyStats }: { components: any[]; aircraft: any[]; aircraftYearlyStats: any[] }) {
+function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewMetrics }: { components: any[]; aircraft: any[]; aircraftYearlyStats: any[]; overviewMetrics?: OverviewMetrics }) {
   // Calculate predicted inspection dates
-  const getPredictedDate = (aircraftId: string, hoursRemaining: number) => {
-    const stats = aircraftYearlyStats.find(s => s.aircraftId === aircraftId);
+  const getPredictedDate = (hoursRemaining: number) => {
+    // Use CC-AQI stats (main aircraft)
+    const stats = aircraftYearlyStats.find(s => s.matricula === 'CC-AQI');
     if (!stats || stats.avgHoursPerYear <= 0) return null;
     
     const yearsToInspection = hoursRemaining / stats.avgHoursPerYear;
@@ -1793,6 +1794,24 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats }: { compo
       avgHoursPerYear: stats.avgHoursPerYear
     };
   };
+  
+  // Build inspection items for Oil Change and 100-Hour
+  const inspectionItems = [
+    {
+      id: 'oil-change',
+      name: 'Oil Change',
+      interval: 50,
+      remaining: overviewMetrics?.nextInspections?.oilChangeRemaining ?? 0,
+      icon: '🛢️'
+    },
+    {
+      id: '100-hour',
+      name: '100-Hour Inspection',
+      interval: 100,
+      remaining: overviewMetrics?.nextInspections?.hundredHourRemaining ?? 0,
+      icon: '🔧'
+    }
+  ];
 
   return (
     <div className="space-y-6">
@@ -1843,7 +1862,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats }: { compo
         </div>
       </div>
 
-      {/* Next Inspections Prediction */}
+      {/* Next Inspections Prediction - Oil Change & 100-Hour */}
       <div className="bg-white/95 backdrop-blur-lg border-2 border-amber-200 rounded-2xl shadow-2xl overflow-hidden">
         <div className="bg-gradient-to-r from-amber-600 to-orange-600 px-8 py-6">
           <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
@@ -1852,14 +1871,14 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats }: { compo
             </svg>
             Next Inspections (Predictive Analysis)
           </h3>
-          <p className="text-amber-100 text-sm mt-1">Based on historical flight hours average</p>
+          <p className="text-amber-100 text-sm mt-1">Based on CC-AQI historical flight hours average</p>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200">
             <thead className="bg-amber-50">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Aircraft</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Component</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Inspection Type</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Interval</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Hrs Remaining</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Avg Hrs/Year</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Est. Inspection Date</th>
@@ -1867,50 +1886,49 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats }: { compo
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-slate-100">
-              {components
-                .filter(c => c.tipo === 'ENGINE' || c.tipo === 'PROPELLER') // Focus on TBO-critical components
-                .sort((a, b) => {
-                  const restA = Number(a.limite_tbo) - Number(a.horas_acumuladas);
-                  const restB = Number(b.limite_tbo) - Number(b.horas_acumuladas);
-                  return restA - restB;
-                })
-                .map(c => {
-                  const restante = Number(c.limite_tbo) - Number(c.horas_acumuladas);
-                  const prediction = getPredictedDate(c.aircraftId, restante);
-                  const urgencyClass = prediction && prediction.daysRemaining < 180 
-                    ? 'bg-red-50 border-l-4 border-red-500' 
-                    : prediction && prediction.daysRemaining < 365 
-                      ? 'bg-amber-50 border-l-4 border-amber-500' 
-                      : 'hover:bg-blue-50';
-                  
-                  return (
-                    <tr key={c.id} className={`transition-colors ${urgencyClass}`}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-600 font-mono">{c.aircraftId}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">{c.tipo}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{restante.toFixed(1)} hrs</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-mono font-bold">
-                        {prediction ? `${prediction.avgHoursPerYear.toFixed(1)} hrs/yr` : 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">
-                        {prediction ? prediction.date.toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Sin datos'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {prediction ? (
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
-                            prediction.daysRemaining < 180 ? 'bg-red-100 text-red-700' :
-                            prediction.daysRemaining < 365 ? 'bg-amber-100 text-amber-700' :
-                            prediction.daysRemaining < 730 ? 'bg-blue-100 text-blue-700' :
-                            'bg-green-100 text-green-700'
-                          }`}>
-                            {prediction.daysRemaining} días
-                          </span>
-                        ) : (
-                          <span className="text-slate-400">-</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+              {inspectionItems.map(item => {
+                const prediction = getPredictedDate(item.remaining);
+                const urgencyClass = prediction && prediction.daysRemaining < 30 
+                  ? 'bg-red-50 border-l-4 border-red-500' 
+                  : prediction && prediction.daysRemaining < 60 
+                    ? 'bg-amber-50 border-l-4 border-amber-500' 
+                    : 'hover:bg-blue-50';
+                
+                return (
+                  <tr key={item.id} className={`transition-colors ${urgencyClass}`}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">
+                      <span className="mr-2">{item.icon}</span>
+                      {item.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{item.interval} hrs</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold font-mono">
+                      <span className={item.remaining < 10 ? 'text-red-600' : item.remaining < 20 ? 'text-amber-600' : 'text-green-600'}>
+                        {item.remaining.toFixed(1)} hrs
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-mono font-bold">
+                      {prediction ? `${prediction.avgHoursPerYear.toFixed(1)} hrs/yr` : 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">
+                      {prediction ? prediction.date.toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Sin datos'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {prediction ? (
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
+                          prediction.daysRemaining < 30 ? 'bg-red-100 text-red-700' :
+                          prediction.daysRemaining < 60 ? 'bg-amber-100 text-amber-700' :
+                          prediction.daysRemaining < 90 ? 'bg-blue-100 text-blue-700' :
+                          'bg-green-100 text-green-700'
+                        }`}>
+                          {prediction.daysRemaining} días
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">-</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -1919,7 +1937,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats }: { compo
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            Predictions are based on average yearly flight hours. Actual inspection dates may vary based on usage patterns.
+            Predictions based on CC-AQI average yearly flight hours ({aircraftYearlyStats.find(s => s.matricula === 'CC-AQI')?.avgHoursPerYear.toFixed(1) || 'N/A'} hrs/year).
           </p>
         </div>
       </div>
