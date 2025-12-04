@@ -23,7 +23,7 @@ export default function LoginPage() {
     if (res?.error) {
       setError("Credenciales inválidas");
     } else {
-      router.push("/admin/submissions");
+      router.push("/admin/validacion");
     }
   }
 

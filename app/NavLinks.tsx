@@ -27,7 +27,7 @@ export default function NavLinks() {
         Dashboard
       </Link>
       <Link 
-        href="/admin/submissions" 
+        href="/admin/validacion" 
         className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-blue-100 hover:text-white hover:bg-white/15 rounded-lg transition-all"
       >
         <span className="hidden sm:inline">Validación</span>

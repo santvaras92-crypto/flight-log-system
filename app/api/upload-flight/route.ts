@@ -30,7 +30,7 @@ async function sendNotificationEmail(submission: any, piloto: any) {
     <p><strong>Detalle:</strong> ${submission.detalle || 'Sin observaciones'}</p>
     <hr/>
     <p>Para aprobar este vuelo y agregar la tarifa de instructor/SP, accede al panel de administración:</p>
-    <p><a href="${process.env.NEXTAUTH_URL || 'https://flight-log-system-production.up.railway.app'}/admin/submissions">Ver Submissions Pendientes</a></p>
+    <p><a href="${process.env.NEXTAUTH_URL || 'https://flight-log-system-production.up.railway.app'}/admin/validacion">Ver Validaciones Pendientes</a></p>
   `;
 
   try {
