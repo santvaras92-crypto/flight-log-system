@@ -420,6 +420,36 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     .map(u => (u.codigo || '').toUpperCase())
     .filter(c => c && !allowedPilotCodes.includes(c));
 
+  // Calculate yearly flight hours per aircraft for prediction
+  const aircraftYearlyStats = await Promise.all(
+    aircraft.map(async (a) => {
+      // Get all flights for this aircraft
+      const allAircraftFlights = await prisma.flight.findMany({
+        where: { aircraftId: a.matricula },
+        orderBy: { fecha: 'asc' },
+        select: { fecha: true, diff_hobbs: true }
+      });
+      
+      if (allAircraftFlights.length === 0) {
+        return { matricula: a.matricula, avgHoursPerYear: 0, yearsOfOperation: 0, totalHours: 0 };
+      }
+      
+      // Calculate total hours and time span
+      const totalHours = allAircraftFlights.reduce((sum, f) => sum + Number(f.diff_hobbs || 0), 0);
+      const firstFlight = new Date(allAircraftFlights[0].fecha);
+      const lastFlight = new Date(allAircraftFlights[allAircraftFlights.length - 1].fecha);
+      const yearsDiff = Math.max((lastFlight.getTime() - firstFlight.getTime()) / (1000 * 60 * 60 * 24 * 365), 0.5);
+      const avgHoursPerYear = totalHours / yearsDiff;
+      
+      return { 
+        matricula: a.matricula, 
+        avgHoursPerYear: Math.round(avgHoursPerYear * 10) / 10,
+        yearsOfOperation: Math.round(yearsDiff * 10) / 10,
+        totalHours: Math.round(totalHours * 10) / 10
+      };
+    })
+  );
+
   // Build maintenance items: get values directly from last flight in Flight Log Entries
   const maintenanceComponents = await Promise.all(
     aircraft.map(async (a) => {
@@ -456,6 +486,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     allFlightsComplete: allFlightsComplete.map((f: any) => ({ ...f, hobbs_inicio: Number(f.hobbs_inicio), hobbs_fin: Number(f.hobbs_fin), tach_inicio: Number(f.tach_inicio), tach_fin: Number(f.tach_fin), diff_hobbs: Number(f.diff_hobbs), diff_tach: Number(f.diff_tach), costo: Number(f.costo), tarifa: f.tarifa ? Number(f.tarifa) : null, piloto_raw: f.piloto_raw || null })), // Complete data for FlightsTable client filter
     submissions: submissions.map(s => ({ ...s, imageLogs: s.ImageLog.map(img => ({ ...img, valorExtraido: img.valorExtraido ? Number(img.valorExtraido) : null, confianza: img.confianza ? Number(img.confianza) : null })), flight: s.Flight ? { ...s.Flight, diff_hobbs: Number(s.Flight.diff_hobbs), diff_tach: Number(s.Flight.diff_tach), costo: Number(s.Flight.costo) } : null })),
     components: computedComponents.map(c => ({ ...c, horas_acumuladas: Number(c.horas_acumuladas), limite_tbo: Number(c.limite_tbo) })),
+    aircraftYearlyStats,
     transactions: transactions.map(t => ({ ...t, monto: Number(t.monto) })),
     fuelByCode: (() => {
       const map: Record<string, number> = {};

@@ -26,6 +26,7 @@ type InitialData = {
     initial: { code: string; name: string }[];
     registered: { id: number; code: string; name: string; email: string; createdAt: string | Date; fechaNacimiento?: Date | null; telefono?: string | null; numeroLicencia?: string | null; tipoDocumento?: string | null; documento?: string | null }[];
   };
+  aircraftYearlyStats?: { matricula: string; avgHoursPerYear: number; totalHours: number; yearsOfOperation: number }[];
 };
 type PaginationInfo = { page: number; pageSize: number; total: number };
 type OverviewMetrics = {
@@ -573,7 +574,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         </>
       )}
       {tab === "fuel" && <FuelTable logs={initialData.fuelLogs || []} />}
-      {tab === "maintenance" && <MaintenanceTable components={initialData.components} aircraft={initialData.aircraft} />}
+      {tab === "maintenance" && <MaintenanceTable components={initialData.components} aircraft={initialData.aircraft} aircraftYearlyStats={initialData.aircraftYearlyStats || []} />}
       {tab === "finance" && <FinanceCharts flights={initialData.flights} transactions={initialData.transactions} palette={palette} />}
     </div>
   );
@@ -1775,51 +1776,152 @@ function PilotDirectory({ directory }: { directory?: { initial: { code: string; 
   );
 }
 
-function MaintenanceTable({ components, aircraft }: { components: any[]; aircraft: any[] }) {
+function MaintenanceTable({ components, aircraft, aircraftYearlyStats }: { components: any[]; aircraft: any[]; aircraftYearlyStats: any[] }) {
+  // Calculate predicted inspection dates
+  const getPredictedDate = (aircraftId: string, hoursRemaining: number) => {
+    const stats = aircraftYearlyStats.find(s => s.aircraftId === aircraftId);
+    if (!stats || stats.avgHoursPerYear <= 0) return null;
+    
+    const yearsToInspection = hoursRemaining / stats.avgHoursPerYear;
+    const daysToInspection = Math.round(yearsToInspection * 365);
+    const predictedDate = new Date();
+    predictedDate.setDate(predictedDate.getDate() + daysToInspection);
+    
+    return {
+      date: predictedDate,
+      daysRemaining: daysToInspection,
+      avgHoursPerYear: stats.avgHoursPerYear
+    };
+  };
+
   return (
-    <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
-      <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
-        <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          Component Status
-        </h3>
+    <div className="space-y-6">
+      {/* Component Status Table */}
+      <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
+        <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
+          <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Component Status
+          </h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-200">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Aircraft</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Type</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Hours</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">TBO</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Remaining</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Life %</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-slate-100">
+              {components.map(c => {
+                const restante = Number(c.limite_tbo) - Number(c.horas_acumuladas);
+                const pct = (Number(c.horas_acumuladas)/Number(c.limite_tbo))*100;
+                const colorClass = pct > 80 ? 'text-red-600 font-bold' : pct > 60 ? 'text-orange-500 font-bold' : 'text-green-600 font-bold';
+                return (
+                  <tr key={c.id} className="hover:bg-blue-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-600 font-mono">{c.aircraftId}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">{c.tipo}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{Number(c.horas_acumuladas).toFixed(1)} hrs</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{Number(c.limite_tbo).toFixed(0)} hrs</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{restante.toFixed(1)} hrs</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${colorClass}`}>
+                        {pct.toFixed(1)}%
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50">
-            <tr>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Aircraft</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Type</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Hours</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">TBO</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Remaining</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Life %</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-slate-100">
-            {components.map(c => {
-              const restante = Number(c.limite_tbo) - Number(c.horas_acumuladas);
-              const pct = (Number(c.horas_acumuladas)/Number(c.limite_tbo))*100;
-              const colorClass = pct > 80 ? 'text-red-600 font-bold' : pct > 60 ? 'text-orange-500 font-bold' : 'text-green-600 font-bold';
-              return (
-                <tr key={c.id} className="hover:bg-blue-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-600 font-mono">{c.aircraftId}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">{c.tipo}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{Number(c.horas_acumuladas).toFixed(1)} hrs</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{Number(c.limite_tbo).toFixed(0)} hrs</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{restante.toFixed(1)} hrs</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${colorClass}`}>
-                      {pct.toFixed(1)}%
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+
+      {/* Next Inspections Prediction */}
+      <div className="bg-white/95 backdrop-blur-lg border-2 border-amber-200 rounded-2xl shadow-2xl overflow-hidden">
+        <div className="bg-gradient-to-r from-amber-600 to-orange-600 px-8 py-6">
+          <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Next Inspections (Predictive Analysis)
+          </h3>
+          <p className="text-amber-100 text-sm mt-1">Based on historical flight hours average</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-200">
+            <thead className="bg-amber-50">
+              <tr>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Aircraft</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Component</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Hrs Remaining</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Avg Hrs/Year</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Est. Inspection Date</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Days Until</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-slate-100">
+              {components
+                .filter(c => c.tipo === 'ENGINE' || c.tipo === 'PROPELLER') // Focus on TBO-critical components
+                .sort((a, b) => {
+                  const restA = Number(a.limite_tbo) - Number(a.horas_acumuladas);
+                  const restB = Number(b.limite_tbo) - Number(b.horas_acumuladas);
+                  return restA - restB;
+                })
+                .map(c => {
+                  const restante = Number(c.limite_tbo) - Number(c.horas_acumuladas);
+                  const prediction = getPredictedDate(c.aircraftId, restante);
+                  const urgencyClass = prediction && prediction.daysRemaining < 180 
+                    ? 'bg-red-50 border-l-4 border-red-500' 
+                    : prediction && prediction.daysRemaining < 365 
+                      ? 'bg-amber-50 border-l-4 border-amber-500' 
+                      : 'hover:bg-blue-50';
+                  
+                  return (
+                    <tr key={c.id} className={`transition-colors ${urgencyClass}`}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-600 font-mono">{c.aircraftId}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">{c.tipo}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{restante.toFixed(1)} hrs</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-mono font-bold">
+                        {prediction ? `${prediction.avgHoursPerYear.toFixed(1)} hrs/yr` : 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">
+                        {prediction ? prediction.date.toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Sin datos'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {prediction ? (
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
+                            prediction.daysRemaining < 180 ? 'bg-red-100 text-red-700' :
+                            prediction.daysRemaining < 365 ? 'bg-amber-100 text-amber-700' :
+                            prediction.daysRemaining < 730 ? 'bg-blue-100 text-blue-700' :
+                            'bg-green-100 text-green-700'
+                          }`}>
+                            {prediction.daysRemaining} días
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+            </tbody>
+          </table>
+        </div>
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200">
+          <p className="text-xs text-slate-500 flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Predictions are based on average yearly flight hours. Actual inspection dates may vary based on usage patterns.
+          </p>
+        </div>
       </div>
     </div>
   );
