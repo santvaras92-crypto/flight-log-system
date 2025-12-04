@@ -64,10 +64,37 @@ async function loadImageAsBase64(url: string): Promise<string> {
   });
 }
 
+// Helper function to load font as base64
+async function loadFontAsBase64(url: string): Promise<string> {
+  const response = await fetch(url);
+  const arrayBuffer = await response.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
 export async function generateAccountStatementPDF(data: AccountData): Promise<void> {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
+  
+  // Load custom fonts (Avenir Next)
+  try {
+    const [avenirBold, avenirRegular] = await Promise.all([
+      loadFontAsBase64('/fonts/Avenir_Next_Bold.ttf'),
+      loadFontAsBase64('/fonts/Avenir_Next_Regular.ttf'),
+    ]);
+    
+    doc.addFileToVFS('AvenirNext-Bold.ttf', avenirBold);
+    doc.addFileToVFS('AvenirNext-Regular.ttf', avenirRegular);
+    doc.addFont('AvenirNext-Bold.ttf', 'AvenirNext', 'bold');
+    doc.addFont('AvenirNext-Regular.ttf', 'AvenirNext', 'normal');
+  } catch (e) {
+    console.error('Could not load Avenir fonts, falling back to Helvetica:', e);
+  }
   
   // Load logo
   let logoBase64: string | null = null;
@@ -126,7 +153,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   // Title - Left aligned with letter spacing
   doc.setTextColor(...colors.navy);
   doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('AvenirNext', 'bold');
   doc.text('P I L O T   A C C O U N T', 14, y);
   
   doc.setFontSize(18);
@@ -135,7 +162,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   // CC-AQI subtitle
   doc.setTextColor(...colors.silver);
   doc.setFontSize(11);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('AvenirNext', 'normal');
   doc.text('CC-AQI', 14, y + 16);
   
   // Period
@@ -174,35 +201,35 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   // Code
   doc.setTextColor(...colors.silver);
   doc.setFontSize(7);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('AvenirNext', 'bold');
   doc.text('CÓDIGO', 20, y + 5);
   
   doc.setTextColor(...colors.navy);
   doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('AvenirNext', 'bold');
   doc.text(data.clientCode, 20, y + 12);
   
   // Name
   doc.setTextColor(...colors.silver);
   doc.setFontSize(7);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('AvenirNext', 'bold');
   doc.text('NOMBRE', 55, y + 5);
   
   doc.setTextColor(...colors.textPrimary);
   doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('AvenirNext', 'bold');
   doc.text(data.clientName, 55, y + 12);
   
   // Balance
   const balanceColor = data.balance >= 0 ? colors.credit : colors.debit;
   doc.setTextColor(...colors.silver);
   doc.setFontSize(7);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('AvenirNext', 'bold');
   doc.text('BALANCE', pageWidth - 50, y + 5);
   
   doc.setTextColor(...balanceColor);
   doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('AvenirNext', 'bold');
   doc.text(formatCurrency(data.balance), pageWidth - 20, y + 12, { align: 'right' });
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -232,7 +259,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     // Label
     doc.setTextColor(...colors.silver);
     doc.setFontSize(7);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('AvenirNext', 'bold');
     doc.text(metric.label, x + cardWidth / 2, y + 8, { align: 'center' });
     
     // Separator
@@ -246,7 +273,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     
     doc.setTextColor(...valueColor);
     doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('AvenirNext', 'bold');
     doc.text(metric.value, x + cardWidth / 2, y + 19, { align: 'center' });
   });
 
@@ -266,12 +293,12 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   // Section title
   doc.setTextColor(...colors.navy);
   doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('AvenirNext', 'bold');
   doc.text('DETALLE DE VUELOS', 14, y);
   
   doc.setTextColor(...colors.silver);
   doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('AvenirNext', 'normal');
   doc.text(`${data.flights.length} registros`, pageWidth - 14, y, { align: 'right' });
   
   y += 6;
@@ -357,7 +384,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     if (data.deposits.length > 0) {
       doc.setTextColor(...colors.navy);
       doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont('AvenirNext', 'bold');
       doc.text('DEPÓSITOS', 14, y + 4);
       
       const depositRows = data.deposits.map(d => [
@@ -408,7 +435,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     if (data.fuelCredits.length > 0) {
       doc.setTextColor(...colors.navy);
       doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont('AvenirNext', 'bold');
       doc.text('CRÉDITOS COMBUSTIBLE', pageWidth / 2 + 4, y + 4);
       
       const fuelRows = data.fuelCredits.map(f => [
@@ -487,7 +514,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   // Title
   doc.setTextColor(...colors.navy);
   doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('AvenirNext', 'bold');
   doc.text('INFORMACIÓN BANCARIA', 20, bankY + 6);
   
   // Details - two columns
@@ -498,28 +525,28 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   // Left column
   doc.setTextColor(...colors.silver);
   doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('AvenirNext', 'normal');
   doc.text('Titular', col1, detailY);
   doc.text('RUT', col1, detailY + 8);
   
   doc.setTextColor(...colors.textPrimary);
   doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('AvenirNext', 'bold');
   doc.text('SANTIAGO NICOLÁS VARAS SAAVEDRA', col1, detailY + 4);
   doc.text('18.166.515-7', col1, detailY + 12);
   
   // Right column
   doc.setTextColor(...colors.silver);
   doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('AvenirNext', 'normal');
   doc.text('Banco', col2, detailY);
   doc.text('Email', col2, detailY + 8);
   
   doc.setTextColor(...colors.textPrimary);
   doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('AvenirNext', 'bold');
   doc.text('Santander • Cta. Cte. 0-000-75-79256-5', col2, detailY + 4);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('AvenirNext', 'normal');
   doc.text('santvaras92@gmail.com', col2, detailY + 12);
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -537,7 +564,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     // Footer text
     doc.setTextColor(...colors.silver);
     doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('AvenirNext', 'normal');
     doc.text('CC-AQI  •  AeroStratus Aviation Solutions', 14, pageHeight - 6);
     doc.text(`Página ${i} de ${pagesCount}`, pageWidth - 14, pageHeight - 6, { align: 'right' });
   }
