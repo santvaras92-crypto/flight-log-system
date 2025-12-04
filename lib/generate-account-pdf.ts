@@ -582,3 +582,4 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   const fileName = `Estado_Cuenta_${data.clientCode}_${new Date().toISOString().split('T')[0]}.pdf`;
   doc.save(fileName);
 }
+// Build trigger 1764807953
