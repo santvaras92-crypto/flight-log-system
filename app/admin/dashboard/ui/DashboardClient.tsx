@@ -273,150 +273,150 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
   // Define all Overview cards
   const overviewCards: Record<string, JSX.Element> = overviewMetrics ? {
     fuelRate: (
-      <div className={`${palette.card} rounded-xl p-6 ${palette.shadow}`}>
-        <div className="flex items-start justify-between mb-4">
-          <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
-            <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+        <div className="flex items-start justify-between mb-2 sm:mb-4">
+          <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-amber-100 flex items-center justify-center">
+            <svg className="w-4 h-4 sm:w-6 sm:h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
           </div>
-          <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">LIVE</span>
+          <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-green-100 text-green-700 text-[9px] sm:text-xs font-semibold rounded-full">LIVE</span>
         </div>
-        <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">Fuel Consumption Rate</h3>
-        <div className="space-y-1">
-          <div className="text-3xl font-bold text-slate-900">
+        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Fuel Rate</h3>
+        <div className="space-y-0.5 sm:space-y-1">
+          <div className="text-lg sm:text-3xl font-bold text-slate-900">
             {typeof overviewMetrics?.fuelRateLph === 'number' 
               ? overviewMetrics.fuelRateLph.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
-              : '0,00'} <span className="text-xl text-slate-600">L/H</span>
+              : '0,00'} <span className="text-sm sm:text-xl text-slate-600">L/H</span>
           </div>
-          <div className="text-xl font-semibold text-amber-600">
+          <div className="text-base sm:text-xl font-semibold text-amber-600">
             {typeof overviewMetrics?.fuelRateGph === 'number' 
               ? overviewMetrics.fuelRateGph.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
-              : '0,00'} <span className="text-base text-slate-600">GAL/H</span>
+              : '0,00'} <span className="text-xs sm:text-base text-slate-600">GAL/H</span>
           </div>
         </div>
-        <p className="text-xs text-slate-500 mt-3">Since Sep 9, 2020 • Excludes 10% idle time</p>
+        <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">Since Sep 9, 2020 • Excludes 10% idle</p>
       </div>
     ),
     totalHours: (
-      <div className={`${palette.card} rounded-xl p-6 ${palette.shadow}`}>
-        <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-4">
-          <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-blue-100 flex items-center justify-center mb-2 sm:mb-4">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">Total Hours</h3>
-        <div className="text-3xl font-bold text-slate-900 mb-1">{overviewMetrics.totalHours.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
-        <p className="text-sm text-slate-600 font-medium">Flight hours</p>
-        <p className="text-xs text-slate-500 mt-3">Since Dec 2, 2017</p>
+        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Total Hours</h3>
+        <div className="text-xl sm:text-3xl font-bold text-slate-900 mb-0.5 sm:mb-1">{overviewMetrics.totalHours.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
+        <p className="text-xs sm:text-sm text-slate-600 font-medium">Flight hours</p>
+        <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">Since Dec 2, 2017</p>
       </div>
     ),
     totalFlights: (
-      <div className={`${palette.card} rounded-xl p-6 ${palette.shadow}`}>
-        <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center mb-4">
-          <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-indigo-100 flex items-center justify-center mb-2 sm:mb-4">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
           </svg>
         </div>
-        <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">Total Flights</h3>
-        <div className="text-3xl font-bold text-slate-900 mb-1">{overviewMetrics.totalFlights.toLocaleString('es-CL')}</div>
-        <p className="text-sm text-slate-600 font-medium">Completed flights</p>
-        <p className="text-xs text-slate-500 mt-3">8+ years of operations</p>
+        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Total Flights</h3>
+        <div className="text-xl sm:text-3xl font-bold text-slate-900 mb-0.5 sm:mb-1">{overviewMetrics.totalFlights.toLocaleString('es-CL')}</div>
+        <p className="text-xs sm:text-sm text-slate-600 font-medium">Completed</p>
+        <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">8+ years of operations</p>
       </div>
     ),
     nextInspections: (
-      <div className={`${palette.card} rounded-xl p-6 ${palette.shadow}`}>
-        <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
-          <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-red-100 flex items-center justify-center mb-2 sm:mb-4">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
           </svg>
         </div>
-        <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">Next Inspections</h3>
-        <div className="space-y-2">
+        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Inspections</h3>
+        <div className="space-y-1 sm:space-y-2">
           <div>
-            <div className="text-sm text-slate-600 font-medium">Oil Change</div>
-            <div className="text-2xl font-bold text-slate-900">{(overviewMetrics?.nextInspections?.oilChangeRemaining ?? 0).toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-base text-slate-600">hrs</span></div>
+            <div className="text-[10px] sm:text-sm text-slate-600 font-medium">Oil</div>
+            <div className="text-lg sm:text-2xl font-bold text-slate-900">{(overviewMetrics?.nextInspections?.oilChangeRemaining ?? 0).toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-xs sm:text-base text-slate-600">hrs</span></div>
           </div>
           <div>
-            <div className="text-sm text-slate-600 font-medium">100-hour Inspection</div>
-            <div className="text-2xl font-bold text-slate-900">{(overviewMetrics?.nextInspections?.hundredHourRemaining ?? 0).toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-base text-slate-600">hrs</span></div>
+            <div className="text-[10px] sm:text-sm text-slate-600 font-medium">100hr</div>
+            <div className="text-lg sm:text-2xl font-bold text-slate-900">{(overviewMetrics?.nextInspections?.hundredHourRemaining ?? 0).toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-xs sm:text-base text-slate-600">hrs</span></div>
           </div>
         </div>
-        <p className="text-xs text-slate-500 mt-3">Based on TACH hours</p>
+        <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">Based on TACH</p>
       </div>
     ),
     fuelConsumed: (
-      <div className={`${palette.card} rounded-xl p-6 ${palette.shadow}`}>
-        <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center mb-4">
-          <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-orange-100 flex items-center justify-center mb-2 sm:mb-4">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
           </svg>
         </div>
-        <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">Fuel Consumed</h3>
-        <div className="space-y-1">
-          <div className="text-3xl font-bold text-slate-900">{(overviewMetrics?.fuelConsumed || 0).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-lg text-slate-600">L</span></div>
-          <div className="text-xl font-semibold text-orange-600">{(((overviewMetrics?.fuelConsumed || 0) / 3.78541)).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-base text-slate-600">GAL</span></div>
+        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Fuel</h3>
+        <div className="space-y-0.5 sm:space-y-1">
+          <div className="text-lg sm:text-3xl font-bold text-slate-900">{(overviewMetrics?.fuelConsumed || 0).toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} <span className="text-xs sm:text-lg text-slate-600">L</span></div>
+          <div className="text-base sm:text-xl font-semibold text-orange-600">{(((overviewMetrics?.fuelConsumed || 0) / 3.78541)).toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} <span className="text-xs sm:text-base text-slate-600">GAL</span></div>
         </div>
-        <p className="text-xs text-slate-500 mt-3">Since Sep 9, 2020</p>
+        <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">Since Sep 9, 2020</p>
       </div>
     ),
     activePilots: (
-      <div className={`${palette.card} rounded-xl p-6 ${palette.shadow}`}>
-        <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mb-4">
-          <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-purple-100 flex items-center justify-center mb-2 sm:mb-4">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
         </div>
-        <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">Active Pilots</h3>
-        <div className="text-3xl font-bold text-slate-900 mb-1">{overviewMetrics.activePilots}</div>
-        <p className="text-sm text-slate-600 font-medium">Currently active</p>
-        <p className="text-xs text-slate-500 mt-3">Last 6 months activity</p>
+        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Pilots</h3>
+        <div className="text-xl sm:text-3xl font-bold text-slate-900 mb-0.5 sm:mb-1">{overviewMetrics.activePilots}</div>
+        <p className="text-xs sm:text-sm text-slate-600 font-medium">Active</p>
+        <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">Last 6 months</p>
       </div>
     ),
     pendingBalance: (
-      <div className={`${palette.card} rounded-xl p-6 ${palette.shadow}`}>
-        <div className="flex items-start justify-between mb-4">
-          <div className="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center">
-            <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+        <div className="flex items-start justify-between mb-2 sm:mb-4">
+          <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-yellow-100 flex items-center justify-center">
+            <svg className="w-4 h-4 sm:w-6 sm:h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
             </svg>
           </div>
-          <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-full">PENDING</span>
+          <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-yellow-100 text-yellow-700 text-[9px] sm:text-xs font-semibold rounded-full">PEND</span>
         </div>
-        <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">Pending Balance</h3>
-        <div className="text-3xl font-bold text-slate-900 mb-1">${overviewMetrics.pendingBalance.toLocaleString('es-CL')}</div>
-        <p className="text-sm text-slate-600 font-medium">Unpaid deposits</p>
-        <p className="text-xs text-slate-500 mt-3">Auto-calculated from DB</p>
+        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Balance</h3>
+        <div className="text-lg sm:text-3xl font-bold text-slate-900 mb-0.5 sm:mb-1">${overviewMetrics.pendingBalance.toLocaleString('es-CL')}</div>
+        <p className="text-xs sm:text-sm text-slate-600 font-medium">Unpaid</p>
+        <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">Auto-calculated</p>
       </div>
     ),
     thisMonth: (
-      <div className={`${palette.card} rounded-xl p-6 ${palette.shadow}`}>
-        <div className="w-12 h-12 rounded-full bg-cyan-100 flex items-center justify-center mb-4">
-          <svg className="w-6 h-6 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-cyan-100 flex items-center justify-center mb-2 sm:mb-4">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
           </svg>
         </div>
-        <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">This Month</h3>
-        <div className="space-y-1">
-          <div className="text-3xl font-bold text-slate-900">{overviewMetrics.thisMonthFlights} <span className="text-lg text-slate-600">flights</span></div>
-          <div className="text-xl font-semibold text-cyan-600">{overviewMetrics.thisMonthHours.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-base text-slate-600">hrs</span></div>
+        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">This Month</h3>
+        <div className="space-y-0.5 sm:space-y-1">
+          <div className="text-lg sm:text-3xl font-bold text-slate-900">{overviewMetrics.thisMonthFlights} <span className="text-xs sm:text-lg text-slate-600">flights</span></div>
+          <div className="text-base sm:text-xl font-semibold text-cyan-600">{overviewMetrics.thisMonthHours.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-xs sm:text-base text-slate-600">hrs</span></div>
         </div>
-        <p className="text-xs text-slate-500 mt-3">December 2025</p>
+        <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">Dec 2025</p>
       </div>
     ),
     avgFlightTime: (
-      <div className={`${palette.card} rounded-xl p-6 ${palette.shadow}`}>
-        <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center mb-4">
-          <svg className="w-6 h-6 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-rose-100 flex items-center justify-center mb-2 sm:mb-4">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
           </svg>
         </div>
-        <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">Avg Flight Time</h3>
-        <div className="text-3xl font-bold text-slate-900 mb-1">
-          {overviewMetrics.totalFlights > 0 ? (overviewMetrics.totalHours / overviewMetrics.totalFlights).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'} <span className="text-xl text-slate-600">hrs</span>
+        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Avg Time</h3>
+        <div className="text-xl sm:text-3xl font-bold text-slate-900 mb-0.5 sm:mb-1">
+          {overviewMetrics.totalFlights > 0 ? (overviewMetrics.totalHours / overviewMetrics.totalFlights).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'} <span className="text-sm sm:text-xl text-slate-600">hrs</span>
         </div>
-        <p className="text-sm text-slate-600 font-medium">Average per flight</p>
-        <p className="text-xs text-slate-500 mt-3">{overviewMetrics.totalHours.toLocaleString('es-CL', { minimumFractionDigits: 1 })} hrs ÷ {overviewMetrics.totalFlights.toLocaleString('es-CL')} flights</p>
+        <p className="text-xs sm:text-sm text-slate-600 font-medium">Per flight</p>
+        <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">{overviewMetrics.totalHours.toLocaleString('es-CL', { minimumFractionDigits: 1 })} ÷ {overviewMetrics.totalFlights.toLocaleString('es-CL')}</p>
       </div>
     ),
   } : {};
@@ -451,7 +451,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
 
       {tab === "overview" && overviewMetrics && cardOrder.length > 0 && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
             {cardOrder.map(cardId => overviewCards[cardId] ? renderCard(cardId, overviewCards[cardId]) : null)}
           </div>
         </div>
