@@ -147,6 +147,8 @@ model User {
   saldo_cuenta     Decimal            @default(0.0)
   tarifa_hora      Decimal
   password         String
+  resetToken       String?            @unique
+  resetTokenExpiry DateTime?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   fechaNacimiento  DateTime?
