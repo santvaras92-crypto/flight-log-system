@@ -195,127 +195,127 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
   // Overview cards definition (same style as admin)
   const overviewCards: Record<string, JSX.Element> = {
     totalHours: (
-      <div className={`${palette.card} rounded-xl p-6 ${palette.shadow}`}>
-        <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-4">
-          <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-blue-100 flex items-center justify-center mb-2 sm:mb-4">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">Horas Totales</h3>
-        <div className="text-3xl font-bold text-slate-900 mb-1">{data.metrics.totalHours.toLocaleString()}</div>
-        <p className="text-sm text-slate-600 font-medium">horas de vuelo</p>
+        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Horas Totales</h3>
+        <div className="text-xl sm:text-3xl font-bold text-slate-900 mb-0.5 sm:mb-1">{data.metrics.totalHours.toLocaleString()}</div>
+        <p className="text-xs sm:text-sm text-slate-600 font-medium">horas de vuelo</p>
       </div>
     ),
     totalFlights: (
-      <div className={`${palette.card} rounded-xl p-6 ${palette.shadow}`}>
-        <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center mb-4">
-          <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-indigo-100 flex items-center justify-center mb-2 sm:mb-4">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
         </div>
-        <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">Total Vuelos</h3>
-        <div className="text-3xl font-bold text-slate-900 mb-1">{data.metrics.totalFlights.toLocaleString()}</div>
-        <p className="text-sm text-slate-600 font-medium">vuelos registrados</p>
+        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Total Vuelos</h3>
+        <div className="text-xl sm:text-3xl font-bold text-slate-900 mb-0.5 sm:mb-1">{data.metrics.totalFlights.toLocaleString()}</div>
+        <p className="text-xs sm:text-sm text-slate-600 font-medium">vuelos registrados</p>
       </div>
     ),
     thisMonth: (
-      <div className={`${palette.card} rounded-xl p-6 ${palette.shadow}`}>
-        <div className="w-12 h-12 rounded-full bg-cyan-100 flex items-center justify-center mb-4">
-          <svg className="w-6 h-6 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-cyan-100 flex items-center justify-center mb-2 sm:mb-4">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
         </div>
-        <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">Este Mes</h3>
-        <div className="text-3xl font-bold text-slate-900 mb-1">{data.metrics.thisMonthFlights}</div>
-        <p className="text-sm text-slate-600 font-medium">{data.metrics.thisMonthHours} horas voladas</p>
+        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Este Mes</h3>
+        <div className="text-xl sm:text-3xl font-bold text-slate-900 mb-0.5 sm:mb-1">{data.metrics.thisMonthFlights}</div>
+        <p className="text-xs sm:text-sm text-slate-600 font-medium">{data.metrics.thisMonthHours} hrs voladas</p>
       </div>
     ),
     avgFlightTime: (
-      <div className={`${palette.card} rounded-xl p-6 ${palette.shadow}`}>
-        <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center mb-4">
-          <svg className="w-6 h-6 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-rose-100 flex items-center justify-center mb-2 sm:mb-4">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
           </svg>
         </div>
-        <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">Tiempo Promedio</h3>
-        <div className="text-3xl font-bold text-slate-900 mb-1">{data.metrics.avgFlightTime}</div>
-        <p className="text-sm text-slate-600 font-medium">hrs por vuelo</p>
+        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Tiempo Prom.</h3>
+        <div className="text-xl sm:text-3xl font-bold text-slate-900 mb-0.5 sm:mb-1">{data.metrics.avgFlightTime}</div>
+        <p className="text-xs sm:text-sm text-slate-600 font-medium">hrs por vuelo</p>
       </div>
     ),
     deposits: (
-      <div className={`${palette.card} rounded-xl p-6 ${palette.shadow}`}>
-        <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mb-4">
-          <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-green-100 flex items-center justify-center mb-2 sm:mb-4">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">Depósitos</h3>
-        <div className="text-3xl font-bold text-green-600 mb-1">{formatCurrency(data.metrics.totalDeposits)}</div>
-        <p className="text-sm text-slate-600 font-medium">total abonado</p>
+        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Depósitos</h3>
+        <div className="text-lg sm:text-3xl font-bold text-green-600 mb-0.5 sm:mb-1">{formatCurrency(data.metrics.totalDeposits)}</div>
+        <p className="text-xs sm:text-sm text-slate-600 font-medium">total abonado</p>
       </div>
     ),
     flightCost: (
-      <div className={`${palette.card} rounded-xl p-6 ${palette.shadow}`}>
-        <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
-          <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-red-100 flex items-center justify-center mb-2 sm:mb-4">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
         </div>
-        <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">Costo Vuelos</h3>
-        <div className="text-3xl font-bold text-red-600 mb-1">{formatCurrency(data.metrics.totalCost)}</div>
-        <p className="text-sm text-slate-600 font-medium">total consumido</p>
+        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Costo Vuelos</h3>
+        <div className="text-lg sm:text-3xl font-bold text-red-600 mb-0.5 sm:mb-1">{formatCurrency(data.metrics.totalCost)}</div>
+        <p className="text-xs sm:text-sm text-slate-600 font-medium">total consumido</p>
       </div>
     ),
     balance: (
-      <div className={`${palette.card} rounded-xl p-6 ${palette.shadow} ${data.metrics.balance >= 0 ? 'ring-2 ring-green-400' : 'ring-2 ring-red-400'}`}>
-        <div className="flex items-start justify-between mb-4">
-          <div className={`w-12 h-12 rounded-full ${data.metrics.balance >= 0 ? 'bg-green-100' : 'bg-red-100'} flex items-center justify-center`}>
-            <svg className={`w-6 h-6 ${data.metrics.balance >= 0 ? 'text-green-600' : 'text-red-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} ${data.metrics.balance >= 0 ? 'ring-2 ring-green-400' : 'ring-2 ring-red-400'}`}>
+        <div className="flex items-start justify-between mb-2 sm:mb-4">
+          <div className={`w-8 h-8 sm:w-12 sm:h-12 rounded-full ${data.metrics.balance >= 0 ? 'bg-green-100' : 'bg-red-100'} flex items-center justify-center`}>
+            <svg className={`w-4 h-4 sm:w-6 sm:h-6 ${data.metrics.balance >= 0 ? 'text-green-600' : 'text-red-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
             </svg>
           </div>
-          <span className={`px-2 py-1 ${data.metrics.balance >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'} text-xs font-semibold rounded-full`}>
-            {data.metrics.balance >= 0 ? 'A FAVOR' : 'POR PAGAR'}
+          <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 ${data.metrics.balance >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'} text-[9px] sm:text-xs font-semibold rounded-full`}>
+            {data.metrics.balance >= 0 ? 'A FAVOR' : 'PAGAR'}
           </span>
         </div>
-        <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">Tu Saldo</h3>
-        <div className={`text-3xl font-bold ${data.metrics.balance >= 0 ? 'text-green-600' : 'text-red-600'} mb-1`}>
+        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Tu Saldo</h3>
+        <div className={`text-lg sm:text-3xl font-bold ${data.metrics.balance >= 0 ? 'text-green-600' : 'text-red-600'} mb-0.5 sm:mb-1`}>
           {formatCurrency(Math.abs(data.metrics.balance))}
         </div>
-        <p className="text-sm text-slate-600 font-medium">{data.metrics.balance >= 0 ? 'saldo a favor' : 'saldo pendiente'}</p>
+        <p className="text-xs sm:text-sm text-slate-600 font-medium">{data.metrics.balance >= 0 ? 'a favor' : 'pendiente'}</p>
       </div>
     ),
     fuel: (
-      <div className={`${palette.card} rounded-xl p-6 ${palette.shadow}`}>
-        <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center mb-4">
-          <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-orange-100 flex items-center justify-center mb-2 sm:mb-4">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
           </svg>
         </div>
-        <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">Combustible</h3>
-        <div className="text-3xl font-bold text-orange-600 mb-1">{formatCurrency(data.metrics.totalFuel)}</div>
-        <p className="text-sm text-slate-600 font-medium">total registrado</p>
+        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Combustible</h3>
+        <div className="text-lg sm:text-3xl font-bold text-orange-600 mb-0.5 sm:mb-1">{formatCurrency(data.metrics.totalFuel)}</div>
+        <p className="text-xs sm:text-sm text-slate-600 font-medium">total registrado</p>
       </div>
     ),
     nextInspections: (
-      <div className={`${palette.card} rounded-xl p-6 ${palette.shadow}`}>
-        <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
-          <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-red-100 flex items-center justify-center mb-2 sm:mb-4">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
           </svg>
         </div>
-        <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">Próximas Inspecciones</h3>
-        <div className="space-y-2">
+        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Inspecciones</h3>
+        <div className="space-y-1 sm:space-y-2">
           <div>
-            <div className="text-sm text-slate-600 font-medium">Cambio Aceite</div>
-            <div className="text-2xl font-bold text-slate-900">{data.metrics.oilChangeRemaining} hrs</div>
+            <div className="text-[10px] sm:text-sm text-slate-600 font-medium">Aceite</div>
+            <div className="text-lg sm:text-2xl font-bold text-slate-900">{data.metrics.oilChangeRemaining} hrs</div>
           </div>
           <div>
-            <div className="text-sm text-slate-600 font-medium">Inspección 100hr</div>
-            <div className="text-2xl font-bold text-slate-900">{data.metrics.hundredHourRemaining} hrs</div>
+            <div className="text-[10px] sm:text-sm text-slate-600 font-medium">100hr</div>
+            <div className="text-lg sm:text-2xl font-bold text-slate-900">{data.metrics.hundredHourRemaining} hrs</div>
           </div>
         </div>
-        <p className="text-xs text-slate-500 mt-3">Basado en horas TACH</p>
+        <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3">Basado en TACH</p>
       </div>
     ),
   };
@@ -351,7 +351,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
   return (
     <div className="space-y-6">
       {/* Overview Cards - Same style as admin */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
         {cardOrder.map(cardId => overviewCards[cardId] ? renderCard(cardId, overviewCards[cardId]) : null)}
       </div>
 
