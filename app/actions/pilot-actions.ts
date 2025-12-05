@@ -113,6 +113,7 @@ export async function createOrUpdatePilot(data: {
   nombre: string;
   apellido: string;
   documento: string;
+  tipoDocumento?: string;
   email: string;
   telefono?: string;
   licencia?: string;
@@ -128,6 +129,7 @@ export async function createOrUpdatePilot(data: {
       data: {
         nombre: fullName,
         documento: data.documento,
+        tipoDocumento: data.tipoDocumento || null,
         email: data.email,
         telefono: data.telefono || null,
         licencia: data.licencia || null,
@@ -155,6 +157,7 @@ export async function createOrUpdatePilot(data: {
       where: { id: existing.id },
       data: {
         nombre: fullName,
+        tipoDocumento: data.tipoDocumento || null,
         email: data.email,
         telefono: data.telefono || null,
         licencia: data.licencia || null,
@@ -177,6 +180,7 @@ export async function createOrUpdatePilot(data: {
     data: {
       nombre: fullName,
       documento: data.documento,
+      tipoDocumento: data.tipoDocumento || null,
       email: data.email,
       telefono: data.telefono || null,
       licencia: data.licencia || null,

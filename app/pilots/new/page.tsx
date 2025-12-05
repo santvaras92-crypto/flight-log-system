@@ -137,6 +137,7 @@ export default function NewPilotPublicPage() {
         nombre: form.nombre,
         apellido: form.apellido,
         documento: form.documento,
+        tipoDocumento: form.tipoDocumento,
         email: form.email,
         telefono: form.telefono,
         licencia: form.licencia,
