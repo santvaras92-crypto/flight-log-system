@@ -75,27 +75,27 @@ export default function PilotLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-slate-100">
-      {/* Header */}
-      <header className="bg-[#003D82] text-white shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <img src="/logo.png" alt="CC-AQI" className="h-10 w-auto" />
-              <div>
-                <h1 className="text-lg font-semibold">Portal Piloto</h1>
-                <p className="text-sm text-blue-200">{pilotName}</p>
+      {/* Header - Same style as main nav */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 border-b border-blue-600/30 backdrop-blur-md shadow-lg">
+        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <img src="/LOGO_BLANCO.png" alt="CC-AQI" className="h-10 sm:h-12 w-auto" />
+              <div className="flex flex-col">
+                <span className="text-white font-bold text-base sm:text-lg tracking-tight">Portal Piloto</span>
+                <span className="text-blue-200 text-xs font-medium">{pilotName}</span>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowPasswordModal(true)}
-                className="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                className="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-white"
               >
                 🔒 Cambiar Contraseña
               </button>
               <button
                 onClick={() => signOut({ callbackUrl: "/login" })}
-                className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-white"
               >
                 Cerrar Sesión
               </button>
@@ -103,6 +103,9 @@ export default function PilotLayout({ children }: { children: React.ReactNode })
           </div>
         </div>
       </header>
+
+      {/* Spacer for fixed header */}
+      <div className="h-20 sm:h-24" />
 
       {/* Main content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
