@@ -95,24 +95,30 @@ export default function PilotLayout({ children }: { children: React.ReactNode })
                 <span className="text-blue-200 text-xs font-medium">{pilotName}</span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <a
                 href="/register"
-                className="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-white"
+                className="bg-white/10 hover:bg-white/20 px-2 sm:px-3 py-2 rounded-lg text-sm font-medium transition-colors text-white"
+                title="Registro"
               >
-                📝 Registro
+                <span className="sm:hidden">📝</span>
+                <span className="hidden sm:inline">📝 Registro</span>
               </a>
               <button
                 onClick={() => setShowPasswordModal(true)}
-                className="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-white"
+                className="bg-white/10 hover:bg-white/20 px-2 sm:px-3 py-2 rounded-lg text-sm font-medium transition-colors text-white"
+                title="Cambiar Contraseña"
               >
-                🔒 Cambiar Contraseña
+                <span className="sm:hidden">🔒</span>
+                <span className="hidden sm:inline">🔒 Contraseña</span>
               </button>
               <button
                 onClick={() => signOut({ callbackUrl: "/login" })}
-                className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-white"
+                className="bg-white/10 hover:bg-white/20 px-2 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors text-white"
+                title="Cerrar Sesión"
               >
-                Cerrar Sesión
+                <span className="sm:hidden">🚪</span>
+                <span className="hidden sm:inline">Salir</span>
               </button>
             </div>
           </div>
