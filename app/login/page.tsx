@@ -1,6 +1,6 @@
 "use client";
-import { signIn, useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { signIn } from "next-auth/react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
@@ -9,34 +9,43 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const { data: session, status } = useSession();
-
-  // Redirigir según rol cuando la sesión esté activa
-  useEffect(() => {
-    if (status === "authenticated" && session?.user) {
-      const role = (session.user as any).role;
-      if (role === "ADMIN") {
-        router.push("/admin/dashboard");
-      } else if (role === "PILOTO") {
-        router.push("/pilot/dashboard");
-      }
-    }
-  }, [session, status, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    
     const res = await signIn("credentials", {
       redirect: false,
       email,
       password,
     });
-    setLoading(false);
+    
     if (res?.error) {
       setError("Credenciales inválidas");
+      setLoading(false);
+      return;
     }
-    // La redirección se maneja en el useEffect cuando la sesión se actualice
+    
+    // Fetch session to get role and redirect accordingly
+    try {
+      const sessionRes = await fetch('/api/auth/session');
+      const session = await sessionRes.json();
+      const role = session?.user?.role || session?.role;
+      
+      if (role === "ADMIN") {
+        router.push("/admin/dashboard");
+      } else if (role === "PILOTO") {
+        router.push("/pilot/dashboard");
+      } else {
+        // Default fallback
+        router.push("/admin/dashboard");
+      }
+    } catch {
+      router.push("/admin/dashboard");
+    }
+    
+    setLoading(false);
   }
 
   return (
