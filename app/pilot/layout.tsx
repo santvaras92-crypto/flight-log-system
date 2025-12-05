@@ -2,6 +2,7 @@
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 export default function PilotLayout({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
@@ -80,7 +81,15 @@ export default function PilotLayout({ children }: { children: React.ReactNode })
         <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 sm:gap-4">
-              <img src="/LOGO_BLANCO.png" alt="CC-AQI" className="h-10 sm:h-12 w-auto" />
+              <div className="relative w-12 h-10 sm:w-16 sm:h-12">
+                <Image
+                  src="/LOGO_BLANCO.png"
+                  alt="Logo"
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
               <div className="flex flex-col">
                 <span className="text-white font-bold text-base sm:text-lg tracking-tight">Portal Piloto</span>
                 <span className="text-blue-200 text-xs font-medium">{pilotName}</span>
