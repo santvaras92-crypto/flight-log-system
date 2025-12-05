@@ -3,9 +3,20 @@
 import { prisma } from '@/lib/prisma';
 
 /**
+ * Normaliza texto removiendo acentos y convirtiendo a minúsculas
+ */
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remueve acentos
+    .trim();
+}
+
+/**
  * Busca pilotos existentes en dos pasos:
  * 1) Por documento (match exacto)
- * 2) Por nombre similar (para sugerencias)
+ * 2) Por nombre similar (para sugerencias) - con normalización de acentos
  */
 export async function searchExistingPilots(
   nombre: string,
@@ -41,47 +52,16 @@ export async function searchExistingPilots(
   }
 
   // PASO 2: Buscar por nombre similar (para sugerencias)
-  const nombreNormalized = nombre.trim().toLowerCase();
-  const apellidoNormalized = apellido.trim().toLowerCase();
+  const nombreNormalized = normalizeText(nombre);
+  const apellidoNormalized = normalizeText(apellido);
 
   if (!nombreNormalized) {
     return { exactMatch: false, matchType: undefined, pilot: null, suggestions: [] };
   }
 
-  // Buscar por:
-  // 1) Nombre completo + apellido: "Santiago Varas"
-  // 2) Solo apellido: "Varas" (para encontrar "S. Varas", "J. Varas", etc.)
-  // 3) Inicial + apellido: "S. Varas"
-  const firstInitial = nombreNormalized[0];
-  
-  const searchConditions = [];
-  
-  // Búsqueda por nombre completo + apellido
-  if (apellidoNormalized) {
-    searchConditions.push({
-      nombre: { contains: `${nombreNormalized} ${apellidoNormalized}`, mode: 'insensitive' as const }
-    });
-    
-    // Búsqueda por apellido solo (encuentra "S. Varas" cuando buscas "Santiago Varas")
-    searchConditions.push({
-      nombre: { contains: apellidoNormalized, mode: 'insensitive' as const }
-    });
-    
-    // Búsqueda por inicial + apellido (encuentra "S. Varas")
-    searchConditions.push({
-      nombre: { contains: `${firstInitial}. ${apellidoNormalized}`, mode: 'insensitive' as const }
-    });
-  } else {
-    // Solo nombre sin apellido
-    searchConditions.push({
-      nombre: { contains: nombreNormalized, mode: 'insensitive' as const }
-    });
-  }
-
-  const suggestions = await prisma.user.findMany({
-    where: {
-      OR: searchConditions
-    },
+  // Obtener todos los pilotos y filtrar en memoria para manejar acentos correctamente
+  const allPilots = await prisma.user.findMany({
+    where: { rol: 'PILOTO' },
     select: {
       id: true,
       nombre: true,
@@ -91,9 +71,31 @@ export async function searchExistingPilots(
       telefono: true,
       licencia: true,
       fechaNacimiento: true,
-    },
-    take: 5 // Máximo 5 sugerencias
+    }
   });
+
+  // Filtrar pilotos cuyo nombre normalizado contenga la búsqueda
+  const searchTerms = apellidoNormalized 
+    ? [nombreNormalized, apellidoNormalized, `${nombreNormalized} ${apellidoNormalized}`]
+    : [nombreNormalized];
+  
+  const suggestions = allPilots.filter(pilot => {
+    const pilotNameNormalized = normalizeText(pilot.nombre);
+    
+    // Buscar cualquiera de los términos en el nombre del piloto
+    return searchTerms.some(term => {
+      // El término aparece en cualquier parte del nombre
+      if (pilotNameNormalized.includes(term)) return true;
+      
+      // Cada palabra del término aparece en el nombre (orden flexible)
+      const termWords = term.split(' ').filter(w => w.length > 0);
+      if (termWords.length > 1) {
+        return termWords.every(word => pilotNameNormalized.includes(word));
+      }
+      
+      return false;
+    });
+  }).slice(0, 10); // Máximo 10 sugerencias
 
   return {
     exactMatch: false,
