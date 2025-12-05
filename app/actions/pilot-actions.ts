@@ -75,26 +75,26 @@ export async function searchExistingPilots(
   });
 
   // Filtrar pilotos cuyo nombre normalizado contenga la búsqueda
-  const searchTerms = apellidoNormalized 
-    ? [nombreNormalized, apellidoNormalized, `${nombreNormalized} ${apellidoNormalized}`]
-    : [nombreNormalized];
-  
   const suggestions = allPilots.filter(pilot => {
     const pilotNameNormalized = normalizeText(pilot.nombre);
     
-    // Buscar cualquiera de los términos en el nombre del piloto
-    return searchTerms.some(term => {
-      // El término aparece en cualquier parte del nombre
-      if (pilotNameNormalized.includes(term)) return true;
-      
-      // Cada palabra del término aparece en el nombre (orden flexible)
-      const termWords = term.split(' ').filter(w => w.length > 0);
-      if (termWords.length > 1) {
-        return termWords.every(word => pilotNameNormalized.includes(word));
-      }
-      
-      return false;
-    });
+    // Si hay apellido, AMBOS (nombre Y apellido) deben aparecer
+    if (apellidoNormalized && nombreNormalized) {
+      return pilotNameNormalized.includes(nombreNormalized) && 
+             pilotNameNormalized.includes(apellidoNormalized);
+    }
+    
+    // Si solo hay apellido, buscar apellido
+    if (apellidoNormalized) {
+      return pilotNameNormalized.includes(apellidoNormalized);
+    }
+    
+    // Si solo hay nombre, buscar nombre
+    if (nombreNormalized) {
+      return pilotNameNormalized.includes(nombreNormalized);
+    }
+    
+    return false;
   }).slice(0, 10); // Máximo 10 sugerencias
 
   return {
