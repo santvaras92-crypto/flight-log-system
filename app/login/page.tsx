@@ -1,14 +1,27 @@
 "use client";
-import { signIn } from "next-auth/react";
-import { useState } from "react";
+import { signIn, useSession } from "next-auth/react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("admin@aeroclub.com");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { data: session, status } = useSession();
+
+  // Redirigir según rol cuando la sesión esté activa
+  useEffect(() => {
+    if (status === "authenticated" && session?.user) {
+      const role = (session.user as any).role;
+      if (role === "ADMIN") {
+        router.push("/admin/dashboard");
+      } else if (role === "PILOTO") {
+        router.push("/pilot/dashboard");
+      }
+    }
+  }, [session, status, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,9 +35,8 @@ export default function LoginPage() {
     setLoading(false);
     if (res?.error) {
       setError("Credenciales inválidas");
-    } else {
-      router.push("/admin/validacion");
     }
+    // La redirección se maneja en el useEffect cuando la sesión se actualice
   }
 
   return (
@@ -64,7 +76,6 @@ export default function LoginPage() {
         >
           {loading ? "Ingresando..." : "Ingresar"}
         </button>
-        <p className="text-xs text-gray-500">Usa admin@aeroclub.com / admin123 para pruebas.</p>
       </form>
       </div>
     </div>
