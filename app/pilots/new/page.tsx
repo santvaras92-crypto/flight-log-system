@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { searchExistingPilots, createOrUpdatePilot } from "@/app/actions/pilot-actions";
 
 type MatchedPilot = {
@@ -38,15 +38,22 @@ export default function NewPilotPublicPage() {
 
   const [selectedPilotId, setSelectedPilotId] = useState<number | null>(null);
   const [pilotManuallySelected, setPilotManuallySelected] = useState(false);
+  const skipNextSearchRef = useRef(false); // Ref para skip inmediato
 
   // Búsqueda en tiempo real con debounce
   useEffect(() => {
     // Si el usuario ya seleccionó un piloto manualmente, no hacer búsqueda
-    if (pilotManuallySelected) {
+    if (pilotManuallySelected || skipNextSearchRef.current) {
+      skipNextSearchRef.current = false; // Reset después de usar
       return;
     }
 
     const timer = setTimeout(async () => {
+      // Double-check después del debounce
+      if (pilotManuallySelected) {
+        return;
+      }
+
       if (!form.nombre.trim()) {
         setDuplicateCheck({ exactMatch: false, pilot: null, suggestions: [] });
         setSelectedPilotId(null);
@@ -60,6 +67,11 @@ export default function NewPilotPublicPage() {
           form.apellido,
           form.documento
         );
+        
+        // Triple-check: si mientras buscábamos se seleccionó un piloto, no actualizar
+        if (pilotManuallySelected) {
+          return;
+        }
         
         setDuplicateCheck(result);
         
@@ -83,15 +95,17 @@ export default function NewPilotPublicPage() {
       } finally {
         setSearching(false);
       }
-    }, 300); // Debounce de 300ms (más rápido para feedback inmediato)
+    }, 300);
 
     return () => clearTimeout(timer);
   }, [form.nombre, form.apellido, form.documento, pilotManuallySelected]);
 
   const handleSelectSuggestion = (pilot: MatchedPilot) => {
-    setPilotManuallySelected(true); // Marcar que se seleccionó manualmente
+    // Marcar ANTES de cualquier cambio de estado
+    skipNextSearchRef.current = true;
+    setPilotManuallySelected(true);
     setSelectedPilotId(pilot.id);
-    setDuplicateCheck({ exactMatch: false, pilot: null, suggestions: [] }); // Limpiar sugerencias
+    setDuplicateCheck({ exactMatch: false, pilot: null, suggestions: [] });
     setForm(prev => ({
       ...prev,
       nombre: pilot.nombre.split(' ')[0] || prev.nombre,
