@@ -37,9 +37,15 @@ export default function NewPilotPublicPage() {
   }>({ exactMatch: false, pilot: null, suggestions: [] });
 
   const [selectedPilotId, setSelectedPilotId] = useState<number | null>(null);
+  const [pilotManuallySelected, setPilotManuallySelected] = useState(false);
 
   // Búsqueda en tiempo real con debounce
   useEffect(() => {
+    // Si el usuario ya seleccionó un piloto manualmente, no hacer búsqueda
+    if (pilotManuallySelected) {
+      return;
+    }
+
     const timer = setTimeout(async () => {
       if (!form.nombre.trim()) {
         setDuplicateCheck({ exactMatch: false, pilot: null, suggestions: [] });
@@ -80,10 +86,12 @@ export default function NewPilotPublicPage() {
     }, 300); // Debounce de 300ms (más rápido para feedback inmediato)
 
     return () => clearTimeout(timer);
-  }, [form.nombre, form.apellido, form.documento]);
+  }, [form.nombre, form.apellido, form.documento, pilotManuallySelected]);
 
   const handleSelectSuggestion = (pilot: MatchedPilot) => {
+    setPilotManuallySelected(true); // Marcar que se seleccionó manualmente
     setSelectedPilotId(pilot.id);
+    setDuplicateCheck({ exactMatch: false, pilot: null, suggestions: [] }); // Limpiar sugerencias
     setForm(prev => ({
       ...prev,
       nombre: pilot.nombre.split(' ')[0] || prev.nombre,
@@ -101,6 +109,7 @@ export default function NewPilotPublicPage() {
 
   const handleConfirmNewPilot = () => {
     setSelectedPilotId(null);
+    setPilotManuallySelected(false); // Permitir búsqueda de nuevo
     setShowConfirmNew(true);
   };
 
@@ -141,6 +150,7 @@ export default function NewPilotPublicPage() {
         });
         setDuplicateCheck({ exactMatch: false, pilot: null, suggestions: [] });
         setSelectedPilotId(null);
+        setPilotManuallySelected(false); // Permitir búsqueda de nuevo
         setShowConfirmNew(false);
       }
     } catch (error: any) {
