@@ -791,8 +791,8 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
             fechaNacimiento: dbUser.fechaNacimiento || null,
             telefono: dbUser.telefono || null,
             numeroLicencia: dbUser.licencia || null,
-            tipoDocumento: null,
-            documento: null,
+            tipoDocumento: dbUser.tipoDocumento || null,
+            documento: dbUser.documento || null,
             source: 'CSV' as const
           };
         }
@@ -827,8 +827,8 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           fechaNacimiento: u.fechaNacimiento || null,
           telefono: u.telefono || null,
           numeroLicencia: u.licencia || null,
-          tipoDocumento: null,
-          documento: null
+          tipoDocumento: u.tipoDocumento || null,
+          documento: u.documento || null
         }))
     }
   };
