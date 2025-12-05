@@ -96,6 +96,57 @@ export default async function PilotDashboardPage() {
     }
   });
 
+  // Compute Next Inspections (Oil Change and 100-hour) - same logic as admin dashboard
+  const OIL_INTERVAL = 50;
+  const INSPECT_100_INTERVAL = 100;
+
+  const toNumber = (v: any) => {
+    if (v === null || v === undefined) return null;
+    if (typeof v === 'number') return v;
+    if (typeof v === 'object' && v !== null && 'toNumber' in v && typeof (v as any).toNumber === 'function') {
+      try { return (v as any).toNumber(); } catch { return Number(v as any) || null; }
+    }
+    const n = Number(v);
+    return isNaN(n) ? null : n;
+  };
+
+  const getCurrentTach = async (): Promise<number | null> => {
+    const latest = await prisma.flight.findFirst({
+      orderBy: { fecha: 'desc' },
+      select: { tach_fin: true, tach_inicio: true, diff_tach: true }
+    });
+    if (!latest) return null;
+    const fin = toNumber(latest.tach_fin);
+    const ini = toNumber(latest.tach_inicio);
+    const diff = toNumber(latest.diff_tach);
+    if (fin != null) return fin;
+    if (ini != null && diff != null) return ini + diff;
+    return ini;
+  };
+
+  const getLastTachForDetalle = async (keyword: string): Promise<number | null> => {
+    const flight = await prisma.flight.findFirst({
+      where: { detalle: { contains: keyword, mode: 'insensitive' } },
+      orderBy: { fecha: 'desc' },
+      select: { tach_inicio: true, tach_fin: true, diff_tach: true }
+    });
+    if (!flight) return null;
+    const ini = toNumber(flight.tach_inicio);
+    const fin = toNumber(flight.tach_fin);
+    const diff = toNumber(flight.diff_tach);
+    return ini != null ? ini : (fin != null && diff != null ? fin - diff : null);
+  };
+
+  const currentTach = await getCurrentTach();
+  const oilTachBase = await getLastTachForDetalle('CAMBIO DE ACEITE');
+  const inspectTachBase = await getLastTachForDetalle('REVISION 100 HRS');
+
+  const oilUsed = oilTachBase != null && currentTach != null ? (currentTach - oilTachBase) : (currentTach != null ? (currentTach % OIL_INTERVAL) : 0);
+  const inspectUsed = inspectTachBase != null && currentTach != null ? (currentTach - inspectTachBase) : (currentTach != null ? (currentTach % INSPECT_100_INTERVAL) : 0);
+
+  const oilChangeRemaining = Math.max(0, OIL_INTERVAL - (oilUsed < 0 ? 0 : oilUsed));
+  const hundredHourRemaining = Math.max(0, INSPECT_100_INTERVAL - (inspectUsed < 0 ? 0 : inspectUsed));
+
   // Read CSV deposits for this pilot code
   let csvDeposits: { fecha: string; descripcion: string; monto: number }[] = [];
   try {
@@ -213,6 +264,8 @@ export default async function PilotDashboardPage() {
       thisMonthFlights: thisMonthFlights.length,
       thisMonthHours: Number(thisMonthHours.toFixed(1)),
       avgFlightTime: Number(avgFlightTime.toFixed(2)),
+      oilChangeRemaining: Number(oilChangeRemaining.toFixed(1)),
+      hundredHourRemaining: Number(hundredHourRemaining.toFixed(1)),
     }
   };
 

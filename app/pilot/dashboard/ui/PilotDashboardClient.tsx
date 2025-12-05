@@ -51,6 +51,8 @@ type PilotData = {
     thisMonthFlights: number;
     thisMonthHours: number;
     avgFlightTime: number;
+    oilChangeRemaining: number;
+    hundredHourRemaining: number;
   };
 };
 
@@ -64,7 +66,7 @@ const palette = {
   shadow: 'shadow-lg'
 };
 
-const defaultCardOrder = ['totalHours', 'totalFlights', 'thisMonth', 'avgFlightTime', 'deposits', 'flightCost', 'balance', 'fuel'];
+const defaultCardOrder = ['totalHours', 'totalFlights', 'thisMonth', 'avgFlightTime', 'deposits', 'flightCost', 'balance', 'fuel', 'nextInspections'];
 
 export default function PilotDashboardClient({ data }: { data: PilotData }) {
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
@@ -293,6 +295,27 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
         <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">Combustible</h3>
         <div className="text-3xl font-bold text-orange-600 mb-1">{formatCurrency(data.metrics.totalFuel)}</div>
         <p className="text-sm text-slate-600 font-medium">total registrado</p>
+      </div>
+    ),
+    nextInspections: (
+      <div className={`${palette.card} rounded-xl p-6 ${palette.shadow}`}>
+        <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
+          <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+          </svg>
+        </div>
+        <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">Próximas Inspecciones</h3>
+        <div className="space-y-2">
+          <div>
+            <div className="text-sm text-slate-600 font-medium">Cambio Aceite</div>
+            <div className="text-2xl font-bold text-slate-900">{data.metrics.oilChangeRemaining} hrs</div>
+          </div>
+          <div>
+            <div className="text-sm text-slate-600 font-medium">Inspección 100hr</div>
+            <div className="text-2xl font-bold text-slate-900">{data.metrics.hundredHourRemaining} hrs</div>
+          </div>
+        </div>
+        <p className="text-xs text-slate-500 mt-3">Basado en horas TACH</p>
       </div>
     ),
   };

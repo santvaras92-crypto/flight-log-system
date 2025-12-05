@@ -96,6 +96,12 @@ export default function PilotLayout({ children }: { children: React.ReactNode })
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <a
+                href="/register"
+                className="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-white"
+              >
+                📝 Registro
+              </a>
               <button
                 onClick={() => setShowPasswordModal(true)}
                 className="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-white"
