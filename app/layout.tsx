@@ -3,6 +3,7 @@ import "./globals.css";
 import Image from "next/image";
 import Link from "next/link";
 import NavLinks from "./NavLinks";
+import Providers from "./providers";
 
 export const metadata: Metadata = {
   title: "Flight Log System · CC-AQI",
@@ -17,6 +18,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body>
+        <Providers>
         {/* Clean Professional Navigation */}
         <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 border-b border-blue-600/30 backdrop-blur-md shadow-lg">
           <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-3 sm:py-4">
@@ -48,8 +50,8 @@ export default function RootLayout({
         <main className="pt-20 sm:pt-24">
           {children}
         </main>
+        </Providers>
       </body>
     </html>
   );
 }
-

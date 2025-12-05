@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 
 type Flight = {
   id: number;
-  fecha: Date;
+  fecha: string;
   hobbs_inicio: number;
   hobbs_fin: number;
   tach_inicio: number;
@@ -34,11 +34,11 @@ type PilotData = {
   };
   flights: Flight[];
   deposits: {
-    db: { id: number; fecha: Date; monto: number; detalle: string | null }[];
+    db: { id: number; fecha: string; monto: number; detalle: string | null }[];
     csv: { fecha: string; descripcion: string; monto: number }[];
   };
   fuel: {
-    db: { id: number; fecha: Date; litros: number; monto: number; detalle: string | null }[];
+    db: { id: number; fecha: string; litros: number; monto: number; detalle: string | null }[];
     csv: { fecha: string; litros: number; monto: number }[];
   };
   metrics: {

@@ -173,6 +173,7 @@ export default async function PilotDashboardPage() {
     },
     flights: pilotFlights.map(f => ({
       ...f,
+      fecha: f.fecha.toISOString(),
       hobbs_inicio: Number(f.hobbs_inicio),
       hobbs_fin: Number(f.hobbs_fin),
       tach_inicio: Number(f.tach_inicio),
@@ -186,7 +187,7 @@ export default async function PilotDashboardPage() {
     deposits: {
       db: pilotDeposits.map(d => ({
         id: d.id,
-        fecha: d.fecha,
+        fecha: d.fecha.toISOString(),
         monto: Number(d.monto),
         detalle: d.detalle,
       })),
@@ -195,7 +196,7 @@ export default async function PilotDashboardPage() {
     fuel: {
       db: pilotFuelLogs.map(f => ({
         id: f.id,
-        fecha: f.fecha,
+        fecha: f.fecha.toISOString(),
         litros: Number(f.litros),
         monto: Number(f.monto),
         detalle: f.detalle,
