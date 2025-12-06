@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Head from "next/head";
 
+const DEVICE_TOKEN_KEY = "aqi_device_token";
+
 export default function PilotLayout({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -14,6 +16,12 @@ export default function PilotLayout({ children }: { children: React.ReactNode })
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Función de logout que limpia device token antes de cerrar sesión
+  function handleLogout() {
+    localStorage.removeItem(DEVICE_TOKEN_KEY);
+    signOut({ callbackUrl: "/login" });
+  }
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -118,7 +126,7 @@ export default function PilotLayout({ children }: { children: React.ReactNode })
                 <span className="hidden sm:inline">🔒 Contraseña</span>
               </button>
               <button
-                onClick={() => signOut({ callbackUrl: "/login" })}
+                onClick={handleLogout}
                 className="bg-white/10 hover:bg-white/20 px-2 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors text-white"
                 title="Cerrar Sesión"
               >
