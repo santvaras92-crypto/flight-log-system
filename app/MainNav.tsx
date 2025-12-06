@@ -28,9 +28,9 @@ export default function MainNav() {
                   priority
                 />
               </div>
-              <div className="hidden md:flex flex-col">
+              <div className="flex flex-col">
                 <span className="text-white font-bold text-base sm:text-lg tracking-tight">CC-AQI</span>
-                <span className="text-blue-200 text-xs font-medium tracking-wider uppercase">Flight Operations</span>
+                <span className="text-blue-200 text-[10px] sm:text-xs font-medium tracking-wider uppercase">Flight Operations</span>
               </div>
             </Link>
             
