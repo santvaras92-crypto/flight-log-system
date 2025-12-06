@@ -9,6 +9,9 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   
+  // Debug: log token info
+  console.log('Middleware - Path:', pathname, 'Token role:', token?.role);
+  
   // Proteger rutas bajo /admin
   if (pathname.startsWith(ADMIN_PATH)) {
     if (!token) {
@@ -29,8 +32,10 @@ export async function middleware(req: NextRequest) {
       loginUrl.searchParams.set("callbackUrl", req.nextUrl.pathname);
       return NextResponse.redirect(loginUrl);
     }
-    // Solo pilotos pueden acceder a /pilot/*
-    if (token.role !== "PILOTO") {
+    // Solo pilotos pueden acceder a /pilot/* (acepta PILOTO o PILOT)
+    const isPilot = token.role === "PILOTO" || token.role === "PILOT";
+    if (!isPilot) {
+      console.log('Middleware - Access denied. Token role:', token.role);
       return NextResponse.json({ error: "Acceso restringido a pilotos" }, { status: 403 });
     }
   }
