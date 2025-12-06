@@ -196,8 +196,8 @@ export default function NewPilotPublicPage() {
               />
             </div>
             <div className="flex flex-col">
-              <span className="text-white font-bold text-base sm:text-lg tracking-tight">CC-AQI Flight Operations</span>
-              <span className="text-blue-200 text-xs font-medium">Registro de Pilotos</span>
+              <span className="text-white font-bold text-base sm:text-lg tracking-tight">CC-AQI</span>
+              <span className="text-blue-200 text-xs font-medium">Flight Operations</span>
             </div>
           </div>
         </div>
