@@ -18,6 +18,25 @@ export default function LoginPage() {
   // Intentar auto-login al cargar la página
   useEffect(() => {
     async function tryAutoLogin() {
+      // Primero verificar si ya hay sesión activa de NextAuth
+      try {
+        const sessionRes = await fetch('/api/auth/session');
+        const session = await sessionRes.json();
+        if (session?.user) {
+          const role = session.user.role || session.role;
+          if (role === "ADMIN") {
+            router.push("/admin/dashboard");
+            return;
+          } else if (role === "PILOTO" || role === "PILOT") {
+            router.push("/pilot/dashboard");
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Session check error:", err);
+      }
+
+      // Si no hay sesión, intentar con device token
       const savedToken = localStorage.getItem(DEVICE_TOKEN_KEY);
       if (!savedToken) {
         setAutoLoginLoading(false);

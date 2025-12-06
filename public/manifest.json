@@ -2,7 +2,7 @@
   "name": "AQI Flight Log",
   "short_name": "AQI Flight",
   "description": "Professional Flight Operations Management - CC-AQI",
-  "start_url": "/",
+  "start_url": "/login",
   "display": "standalone",
   "background_color": "#1e40af",
   "theme_color": "#1e40af",
