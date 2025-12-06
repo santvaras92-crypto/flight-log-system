@@ -188,7 +188,7 @@ export default function NewPilotPublicPage() {
       <header className="bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center gap-3">
-            <div className="relative h-10 w-10 sm:h-12 sm:w-12 shrink-0">
+            <div className="relative w-12 h-10 sm:w-16 sm:h-12 shrink-0">
               <img
                 src="/LOGO_BLANCO.png"
                 alt="Logo"
@@ -197,7 +197,7 @@ export default function NewPilotPublicPage() {
             </div>
             <div className="flex flex-col">
               <span className="text-white font-bold text-base sm:text-lg tracking-tight">CC-AQI</span>
-              <span className="text-blue-200 text-xs font-medium">Flight Operations</span>
+              <span className="text-blue-200 text-[10px] sm:text-xs font-medium tracking-wider uppercase">Flight Operations</span>
             </div>
           </div>
         </div>
