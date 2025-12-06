@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { createFlightSubmission } from '@/app/actions/create-flight-submission';
 import { createFuel } from '@/app/actions/create-fuel';
 import { createDeposit } from '@/app/actions/create-deposit';
 import { findOrCreatePilotByCode } from '@/app/actions/find-or-create-pilot';
+import Link from 'next/link';
 
 type PilotOpt = { id: string | number; value: string; label: string };
 
@@ -33,6 +34,24 @@ export default function RegisterClient({
   const [pilotValue, setPilotValue] = useState<string>('');
   const [mode, setMode] = useState<'flight' | 'fuel' | 'deposit'>('flight');
   const [submitting, setSubmitting] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  // Detectar si hay sesión activa para mostrar botón de volver
+  useEffect(() => {
+    async function checkSession() {
+      try {
+        const res = await fetch('/api/auth/session');
+        const session = await res.json();
+        if (session?.user) {
+          const role = session.user.role || session.role;
+          setUserRole(role);
+        }
+      } catch {
+        // No session
+      }
+    }
+    checkSession();
+  }, []);
   
   // Flight form fields
   const [fecha, setFecha] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -220,8 +239,22 @@ export default function RegisterClient({
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       <div className="rounded-2xl border shadow-sm bg-white">
         <div className="p-4 sm:p-6 border-b">
-          <h2 className="text-xl sm:text-2xl font-semibold">Registro</h2>
-          <p className="text-sm mt-1">Selecciona piloto y tipo de registro.</p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-semibold">Registro</h2>
+              <p className="text-sm mt-1 text-slate-600">Selecciona piloto y tipo de registro.</p>
+            </div>
+            {userRole && (
+              <Link 
+                href={userRole === 'ADMIN' ? '/admin/dashboard' : '/pilot/dashboard'}
+                className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 shrink-0"
+              >
+                <span>←</span>
+                <span className="hidden sm:inline">{userRole === 'ADMIN' ? 'Dashboard' : 'Portal Piloto'}</span>
+                <span className="sm:hidden">Volver</span>
+              </Link>
+            )}
+          </div>
         </div>
 
         <div className="p-4 sm:p-6 space-y-4">
