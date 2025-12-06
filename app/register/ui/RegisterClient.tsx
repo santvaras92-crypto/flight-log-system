@@ -217,12 +217,30 @@ export default function RegisterClient({
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-      <div className="rounded-2xl border shadow-sm bg-white">
-        <div className="p-4 sm:p-6 border-b">
-          <h2 className="text-xl sm:text-2xl font-semibold">Registro</h2>
-          <p className="text-sm mt-1">Selecciona piloto y tipo de registro.</p>
+    <div className="min-h-screen bg-slate-100">
+      {/* Header CC-AQI */}
+      <header className="bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 shadow-lg">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 sm:py-5">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <img
+              src="/LOGO_BLANCO.png"
+              alt="Logo"
+              className="w-12 h-10 sm:w-16 sm:h-12 object-contain"
+            />
+            <div className="flex flex-col">
+              <span className="text-white font-bold text-lg sm:text-xl tracking-tight">CC-AQI</span>
+              <span className="text-blue-200 text-xs sm:text-sm font-medium tracking-wide">FLIGHT OPERATIONS</span>
+            </div>
+          </div>
         </div>
+      </header>
+
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="rounded-2xl border shadow-sm bg-white">
+          <div className="p-4 sm:p-6 border-b">
+            <h2 className="text-xl sm:text-2xl font-semibold">Registro</h2>
+            <p className="text-sm mt-1">Selecciona piloto y tipo de registro.</p>
+          </div>
 
         <div className="p-4 sm:p-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -544,6 +562,7 @@ export default function RegisterClient({
             <p className="text-xs text-slate-500">Piloto seleccionado: <span className="font-medium">{selectedPilot.label}</span></p>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
