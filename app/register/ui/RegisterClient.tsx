@@ -35,8 +35,9 @@ export default function RegisterClient({
   const [mode, setMode] = useState<'flight' | 'fuel' | 'deposit'>('flight');
   const [submitting, setSubmitting] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [sessionChecked, setSessionChecked] = useState(false);
 
-  // Detectar si hay sesión activa para mostrar botón de volver
+  // Detectar si hay sesión activa para mostrar botón de volver y pre-seleccionar piloto
   useEffect(() => {
     async function checkSession() {
       try {
@@ -45,13 +46,27 @@ export default function RegisterClient({
         if (session?.user) {
           const role = session.user.role || session.role;
           setUserRole(role);
+          
+          // Si es piloto, pre-seleccionar su código
+          const codigo = session.codigo;
+          if (codigo && (role === 'PILOTO' || role === 'PILOT')) {
+            // Buscar si existe en la lista de pilotos
+            const matchingPilot = pilots.find(p => 
+              p.value === codigo || 
+              p.value.toString().toUpperCase() === codigo.toUpperCase()
+            );
+            if (matchingPilot) {
+              setPilotValue(matchingPilot.value);
+            }
+          }
         }
       } catch {
         // No session
       }
+      setSessionChecked(true);
     }
     checkSession();
-  }, []);
+  }, [pilots]);
   
   // Flight form fields
   const [fecha, setFecha] = useState<string>(new Date().toISOString().split('T')[0]);

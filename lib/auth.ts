@@ -23,7 +23,7 @@ export const authOptions: AuthOptions = {
         if (!user || !user.password) return null;
         const valid = await bcrypt.compare(credentials.password, user.password);
         if (!valid) return null;
-        return { id: String(user.id), email: user.email, name: user.nombre, role: user.rol } as any;
+        return { id: String(user.id), email: user.email, name: user.nombre, role: user.rol, codigo: user.codigo } as any;
       },
     }),
   ],
@@ -32,12 +32,14 @@ export const authOptions: AuthOptions = {
       if (user) {
         token.role = (user as any).role || (user as any).rol;
         token.userId = (user as any).id;
+        token.codigo = (user as any).codigo;
       }
       return token;
     },
     async session({ session, token }) {
       (session as any).role = token.role;
       (session as any).userId = token.userId;
+      (session as any).codigo = token.codigo;
       return session;
     },
   },
