@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 async function generateIcons() {
-  const logoPath = path.join(__dirname, '../Logos/LOGO_BLANCO.png');
+  const logoPath = path.join(__dirname, '../public/logo.png');
   const outputDir = path.join(__dirname, '../public/icons');
   
   // Ensure output directory exists
