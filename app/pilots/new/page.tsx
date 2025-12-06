@@ -394,7 +394,6 @@ export default function NewPilotPublicPage() {
           </form>
         </div>
       </div>
-      </div>
     </div>
   );
 }
