@@ -10,6 +10,18 @@ export const authOptions: AuthOptions = {
     strategy: "jwt",
     maxAge: 90 * 24 * 60 * 60, // 90 días
   },
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 90 * 24 * 60 * 60, // 90 días
+      },
+    },
+  },
   providers: [
     Credentials({
       name: "Credenciales",
