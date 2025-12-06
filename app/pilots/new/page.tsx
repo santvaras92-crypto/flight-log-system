@@ -13,6 +13,13 @@ type MatchedPilot = {
   fechaNacimiento: Date | null;
 };
 
+// Helper: retorna email solo si no es @piloto.local (placeholder)
+function getValidEmail(email: string | null | undefined): string {
+  if (!email) return '';
+  if (email.toLowerCase().endsWith('@piloto.local')) return '';
+  return email;
+}
+
 export default function NewPilotPublicPage() {
   const [form, setForm] = useState({
     nombre: "",
@@ -80,7 +87,7 @@ export default function NewPilotPublicPage() {
           setSelectedPilotId(result.pilot.id);
           setForm(prev => ({
             ...prev,
-            email: result.pilot?.email || prev.email,
+            email: getValidEmail(result.pilot?.email) || prev.email,
             telefono: result.pilot?.telefono || prev.telefono,
             licencia: result.pilot?.licencia || prev.licencia,
             fecha_nacimiento: result.pilot?.fechaNacimiento 
@@ -110,7 +117,7 @@ export default function NewPilotPublicPage() {
       ...prev,
       nombre: pilot.nombre.split(' ')[0] || prev.nombre,
       apellido: pilot.nombre.split(' ').slice(1).join(' ') || prev.apellido,
-      email: pilot.email || prev.email,
+      email: getValidEmail(pilot.email) || prev.email,
       telefono: pilot.telefono || prev.telefono,
       licencia: pilot.licencia || prev.licencia,
       documento: pilot.documento || prev.documento,
