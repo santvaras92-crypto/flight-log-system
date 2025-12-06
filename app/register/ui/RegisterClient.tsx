@@ -45,18 +45,23 @@ export default function RegisterClient({
         const session = await res.json();
         if (session?.user) {
           const role = session.user.role || session.role;
+          const email = session.user.email;
           setUserRole(role);
           
-          // Si es piloto, pre-seleccionar su código
-          const codigo = session.codigo;
-          if (codigo && (role === 'PILOTO' || role === 'PILOT')) {
-            // Buscar si existe en la lista de pilotos
-            const matchingPilot = pilots.find(p => 
-              p.value === codigo || 
-              p.value.toString().toUpperCase() === codigo.toUpperCase()
-            );
-            if (matchingPilot) {
-              setPilotValue(matchingPilot.value);
+          // Si es piloto, buscar su código por email y pre-seleccionar
+          if (email && (role === 'PILOTO' || role === 'PILOT')) {
+            const pilotRes = await fetch(`/api/pilot-code?email=${encodeURIComponent(email)}`);
+            const pilotData = await pilotRes.json();
+            
+            if (pilotData.found && pilotData.codigo) {
+              // Buscar en la lista por código
+              const matchingPilot = pilots.find(p => 
+                p.value === pilotData.codigo || 
+                p.value.toString().toUpperCase() === pilotData.codigo.toUpperCase()
+              );
+              if (matchingPilot) {
+                setPilotValue(matchingPilot.value);
+              }
             }
           }
         }
