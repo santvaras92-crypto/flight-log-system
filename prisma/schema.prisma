@@ -163,6 +163,7 @@ model User {
   Transaction      Transaction[]
   Deposit          Deposit[]
   FuelLog          FuelLog[]
+  DeviceToken      DeviceToken[]
 }
 
 model VerificationToken {
@@ -200,4 +201,17 @@ model FuelLog {
   createdAt DateTime @default(now())
 
   User      User     @relation(fields: [userId], references: [id])
+}
+
+// Device tokens for "Remember this device" feature (PWA persistent login)
+model DeviceToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  token     String   @unique
+  deviceInfo String?
+  createdAt DateTime @default(now())
+  lastUsed  DateTime @default(now())
+  expiresAt DateTime
+  
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
