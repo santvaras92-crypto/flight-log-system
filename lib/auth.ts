@@ -6,7 +6,10 @@ import bcrypt from "bcrypt";
 
 export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" },
+  session: { 
+    strategy: "jwt",
+    maxAge: 90 * 24 * 60 * 60, // 90 días
+  },
   providers: [
     Credentials({
       name: "Credenciales",

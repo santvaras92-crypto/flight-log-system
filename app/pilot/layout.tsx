@@ -3,6 +3,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Head from "next/head";
 
 export default function PilotLayout({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
@@ -75,8 +76,12 @@ export default function PilotLayout({ children }: { children: React.ReactNode })
   const pilotName = session?.user?.name || "Piloto";
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      {/* Header - Same style as main nav */}
+    <>
+      <Head>
+        <link rel="manifest" href="/pilot-manifest.json" />
+      </Head>
+      <div className="min-h-screen bg-slate-100">
+        {/* Header - Same style as main nav */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 border-b border-blue-600/30 backdrop-blur-md shadow-lg">
         <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between">
@@ -221,6 +226,7 @@ export default function PilotLayout({ children }: { children: React.ReactNode })
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
