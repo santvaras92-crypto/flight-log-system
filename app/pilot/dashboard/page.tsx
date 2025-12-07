@@ -39,14 +39,10 @@ export default async function PilotDashboardPage() {
 
   const pilotCode = (pilot.codigo || '').toUpperCase();
 
-  // Get all flights for this pilot (by pilotoId or cliente/piloto_raw matching code)
+  // Get all flights for this pilot (only by pilotoId to match admin dashboard)
   const pilotFlights = await prisma.flight.findMany({
     where: {
-      OR: [
-        { pilotoId: userId },
-        { cliente: { equals: pilotCode, mode: 'insensitive' } },
-        { piloto_raw: { contains: pilotCode, mode: 'insensitive' } }
-      ]
+      pilotoId: userId
     },
     orderBy: [{ fecha: 'desc' }, { createdAt: 'desc' }],
     select: {
