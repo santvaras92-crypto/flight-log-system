@@ -186,7 +186,7 @@ export async function createOrUpdatePilot(data: {
       licencia: data.licencia || null,
       fechaNacimiento: data.fechaNacimiento ? new Date(data.fechaNacimiento) : null,
       codigo: newCode,
-      rol: 'PILOT',
+      rol: 'PILOTO',
       tarifa_hora: 0,
       password: '', // Required field
     }
