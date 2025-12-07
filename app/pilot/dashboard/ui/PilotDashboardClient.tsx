@@ -205,7 +205,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
   // Overview cards definition (same style as admin)
   const overviewCards: Record<string, JSX.Element> = {
     totalHours: (
-      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] flex flex-col`}>
         <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-blue-100 flex items-center justify-center mb-2 sm:mb-4">
           <svg className="w-4 h-4 sm:w-6 sm:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -217,7 +217,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
       </div>
     ),
     totalFlights: (
-      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] flex flex-col`}>
         <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-indigo-100 flex items-center justify-center mb-2 sm:mb-4">
           <svg className="w-4 h-4 sm:w-6 sm:h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -229,7 +229,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
       </div>
     ),
     thisMonth: (
-      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] flex flex-col`}>
         <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-cyan-100 flex items-center justify-center mb-2 sm:mb-4">
           <svg className="w-4 h-4 sm:w-6 sm:h-6 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -241,7 +241,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
       </div>
     ),
     avgFlightTime: (
-      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] flex flex-col`}>
         <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-rose-100 flex items-center justify-center mb-2 sm:mb-4">
           <svg className="w-4 h-4 sm:w-6 sm:h-6 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
@@ -253,7 +253,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
       </div>
     ),
     fuelRate: (
-      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] flex flex-col`}>
         <div className="flex items-start justify-between mb-2 sm:mb-4">
           <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-amber-100 flex items-center justify-center">
             <svg className="w-4 h-4 sm:w-6 sm:h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -275,7 +275,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
       </div>
     ),
     deposits: (
-      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] flex flex-col`}>
         <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-green-100 flex items-center justify-center mb-2 sm:mb-4">
           <svg className="w-4 h-4 sm:w-6 sm:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -287,7 +287,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
       </div>
     ),
     flightCost: (
-      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] flex flex-col`}>
         <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-red-100 flex items-center justify-center mb-2 sm:mb-4">
           <svg className="w-4 h-4 sm:w-6 sm:h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -299,7 +299,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
       </div>
     ),
     balance: (
-      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} ${data.metrics.balance >= 0 ? 'ring-2 ring-green-400' : 'ring-2 ring-red-400'}`}>
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] flex flex-col ${data.metrics.balance >= 0 ? 'ring-2 ring-green-400' : 'ring-2 ring-red-400'}`}>
         <div className="flex items-start justify-between mb-2 sm:mb-4">
           <div className={`w-8 h-8 sm:w-12 sm:h-12 rounded-full ${data.metrics.balance >= 0 ? 'bg-green-100' : 'bg-red-100'} flex items-center justify-center`}>
             <svg className={`w-4 h-4 sm:w-6 sm:h-6 ${data.metrics.balance >= 0 ? 'text-green-600' : 'text-red-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -318,7 +318,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
       </div>
     ),
     fuel: (
-      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] flex flex-col`}>
         <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-orange-100 flex items-center justify-center mb-2 sm:mb-4">
           <svg className="w-4 h-4 sm:w-6 sm:h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
@@ -367,7 +367,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
       };
       
       return (
-        <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+        <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] flex flex-col`}>
           <div className="flex items-start justify-between mb-2 sm:mb-3">
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-red-100 flex items-center justify-center">
               <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -442,6 +442,8 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
   const renderCard = (cardId: string, content: JSX.Element) => {
     const isDragging = draggedCard === cardId;
     const isBeingDragged = isDragEnabled && draggedCard === cardId;
+    // Complex cards span 2 columns on mobile
+    const isComplexCard = cardId === 'nextInspections';
     return (
       <div
         key={cardId}
@@ -454,7 +456,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
         onTouchStart={(e) => handleTouchStart(e, cardId)}
         onTouchMove={handleTouchMove}
         onTouchEnd={(e) => handleTouchEnd(e, cardId)}
-        className={`${isDragging ? 'opacity-50 scale-95' : 'opacity-100'} transition-all duration-150 cursor-move select-none`}
+        className={`${isDragging ? 'opacity-50 scale-95' : 'opacity-100'} ${isComplexCard ? 'col-span-2 lg:col-span-1' : ''} transition-all duration-150 cursor-move select-none`}
         style={{ 
           WebkitUserSelect: 'none',
           WebkitTouchCallout: 'none',
