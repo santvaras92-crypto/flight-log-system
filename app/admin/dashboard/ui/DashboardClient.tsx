@@ -1161,31 +1161,31 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
         </div>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-slate-200">
+      <div className="overflow-x-auto -mx-4 sm:mx-0">
+        <table className="min-w-full divide-y divide-slate-200" style={{ minWidth: '1400px' }}>
           <thead className="bg-slate-50">
             <tr>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</th>
-              <th className="hidden lg:table-cell px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Tac. 1</th>
-              <th className="hidden lg:table-cell px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Tac. 2</th>
-              <th className="hidden md:table-cell px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Dif. Taco</th>
-              <th className="hidden lg:table-cell px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Hobbs I</th>
-              <th className="hidden lg:table-cell px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Hobbs F</th>
-              <th className="px-2 sm:px-3 py-2 sm:py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Horas</th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Piloto</th>
-              <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Copiloto</th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">ID</th>
-              <th className="hidden lg:table-cell px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Tarifa</th>
-              <th className="hidden xl:table-cell px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Inst. Rate</th>
-              <th className="px-2 sm:px-3 py-2 sm:py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Total</th>
-              <th className="hidden xl:table-cell px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">AIRFRAME</th>
-              <th className="hidden xl:table-cell px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">ENGINE</th>
-              <th className="hidden xl:table-cell px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">PROPELLER</th>
-              <th className="hidden md:table-cell px-3 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">AD Sal</th>
-              <th className="hidden md:table-cell px-3 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">AD Dest</th>
-              <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Detalle</th>
-              <th className="hidden lg:table-cell px-3 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">Año</th>
-              <th className="hidden lg:table-cell px-3 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">Mes</th>
+              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Fecha</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Tac. 1</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Tac. 2</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Dif. Taco</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Hobbs I</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Hobbs F</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Horas</th>
+              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Piloto</th>
+              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Copiloto</th>
+              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">ID</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Tarifa</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Inst. Rate</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Total</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">AIRFRAME</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">ENGINE</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">PROPELLER</th>
+              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">AD Sal</th>
+              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">AD Dest</th>
+              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Detalle</th>
+              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Año</th>
+              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Mes</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-slate-100">
@@ -1201,137 +1201,137 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
               return (
                 <tr key={f.id} className="hover:bg-blue-50 transition-colors">
                   {/* Fecha */}
-                  <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs text-slate-600 font-medium">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-medium">
                     {editMode ? (
-                      <input type="date" className="px-2 py-1 border rounded text-xs w-full" value={fecha.toISOString().slice(0,10)} onChange={e=>handleChange(f.id,'fecha',e.target.value)} />
+                      <input type="date" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-full" value={fecha.toISOString().slice(0,10)} onChange={e=>handleChange(f.id,'fecha',e.target.value)} />
                     ) : (
                       fecha.toLocaleDateString("es-CL")
                     )}
                   </td>
                   
                   {/* Tac. 1 */}
-                  <td className="hidden lg:table-cell px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="0.1" className="px-2 py-1 border rounded text-right text-xs w-20" defaultValue={Number(f.tach_inicio).toFixed(1)} onChange={e=>handleChange(f.id,'tach_inicio',e.target.value)} />
+                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={Number(f.tach_inicio).toFixed(1)} onChange={e=>handleChange(f.id,'tach_inicio',e.target.value)} />
                     ) : Number(f.tach_inicio).toFixed(1)}
                   </td>
                   
                   {/* Tac. 2 */}
-                  <td className="hidden lg:table-cell px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="0.1" className="px-2 py-1 border rounded text-right text-xs w-20" defaultValue={Number(f.tach_fin).toFixed(1)} onChange={e=>handleChange(f.id,'tach_fin',e.target.value)} />
+                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={Number(f.tach_fin).toFixed(1)} onChange={e=>handleChange(f.id,'tach_fin',e.target.value)} />
                     ) : Number(f.tach_fin).toFixed(1)}
                   </td>
                   
                   {/* Dif. Taco */}
-                  <td className="hidden md:table-cell px-3 py-3 whitespace-nowrap text-xs font-semibold text-blue-600 font-mono text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs font-semibold text-blue-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="0.1" className="px-2 py-1 border rounded text-right text-xs w-20" defaultValue={f.diff_tach ?? ''} onChange={e=>handleChange(f.id,'diff_tach',e.target.value)} />
+                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.diff_tach ?? ''} onChange={e=>handleChange(f.id,'diff_tach',e.target.value)} />
                     ) : (f.diff_tach != null ? Number(f.diff_tach).toFixed(1) : '-')}
                   </td>
                   
                   {/* Hobbs I */}
-                  <td className="hidden lg:table-cell px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="0.1" className="px-2 py-1 border rounded text-right text-xs w-20" defaultValue={f.hobbs_inicio ?? ''} onChange={e=>handleChange(f.id,'hobbs_inicio',e.target.value)} />
+                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.hobbs_inicio ?? ''} onChange={e=>handleChange(f.id,'hobbs_inicio',e.target.value)} />
                     ) : (f.hobbs_inicio != null ? Number(f.hobbs_inicio).toFixed(1) : '-')}
                   </td>
                   
                   {/* Hobbs F */}
-                  <td className="hidden lg:table-cell px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="0.1" className="px-2 py-1 border rounded text-right text-xs w-20" defaultValue={f.hobbs_fin ?? ''} onChange={e=>handleChange(f.id,'hobbs_fin',e.target.value)} />
+                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.hobbs_fin ?? ''} onChange={e=>handleChange(f.id,'hobbs_fin',e.target.value)} />
                     ) : (f.hobbs_fin != null ? Number(f.hobbs_fin).toFixed(1) : '-')}
                   </td>
                   
                   {/* Dif. Hobbs (Horas) */}
-                  <td className="px-2 sm:px-3 py-2 sm:py-3 whitespace-nowrap text-xs font-semibold text-blue-600 font-mono text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs font-semibold text-blue-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="0.1" className="px-2 py-1 border rounded text-right text-xs w-20" defaultValue={f.diff_hobbs ?? ''} onChange={e=>handleChange(f.id,'diff_hobbs',e.target.value)} />
+                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.diff_hobbs ?? ''} onChange={e=>handleChange(f.id,'diff_hobbs',e.target.value)} />
                     ) : (f.diff_hobbs != null ? Number(f.diff_hobbs).toFixed(1) : '-')}
                   </td>
                   
                   {/* Piloto */}
-                  <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs text-slate-700 font-medium max-w-[80px] sm:max-w-none truncate">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-700 font-medium max-w-[60px] sm:max-w-none truncate">
                     {editMode ? (
-                      <input type="text" className="px-2 py-1 border rounded text-xs w-full" defaultValue={pilotName} onChange={e=>handleChange(f.id,'piloto_raw',e.target.value)} />
+                      <input type="text" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-full" defaultValue={pilotName} onChange={e=>handleChange(f.id,'piloto_raw',e.target.value)} />
                     ) : pilotName}
                   </td>
                   
                   {/* Copiloto-instructor */}
-                  <td className="hidden md:table-cell px-4 py-3 whitespace-nowrap text-xs text-slate-600">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600">
                     {editMode ? (
-                      <input type="text" className="px-2 py-1 border rounded text-xs w-full" defaultValue={f.copiloto || ''} onChange={e=>handleChange(f.id,'copiloto',e.target.value)} />
+                      <input type="text" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-full" defaultValue={f.copiloto || ''} onChange={e=>handleChange(f.id,'copiloto',e.target.value)} />
                     ) : (f.copiloto || '-')}
                   </td>
                   
                   {/* Pilot ID (Cliente) */}
-                  <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs text-slate-700 font-semibold">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-700 font-semibold">
                     {editMode ? (
-                      <input type="text" className="px-2 py-1 border rounded text-xs w-20" defaultValue={f.cliente || ''} onChange={e=>handleChange(f.id,'cliente',e.target.value)} />
+                      <input type="text" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-12" defaultValue={f.cliente || ''} onChange={e=>handleChange(f.id,'cliente',e.target.value)} />
                     ) : (f.cliente || '-')}
                   </td>
                   
                   {/* Airplane Rate (Tarifa) */}
-                  <td className="hidden lg:table-cell px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="1000" className="px-2 py-1 border rounded text-right text-xs w-24" defaultValue={f.tarifa || ''} onChange={e=>handleChange(f.id,'tarifa',e.target.value)} />
+                      <input type="number" step="1000" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-20" defaultValue={f.tarifa || ''} onChange={e=>handleChange(f.id,'tarifa',e.target.value)} />
                     ) : (f.tarifa ? `$${Number(f.tarifa).toLocaleString('es-CL')}` : '-')}
                   </td>
                   
                   {/* Instructor/ Safety Pilot Rate */}
-                  <td className="hidden xl:table-cell px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="1000" className="px-2 py-1 border rounded text-right text-xs w-24" defaultValue={f.instructor_rate || ''} onChange={e=>handleChange(f.id,'instructor_rate',e.target.value)} />
+                      <input type="number" step="1000" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-20" defaultValue={f.instructor_rate || ''} onChange={e=>handleChange(f.id,'instructor_rate',e.target.value)} />
                     ) : (f.instructor_rate ? `$${Number(f.instructor_rate).toLocaleString('es-CL')}` : '-')}
                   </td>
                   
                   {/* Total */}
-                  <td className="px-2 sm:px-3 py-2 sm:py-3 whitespace-nowrap text-xs font-bold text-green-700 font-mono text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs font-bold text-green-700 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="1000" className="px-2 py-1 border rounded text-right text-xs w-24" defaultValue={f.costo ?? ''} onChange={e=>handleChange(f.id,'costo',e.target.value)} />
+                      <input type="number" step="1000" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-20" defaultValue={f.costo ?? ''} onChange={e=>handleChange(f.id,'costo',e.target.value)} />
                     ) : (f.costo != null ? `$${Number(f.costo).toLocaleString('es-CL')}` : '-')}
                   </td>
                   
                   {/* AIRFRAME */}
-                  <td className="hidden xl:table-cell px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
                     {f.airframe_hours != null ? Number(f.airframe_hours).toFixed(1) : '-'}
                   </td>
                   
                   {/* ENGINE */}
-                  <td className="hidden xl:table-cell px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
                     {f.engine_hours != null ? Number(f.engine_hours).toFixed(1) : '-'}
                   </td>
                   
                   {/* PROPELLER */}
-                  <td className="hidden xl:table-cell px-3 py-3 whitespace-nowrap text-xs text-slate-600 font-mono text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
                     {f.propeller_hours != null ? Number(f.propeller_hours).toFixed(1) : '-'}
                   </td>
                   
                   {/* AD Salida */}
-                  <td className="hidden md:table-cell px-3 py-3 whitespace-nowrap text-xs text-slate-600">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600">
                     {f.aerodromoSalida || '-'}
                   </td>
                   
                   {/* AD Destino */}
-                  <td className="hidden md:table-cell px-3 py-3 whitespace-nowrap text-xs text-slate-600">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600">
                     {f.aerodromoDestino || '-'}
                   </td>
                   
                   {/* Detalle */}
-                  <td className="hidden lg:table-cell px-4 py-3 text-xs text-slate-600 max-w-xs truncate">
+                  <td className="px-2 py-2 text-[10px] sm:text-xs text-slate-600 max-w-[80px] truncate">
                     {editMode ? (
-                      <input type="text" className="px-2 py-1 border rounded text-xs w-full" defaultValue={f.detalle || ''} onChange={e=>handleChange(f.id,'detalle',e.target.value)} />
+                      <input type="text" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-full" defaultValue={f.detalle || ''} onChange={e=>handleChange(f.id,'detalle',e.target.value)} />
                     ) : (f.detalle || '-')}
                   </td>
                   
                   {/* Año */}
-                  <td className="hidden lg:table-cell px-3 py-3 whitespace-nowrap text-xs text-slate-600 text-center font-medium">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 text-center font-medium">
                     {año}
                   </td>
                   
                   {/* Mes */}
-                  <td className="hidden lg:table-cell px-3 py-3 whitespace-nowrap text-xs text-slate-600 text-center">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 text-center">
                     {mes}
                   </td>
                 </tr>
