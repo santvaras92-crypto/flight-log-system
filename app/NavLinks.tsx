@@ -18,36 +18,38 @@ export default function NavLinks() {
   }
 
   return (
-    <div className="flex items-center gap-1 sm:gap-2">
+    <div className="flex items-center gap-0.5 sm:gap-2">
       <Link 
         href="/" 
-        className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-blue-100 hover:text-white hover:bg-white/15 rounded-lg transition-all"
+        className="px-2 sm:px-4 py-2 text-[10px] sm:text-sm font-semibold text-blue-100 hover:text-white hover:bg-white/15 rounded-lg transition-all"
       >
-        Registro
+        <span className="hidden sm:inline">Registro</span>
+        <span className="sm:hidden">✈️</span>
       </Link>
       <Link 
         href="/admin/dashboard" 
-        className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-blue-100 hover:text-white hover:bg-white/15 rounded-lg transition-all"
+        className="px-2 sm:px-4 py-2 text-[10px] sm:text-sm font-semibold text-blue-100 hover:text-white hover:bg-white/15 rounded-lg transition-all"
       >
-        Dashboard
+        <span className="hidden sm:inline">Dashboard</span>
+        <span className="sm:hidden">📈</span>
       </Link>
       <Link 
         href="/admin/validacion" 
-        className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-blue-100 hover:text-white hover:bg-white/15 rounded-lg transition-all"
+        className="px-2 sm:px-4 py-2 text-[10px] sm:text-sm font-semibold text-blue-100 hover:text-white hover:bg-white/15 rounded-lg transition-all"
       >
         <span className="hidden sm:inline">Validación</span>
-        <span className="sm:hidden">Valid.</span>
+        <span className="sm:hidden">✓</span>
       </Link>
       <Link 
         href="/admin/counters" 
-        className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-blue-100 hover:text-white hover:bg-white/15 rounded-lg transition-all"
+        className="px-2 sm:px-4 py-2 text-[10px] sm:text-sm font-semibold text-blue-100 hover:text-white hover:bg-white/15 rounded-lg transition-all"
       >
-        <span className="hidden lg:inline">Contadores</span>
-        <span className="lg:hidden">📊</span>
+        <span className="hidden sm:inline">Contadores</span>
+        <span className="sm:hidden">📊</span>
       </Link>
       <button
         onClick={handleLogout}
-        className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-red-200 hover:text-white hover:bg-red-500/30 rounded-lg transition-all flex items-center gap-1"
+        className="px-2 sm:px-4 py-2 text-[10px] sm:text-sm font-semibold text-red-200 hover:text-white hover:bg-red-500/30 rounded-lg transition-all"
       >
         <span className="hidden sm:inline">Cerrar Sesión</span>
         <span className="sm:hidden">🚪</span>
