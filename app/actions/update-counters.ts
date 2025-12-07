@@ -1,3 +1,4 @@
+// Railway rebuild fix - Dec 7, 2025
 'use server';
 
 import { prisma } from '@/lib/prisma';

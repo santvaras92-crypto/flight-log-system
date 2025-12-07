@@ -1,3 +1,4 @@
+// Railway rebuild fix - Dec 7, 2025
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
