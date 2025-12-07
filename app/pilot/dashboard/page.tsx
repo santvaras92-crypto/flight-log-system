@@ -146,6 +146,66 @@ export default async function PilotDashboardPage() {
   const oilChangeRemaining = Math.max(0, OIL_INTERVAL - (oilUsed < 0 ? 0 : oilUsed));
   const hundredHourRemaining = Math.max(0, INSPECT_100_INTERVAL - (inspectUsed < 0 ? 0 : inspectUsed));
 
+  // === PREDICTIVE STATISTICS (same as admin dashboard) ===
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+  const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+  const prevThirtyStart = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+  const prevThirtyEnd = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  
+  const [flights30d, flights60d, flights90d, flightsPrev30d] = await Promise.all([
+    prisma.flight.findMany({ where: { fecha: { gte: thirtyDaysAgo } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true, fecha: true } }),
+    prisma.flight.findMany({ where: { fecha: { gte: sixtyDaysAgo } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true } }),
+    prisma.flight.findMany({ where: { fecha: { gte: ninetyDaysAgo } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true } }),
+    prisma.flight.findMany({ where: { fecha: { gte: prevThirtyStart, lt: prevThirtyEnd } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true } }),
+  ]);
+  
+  const computeTachHours = (flights: { diff_tach: any; tach_inicio: any; tach_fin: any }[]) => {
+    let sum = 0;
+    for (const f of flights) {
+      const dt = toNumber(f.diff_tach);
+      const ti = toNumber(f.tach_inicio);
+      const tf = toNumber(f.tach_fin);
+      const d = dt !== null ? dt : (ti !== null && tf !== null ? (tf - ti) : 0);
+      if (!isNaN(d) && d > 0) sum += d;
+    }
+    return sum;
+  };
+  
+  const hours30d = computeTachHours(flights30d);
+  const hours60d = computeTachHours(flights60d);
+  const hours90d = computeTachHours(flights90d);
+  const hoursPrev30d = computeTachHours(flightsPrev30d);
+  
+  const rate30d = hours30d / 30;
+  const rate60d = hours60d / 60;
+  const rate90d = hours90d / 90;
+  const ratePrev30d = hoursPrev30d / 30;
+  
+  const weightedRate = (rate30d * 3 + rate60d * 2 + rate90d * 1) / 6;
+  const trend = ratePrev30d > 0 ? ((rate30d - ratePrev30d) / ratePrev30d) * 100 : 0;
+  
+  // Standard deviation
+  const flightsByDay = new Map<string, number>();
+  for (const f of flights30d) {
+    const dateKey = new Date(f.fecha).toISOString().slice(0, 10);
+    const dt = toNumber(f.diff_tach);
+    const ti = toNumber(f.tach_inicio);
+    const tf = toNumber(f.tach_fin);
+    const d = dt !== null ? dt : (ti !== null && tf !== null ? (tf - ti) : 0);
+    flightsByDay.set(dateKey, (flightsByDay.get(dateKey) || 0) + (d > 0 ? d : 0));
+  }
+  const dailyHours: number[] = [];
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+    const dateKey = d.toISOString().slice(0, 10);
+    dailyHours.push(flightsByDay.get(dateKey) || 0);
+  }
+  const mean = dailyHours.reduce((a, b) => a + b, 0) / dailyHours.length;
+  const variance = dailyHours.reduce((sum, h) => sum + Math.pow(h - mean, 2), 0) / dailyHours.length;
+  const stdDev = Math.sqrt(variance);
+
   // Global Fuel Rate calculation (same as admin dashboard - aircraft-wide, not pilot-specific)
   const sep9_2020 = new Date('2020-09-09');
   
@@ -330,6 +390,14 @@ export default async function PilotDashboardPage() {
       hundredHourRemaining: Number(hundredHourRemaining.toFixed(1)),
       fuelRateLph: fuelRateLph,
       fuelRateGph: fuelRateGph,
+      usageStats: {
+        rate30d: Number(rate30d.toFixed(3)),
+        rate60d: Number(rate60d.toFixed(3)),
+        rate90d: Number(rate90d.toFixed(3)),
+        weightedRate: Number(weightedRate.toFixed(3)),
+        trend: Number(trend.toFixed(1)),
+        stdDev: Number(stdDev.toFixed(3)),
+      },
     }
   };
 
