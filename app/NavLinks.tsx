@@ -2,10 +2,15 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { signOut } from 'next-auth/react'
 
 export default function NavLinks() {
   const pathname = usePathname()
   const isRegistro = pathname === '/register'
+  
+  const handleLogout = () => {
+    signOut({ callbackUrl: '/login' })
+  }
   
   if (isRegistro) {
     // Hide right-side tabs on Registro page
@@ -40,6 +45,13 @@ export default function NavLinks() {
         <span className="hidden lg:inline">Contadores</span>
         <span className="lg:hidden">📊</span>
       </Link>
+      <button
+        onClick={handleLogout}
+        className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-red-200 hover:text-white hover:bg-red-500/30 rounded-lg transition-all flex items-center gap-1"
+      >
+        <span className="hidden sm:inline">Cerrar Sesión</span>
+        <span className="sm:hidden">🚪</span>
+      </button>
     </div>
   )
 }
