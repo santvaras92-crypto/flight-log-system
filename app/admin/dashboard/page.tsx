@@ -218,11 +218,11 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           } catch {}
           return csvPayments;
         })(),
-        // Fuel charges from DB transactions (tipo FUEL, excluding Stratus user ID 96)
+        // Fuel charges from DB transactions (tipo FUEL, excluding Stratus user ID 95)
         prisma.transaction.aggregate({
           where: { 
             tipo: 'FUEL',
-            userId: { not: 96 }
+            userId: { not: 95 }
           },
           _sum: { monto: true }
         }),
@@ -317,7 +317,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       // Fuel charges (non-Stratus users)
       const fuelCharges = Number(fuelChargesNonStratus._sum.monto || 0);
       
-      // Fixed adjustment for pending balance
+      // Fixed adjustment for pending balance (historical correction)
       const FIXED_ADJUSTMENT = 20691074;
       
       return {
