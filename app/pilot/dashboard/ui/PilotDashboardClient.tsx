@@ -53,6 +53,8 @@ type PilotData = {
     avgFlightTime: number;
     oilChangeRemaining: number;
     hundredHourRemaining: number;
+    fuelRateLph: number;
+    fuelRateGph: number;
   };
 };
 
@@ -66,7 +68,7 @@ const palette = {
   shadow: 'shadow-lg'
 };
 
-const defaultCardOrder = ['totalHours', 'totalFlights', 'thisMonth', 'avgFlightTime', 'deposits', 'flightCost', 'balance', 'fuel', 'nextInspections'];
+const defaultCardOrder = ['totalHours', 'totalFlights', 'thisMonth', 'avgFlightTime', 'fuelRate', 'deposits', 'flightCost', 'balance', 'fuel', 'nextInspections'];
 
 export default function PilotDashboardClient({ data }: { data: PilotData }) {
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
@@ -240,6 +242,28 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
         <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Tiempo Prom.</h3>
         <div className="text-xl sm:text-3xl font-bold text-slate-900 mb-0.5 sm:mb-1">{data.metrics.avgFlightTime}</div>
         <p className="text-xs sm:text-sm text-slate-600 font-medium">hrs por vuelo</p>
+      </div>
+    ),
+    fuelRate: (
+      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+        <div className="flex items-start justify-between mb-2 sm:mb-4">
+          <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-amber-100 flex items-center justify-center">
+            <svg className="w-4 h-4 sm:w-6 sm:h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+          </div>
+          <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-green-100 text-green-700 text-[9px] sm:text-xs font-semibold rounded-full">LIVE</span>
+        </div>
+        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Fuel Rate</h3>
+        <div className="space-y-0.5 sm:space-y-1">
+          <div className="text-lg sm:text-3xl font-bold text-slate-900">
+            {data.metrics.fuelRateLph.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-sm sm:text-xl text-slate-600">L/H</span>
+          </div>
+          <div className="text-base sm:text-xl font-semibold text-amber-600">
+            {data.metrics.fuelRateGph.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs sm:text-base text-slate-600">GAL/H</span>
+          </div>
+        </div>
+        <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">Since Sep 9, 2020 • Excludes 10% idle</p>
       </div>
     ),
     deposits: (

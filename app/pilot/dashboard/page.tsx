@@ -146,6 +146,69 @@ export default async function PilotDashboardPage() {
   const oilChangeRemaining = Math.max(0, OIL_INTERVAL - (oilUsed < 0 ? 0 : oilUsed));
   const hundredHourRemaining = Math.max(0, INSPECT_100_INTERVAL - (inspectUsed < 0 ? 0 : inspectUsed));
 
+  // Global Fuel Rate calculation (same as admin dashboard - aircraft-wide, not pilot-specific)
+  const sep9_2020 = new Date('2020-09-09');
+  
+  // Get total fuel consumed since Sep 9, 2020 from CSV
+  let globalFuelLitros = 0;
+  try {
+    const fuelPath = path.join(process.cwd(), 'Combustible', 'Planilla control combustible.csv');
+    if (fs.existsSync(fuelPath)) {
+      const content = fs.readFileSync(fuelPath, 'utf-8');
+      const lines = content.split('\n').filter(l => l.trim());
+      for (let i = 1; i < lines.length; i++) {
+        const parts = lines[i].split(';');
+        const dateStr = (parts[0] || '').trim();
+        if (!dateStr) continue;
+        const dateParts = dateStr.split('-');
+        if (dateParts.length !== 3) continue;
+        const day = parseInt(dateParts[0]);
+        const month = parseInt(dateParts[1]);
+        let year = parseInt(dateParts[2]);
+        if (year < 100) year = year < 50 ? 2000 + year : 1900 + year;
+        const fuelDate = new Date(year, month - 1, day);
+        if (fuelDate >= sep9_2020) {
+          const litrosStr = (parts[2] || '').trim().replace(',', '.');
+          const litros = parseFloat(litrosStr);
+          if (!isNaN(litros) && litros > 0) {
+            globalFuelLitros += litros;
+          }
+        }
+      }
+    }
+  } catch {}
+  
+  // Add DB fuel logs since Sep 9, 2020
+  const dbFuelSinceSep = await prisma.fuelLog.findMany({
+    where: { fecha: { gte: sep9_2020 } },
+    select: { litros: true, fecha: true }
+  });
+  const dbFuelLatest = dbFuelSinceSep.length > 0 ? dbFuelSinceSep.reduce((max, f) => f.fecha > max ? f.fecha : max, sep9_2020) : null;
+  // Only add DB fuel if it's after CSV data
+  if (dbFuelLatest) {
+    for (const f of dbFuelSinceSep) {
+      globalFuelLitros += Number(f.litros) || 0;
+    }
+  }
+  
+  // Get total hours since Sep 9, 2020 (all flights, not just this pilot)
+  const allFlightsSinceSep = await prisma.flight.findMany({
+    where: { fecha: { gte: sep9_2020 } },
+    select: { hobbs_inicio: true, hobbs_fin: true, diff_hobbs: true }
+  });
+  const globalHoursSinceSep = allFlightsSinceSep.reduce((sum, f) => {
+    const dh = toNumber(f.diff_hobbs);
+    const hi = toNumber(f.hobbs_inicio);
+    const hf = toNumber(f.hobbs_fin);
+    const d = dh !== null ? dh : (hi !== null && hf !== null ? (hf - hi) : 0);
+    return sum + (d > 0 ? d : 0);
+  }, 0);
+  
+  // Apply 10% idle adjustment
+  const effectiveHours = globalHoursSinceSep > 0 ? globalHoursSinceSep * 0.9 : 0;
+  const fuelRateLph = effectiveHours > 0 ? Number((globalFuelLitros / effectiveHours).toFixed(2)) : 0;
+  const fuelRateGph = fuelRateLph > 0 ? Number((fuelRateLph / 3.78541).toFixed(2)) : 0;
+
   // Read CSV deposits for this pilot code
   let csvDeposits: { fecha: string; descripcion: string; monto: number }[] = [];
   try {
@@ -265,6 +328,8 @@ export default async function PilotDashboardPage() {
       avgFlightTime: Number(avgFlightTime.toFixed(2)),
       oilChangeRemaining: Number(oilChangeRemaining.toFixed(1)),
       hundredHourRemaining: Number(hundredHourRemaining.toFixed(1)),
+      fuelRateLph: fuelRateLph,
+      fuelRateGph: fuelRateGph,
     }
   };
 
