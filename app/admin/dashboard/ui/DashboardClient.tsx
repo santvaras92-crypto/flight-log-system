@@ -360,19 +360,44 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">Since Sep 9, 2020</p>
       </div>
     ),
-    activePilots: (
-      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
-        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-purple-100 flex items-center justify-center mb-2 sm:mb-4">
-          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-          </svg>
+    activePilots: (() => {
+      // Calculate active pilots from last 2 months
+      const twoMonthsAgo = new Date();
+      twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+      const recentFlights = (initialData.allFlightsComplete || initialData.flights || [])
+        .filter(f => new Date(f.fecha) >= twoMonthsAgo);
+      const uniqueCodes = new Set<string>();
+      recentFlights.forEach(f => {
+        const code = ((f as any).cliente || '').toUpperCase().trim();
+        if (code) uniqueCodes.add(code);
+      });
+      const activePilotNames = Array.from(uniqueCodes)
+        .map(code => csvPilotNames?.[code] || code)
+        .sort((a, b) => a.localeCompare(b, 'es'));
+      
+      return (
+        <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+          <div className="flex items-start justify-between mb-2 sm:mb-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-purple-100 flex items-center justify-center">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+            <span className="px-1.5 sm:px-2 py-0.5 bg-purple-100 text-purple-700 text-[9px] sm:text-xs font-bold rounded-full">{activePilotNames.length}</span>
+          </div>
+          <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Pilotos Activos</h3>
+          <p className="text-[9px] sm:text-xs text-slate-500 mb-2">Últimos 2 meses</p>
+          <div className="max-h-24 sm:max-h-32 overflow-y-auto space-y-0.5">
+            {activePilotNames.map((name, i) => (
+              <div key={i} className="text-[10px] sm:text-xs text-slate-700 truncate">{name}</div>
+            ))}
+            {activePilotNames.length === 0 && (
+              <div className="text-[10px] sm:text-xs text-slate-400 italic">Sin vuelos recientes</div>
+            )}
+          </div>
         </div>
-        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Pilots</h3>
-        <div className="text-xl sm:text-3xl font-bold text-slate-900 mb-0.5 sm:mb-1">{overviewMetrics.activePilots}</div>
-        <p className="text-xs sm:text-sm text-slate-600 font-medium">Active</p>
-        <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">Last 6 months</p>
-      </div>
-    ),
+      );
+    })(),
     pendingBalance: (
       <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
         <div className="flex items-start justify-between mb-2 sm:mb-4">
