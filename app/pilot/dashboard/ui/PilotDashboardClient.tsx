@@ -76,7 +76,7 @@ const palette = {
   shadow: 'shadow-lg'
 };
 
-const defaultCardOrder = ['totalHours', 'totalFlights', 'thisMonth', 'avgFlightTime', 'fuelRate', 'deposits', 'flightCost', 'balance', 'fuel', 'nextInspections'];
+const defaultCardOrder = ['totalHours', 'totalFlights', 'thisMonth', 'avgFlightTime', 'lastFlight', 'fuelRate', 'deposits', 'flightCost', 'balance', 'fuel', 'nextInspections'];
 
 export default function PilotDashboardClient({ data }: { data: PilotData }) {
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
@@ -252,6 +252,87 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
         <p className="text-xs sm:text-sm text-slate-600 font-medium">hrs por vuelo</p>
       </div>
     ),
+    lastFlight: (() => {
+      // Find the most recent flight
+      const sortedFlights = [...data.flights].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+      const lastFlight = sortedFlights[0];
+      
+      if (!lastFlight) {
+        return (
+          <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] lg:overflow-y-auto flex flex-col bg-slate-50`}>
+            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-slate-200 flex items-center justify-center mb-2 sm:mb-4">
+              <svg className="w-4 h-4 sm:w-6 sm:h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+            </div>
+            <h3 className="text-slate-400 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Último Vuelo</h3>
+            <div className="text-xl sm:text-3xl font-bold text-slate-400 mb-0.5 sm:mb-1">—</div>
+            <p className="text-xs sm:text-sm text-slate-400 font-medium">Sin vuelos registrados</p>
+          </div>
+        );
+      }
+      
+      const lastFlightDate = new Date(lastFlight.fecha);
+      const today = new Date();
+      const daysSince = Math.floor((today.getTime() - lastFlightDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Determine color based on days
+      const getStatusStyle = () => {
+        if (daysSince >= 60) return {
+          bg: 'bg-red-50',
+          iconBg: 'bg-red-100',
+          iconText: 'text-red-600',
+          textColor: 'text-red-600',
+          badge: 'bg-red-100 text-red-700',
+          badgeText: '⚠️ INACTIVO',
+          ring: 'ring-2 ring-red-400'
+        };
+        if (daysSince >= 30) return {
+          bg: 'bg-yellow-50',
+          iconBg: 'bg-yellow-100',
+          iconText: 'text-yellow-600',
+          textColor: 'text-yellow-600',
+          badge: 'bg-yellow-100 text-yellow-700',
+          badgeText: '⚠️',
+          ring: ''
+        };
+        return {
+          bg: 'bg-green-50',
+          iconBg: 'bg-green-100',
+          iconText: 'text-green-600',
+          textColor: 'text-green-600',
+          badge: 'bg-green-100 text-green-700',
+          badgeText: '✅',
+          ring: ''
+        };
+      };
+      
+      const style = getStatusStyle();
+      const formattedDate = lastFlightDate.toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' });
+      
+      return (
+        <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] lg:overflow-y-auto flex flex-col ${style.bg} ${style.ring}`}>
+          <div className="flex items-start justify-between mb-2 sm:mb-4">
+            <div className={`w-8 h-8 sm:w-12 sm:h-12 rounded-full ${style.iconBg} flex items-center justify-center`}>
+              <svg className={`w-4 h-4 sm:w-6 sm:h-6 ${style.iconText}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+            </div>
+            <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 ${style.badge} text-[9px] sm:text-xs font-semibold rounded-full`}>
+              {style.badgeText}
+            </span>
+          </div>
+          <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Último Vuelo</h3>
+          <div className={`text-xl sm:text-3xl font-bold ${style.textColor} mb-0.5 sm:mb-1`}>
+            {daysSince === 0 ? 'Hoy' : daysSince === 1 ? 'Ayer' : `hace ${daysSince}d`}
+          </div>
+          <p className="text-xs sm:text-sm text-slate-600 font-medium">{formattedDate}</p>
+          <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">
+            {daysSince >= 60 ? '⚠️ Más de 60 días sin volar' : daysSince >= 30 ? 'Más de 30 días sin volar' : 'Actividad reciente'}
+          </p>
+        </div>
+      );
+    })(),
     fuelRate: (
       <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] lg:overflow-y-auto flex flex-col`}>
         <div className="flex items-start justify-between mb-2 sm:mb-4">
