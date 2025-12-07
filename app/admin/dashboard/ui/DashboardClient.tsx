@@ -364,16 +364,32 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       // Calculate active pilots from last 60 days
       const sixtyDaysAgo = new Date();
       sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+      const today = new Date();
       const recentFlights = (initialData.allFlightsComplete || initialData.flights || [])
         .filter(f => new Date(f.fecha) >= sixtyDaysAgo);
-      const uniqueCodes = new Set<string>();
+      
+      // Map each code to their most recent flight date
+      const codeToLastFlight = new Map<string, Date>();
       recentFlights.forEach(f => {
         const code = ((f as any).cliente || '').toUpperCase().trim();
-        if (code) uniqueCodes.add(code);
+        if (!code) return;
+        const flightDate = new Date(f.fecha);
+        const existing = codeToLastFlight.get(code);
+        if (!existing || flightDate > existing) {
+          codeToLastFlight.set(code, flightDate);
+        }
       });
-      const activePilotNames = Array.from(uniqueCodes)
-        .map(code => csvPilotNames?.[code] || code)
-        .sort((a, b) => a.localeCompare(b, 'es'));
+      
+      // Build array with name and days since last flight
+      const activePilotsData = Array.from(codeToLastFlight.entries())
+        .map(([code, lastFlightDate]) => {
+          const daysSince = Math.floor((today.getTime() - lastFlightDate.getTime()) / (1000 * 60 * 60 * 24));
+          return {
+            name: csvPilotNames?.[code] || code,
+            daysSince
+          };
+        })
+        .sort((a, b) => a.daysSince - b.daysSince); // Sort by most recent first
       
       return (
         <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
@@ -383,15 +399,20 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             </div>
-            <span className="px-1.5 sm:px-2 py-0.5 bg-purple-100 text-purple-700 text-[9px] sm:text-xs font-bold rounded-full">{activePilotNames.length}</span>
+            <span className="px-1.5 sm:px-2 py-0.5 bg-purple-100 text-purple-700 text-[9px] sm:text-xs font-bold rounded-full">{activePilotsData.length}</span>
           </div>
           <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Pilotos Activos</h3>
           <p className="text-[9px] sm:text-xs text-slate-500 mb-2">Últimos 60 días</p>
           <div className="max-h-24 sm:max-h-32 overflow-y-auto space-y-0.5">
-            {activePilotNames.map((name, i) => (
-              <div key={i} className="text-[10px] sm:text-xs text-slate-700 truncate">{name}</div>
+            {activePilotsData.map((pilot, i) => (
+              <div key={i} className="flex items-center justify-between text-[10px] sm:text-xs">
+                <span className="text-slate-700 truncate flex-1">{pilot.name}</span>
+                <span className={`ml-1 font-mono ${pilot.daysSince === 0 ? 'text-green-600 font-bold' : pilot.daysSince <= 7 ? 'text-emerald-500' : pilot.daysSince <= 30 ? 'text-slate-500' : 'text-orange-500'}`}>
+                  {pilot.daysSince === 0 ? 'hoy' : `${pilot.daysSince}d`}
+                </span>
+              </div>
             ))}
-            {activePilotNames.length === 0 && (
+            {activePilotsData.length === 0 && (
               <div className="text-[10px] sm:text-xs text-slate-400 italic">Sin vuelos recientes</div>
             )}
           </div>
