@@ -68,6 +68,8 @@ export default async function PilotDashboardPage() {
       aircraftId: true,
       piloto_raw: true,
       pilotoId: true,
+      aerodromoSalida: true,
+      aerodromoDestino: true,
     }
   });
 
