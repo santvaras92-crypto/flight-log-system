@@ -361,11 +361,11 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       </div>
     ),
     activePilots: (() => {
-      // Calculate active pilots from last 2 months
-      const twoMonthsAgo = new Date();
-      twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+      // Calculate active pilots from last 60 days
+      const sixtyDaysAgo = new Date();
+      sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
       const recentFlights = (initialData.allFlightsComplete || initialData.flights || [])
-        .filter(f => new Date(f.fecha) >= twoMonthsAgo);
+        .filter(f => new Date(f.fecha) >= sixtyDaysAgo);
       const uniqueCodes = new Set<string>();
       recentFlights.forEach(f => {
         const code = ((f as any).cliente || '').toUpperCase().trim();
@@ -386,7 +386,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             <span className="px-1.5 sm:px-2 py-0.5 bg-purple-100 text-purple-700 text-[9px] sm:text-xs font-bold rounded-full">{activePilotNames.length}</span>
           </div>
           <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Pilotos Activos</h3>
-          <p className="text-[9px] sm:text-xs text-slate-500 mb-2">Últimos 2 meses</p>
+          <p className="text-[9px] sm:text-xs text-slate-500 mb-2">Últimos 60 días</p>
           <div className="max-h-24 sm:max-h-32 overflow-y-auto space-y-0.5">
             {activePilotNames.map((name, i) => (
               <div key={i} className="text-[10px] sm:text-xs text-slate-700 truncate">{name}</div>
