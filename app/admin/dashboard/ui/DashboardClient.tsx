@@ -2097,44 +2097,181 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
 }
 
 function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewMetrics }: { components: any[]; aircraft: any[]; aircraftYearlyStats: any[]; overviewMetrics?: OverviewMetrics }) {
-  // Calculate predicted inspection dates
-  const getPredictedDate = (hoursRemaining: number) => {
-    // Use CC-AQI stats (main aircraft)
-    const stats = aircraftYearlyStats.find(s => s.matricula === 'CC-AQI');
-    if (!stats || stats.avgHoursPerYear <= 0) return null;
+  // Get usage stats from new predictive system
+  const stats = overviewMetrics?.nextInspections?.usageStats;
+  const weightedRate = stats?.weightedRate || 0;  // hrs/day
+  const stdDev = stats?.stdDev || 0;
+  const trend = stats?.trend || 0;
+  const rate30d = stats?.rate30d || 0;
+  
+  // Calculate predicted inspection with confidence interval
+  const getPrediction = (hoursRemaining: number) => {
+    if (weightedRate <= 0) return null;
     
-    const yearsToInspection = hoursRemaining / stats.avgHoursPerYear;
-    const daysToInspection = Math.round(yearsToInspection * 365);
-    const predictedDate = new Date();
-    predictedDate.setDate(predictedDate.getDate() + daysToInspection);
+    const days = Math.round(hoursRemaining / weightedRate);
+    const uncertainty = 1.96 * stdDev * Math.sqrt(days > 0 ? days : 1) / weightedRate;
+    const minDays = Math.max(1, Math.round(days - uncertainty));
+    const maxDays = Math.round(days + uncertainty);
     
-    return {
-      date: predictedDate,
-      daysRemaining: daysToInspection,
-      avgHoursPerYear: stats.avgHoursPerYear
-    };
+    const today = new Date();
+    const date = new Date(today.getTime() + days * 24 * 60 * 60 * 1000);
+    const minDate = new Date(today.getTime() + minDays * 24 * 60 * 60 * 1000);
+    const maxDate = new Date(today.getTime() + maxDays * 24 * 60 * 60 * 1000);
+    
+    return { days, minDays, maxDays, date, minDate, maxDate };
   };
   
   // Build inspection items for Oil Change and 100-Hour
   const inspectionItems = [
     {
       id: 'oil-change',
-      name: 'Oil Change',
+      name: 'Cambio de Aceite',
       interval: 50,
       remaining: overviewMetrics?.nextInspections?.oilChangeRemaining ?? 0,
       icon: '🛢️'
     },
     {
       id: '100-hour',
-      name: '100-Hour Inspection',
+      name: 'Inspección 100 Horas',
       interval: 100,
       remaining: overviewMetrics?.nextInspections?.hundredHourRemaining ?? 0,
       icon: '🔧'
     }
   ];
 
+  const formatDate = (d: Date) => d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' });
+  const formatShortDate = (d: Date) => d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
+  
+  const getUrgencyClass = (days: number) => {
+    if (days <= 7) return { row: 'bg-red-50 border-l-4 border-red-500', badge: 'bg-red-100 text-red-700', text: 'text-red-600' };
+    if (days <= 15) return { row: 'bg-orange-50 border-l-4 border-orange-500', badge: 'bg-orange-100 text-orange-700', text: 'text-orange-600' };
+    if (days <= 30) return { row: 'bg-yellow-50 border-l-4 border-yellow-500', badge: 'bg-yellow-100 text-yellow-700', text: 'text-yellow-600' };
+    return { row: 'hover:bg-blue-50', badge: 'bg-green-100 text-green-700', text: 'text-green-600' };
+  };
+
   return (
     <div className="space-y-6">
+      {/* Smart Predictions Header */}
+      {stats && (
+        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-6 shadow-xl text-white">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">🔮</span>
+              <div>
+                <h3 className="text-xl font-bold">Sistema Predictivo SMART</h3>
+                <p className="text-purple-200 text-sm">Análisis estadístico basado en los últimos 90 días</p>
+              </div>
+            </div>
+            <div className="flex gap-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold">{(weightedRate * 7).toFixed(1)}</div>
+                <div className="text-xs text-purple-200">hrs/semana</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold">{(weightedRate * 30).toFixed(1)}</div>
+                <div className="text-xs text-purple-200">hrs/mes</div>
+              </div>
+              <div className="text-center">
+                <div className={`text-2xl font-bold flex items-center gap-1 ${trend > 0 ? 'text-orange-300' : trend < 0 ? 'text-green-300' : ''}`}>
+                  {trend > 0 ? '↗️' : trend < 0 ? '↘️' : '→'} {Math.abs(trend).toFixed(0)}%
+                </div>
+                <div className="text-xs text-purple-200">tendencia</div>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
+            <div className="bg-white/10 rounded-lg p-3">
+              <div className="text-purple-200 text-xs">Tasa 30 días</div>
+              <div className="font-mono font-bold">{(rate30d * 30).toFixed(1)} hrs/mes</div>
+            </div>
+            <div className="bg-white/10 rounded-lg p-3">
+              <div className="text-purple-200 text-xs">Tasa 60 días</div>
+              <div className="font-mono font-bold">{((stats.rate60d || 0) * 30).toFixed(1)} hrs/mes</div>
+            </div>
+            <div className="bg-white/10 rounded-lg p-3">
+              <div className="text-purple-200 text-xs">Tasa 90 días</div>
+              <div className="font-mono font-bold">{((stats.rate90d || 0) * 30).toFixed(1)} hrs/mes</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Next Inspections - Enhanced with Smart Predictions */}
+      <div className="bg-white/95 backdrop-blur-lg border-2 border-amber-200 rounded-2xl shadow-2xl overflow-hidden">
+        <div className="bg-gradient-to-r from-amber-600 to-orange-600 px-8 py-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Próximas Inspecciones
+            </h3>
+            <span className="px-3 py-1 bg-white/20 rounded-full text-sm font-bold">🔮 SMART</span>
+          </div>
+          <p className="text-amber-100 text-sm mt-1">Predicciones con intervalo de confianza del 95%</p>
+        </div>
+        
+        <div className="p-6 space-y-4">
+          {inspectionItems.map(item => {
+            const pred = getPrediction(item.remaining);
+            const urgency = pred ? getUrgencyClass(pred.days) : getUrgencyClass(999);
+            
+            return (
+              <div key={item.id} className={`rounded-xl border-2 p-4 transition-all ${urgency.row}`}>
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{item.icon}</span>
+                    <div>
+                      <h4 className="font-bold text-slate-900">{item.name}</h4>
+                      <p className="text-xs text-slate-500">Intervalo: {item.interval} hrs</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className={`text-2xl font-bold font-mono ${urgency.text}`}>{item.remaining.toFixed(1)}</div>
+                    <div className="text-xs text-slate-500">horas restantes</div>
+                  </div>
+                </div>
+                
+                {pred && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-200">
+                    <div className="bg-slate-50 rounded-lg p-3">
+                      <div className="text-xs text-slate-500 mb-1">📅 Fecha Estimada</div>
+                      <div className="font-bold text-slate-900">{formatDate(pred.date)}</div>
+                    </div>
+                    <div className="bg-slate-50 rounded-lg p-3">
+                      <div className="text-xs text-slate-500 mb-1">📈 Rango de Confianza (95%)</div>
+                      <div className="font-semibold text-slate-700">{formatShortDate(pred.minDate)} - {formatShortDate(pred.maxDate)}</div>
+                    </div>
+                    <div className="bg-slate-50 rounded-lg p-3">
+                      <div className="text-xs text-slate-500 mb-1">⏱️ Días Restantes</div>
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ${urgency.badge}`}>
+                          {pred.days} días
+                        </span>
+                        <span className="text-xs text-slate-500">({pred.minDays} - {pred.maxDays})</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {!pred && (
+                  <div className="text-sm text-slate-500 italic mt-2">Sin datos suficientes para predicción</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200">
+          <p className="text-xs text-slate-500 flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Predicciones basadas en media ponderada: 30d (×3) + 60d (×2) + 90d (×1). Desviación estándar: {stdDev.toFixed(3)} hrs/día.
+          </p>
+        </div>
+      </div>
+
       {/* Component Status Table */}
       <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
         <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
@@ -2142,19 +2279,20 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            Component Status
+            Estado de Componentes (TBO)
           </h3>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200">
             <thead className="bg-slate-50">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Aircraft</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Hours</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Aeronave</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Componente</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Horas</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">TBO</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Remaining</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Life %</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Restante</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Vida %</th>
+                {weightedRate > 0 && <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Est. TBO</th>}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-slate-100">
@@ -2162,6 +2300,8 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
                 const restante = Number(c.limite_tbo) - Number(c.horas_acumuladas);
                 const pct = (Number(c.horas_acumuladas)/Number(c.limite_tbo))*100;
                 const colorClass = pct > 80 ? 'text-red-600 font-bold' : pct > 60 ? 'text-orange-500 font-bold' : 'text-green-600 font-bold';
+                const tboPred = weightedRate > 0 ? getPrediction(restante) : null;
+                
                 return (
                   <tr key={c.id} className="hover:bg-blue-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-600 font-mono">{c.aircraftId}</td>
@@ -2174,91 +2314,18 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
                         {pct.toFixed(1)}%
                       </span>
                     </td>
+                    {weightedRate > 0 && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                        {tboPred ? (
+                          <span className="font-mono">{formatShortDate(tboPred.date)} ({tboPred.days}d)</span>
+                        ) : '-'}
+                      </td>
+                    )}
                   </tr>
                 );
               })}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* Next Inspections Prediction - Oil Change & 100-Hour */}
-      <div className="bg-white/95 backdrop-blur-lg border-2 border-amber-200 rounded-2xl shadow-2xl overflow-hidden">
-        <div className="bg-gradient-to-r from-amber-600 to-orange-600 px-8 py-6">
-          <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            Next Inspections (Predictive Analysis)
-          </h3>
-          <p className="text-amber-100 text-sm mt-1">Based on CC-AQI historical flight hours average</p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-amber-50">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Inspection Type</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Interval</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Hrs Remaining</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Avg Hrs/Year</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Est. Inspection Date</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Days Until</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-slate-100">
-              {inspectionItems.map(item => {
-                const prediction = getPredictedDate(item.remaining);
-                const urgencyClass = prediction && prediction.daysRemaining < 8 
-                  ? 'bg-red-50 border-l-4 border-red-500' 
-                  : prediction && prediction.daysRemaining < 20 
-                    ? 'bg-amber-50 border-l-4 border-amber-500' 
-                    : 'hover:bg-blue-50';
-                
-                return (
-                  <tr key={item.id} className={`transition-colors ${urgencyClass}`}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">
-                      <span className="mr-2">{item.icon}</span>
-                      {item.name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{item.interval} hrs</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold font-mono">
-                      <span className={item.remaining < 10 ? 'text-red-600' : item.remaining < 20 ? 'text-amber-600' : 'text-green-600'}>
-                        {item.remaining.toFixed(1)} hrs
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-mono font-bold">
-                      {prediction ? `${prediction.avgHoursPerYear.toFixed(1)} hrs/yr` : 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">
-                      {prediction ? prediction.date.toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Sin datos'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {prediction ? (
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
-                          prediction.daysRemaining < 8 ? 'bg-red-100 text-red-700' :
-                          prediction.daysRemaining < 20 ? 'bg-amber-100 text-amber-700' :
-                          prediction.daysRemaining < 30 ? 'bg-blue-100 text-blue-700' :
-                          'bg-green-100 text-green-700'
-                        }`}>
-                          {prediction.daysRemaining} días
-                        </span>
-                      ) : (
-                        <span className="text-slate-400">-</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200">
-          <p className="text-xs text-slate-500 flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Predictions based on CC-AQI average yearly flight hours ({aircraftYearlyStats.find(s => s.matricula === 'CC-AQI')?.avgHoursPerYear.toFixed(1) || 'N/A'} hrs/year).
-          </p>
         </div>
       </div>
     </div>
