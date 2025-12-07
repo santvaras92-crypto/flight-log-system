@@ -13,12 +13,13 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     prisma.user.findMany(),
     prisma.aircraft.findMany(),
     prisma.flight.findMany({
-      orderBy: { fecha: "desc" },
+      orderBy: [{ fecha: "desc" }, { createdAt: "desc" }],
       skip,
       take: pageSize,
       select: {
         id: true,
         fecha: true,
+        createdAt: true,
         hobbs_inicio: true,
         hobbs_fin: true,
         tach_inicio: true,
@@ -44,10 +45,11 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     }),
     // All flights with complete data for client filtering in FlightsTable
     prisma.flight.findMany({ 
-      orderBy: { fecha: "desc" }, 
+      orderBy: [{ fecha: "desc" }, { createdAt: "desc" }], 
       select: { 
         id: true, 
-        fecha: true, 
+        fecha: true,
+        createdAt: true, 
         hobbs_inicio: true,
         hobbs_fin: true,
         tach_inicio: true,

@@ -48,10 +48,11 @@ export default async function PilotDashboardPage() {
         { piloto_raw: { contains: pilotCode, mode: 'insensitive' } }
       ]
     },
-    orderBy: { fecha: 'desc' },
+    orderBy: [{ fecha: 'desc' }, { createdAt: 'desc' }],
     select: {
       id: true,
       fecha: true,
+      createdAt: true,
       hobbs_inicio: true,
       hobbs_fin: true,
       tach_inicio: true,
