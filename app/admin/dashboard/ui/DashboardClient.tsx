@@ -44,6 +44,15 @@ type OverviewMetrics = {
   nextInspections?: {
     oilChangeRemaining: number;
     hundredHourRemaining: number;
+    // Predictive stats
+    usageStats?: {
+      rate30d: number;  // hrs/day last 30 days
+      rate60d: number;  // hrs/day last 60 days  
+      rate90d: number;  // hrs/day last 90 days
+      weightedRate: number;  // weighted average
+      trend: number;  // % change vs previous period
+      stdDev: number;  // standard deviation
+    };
   };
 };
 
@@ -324,27 +333,114 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">8+ years of operations</p>
       </div>
     ),
-    nextInspections: (
-      <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
-        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-red-100 flex items-center justify-center mb-2 sm:mb-4">
-          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-          </svg>
-        </div>
-        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Inspections</h3>
-        <div className="space-y-1 sm:space-y-2">
-          <div>
-            <div className="text-[10px] sm:text-sm text-slate-600 font-medium">Oil</div>
-            <div className="text-lg sm:text-2xl font-bold text-slate-900">{(overviewMetrics?.nextInspections?.oilChangeRemaining ?? 0).toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-xs sm:text-base text-slate-600">hrs</span></div>
+    nextInspections: (() => {
+      const stats = overviewMetrics?.nextInspections?.usageStats;
+      const oilRemaining = overviewMetrics?.nextInspections?.oilChangeRemaining ?? 0;
+      const hundredRemaining = overviewMetrics?.nextInspections?.hundredHourRemaining ?? 0;
+      const weightedRate = stats?.weightedRate || 0;
+      const stdDev = stats?.stdDev || 0;
+      const trend = stats?.trend || 0;
+      
+      // Calculate predictions
+      const calcPrediction = (hoursRemaining: number) => {
+        if (weightedRate <= 0) return { days: 0, minDays: 0, maxDays: 0, date: null, minDate: null, maxDate: null };
+        
+        const days = Math.round(hoursRemaining / weightedRate);
+        // 95% confidence interval: ±1.96 * stdDev * sqrt(days)
+        const uncertainty = 1.96 * stdDev * Math.sqrt(days) / weightedRate;
+        const minDays = Math.max(1, Math.round(days - uncertainty));
+        const maxDays = Math.round(days + uncertainty);
+        
+        const today = new Date();
+        const date = new Date(today.getTime() + days * 24 * 60 * 60 * 1000);
+        const minDate = new Date(today.getTime() + minDays * 24 * 60 * 60 * 1000);
+        const maxDate = new Date(today.getTime() + maxDays * 24 * 60 * 60 * 1000);
+        
+        return { days, minDays, maxDays, date, minDate, maxDate };
+      };
+      
+      const oilPred = calcPrediction(oilRemaining);
+      const hundredPred = calcPrediction(hundredRemaining);
+      
+      const formatDate = (d: Date | null) => d ? d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' }) : '-';
+      
+      const getUrgencyColor = (days: number) => {
+        if (days <= 7) return 'text-red-600 bg-red-50 border-red-200';
+        if (days <= 15) return 'text-orange-600 bg-orange-50 border-orange-200';
+        if (days <= 30) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+        return 'text-green-600 bg-green-50 border-green-200';
+      };
+      
+      return (
+        <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
+          <div className="flex items-start justify-between mb-2 sm:mb-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-red-100 flex items-center justify-center">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+            </div>
+            <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[8px] sm:text-[10px] font-bold rounded-full">🔮 SMART</span>
           </div>
-          <div>
-            <div className="text-[10px] sm:text-sm text-slate-600 font-medium">100hr</div>
-            <div className="text-lg sm:text-2xl font-bold text-slate-900">{(overviewMetrics?.nextInspections?.hundredHourRemaining ?? 0).toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-xs sm:text-base text-slate-600">hrs</span></div>
+          <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-2 sm:mb-3">Inspecciones</h3>
+          
+          {/* Oil Change */}
+          <div className={`rounded-lg border p-2 mb-2 ${getUrgencyColor(oilPred.days)}`}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] sm:text-xs font-bold">🛢️ Aceite</span>
+              <span className="text-[10px] sm:text-xs font-mono">{oilRemaining.toFixed(1)} hrs</span>
+            </div>
+            {weightedRate > 0 && (
+              <div className="space-y-0.5">
+                <div className="flex items-center justify-between text-[9px] sm:text-[11px]">
+                  <span>📅 Est:</span>
+                  <span className="font-semibold">{formatDate(oilPred.date)} (~{oilPred.days}d)</span>
+                </div>
+                <div className="flex items-center justify-between text-[8px] sm:text-[10px] opacity-75">
+                  <span>📈 Rango:</span>
+                  <span>{formatDate(oilPred.minDate)} - {formatDate(oilPred.maxDate)}</span>
+                </div>
+              </div>
+            )}
           </div>
+          
+          {/* 100hr Inspection */}
+          <div className={`rounded-lg border p-2 mb-2 ${getUrgencyColor(hundredPred.days)}`}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] sm:text-xs font-bold">🔧 100 Hrs</span>
+              <span className="text-[10px] sm:text-xs font-mono">{hundredRemaining.toFixed(1)} hrs</span>
+            </div>
+            {weightedRate > 0 && (
+              <div className="space-y-0.5">
+                <div className="flex items-center justify-between text-[9px] sm:text-[11px]">
+                  <span>📅 Est:</span>
+                  <span className="font-semibold">{formatDate(hundredPred.date)} (~{hundredPred.days}d)</span>
+                </div>
+                <div className="flex items-center justify-between text-[8px] sm:text-[10px] opacity-75">
+                  <span>📈 Rango:</span>
+                  <span>{formatDate(hundredPred.minDate)} - {formatDate(hundredPred.maxDate)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Usage Stats */}
+          {stats && (
+            <div className="text-[8px] sm:text-[10px] text-slate-500 space-y-0.5 pt-1 border-t border-slate-200">
+              <div className="flex justify-between">
+                <span>Tasa:</span>
+                <span className="font-mono">{(weightedRate * 7).toFixed(1)} hrs/sem</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Tendencia:</span>
+                <span className={`font-semibold ${trend > 0 ? 'text-orange-500' : trend < 0 ? 'text-green-500' : 'text-slate-500'}`}>
+                  {trend > 0 ? '↗️' : trend < 0 ? '↘️' : '→'} {Math.abs(trend).toFixed(0)}%
+                </span>
+              </div>
+            </div>
+          )}
         </div>
-        <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">Based on TACH</p>
-      </div>
-    ),
+      );
+    })(),
     fuelConsumed: (
       <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow}`}>
         <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-orange-100 flex items-center justify-center mb-2 sm:mb-4">
