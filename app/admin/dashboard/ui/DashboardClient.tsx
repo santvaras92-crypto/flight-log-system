@@ -424,7 +424,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
   return (
     <div className={`min-h-screen ${palette.bg} -mx-6 -my-8 px-4 sm:px-6 py-6 sm:py-8`}>
       {/* Navigation Tabs - Mobile Responsive */}
-      <nav className="mb-6 sm:mb-8 flex flex-wrap gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-xl border border-slate-200 shadow-sm">
+      <nav className="mb-6 sm:mb-8 flex gap-1 sm:gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-xl border border-slate-200 shadow-sm">
         {[
           { id: "overview", label: "Overview", icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
           { id: "flights", label: "Flights", icon: "M12 19l9 2-9-18-9 18 9-2zm0 0v-8" },
@@ -435,13 +435,13 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           <button 
             key={t.id} 
             onClick={()=>setTab(t.id)}
-            className={`flex-1 min-w-[80px] px-3 sm:px-6 py-3 sm:py-4 rounded-lg font-bold uppercase tracking-wide text-xs sm:text-sm transition-all flex items-center justify-center gap-2 ${
+            className={`flex-1 min-w-0 px-2 sm:px-6 py-3 sm:py-4 rounded-lg font-bold uppercase tracking-wide text-xs sm:text-sm transition-all flex items-center justify-center gap-1 sm:gap-2 ${
               tab===t.id 
                 ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg' 
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={t.icon} />
             </svg>
             <span className="hidden sm:inline">{t.label}</span>
