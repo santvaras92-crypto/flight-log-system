@@ -168,12 +168,6 @@ async function sendPilotConfirmationEmail(
       <h3 style="color: #334155; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">Vista Previa Bitácora</h3>
       ${logbookPreview}
       
-      <div style="background-color: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px; padding: 12px; margin: 16px 0;">
-        <p style="margin: 0; color: #92400e; font-size: 14px;">
-          ⏳ <strong>Pendiente de validación</strong> - Recibirás un correo cuando el administrador apruebe tu vuelo.
-        </p>
-      </div>
-      
       <p style="color: #64748b; font-size: 12px; margin-top: 24px;">
         Este correo fue enviado automáticamente por el sistema CC-AQI Flight Log.
       </p>
@@ -245,12 +239,12 @@ export async function createFlightSubmission(input: Input) {
   };
 
   const lastComponents = {
-    airframe: components.find(c => c.tipo === 'airframe')?.horas_acumuladas 
-      ? Number(components.find(c => c.tipo === 'airframe')!.horas_acumuladas) : null,
-    engine: components.find(c => c.tipo === 'engine')?.horas_acumuladas 
-      ? Number(components.find(c => c.tipo === 'engine')!.horas_acumuladas) : null,
-    propeller: components.find(c => c.tipo === 'propeller')?.horas_acumuladas 
-      ? Number(components.find(c => c.tipo === 'propeller')!.horas_acumuladas) : null
+    airframe: components.find(c => c.tipo.toLowerCase() === 'airframe')?.horas_acumuladas 
+      ? Number(components.find(c => c.tipo.toLowerCase() === 'airframe')!.horas_acumuladas) : null,
+    engine: components.find(c => c.tipo.toLowerCase() === 'engine')?.horas_acumuladas 
+      ? Number(components.find(c => c.tipo.toLowerCase() === 'engine')!.horas_acumuladas) : null,
+    propeller: components.find(c => c.tipo.toLowerCase() === 'propeller')?.horas_acumuladas 
+      ? Number(components.find(c => c.tipo.toLowerCase() === 'propeller')!.horas_acumuladas) : null
   };
 
   const submission = await prisma.flightSubmission.create({
