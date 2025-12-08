@@ -84,6 +84,18 @@ export default function RegisterClient({
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   
+  // Fuel form fields
+  const [fuelLitros, setFuelLitros] = useState<string>('');
+  const [fuelMonto, setFuelMonto] = useState<string>('');
+  
+  // Calculate fuel price per liter
+  const precioLitro = useMemo(() => {
+    const litros = parseFloat(fuelLitros);
+    const monto = parseFloat(fuelMonto);
+    if (!litros || !monto || litros <= 0 || monto <= 0) return null;
+    return Math.round(monto / litros);
+  }, [fuelLitros, fuelMonto]);
+  
   const selectedPilot = useMemo(() => pilots.find(p => p.value === pilotValue), [pilotValue, pilots]);
 
   // Calcular deltas en tiempo real para modo flight
@@ -243,6 +255,8 @@ export default function RegisterClient({
       setTachFin('');
       setCopiloto('');
       setDetalle('');
+      setFuelLitros('');
+      setFuelMonto('');
       // Después de enviar, el nuevo aeródromo de salida es el destino que acabamos de registrar
       setAerodromoSalida(aerodromoDestino);
       setAerodromoDestino('SCCV');
@@ -305,16 +319,6 @@ export default function RegisterClient({
           </div>
 
           <form id="registro-form" action={onSubmit} className="space-y-4">
-            {formError && (
-              <div className="rounded-lg p-3 border border-red-400 bg-red-50 text-sm text-red-800 font-medium">
-                ⚠️ {formError}
-              </div>
-            )}
-            {formSuccess && (
-              <div className="rounded-lg p-3 border border-green-500 bg-green-50 text-sm text-green-800 font-medium">
-                ✅ {formSuccess}
-              </div>
-            )}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <label className="flex flex-col text-sm">
                 <span className="mb-1 font-medium">Fecha</span>
@@ -548,17 +552,43 @@ export default function RegisterClient({
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <label className="flex flex-col text-sm">
                     <span className="mb-1">Litros</span>
-                    <input name="litros" type="number" step="0.001" required className="rounded-xl border px-3 py-3 bg-slate-50" />
+                    <input 
+                      name="litros" 
+                      type="number" 
+                      step="0.001" 
+                      required 
+                      value={fuelLitros}
+                      onChange={(e) => setFuelLitros(e.target.value)}
+                      className="rounded-xl border px-3 py-3 bg-slate-50" 
+                    />
                   </label>
                   <label className="flex flex-col text-sm">
                     <span className="mb-1">Monto</span>
-                    <input name="monto" type="number" step="0.001" required className="rounded-xl border px-3 py-3 bg-slate-50" />
+                    <input 
+                      name="monto" 
+                      type="number" 
+                      step="0.001" 
+                      required 
+                      value={fuelMonto}
+                      onChange={(e) => setFuelMonto(e.target.value)}
+                      className="rounded-xl border px-3 py-3 bg-slate-50" 
+                    />
                   </label>
                   <label className="flex flex-col text-sm">
                     <span className="mb-1">Foto boleta</span>
                     <input name="file" type="file" accept="image/*" required className="rounded-xl border px-3 py-2 bg-slate-50" />
                   </label>
                 </div>
+                
+                {/* AVGAS Price per Liter display */}
+                {precioLitro !== null && (
+                  <div className="rounded-lg p-3 bg-emerald-50 border border-emerald-200">
+                    <p className="text-sm text-emerald-800 font-medium">
+                      ⛽ Precio AVGAS: <span className="text-lg font-bold">${precioLitro.toLocaleString('es-CL')}</span> /litro
+                    </p>
+                  </div>
+                )}
+                
                 <label className="flex flex-col text-sm">
                   <span className="mb-1">Detalle (opcional)</span>
                   <input name="detalle" className="rounded-xl border px-3 py-3 bg-slate-50" />
@@ -585,6 +615,18 @@ export default function RegisterClient({
                             </label>
                           </>
                         )}
+
+            {/* Success/Error messages near the submit button */}
+            {formError && (
+              <div className="rounded-lg p-3 border border-red-400 bg-red-50 text-sm text-red-800 font-medium">
+                ⚠️ {formError}
+              </div>
+            )}
+            {formSuccess && (
+              <div className="rounded-lg p-3 border border-green-500 bg-green-50 text-sm text-green-800 font-medium">
+                ✅ {formSuccess}
+              </div>
+            )}
 
             <div className="pt-2">
               <button type="submit" disabled={!pilotValue || submitting} className="rounded-xl px-4 py-3 bg-blue-600 text-white w-full sm:w-auto disabled:opacity-60">
