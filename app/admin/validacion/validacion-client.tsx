@@ -186,7 +186,10 @@ export default function ValidacionClient({
               flightsData.map((flight) => {
                 const hobbsFinal = parseFloat(flight.hobbsFinal || '0');
                 const lastHobbs = parseFloat(flight.lastHobbs || '0');
+                const tachFinal = parseFloat(flight.tachFinal || '0');
+                const lastTach = parseFloat(flight.lastTach || '0');
                 const diffHobbs = hobbsFinal - lastHobbs;
+                const diffTach = tachFinal - lastTach;
                 const rate = parseFloat(rates[flight.id] || '185000');
                 const instRate = parseFloat(instructorRates[flight.id] ?? (flight.copiloto ? '30000' : '0'));
                 // Costo = horas * (tarifa + instructor_rate)
@@ -235,18 +238,32 @@ export default function ValidacionClient({
                       )}
 
                       {/* Flight Details */}
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                         <div>
                           <p className="text-xs text-slate-500 uppercase">Fecha Vuelo</p>
                           <p className="font-medium">{flight.fechaVuelo ? new Date(flight.fechaVuelo).toLocaleDateString('es-CL') : '-'}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-slate-500 uppercase">Hobbs Final</p>
-                          <p className="font-mono font-bold text-blue-600">{flight.hobbsFinal || '-'}</p>
+                          <p className="text-xs text-slate-500 uppercase">HOBBS (Inicio → Fin)</p>
+                          <p className="font-mono">
+                            <span className="text-slate-500">{lastHobbs.toFixed(1)}</span>
+                            <span className="mx-1">→</span>
+                            <span className="font-bold text-blue-600">{hobbsFinal.toFixed(1)}</span>
+                          </p>
+                          <p className="text-xs font-bold text-green-600">Δ {diffHobbs.toFixed(1)} hrs</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-500 uppercase">TACH (Inicio → Fin)</p>
+                          <p className="font-mono">
+                            <span className="text-slate-500">{lastTach.toFixed(1)}</span>
+                            <span className="mx-1">→</span>
+                            <span className="font-bold text-blue-600">{tachFinal.toFixed(1)}</span>
+                          </p>
+                          <p className="text-xs font-bold text-green-600">Δ {diffTach.toFixed(1)} hrs</p>
                         </div>
                         <div>
                           <p className="text-xs text-slate-500 uppercase">Tiempo Vuelo</p>
-                          <p className="font-mono font-bold text-green-600">{diffHobbs.toFixed(1)} hrs</p>
+                          <p className="font-mono font-bold text-green-600 text-xl">{diffHobbs.toFixed(1)} hrs</p>
                         </div>
                       </div>
 
