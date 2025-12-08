@@ -961,6 +961,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
 }) {
   const [drafts, setDrafts] = useState<Record<number, any>>({});
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   
   // Filtros locales para la tabla
   const [filterStartDate, setFilterStartDate] = useState("");
@@ -1039,6 +1040,32 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
       alert('Error de red al guardar');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteFlight = async (flightId: number, pilotName: string, fecha: string, costo: number) => {
+    const confirmMsg = `¿Eliminar este vuelo?\n\nPiloto: ${pilotName}\nFecha: ${fecha}\nCosto: $${costo.toLocaleString('es-CL')}\n\nEsto revertirá:\n• Saldo del piloto (+$${costo.toLocaleString('es-CL')})\n• Contadores del avión\n• Horas de componentes`;
+    
+    if (!confirm(confirmMsg)) return;
+    
+    setDeletingId(flightId);
+    try {
+      const res = await fetch('/api/flights/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: flightId }),
+      });
+      const json = await res.json();
+      if (!json.ok) {
+        alert(json.error || 'Error al eliminar vuelo');
+      } else {
+        alert(`Vuelo eliminado.\nSaldo revertido: +$${json.reverted?.balance?.toLocaleString('es-CL') || costo.toLocaleString('es-CL')}`);
+        location.reload();
+      }
+    } catch (e) {
+      alert('Error de red al eliminar');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -1330,6 +1357,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
               <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Detalle</th>
               <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Año</th>
               <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Mes</th>
+              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-red-600 uppercase tracking-wider whitespace-nowrap">🗑️</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-slate-100">
@@ -1477,6 +1505,23 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                   {/* Mes */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 text-center">
                     {mes}
+                  </td>
+                  
+                  {/* Delete */}
+                  <td className="px-2 py-2 whitespace-nowrap text-center">
+                    <button
+                      onClick={() => handleDeleteFlight(
+                        f.id, 
+                        pilotName, 
+                        fecha.toLocaleDateString('es-CL'),
+                        Number(f.costo || 0)
+                      )}
+                      disabled={deletingId === f.id}
+                      className="px-2 py-1 text-[10px] sm:text-xs bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-medium transition-colors disabled:opacity-50"
+                      title="Eliminar vuelo y revertir saldo/contadores"
+                    >
+                      {deletingId === f.id ? '...' : '✕'}
+                    </button>
                   </td>
                 </tr>
               );
