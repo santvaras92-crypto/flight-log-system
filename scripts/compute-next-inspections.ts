@@ -39,6 +39,28 @@ async function getLastTachForDetalle(keyword: string): Promise<number | null> {
   return ini != null ? ini : (fin != null && diff != null ? fin - diff : null);
 }
 
+// Oil change is also done during 100hr inspections, so find the most recent of either
+async function getLastOilChangeTach(): Promise<number | null> {
+  const flights = await prisma.flight.findMany({
+    where: {
+      OR: [
+        { detalle: { contains: 'CAMBIO DE ACEITE', mode: 'insensitive' } },
+        { detalle: { contains: 'REVISION 100 HRS', mode: 'insensitive' } },
+        { detalle: { contains: 'REVISION 100 HORAS', mode: 'insensitive' } },
+      ]
+    },
+    orderBy: { fecha: 'desc' },
+    take: 1,
+    select: { tach_inicio: true, tach_fin: true, diff_tach: true }
+  });
+  if (flights.length === 0) return null;
+  const flight = flights[0];
+  const ini = toNumber(flight.tach_inicio);
+  const fin = toNumber(flight.tach_fin);
+  const diff = toNumber(flight.diff_tach);
+  return ini != null ? ini : (fin != null && diff != null ? fin - diff : null);
+}
+
 async function main() {
   const OIL_INTERVAL = 50;
   const INSPECT_INTERVAL = 100;
@@ -49,7 +71,7 @@ async function main() {
     return;
   }
 
-  const oilTachBase = await getLastTachForDetalle('CAMBIO DE ACEITE');
+  const oilTachBase = await getLastOilChangeTach();
   const inspectTachBase = await getLastTachForDetalle('REVISION 100 HRS');
 
   const oilUsed = oilTachBase != null ? (currentTach - oilTachBase) : (currentTach % OIL_INTERVAL);
