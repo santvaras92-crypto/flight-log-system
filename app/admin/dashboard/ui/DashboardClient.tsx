@@ -2218,11 +2218,13 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
             <div className="flex gap-6">
               <div className="text-center">
                 <div className="text-2xl font-bold">{(weightedRate * 7).toFixed(1)}</div>
-                <div className="text-xs text-purple-200">hrs/semana</div>
+                <div className="text-xs text-purple-200">TACH/semana</div>
+                <div className="text-xs text-purple-300/70">≈{(weightedRate * 7 * 1.25).toFixed(1)} HOBBS</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold">{(weightedRate * 30).toFixed(1)}</div>
-                <div className="text-xs text-purple-200">hrs/mes</div>
+                <div className="text-xs text-purple-200">TACH/mes</div>
+                <div className="text-xs text-purple-300/70">≈{(weightedRate * 30 * 1.25).toFixed(1)} HOBBS</div>
               </div>
               <div className="text-center">
                 <div className={`text-2xl font-bold flex items-center gap-1 ${trend > 0 ? 'text-orange-300' : trend < 0 ? 'text-green-300' : ''}`}>
@@ -2235,15 +2237,18 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
           <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
             <div className="bg-white/10 rounded-lg p-3">
               <div className="text-purple-200 text-xs">Tasa 30 días</div>
-              <div className="font-mono font-bold">{(rate30d * 30).toFixed(1)} hrs/mes</div>
+              <div className="font-mono font-bold">{(rate30d * 30).toFixed(1)} TACH/mes</div>
+              <div className="text-purple-300/70 text-xs">≈{(rate30d * 30 * 1.25).toFixed(1)} HOBBS</div>
             </div>
             <div className="bg-white/10 rounded-lg p-3">
               <div className="text-purple-200 text-xs">Tasa 60 días</div>
-              <div className="font-mono font-bold">{((stats.rate60d || 0) * 30).toFixed(1)} hrs/mes</div>
+              <div className="font-mono font-bold">{((stats.rate60d || 0) * 30).toFixed(1)} TACH/mes</div>
+              <div className="text-purple-300/70 text-xs">≈{((stats.rate60d || 0) * 30 * 1.25).toFixed(1)} HOBBS</div>
             </div>
             <div className="bg-white/10 rounded-lg p-3">
               <div className="text-purple-200 text-xs">Tasa 90 días</div>
-              <div className="font-mono font-bold">{((stats.rate90d || 0) * 30).toFixed(1)} hrs/mes</div>
+              <div className="font-mono font-bold">{((stats.rate90d || 0) * 30).toFixed(1)} TACH/mes</div>
+              <div className="text-purple-300/70 text-xs">≈{((stats.rate90d || 0) * 30 * 1.25).toFixed(1)} HOBBS</div>
             </div>
           </div>
         </div>
