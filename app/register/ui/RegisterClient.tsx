@@ -517,7 +517,7 @@ export default function RegisterClient({
                         </thead>
                         <tbody className="bg-white">
                           <tr className="hover:bg-gray-50">
-                            <td className="border border-slate-300 px-2 py-2 text-center font-mono whitespace-nowrap">{fecha}</td>
+                            <td className="border border-slate-300 px-2 py-2 text-center font-mono whitespace-nowrap">{fecha.split('-').reverse().map((p, i) => i === 2 ? p.slice(-2) : p).join('-')}</td>
                             <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold">{hobbsFin}</td>
                             <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold text-blue-600">{deltaHobbs.toFixed(1)}</td>
                             <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold">{tachFin}</td>
