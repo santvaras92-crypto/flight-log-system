@@ -52,12 +52,12 @@ export default async function ValidacionPage() {
 
   // Process flight submissions with last counter values
   const flightsDto = await Promise.all(pendingFlights.map(async (s) => {
+    // Get the last approved flight by highest hobbs_fin (most recent actual flight)
     const lastFlight = await prisma.flight.findFirst({
       where: {
         aircraftId: s.Aircraft.matricula,
-        ...(s.fechaVuelo ? { fecha: { lte: s.fechaVuelo } } : {}),
       },
-      orderBy: { fecha: 'desc' },
+      orderBy: { hobbs_fin: 'desc' },
       select: { hobbs_fin: true, tach_fin: true },
     });
 
