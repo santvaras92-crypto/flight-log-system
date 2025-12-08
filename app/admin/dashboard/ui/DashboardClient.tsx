@@ -2206,49 +2206,49 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
     <div className="space-y-6">
       {/* Smart Predictions Header */}
       {stats && (
-        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-6 shadow-xl text-white">
+        <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 rounded-2xl p-6 shadow-xl text-white">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3">
               <span className="text-3xl">🔮</span>
               <div>
                 <h3 className="text-xl font-bold">Sistema Predictivo SMART</h3>
-                <p className="text-purple-200 text-sm">Análisis estadístico basado en los últimos 90 días</p>
+                <p className="text-indigo-200 text-sm">Análisis estadístico basado en los últimos 90 días</p>
               </div>
             </div>
             <div className="flex gap-6">
               <div className="text-center">
                 <div className="text-2xl font-bold">{(weightedRate * 7).toFixed(1)}</div>
-                <div className="text-xs text-purple-200">TACH/semana</div>
-                <div className="text-xs text-purple-300/70">≈{(weightedRate * 7 * 1.25).toFixed(1)} HOBBS</div>
+                <div className="text-xs text-indigo-200">TACH/semana</div>
+                <div className="text-xs text-indigo-300/70">≈{(weightedRate * 7 * 1.25).toFixed(1)} HOBBS</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold">{(weightedRate * 30).toFixed(1)}</div>
-                <div className="text-xs text-purple-200">TACH/mes</div>
-                <div className="text-xs text-purple-300/70">≈{(weightedRate * 30 * 1.25).toFixed(1)} HOBBS</div>
+                <div className="text-xs text-indigo-200">TACH/mes</div>
+                <div className="text-xs text-indigo-300/70">≈{(weightedRate * 30 * 1.25).toFixed(1)} HOBBS</div>
               </div>
               <div className="text-center">
                 <div className={`text-2xl font-bold flex items-center gap-1 ${trend > 0 ? 'text-orange-300' : trend < 0 ? 'text-green-300' : ''}`}>
                   {trend > 0 ? '↗️' : trend < 0 ? '↘️' : '→'} {Math.abs(trend).toFixed(0)}%
                 </div>
-                <div className="text-xs text-purple-200">tendencia</div>
+                <div className="text-xs text-indigo-200">tendencia</div>
               </div>
             </div>
           </div>
           <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
             <div className="bg-white/10 rounded-lg p-3">
-              <div className="text-purple-200 text-xs">Tasa 30 días</div>
+              <div className="text-indigo-200 text-xs">Tasa 30 días</div>
               <div className="font-mono font-bold">{(rate30d * 30).toFixed(1)} TACH/mes</div>
-              <div className="text-purple-300/70 text-xs">≈{(rate30d * 30 * 1.25).toFixed(1)} HOBBS</div>
+              <div className="text-indigo-300/70 text-xs">≈{(rate30d * 30 * 1.25).toFixed(1)} HOBBS</div>
             </div>
             <div className="bg-white/10 rounded-lg p-3">
-              <div className="text-purple-200 text-xs">Tasa 60 días</div>
+              <div className="text-indigo-200 text-xs">Tasa 60 días</div>
               <div className="font-mono font-bold">{((stats.rate60d || 0) * 30).toFixed(1)} TACH/mes</div>
-              <div className="text-purple-300/70 text-xs">≈{((stats.rate60d || 0) * 30 * 1.25).toFixed(1)} HOBBS</div>
+              <div className="text-indigo-300/70 text-xs">≈{((stats.rate60d || 0) * 30 * 1.25).toFixed(1)} HOBBS</div>
             </div>
             <div className="bg-white/10 rounded-lg p-3">
-              <div className="text-purple-200 text-xs">Tasa 90 días</div>
+              <div className="text-indigo-200 text-xs">Tasa 90 días</div>
               <div className="font-mono font-bold">{((stats.rate90d || 0) * 30).toFixed(1)} TACH/mes</div>
-              <div className="text-purple-300/70 text-xs">≈{((stats.rate90d || 0) * 30 * 1.25).toFixed(1)} HOBBS</div>
+              <div className="text-indigo-300/70 text-xs">≈{((stats.rate90d || 0) * 30 * 1.25).toFixed(1)} HOBBS</div>
             </div>
           </div>
         </div>
