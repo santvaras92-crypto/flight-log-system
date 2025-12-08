@@ -463,7 +463,10 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
           <div className={`rounded-lg border p-2 mb-2 ${getUrgencyColor(oilPred.days)}`}>
             <div className="flex items-center justify-between mb-1">
               <span className="text-[10px] sm:text-xs font-bold">🛢️ Aceite</span>
-              <span className="text-[10px] sm:text-xs font-mono">{oilRemaining.toFixed(1)} hrs</span>
+              <div className="text-right">
+                <span className="text-[10px] sm:text-xs font-mono">{oilRemaining.toFixed(1)} TACH</span>
+                <span className="text-[8px] sm:text-[10px] text-slate-500 ml-1">(≈{(oilRemaining * 1.25).toFixed(1)} HOBBS)</span>
+              </div>
             </div>
             {weightedRate > 0 && (
               <div className="space-y-0.5">
@@ -483,7 +486,10 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
           <div className={`rounded-lg border p-2 mb-2 ${getUrgencyColor(hundredPred.days)}`}>
             <div className="flex items-center justify-between mb-1">
               <span className="text-[10px] sm:text-xs font-bold">🔧 100 Hrs</span>
-              <span className="text-[10px] sm:text-xs font-mono">{hundredRemaining.toFixed(1)} hrs</span>
+              <div className="text-right">
+                <span className="text-[10px] sm:text-xs font-mono">{hundredRemaining.toFixed(1)} TACH</span>
+                <span className="text-[8px] sm:text-[10px] text-slate-500 ml-1">(≈{(hundredRemaining * 1.25).toFixed(1)} HOBBS)</span>
+              </div>
             </div>
             {weightedRate > 0 && (
               <div className="space-y-0.5">
