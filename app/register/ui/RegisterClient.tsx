@@ -83,6 +83,8 @@ export default function RegisterClient({
   const [aerodromoDestino, setAerodromoDestino] = useState<string>('SCCV');
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
   
   // Fuel form fields
   const [fuelLitros, setFuelLitros] = useState<string>('');
@@ -145,7 +147,41 @@ export default function RegisterClient({
     };
   }, [deltaTach, lastComponents]);
 
-  const onSubmit = async (formData: FormData) => {
+  // Handler for initial form submit - validates and shows modal for flights
+  const onFormSubmit = async (formData: FormData) => {
+    if (!pilotValue) return;
+    setFormError(null);
+    setFormSuccess(null);
+    
+    if (mode === 'flight') {
+      // Validar que los contadores cumplan con los mínimos
+      const hobbsVal = Number(hobbsFin);
+      const tachVal = Number(tachFin);
+      
+      // HOBBS: puede ser igual o mayor al último registrado
+      if (lastCounters.hobbs !== null && hobbsVal < lastCounters.hobbs) {
+        setFormError(`HOBBS Final debe ser mayor o igual a ${lastCounters.hobbs.toFixed(1)} (último registrado)`);
+        return;
+      }
+      
+      // TACH: debe ser estrictamente mayor al último registrado
+      if (lastCounters.tach !== null && tachVal <= lastCounters.tach) {
+        setFormError(`TACH Final debe ser mayor a ${lastCounters.tach.toFixed(1)} (último registrado)`);
+        return;
+      }
+      
+      // Show confirmation modal for flights
+      setPendingFormData(formData);
+      setShowConfirmModal(true);
+      return;
+    }
+    
+    // For fuel and deposit, submit directly
+    await executeSubmit(formData);
+  };
+
+  // Execute actual submission
+  const executeSubmit = async (formData: FormData) => {
     if (!pilotValue) return;
     setSubmitting(true);
     setFormError(null);
@@ -161,23 +197,8 @@ export default function RegisterClient({
       }
       
       if (mode === 'flight') {
-        // Validar que los contadores cumplan con los mínimos
         const hobbsVal = Number(hobbsFin);
         const tachVal = Number(tachFin);
-        
-        // HOBBS: puede ser igual o mayor al último registrado
-        if (lastCounters.hobbs !== null && hobbsVal < lastCounters.hobbs) {
-          setFormError(`HOBBS Final debe ser mayor o igual a ${lastCounters.hobbs.toFixed(1)} (último registrado)`);
-          setSubmitting(false);
-          return;
-        }
-        
-        // TACH: debe ser estrictamente mayor al último registrado
-        if (lastCounters.tach !== null && tachVal <= lastCounters.tach) {
-          setFormError(`TACH Final debe ser mayor a ${lastCounters.tach.toFixed(1)} (último registrado)`);
-          setSubmitting(false);
-          return;
-        }
         
         console.log('Creating flight submission:', { resolvedPilotId, fecha, hobbsFin, tachFin, aerodromoSalida, aerodromoDestino });
         const result = await createFlightSubmission({
@@ -336,7 +357,7 @@ export default function RegisterClient({
             </label>
           </div>
 
-          <form id="registro-form" action={onSubmit} className="space-y-4">
+          <form id="registro-form" action={onFormSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <label className="flex flex-col text-sm">
                 <span className="mb-1 font-medium">Fecha</span>
@@ -658,6 +679,131 @@ export default function RegisterClient({
           )}
         </div>
       </div>
+
+      {/* Modal de confirmación para vuelos */}
+      {showConfirmModal && deltaHobbs !== null && deltaTach !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b bg-slate-100 rounded-t-2xl">
+              <h2 className="text-xl font-bold text-slate-800 flex items-center gap-3">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                CONFIRMAR REGISTRO DE VUELO
+              </h2>
+              <p className="text-sm text-slate-600 mt-1">Revisa los datos antes de enviar a validación.</p>
+            </div>
+            
+            <div className="p-6">
+              <div className="rounded-xl border-2 border-blue-500 bg-blue-50 p-4 mb-6">
+                <h3 className="text-sm font-bold text-blue-900 mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  VISTA PREVIA - BITÁCORA CC-AQI
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-700 text-white">
+                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>DATE</th>
+                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>HOBBS</th>
+                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>BLOCK<br/>TIME</th>
+                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>TAC</th>
+                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>TACH.<br/>TIME</th>
+                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" colSpan={3}>TOTAL TIME IN SERVICE</th>
+                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>PILOT</th>
+                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>INSTRUCTOR/<br/>COPILOT</th>
+                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>ROUTE</th>
+                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>REMARKS<br/>SIGNATURE</th>
+                      </tr>
+                      <tr className="bg-slate-700 text-white">
+                        <th className="border border-slate-400 px-2 py-1 text-center text-[10px]">AIRFRAME</th>
+                        <th className="border border-slate-400 px-2 py-1 text-center text-[10px]">ENGINE</th>
+                        <th className="border border-slate-400 px-2 py-1 text-center text-[10px]">PROPELLER</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white">
+                      <tr className="hover:bg-gray-50">
+                        <td className="border border-slate-300 px-2 py-2 text-center font-mono whitespace-nowrap">{fecha.split('-').reverse().map((p, i) => i === 2 ? p.slice(-2) : p).join('-')}</td>
+                        <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold">{hobbsFin}</td>
+                        <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold text-blue-600">{deltaHobbs.toFixed(1)}</td>
+                        <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold">{tachFin}</td>
+                        <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold text-blue-600">{deltaTach.toFixed(1)}</td>
+                        <td className="border border-slate-300 px-2 py-2 text-center font-mono">{newComponents?.airframe?.toFixed(1) || '--'}</td>
+                        <td className="border border-slate-300 px-2 py-2 text-center font-mono">{newComponents?.engine?.toFixed(1) || '--'}</td>
+                        <td className="border border-slate-300 px-2 py-2 text-center font-mono">{newComponents?.propeller?.toFixed(1) || '--'}</td>
+                        <td className="border border-slate-300 px-2 py-2 text-center">{selectedPilot?.label.split('(')[0]?.trim() || '--'}</td>
+                        <td className="border border-slate-300 px-2 py-2 text-center">{copiloto || '--'}</td>
+                        <td className="border border-slate-300 px-2 py-2 text-center font-mono">{aerodromoSalida || 'SCCV'}-{aerodromoDestino || 'SCCV'}</td>
+                        <td className="border border-slate-300 px-2 py-2 text-center text-[10px]">{detalle || 'S/Obs'}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-xs text-blue-700 mt-3">
+                  Base A/E/P: {lastComponents.airframe?.toFixed(1) || 'N/A'} / {lastComponents.engine?.toFixed(1) || 'N/A'} / {lastComponents.propeller?.toFixed(1) || 'N/A'} 
+                  &nbsp;| Δ Tach: {deltaTach.toFixed(1)} | Δ Hobbs: {deltaHobbs.toFixed(1)}
+                </p>
+              </div>
+
+              {/* Ratio warning in modal if applicable */}
+              {ratioWarning && (
+                <div className="mb-6 rounded-xl p-4 bg-red-50 border-2 border-red-400">
+                  <div className="flex items-start gap-3">
+                    <svg className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-bold text-red-900 mb-1">⚠️ RATIO HOBBS/TACH FUERA DE RANGO</h4>
+                      <p className="text-sm text-red-800">
+                        Ratio: <strong className="font-mono">{ratioWarning.ratio.toFixed(2)}x</strong> (esperado: 1.30x ± 0.20)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-col-reverse sm:flex-row gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowConfirmModal(false);
+                    setPendingFormData(null);
+                  }}
+                  className="px-6 py-3 rounded-xl border-2 border-slate-300 bg-slate-100 text-slate-700 font-medium hover:bg-slate-200 transition-colors"
+                >
+                  ← Volver
+                </button>
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={async () => {
+                    if (pendingFormData) {
+                      await executeSubmit(pendingFormData);
+                      setShowConfirmModal(false);
+                      setPendingFormData(null);
+                    }
+                  }}
+                  className="px-6 py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {submitting ? (
+                    <>
+                      <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Enviando...
+                    </>
+                  ) : (
+                    <>✓ Confirmar y Enviar</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
