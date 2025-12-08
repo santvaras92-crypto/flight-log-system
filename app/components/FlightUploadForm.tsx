@@ -92,16 +92,16 @@ export default function FlightUploadForm({
     return isNaN(val) || val <= 0 ? null : Number(val.toFixed(1));
   }, [tachManual, lastCounters.tach]);
 
-  // Verificar relación Hobbs/Tach (~1.3x con margen de 20%)
+  // Verificar relación Hobbs/Tach (~1.25x basado en análisis de 1,328 vuelos)
   const ratioWarning = useMemo(() => {
     if (deltaHobbs === null || deltaTach === null || deltaTach === 0) return null;
     const ratio = deltaHobbs / deltaTach;
-    // Esperado: 1.3 con margen de 20% (entre 1.04 y 1.56)
-    if (ratio < 1.04 || ratio > 1.56) {
+    // Esperado: 1.25 (rango P5-P95: 1.00 - 1.70)
+    if (ratio < 1.00 || ratio > 1.70) {
       return {
         ratio: ratio.toFixed(2),
-        expected: "~1.3",
-        message: ratio < 1.04 
+        expected: "~1.25",
+        message: ratio < 1.00 
           ? "Δ Hobbs parece bajo respecto a Δ Tach" 
           : "Δ Hobbs parece alto respecto a Δ Tach"
       };

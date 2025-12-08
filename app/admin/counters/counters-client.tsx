@@ -210,7 +210,7 @@ export default function CountersClient({
           <div className="mb-6">
             {(() => {
               const ratio = parseFloat(deltaHobbs) / parseFloat(deltaTach);
-              const inRange = ratio >= 1.1 && ratio <= 1.5;
+              const inRange = ratio >= 1.00 && ratio <= 1.70;
               
               return (
                 <div className={`rounded-lg p-4 border-2 ${inRange ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500'}`}>
@@ -230,8 +230,8 @@ export default function CountersClient({
                   </div>
                   <p className={`text-xs ${inRange ? 'text-green-800' : 'text-red-800'}`}>
                     {inRange 
-                      ? 'El ratio está dentro del rango esperado (1.10 - 1.50)'
-                      : 'El ratio está fuera del rango esperado (1.10 - 1.50). Verifica los valores.'}
+                      ? 'El ratio está dentro del rango esperado (1.00 - 1.70)'
+                      : 'El ratio está fuera del rango esperado (1.00 - 1.70). Verifica los valores.'}
                   </p>
                 </div>
               );

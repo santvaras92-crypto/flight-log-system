@@ -113,19 +113,18 @@ export default function RegisterClient({
     return isNaN(val) || val <= 0 ? null : Number(val.toFixed(1));
   }, [mode, tachFin, lastCounters.tach]);
 
-  // Validar ratio entre deltaHobbs y deltaTach (esperado: ~1.3x)
+  // Validar ratio entre deltaHobbs y deltaTach (esperado: ~1.25x basado en análisis de 1,328 vuelos)
   const hobbsTachRatio = useMemo(() => {
     if (deltaHobbs === null || deltaTach === null || deltaTach === 0) return null;
     return deltaHobbs / deltaTach;
   }, [deltaHobbs, deltaTach]);
 
-  // El ratio esperado es 1.3 ± 0.2 (rango: 1.1 - 1.5)
+  // El ratio esperado es 1.25 (rango P5-P95: 1.00 - 1.70)
   const ratioWarning = useMemo(() => {
     if (hobbsTachRatio === null) return null;
-    const expectedRatio = 1.3;
-    const tolerance = 0.2;
-    const minRatio = expectedRatio - tolerance;
-    const maxRatio = expectedRatio + tolerance;
+    const expectedRatio = 1.25;
+    const minRatio = 1.00;
+    const maxRatio = 1.70;
     
     if (hobbsTachRatio < minRatio || hobbsTachRatio > maxRatio) {
       return {
@@ -515,7 +514,7 @@ export default function RegisterClient({
                             {' '}(Δ HOBBS: {deltaHobbs?.toFixed(1)} hrs ÷ Δ TACH: {deltaTach?.toFixed(1)} hrs)
                           </p>
                           <p className="text-sm text-red-800">
-                            Se espera un ratio de aproximadamente <strong className="font-mono">1.30x ± 0.20</strong> (rango: 1.10 - 1.50).
+                            Se espera un ratio de aproximadamente <strong className="font-mono">1.25x</strong> (rango: 1.00 - 1.70).
                             Por favor verifica que los valores ingresados sean correctos.
                           </p>
                         </div>
@@ -757,7 +756,7 @@ export default function RegisterClient({
                     <div className="flex-1">
                       <h4 className="text-sm font-bold text-red-900 mb-1">⚠️ RATIO HOBBS/TACH FUERA DE RANGO</h4>
                       <p className="text-sm text-red-800">
-                        Ratio: <strong className="font-mono">{ratioWarning.ratio.toFixed(2)}x</strong> (esperado: 1.30x ± 0.20)
+                        Ratio: <strong className="font-mono">{ratioWarning.ratio.toFixed(2)}x</strong> (esperado: 1.25x, rango 1.00-1.70)
                       </p>
                     </div>
                   </div>
