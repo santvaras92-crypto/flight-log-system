@@ -161,12 +161,30 @@ export default function RegisterClient({
       }
       
       if (mode === 'flight') {
+        // Validar que los contadores cumplan con los mínimos
+        const hobbsVal = Number(hobbsFin);
+        const tachVal = Number(tachFin);
+        
+        // HOBBS: puede ser igual o mayor al último registrado
+        if (lastCounters.hobbs !== null && hobbsVal < lastCounters.hobbs) {
+          setFormError(`HOBBS Final debe ser mayor o igual a ${lastCounters.hobbs.toFixed(1)} (último registrado)`);
+          setSubmitting(false);
+          return;
+        }
+        
+        // TACH: debe ser estrictamente mayor al último registrado
+        if (lastCounters.tach !== null && tachVal <= lastCounters.tach) {
+          setFormError(`TACH Final debe ser mayor a ${lastCounters.tach.toFixed(1)} (último registrado)`);
+          setSubmitting(false);
+          return;
+        }
+        
         console.log('Creating flight submission:', { resolvedPilotId, fecha, hobbsFin, tachFin, aerodromoSalida, aerodromoDestino });
         const result = await createFlightSubmission({
           pilotoId: resolvedPilotId,
           fecha,
-          hobbs_fin: Number(hobbsFin) || NaN,
-          tach_fin: Number(tachFin) || NaN,
+          hobbs_fin: hobbsVal || NaN,
+          tach_fin: tachVal || NaN,
           copiloto: copiloto || undefined,
           detalle: detalle || undefined,
           aerodromoSalida: aerodromoSalida || 'SCCV',
@@ -426,8 +444,8 @@ export default function RegisterClient({
                         step="0.1"
                         value={hobbsFin}
                         onChange={(e) => setHobbsFin(e.target.value)}
-                        min={lastCounters.hobbs !== null ? lastCounters.hobbs + 0.1 : 0}
-                        placeholder={lastCounters.hobbs !== null ? `Mayor a ${lastCounters.hobbs.toFixed(1)}` : "Ej: 2058.5"}
+                        min={lastCounters.hobbs !== null ? lastCounters.hobbs : 0}
+                        placeholder={lastCounters.hobbs !== null ? `≥ ${lastCounters.hobbs.toFixed(1)}` : "Ej: 2058.5"}
                         required
                         className="w-full rounded-xl border px-3 py-3 bg-white font-mono font-bold text-lg"
                       />
