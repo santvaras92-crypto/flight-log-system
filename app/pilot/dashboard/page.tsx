@@ -357,7 +357,8 @@ export default async function PilotDashboardPage() {
   const totalFuel = totalFuelDB + totalFuelCSV;
 
   // Balance = Deposits - Flight Costs - Fuel (igual que Flight Log Entries)
-  const balance = totalDeposits - totalFlightCost - totalFuel;
+  // Balance = Deposits - Flight Costs + Fuel (créditos de combustible suman al balance)
+  const balance = totalDeposits - totalFlightCost + totalFuel;
 
   // This month stats
   const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
