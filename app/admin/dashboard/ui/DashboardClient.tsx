@@ -54,6 +54,17 @@ type OverviewMetrics = {
       stdDev: number;  // standard deviation
     };
   };
+  annualStats?: {
+    hoursThisYear: number;
+    hoursPrevYear: number;
+    hoursTrend: number;
+    avgMonthlyHoursThisYear: number;
+    avgMonthlyHoursPrevYear: number;
+    avgHoursTrend: number;
+    avgMonthlyFlightsThisYear: number;
+    avgMonthlyFlightsPrevYear: number;
+    flightsTrend: number;
+  };
 };
 
 export default function DashboardClient({ initialData, overviewMetrics, pagination, allowedPilotCodes, registeredPilotCodes, csvPilotNames }: { initialData: InitialData; overviewMetrics?: OverviewMetrics; pagination?: PaginationInfo; allowedPilotCodes?: string[]; registeredPilotCodes?: string[]; csvPilotNames?: Record<string, string> }) {
@@ -82,12 +93,18 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
     const saved = localStorage.getItem('overview-card-order');
     if (saved) {
       try {
-        setCardOrder(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        // Ensure annualStats is included if not present
+        if (!parsed.includes('annualStats')) {
+          parsed.push('annualStats');
+          localStorage.setItem('overview-card-order', JSON.stringify(parsed));
+        }
+        setCardOrder(parsed);
       } catch {
-        setCardOrder(['fuelRate', 'totalHours', 'totalFlights', 'nextInspections', 'fuelConsumed', 'activePilots', 'pendingBalance', 'thisMonth', 'avgFlightTime']);
+        setCardOrder(['fuelRate', 'totalHours', 'totalFlights', 'nextInspections', 'fuelConsumed', 'activePilots', 'pendingBalance', 'thisMonth', 'avgFlightTime', 'annualStats']);
       }
     } else {
-      setCardOrder(['fuelRate', 'totalHours', 'totalFlights', 'nextInspections', 'fuelConsumed', 'activePilots', 'pendingBalance', 'thisMonth', 'avgFlightTime']);
+      setCardOrder(['fuelRate', 'totalHours', 'totalFlights', 'nextInspections', 'fuelConsumed', 'activePilots', 'pendingBalance', 'thisMonth', 'avgFlightTime', 'annualStats']);
     }
   }, []);
 
@@ -569,6 +586,133 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">{overviewMetrics.totalHours.toLocaleString('es-CL', { minimumFractionDigits: 1 })} ÷ {overviewMetrics.totalFlights.toLocaleString('es-CL')}</p>
       </div>
     ),
+    annualStats: (() => {
+      const stats = overviewMetrics?.annualStats;
+      if (!stats) return null;
+      
+      const HOBBS_TACH_RATIO = 1.25;
+      const hoursThisYearHobbs = stats.hoursThisYear * HOBBS_TACH_RATIO;
+      const hoursPrevYearHobbs = stats.hoursPrevYear * HOBBS_TACH_RATIO;
+      const avgMonthlyHoursThisYearHobbs = stats.avgMonthlyHoursThisYear * HOBBS_TACH_RATIO;
+      const avgMonthlyHoursPrevYearHobbs = stats.avgMonthlyHoursPrevYear * HOBBS_TACH_RATIO;
+      
+      // Calculate max values for bar scaling
+      const maxHours = Math.max(hoursThisYearHobbs, hoursPrevYearHobbs);
+      const maxAvgHours = Math.max(avgMonthlyHoursThisYearHobbs, avgMonthlyHoursPrevYearHobbs);
+      const maxFlights = Math.max(stats.avgMonthlyFlightsThisYear, stats.avgMonthlyFlightsPrevYear);
+      
+      const renderTrend = (value: number) => (
+        <div className={`flex items-center gap-1 text-xs font-semibold ${value >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+          <span>{value >= 0 ? '↗' : '↘'}</span>
+          <span>{value >= 0 ? '+' : ''}{value.toFixed(1)}%</span>
+        </div>
+      );
+      
+      const renderBar = (current: number, max: number, color: string, isPrevious = false) => {
+        const pct = max > 0 ? (current / max) * 100 : 0;
+        return (
+          <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
+            <div 
+              className={`h-full rounded-full transition-all ${isPrevious ? 'bg-slate-400' : color}`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        );
+      };
+      
+      return (
+        <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] lg:overflow-y-auto flex flex-col col-span-2 lg:col-span-3`}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide">Annual Statistics</h3>
+              <p className="text-[9px] sm:text-[10px] text-slate-400">Rolling 365 days</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 flex-1">
+            {/* Total Hours */}
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">🕐</span>
+                <span className="text-xs sm:text-sm font-semibold text-slate-700 uppercase tracking-wide">Total Horas</span>
+              </div>
+              <div className="text-xl sm:text-2xl font-bold text-slate-900">
+                {hoursThisYearHobbs.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-sm text-slate-500">HOBBS</span>
+              </div>
+              <div className="text-xs text-slate-500 mb-2">
+                ≈ {stats.hoursThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} TACH
+              </div>
+              <div className="space-y-1.5 mt-auto">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-slate-500 w-14">Este año</span>
+                  {renderBar(hoursThisYearHobbs, maxHours, 'bg-violet-500')}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-slate-400 w-14">Anterior</span>
+                  {renderBar(hoursPrevYearHobbs, maxHours, 'bg-slate-400', true)}
+                </div>
+              </div>
+              <div className="mt-2">{renderTrend(stats.hoursTrend)}</div>
+            </div>
+            
+            {/* Monthly Average Hours */}
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">📈</span>
+                <span className="text-xs sm:text-sm font-semibold text-slate-700 uppercase tracking-wide">Prom. Mensual</span>
+              </div>
+              <div className="text-xl sm:text-2xl font-bold text-slate-900">
+                {avgMonthlyHoursThisYearHobbs.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-sm text-slate-500">hrs/mes</span>
+              </div>
+              <div className="text-xs text-slate-500 mb-2">
+                ≈ {stats.avgMonthlyHoursThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} TACH/mes
+              </div>
+              <div className="space-y-1.5 mt-auto">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-slate-500 w-14">Este año</span>
+                  {renderBar(avgMonthlyHoursThisYearHobbs, maxAvgHours, 'bg-emerald-500')}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-slate-400 w-14">Anterior</span>
+                  {renderBar(avgMonthlyHoursPrevYearHobbs, maxAvgHours, 'bg-slate-400', true)}
+                </div>
+              </div>
+              <div className="mt-2">{renderTrend(stats.avgHoursTrend)}</div>
+            </div>
+            
+            {/* Monthly Flights */}
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">✈️</span>
+                <span className="text-xs sm:text-sm font-semibold text-slate-700 uppercase tracking-wide">Vuelos/Mes</span>
+              </div>
+              <div className="text-xl sm:text-2xl font-bold text-slate-900">
+                {stats.avgMonthlyFlightsThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-sm text-slate-500">vuelos/mes</span>
+              </div>
+              <div className="text-xs text-slate-500 mb-2">
+                {(stats.avgMonthlyFlightsThisYear * 12).toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} vuelos/año
+              </div>
+              <div className="space-y-1.5 mt-auto">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-slate-500 w-14">Este año</span>
+                  {renderBar(stats.avgMonthlyFlightsThisYear, maxFlights, 'bg-sky-500')}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-slate-400 w-14">Anterior</span>
+                  {renderBar(stats.avgMonthlyFlightsPrevYear, maxFlights, 'bg-slate-400', true)}
+                </div>
+              </div>
+              <div className="mt-2">{renderTrend(stats.flightsTrend)}</div>
+            </div>
+          </div>
+        </div>
+      );
+    })(),
   } : {};
 
   return (

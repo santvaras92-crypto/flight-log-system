@@ -341,12 +341,18 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       const prevThirtyStart = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
       const prevThirtyEnd = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       
+      // === ANNUAL STATISTICS (Rolling 365 days) ===
+      const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+      const twoYearsAgo = new Date(now.getTime() - 730 * 24 * 60 * 60 * 1000);
+      
       // Get flights for each period
-      const [flights30d, flights60d, flights90d, flightsPrev30d] = await Promise.all([
+      const [flights30d, flights60d, flights90d, flightsPrev30d, flightsThisYear, flightsPrevYear] = await Promise.all([
         prisma.flight.findMany({ where: { fecha: { gte: thirtyDaysAgo } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true, fecha: true } }),
         prisma.flight.findMany({ where: { fecha: { gte: sixtyDaysAgo } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true } }),
         prisma.flight.findMany({ where: { fecha: { gte: ninetyDaysAgo } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true } }),
         prisma.flight.findMany({ where: { fecha: { gte: prevThirtyStart, lt: prevThirtyEnd } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true } }),
+        prisma.flight.findMany({ where: { fecha: { gte: oneYearAgo } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true } }),
+        prisma.flight.findMany({ where: { fecha: { gte: twoYearsAgo, lt: oneYearAgo } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true } }),
       ]);
       
       // Calculate TACH hours for each period
@@ -399,6 +405,25 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       const variance = dailyHours.reduce((sum, h) => sum + Math.pow(h - mean, 2), 0) / dailyHours.length;
       const stdDev = Math.sqrt(variance);
       
+      // === ANNUAL STATISTICS CALCULATIONS ===
+      const hoursThisYear = computeTachHours(flightsThisYear);
+      const hoursPrevYear = computeTachHours(flightsPrevYear);
+      const flightsCountThisYear = flightsThisYear.length;
+      const flightsCountPrevYear = flightsPrevYear.length;
+      
+      // Monthly averages (TACH hours / 12 months)
+      const avgMonthlyHoursThisYear = hoursThisYear / 12;
+      const avgMonthlyHoursPrevYear = hoursPrevYear / 12;
+      
+      // Monthly flight counts
+      const avgMonthlyFlightsThisYear = flightsCountThisYear / 12;
+      const avgMonthlyFlightsPrevYear = flightsCountPrevYear / 12;
+      
+      // Trend percentages
+      const hoursTrend = hoursPrevYear > 0 ? ((hoursThisYear - hoursPrevYear) / hoursPrevYear) * 100 : 0;
+      const avgHoursTrend = avgMonthlyHoursPrevYear > 0 ? ((avgMonthlyHoursThisYear - avgMonthlyHoursPrevYear) / avgMonthlyHoursPrevYear) * 100 : 0;
+      const flightsTrend = avgMonthlyFlightsPrevYear > 0 ? ((avgMonthlyFlightsThisYear - avgMonthlyFlightsPrevYear) / avgMonthlyFlightsPrevYear) * 100 : 0;
+      
       // Calculate total payments (CSV + DB deposits)
       const totalPayments = paymentsFromCSV + Number(depositsFromDB._sum.monto || 0);
       
@@ -431,6 +456,17 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
             trend: Number(trend.toFixed(1)),
             stdDev: Number(stdDev.toFixed(3)),
           },
+        },
+        annualStats: {
+          hoursThisYear: Number(hoursThisYear.toFixed(1)),
+          hoursPrevYear: Number(hoursPrevYear.toFixed(1)),
+          hoursTrend: Number(hoursTrend.toFixed(1)),
+          avgMonthlyHoursThisYear: Number(avgMonthlyHoursThisYear.toFixed(1)),
+          avgMonthlyHoursPrevYear: Number(avgMonthlyHoursPrevYear.toFixed(1)),
+          avgHoursTrend: Number(avgHoursTrend.toFixed(1)),
+          avgMonthlyFlightsThisYear: Number(avgMonthlyFlightsThisYear.toFixed(1)),
+          avgMonthlyFlightsPrevYear: Number(avgMonthlyFlightsPrevYear.toFixed(1)),
+          flightsTrend: Number(flightsTrend.toFixed(1)),
         },
       };
     })(),
