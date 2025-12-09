@@ -53,10 +53,10 @@ export default async function RegistroPage() {
     a.label.localeCompare(b.label, 'es', { sensitivity: 'base' })
   );
 
-  // Obtener los últimos contadores Hobbs y Tach del vuelo más reciente para CC-AQI
+  // Obtener los últimos contadores Hobbs y Tach del vuelo con mayor HOBBS para CC-AQI
   const lastFlight = await prisma.flight.findFirst({
-    where: { aircraftId: "CC-AQI" },
-    orderBy: [{ fecha: "desc" }, { createdAt: "desc" }],
+    where: { aircraftId: "CC-AQI", hobbs_fin: { not: null } },
+    orderBy: { hobbs_fin: "desc" },
     select: { 
       hobbs_fin: true, 
       tach_fin: true,
