@@ -586,9 +586,9 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">{overviewMetrics.totalHours.toLocaleString('es-CL', { minimumFractionDigits: 1 })} ÷ {overviewMetrics.totalFlights.toLocaleString('es-CL')}</p>
       </div>
     ),
+    ...(overviewMetrics?.annualStats ? {
     annualStats: (() => {
-      const stats = overviewMetrics?.annualStats;
-      if (!stats) return null;
+      const stats = overviewMetrics.annualStats;
       
       const HOBBS_TACH_RATIO = 1.25;
       const hoursThisYearHobbs = stats.hoursThisYear * HOBBS_TACH_RATIO;
@@ -712,7 +712,8 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           </div>
         </div>
       );
-    })(),
+    })()
+    } : {}),
   } : {};
 
   return (
