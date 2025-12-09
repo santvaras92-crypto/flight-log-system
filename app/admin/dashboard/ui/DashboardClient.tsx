@@ -419,7 +419,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               <span className="text-[10px] sm:text-xs font-bold">🛢️ Aceite</span>
               <div className="text-right">
                 <span className="text-[10px] sm:text-xs font-mono">{oilRemaining.toFixed(1)} TACH</span>
-                <span className="text-[8px] sm:text-[10px] text-slate-500 ml-1">(≈{(oilRemaining * 1.25).toFixed(1)} HOBBS)</span>
+                <span className="text-[8px] sm:text-[10px] text-slate-500 ml-1">(≈{(oilRemaining * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS)</span>
               </div>
             </div>
             {weightedRate > 0 && (
@@ -442,7 +442,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               <span className="text-[10px] sm:text-xs font-bold">🔧 100 Hrs</span>
               <div className="text-right">
                 <span className="text-[10px] sm:text-xs font-mono">{hundredRemaining.toFixed(1)} TACH</span>
-                <span className="text-[8px] sm:text-[10px] text-slate-500 ml-1">(≈{(hundredRemaining * 1.25).toFixed(1)} HOBBS)</span>
+                <span className="text-[8px] sm:text-[10px] text-slate-500 ml-1">(≈{(hundredRemaining * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS)</span>
               </div>
             </div>
             {weightedRate > 0 && (
@@ -2375,12 +2375,12 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
               <div className="text-center">
                 <div className="text-2xl font-bold">{(weightedRate * 7).toFixed(1)}</div>
                 <div className="text-xs text-indigo-200">TACH/semana</div>
-                <div className="text-xs text-indigo-300/70">≈{(weightedRate * 7 * 1.25).toFixed(1)} HOBBS</div>
+                <div className="text-xs text-indigo-300/70">≈{(weightedRate * 7 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold">{(weightedRate * 30).toFixed(1)}</div>
                 <div className="text-xs text-indigo-200">TACH/mes</div>
-                <div className="text-xs text-indigo-300/70">≈{(weightedRate * 30 * 1.25).toFixed(1)} HOBBS</div>
+                <div className="text-xs text-indigo-300/70">≈{(weightedRate * 30 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS</div>
               </div>
               <div className="text-center">
                 <div className={`text-2xl font-bold flex items-center gap-1 ${trend > 0 ? 'text-orange-300' : trend < 0 ? 'text-green-300' : ''}`}>
@@ -2394,17 +2394,17 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
             <div className="bg-white/10 rounded-lg p-3">
               <div className="text-indigo-200 text-xs">Tasa 30 días</div>
               <div className="font-mono font-bold">{(rate30d * 30).toFixed(1)} TACH/mes</div>
-              <div className="text-indigo-300/70 text-xs">≈{(rate30d * 30 * 1.25).toFixed(1)} HOBBS</div>
+              <div className="text-indigo-300/70 text-xs">≈{(rate30d * 30 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS</div>
             </div>
             <div className="bg-white/10 rounded-lg p-3">
               <div className="text-indigo-200 text-xs">Tasa 60 días</div>
               <div className="font-mono font-bold">{((stats.rate60d || 0) * 30).toFixed(1)} TACH/mes</div>
-              <div className="text-indigo-300/70 text-xs">≈{((stats.rate60d || 0) * 30 * 1.25).toFixed(1)} HOBBS</div>
+              <div className="text-indigo-300/70 text-xs">≈{((stats.rate60d || 0) * 30 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS</div>
             </div>
             <div className="bg-white/10 rounded-lg p-3">
               <div className="text-indigo-200 text-xs">Tasa 90 días</div>
               <div className="font-mono font-bold">{((stats.rate90d || 0) * 30).toFixed(1)} TACH/mes</div>
-              <div className="text-indigo-300/70 text-xs">≈{((stats.rate90d || 0) * 30 * 1.25).toFixed(1)} HOBBS</div>
+              <div className="text-indigo-300/70 text-xs">≈{((stats.rate90d || 0) * 30 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS</div>
             </div>
           </div>
         </div>
@@ -2442,7 +2442,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
                   </div>
                   <div className="text-right">
                     <div className={`text-2xl font-bold font-mono ${urgency.text}`}>{item.remaining.toFixed(1)} <span className="text-base">TACH</span></div>
-                    <div className="text-sm text-slate-600 font-mono">(≈{(item.remaining * 1.25).toFixed(1)} HOBBS)</div>
+                    <div className="text-sm text-slate-600 font-mono">(≈{(item.remaining * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS)</div>
                     <div className="text-xs text-slate-500">horas restantes</div>
                   </div>
                 </div>

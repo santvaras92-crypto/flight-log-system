@@ -63,6 +63,7 @@ type PilotData = {
       trend: number;
       stdDev: number;
     };
+    hobbsTachRatio: number;
   };
 };
 
@@ -465,7 +466,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
               <span className="text-[10px] sm:text-xs font-bold">🛢️ Aceite</span>
               <div className="text-right">
                 <span className="text-[10px] sm:text-xs font-mono">{oilRemaining.toFixed(1)} TACH</span>
-                <span className="text-[8px] sm:text-[10px] text-slate-500 ml-1">(≈{(oilRemaining * 1.25).toFixed(1)} HOBBS)</span>
+                <span className="text-[8px] sm:text-[10px] text-slate-500 ml-1">(≈{(oilRemaining * (data.metrics.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS)</span>
               </div>
             </div>
             {weightedRate > 0 && (
@@ -488,7 +489,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
               <span className="text-[10px] sm:text-xs font-bold">🔧 100 Hrs</span>
               <div className="text-right">
                 <span className="text-[10px] sm:text-xs font-mono">{hundredRemaining.toFixed(1)} TACH</span>
-                <span className="text-[8px] sm:text-[10px] text-slate-500 ml-1">(≈{(hundredRemaining * 1.25).toFixed(1)} HOBBS)</span>
+                <span className="text-[8px] sm:text-[10px] text-slate-500 ml-1">(≈{(hundredRemaining * (data.metrics.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS)</span>
               </div>
             </div>
             {weightedRate > 0 && (

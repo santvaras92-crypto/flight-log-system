@@ -175,12 +175,14 @@ export default async function PilotDashboardPage() {
   const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
   const prevThirtyStart = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
   const prevThirtyEnd = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
   
-  const [flights30d, flights60d, flights90d, flightsPrev30d] = await Promise.all([
+  const [flights30d, flights60d, flights90d, flightsPrev30d, flightsThisYear] = await Promise.all([
     prisma.flight.findMany({ where: { fecha: { gte: thirtyDaysAgo } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true, fecha: true } }),
     prisma.flight.findMany({ where: { fecha: { gte: sixtyDaysAgo } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true } }),
     prisma.flight.findMany({ where: { fecha: { gte: ninetyDaysAgo } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true } }),
     prisma.flight.findMany({ where: { fecha: { gte: prevThirtyStart, lt: prevThirtyEnd } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true } }),
+    prisma.flight.findMany({ where: { fecha: { gte: oneYearAgo } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true, diff_hobbs: true } }),
   ]);
   
   const computeTachHours = (flights: { diff_tach: any; tach_inicio: any; tach_fin: any }[]) => {
@@ -199,6 +201,15 @@ export default async function PilotDashboardPage() {
   const hours60d = computeTachHours(flights60d);
   const hours90d = computeTachHours(flights90d);
   const hoursPrev30d = computeTachHours(flightsPrev30d);
+  
+  // Calculate HOBBS/TACH ratio from last 365 days
+  const tachThisYear = computeTachHours(flightsThisYear);
+  let hobbsThisYear = 0;
+  for (const f of flightsThisYear) {
+    const dh = toNumber((f as any).diff_hobbs);
+    if (dh !== null && !isNaN(dh) && dh > 0) hobbsThisYear += dh;
+  }
+  const hobbsTachRatio = tachThisYear > 0 ? hobbsThisYear / tachThisYear : 1.25;
   
   const rate30d = hours30d / 30;
   const rate60d = hours60d / 60;
@@ -420,6 +431,7 @@ export default async function PilotDashboardPage() {
         trend: Number(trend.toFixed(1)),
         stdDev: Number(stdDev.toFixed(3)),
       },
+      hobbsTachRatio: Number(hobbsTachRatio.toFixed(2)),
     }
   };
 
