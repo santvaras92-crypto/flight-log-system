@@ -346,6 +346,7 @@ export default async function PilotDashboardPage() {
   } catch {}
 
   // Calculate totals
+
   const totalFlightHours = pilotFlights.reduce((sum, f) => sum + (Number(f.diff_hobbs) || 0), 0);
   const totalFlightCost = pilotFlights.reduce((sum, f) => sum + (Number(f.costo) || 0), 0);
   const totalDepositsDB = pilotDeposits.reduce((sum, d) => sum + (Number(d.monto) || 0), 0);
@@ -355,10 +356,8 @@ export default async function PilotDashboardPage() {
   const totalFuelCSV = csvFuel.reduce((sum, f) => sum + f.monto, 0);
   const totalFuel = totalFuelDB + totalFuelCSV;
 
-  // Balance = Deposits - Flight Costs - Fuel (fuel is already debited from account)
-  // Actually fuel charges are deducted from balance, so:
-  // Balance = Deposits - Flight Costs  (fuel is already included in the account balance on DB)
-  const balance = totalDeposits - totalFlightCost;
+  // Balance = Deposits - Flight Costs - Fuel (igual que Flight Log Entries)
+  const balance = totalDeposits - totalFlightCost - totalFuel;
 
   // This month stats
   const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
