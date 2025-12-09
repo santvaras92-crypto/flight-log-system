@@ -351,8 +351,8 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         prisma.flight.findMany({ where: { fecha: { gte: sixtyDaysAgo } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true } }),
         prisma.flight.findMany({ where: { fecha: { gte: ninetyDaysAgo } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true } }),
         prisma.flight.findMany({ where: { fecha: { gte: prevThirtyStart, lt: prevThirtyEnd } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true } }),
-        prisma.flight.findMany({ where: { fecha: { gte: oneYearAgo } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true } }),
-        prisma.flight.findMany({ where: { fecha: { gte: twoYearsAgo, lt: oneYearAgo } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true } }),
+        prisma.flight.findMany({ where: { fecha: { gte: oneYearAgo } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true, diff_hobbs: true } }),
+        prisma.flight.findMany({ where: { fecha: { gte: twoYearsAgo, lt: oneYearAgo } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true, diff_hobbs: true } }),
       ]);
       
       // Calculate TACH hours for each period
@@ -406,22 +406,40 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       const stdDev = Math.sqrt(variance);
       
       // === ANNUAL STATISTICS CALCULATIONS ===
-      const hoursThisYear = computeTachHours(flightsThisYear);
-      const hoursPrevYear = computeTachHours(flightsPrevYear);
+      // Compute HOBBS hours
+      const computeHobbsHours = (flights: { diff_hobbs?: any }[]) => {
+        let sum = 0;
+        for (const f of flights) {
+          const dh = toNumber(f.diff_hobbs);
+          if (dh !== null && !isNaN(dh) && dh > 0) sum += dh;
+        }
+        return sum;
+      };
+      
+      const tachThisYear = computeTachHours(flightsThisYear);
+      const tachPrevYear = computeTachHours(flightsPrevYear);
+      const hobbsThisYear = computeHobbsHours(flightsThisYear);
+      const hobbsPrevYear = computeHobbsHours(flightsPrevYear);
       const flightsCountThisYear = flightsThisYear.length;
       const flightsCountPrevYear = flightsPrevYear.length;
       
-      // Monthly averages (TACH hours / 12 months)
-      const avgMonthlyHoursThisYear = hoursThisYear / 12;
-      const avgMonthlyHoursPrevYear = hoursPrevYear / 12;
+      // Calculate real HOBBS/TACH ratio
+      const hobbsTachRatio = tachThisYear > 0 ? hobbsThisYear / tachThisYear : 1.25;
+      
+      // Monthly averages
+      const avgMonthlyTachThisYear = tachThisYear / 12;
+      const avgMonthlyTachPrevYear = tachPrevYear / 12;
+      const avgMonthlyHobbsThisYear = hobbsThisYear / 12;
+      const avgMonthlyHobbsPrevYear = hobbsPrevYear / 12;
       
       // Monthly flight counts
       const avgMonthlyFlightsThisYear = flightsCountThisYear / 12;
       const avgMonthlyFlightsPrevYear = flightsCountPrevYear / 12;
       
-      // Trend percentages
-      const hoursTrend = hoursPrevYear > 0 ? ((hoursThisYear - hoursPrevYear) / hoursPrevYear) * 100 : 0;
-      const avgHoursTrend = avgMonthlyHoursPrevYear > 0 ? ((avgMonthlyHoursThisYear - avgMonthlyHoursPrevYear) / avgMonthlyHoursPrevYear) * 100 : 0;
+      // Trend percentages (based on HOBBS)
+      const hobbsTrend = hobbsPrevYear > 0 ? ((hobbsThisYear - hobbsPrevYear) / hobbsPrevYear) * 100 : 0;
+      const tachTrend = tachPrevYear > 0 ? ((tachThisYear - tachPrevYear) / tachPrevYear) * 100 : 0;
+      const avgHoursTrend = avgMonthlyHobbsPrevYear > 0 ? ((avgMonthlyHobbsThisYear - avgMonthlyHobbsPrevYear) / avgMonthlyHobbsPrevYear) * 100 : 0;
       const flightsTrend = avgMonthlyFlightsPrevYear > 0 ? ((avgMonthlyFlightsThisYear - avgMonthlyFlightsPrevYear) / avgMonthlyFlightsPrevYear) * 100 : 0;
       
       // Calculate total payments (CSV + DB deposits)
@@ -458,12 +476,23 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           },
         },
         annualStats: {
-          hoursThisYear: Number(hoursThisYear.toFixed(1)),
-          hoursPrevYear: Number(hoursPrevYear.toFixed(1)),
-          hoursTrend: Number(hoursTrend.toFixed(1)),
-          avgMonthlyHoursThisYear: Number(avgMonthlyHoursThisYear.toFixed(1)),
-          avgMonthlyHoursPrevYear: Number(avgMonthlyHoursPrevYear.toFixed(1)),
+          // TACH hours
+          tachThisYear: Number(tachThisYear.toFixed(1)),
+          tachPrevYear: Number(tachPrevYear.toFixed(1)),
+          tachTrend: Number(tachTrend.toFixed(1)),
+          // HOBBS hours
+          hobbsThisYear: Number(hobbsThisYear.toFixed(1)),
+          hobbsPrevYear: Number(hobbsPrevYear.toFixed(1)),
+          hobbsTrend: Number(hobbsTrend.toFixed(1)),
+          // Real ratio
+          hobbsTachRatio: Number(hobbsTachRatio.toFixed(2)),
+          // Monthly averages
+          avgMonthlyTachThisYear: Number(avgMonthlyTachThisYear.toFixed(1)),
+          avgMonthlyTachPrevYear: Number(avgMonthlyTachPrevYear.toFixed(1)),
+          avgMonthlyHobbsThisYear: Number(avgMonthlyHobbsThisYear.toFixed(1)),
+          avgMonthlyHobbsPrevYear: Number(avgMonthlyHobbsPrevYear.toFixed(1)),
           avgHoursTrend: Number(avgHoursTrend.toFixed(1)),
+          // Flights
           avgMonthlyFlightsThisYear: Number(avgMonthlyFlightsThisYear.toFixed(1)),
           avgMonthlyFlightsPrevYear: Number(avgMonthlyFlightsPrevYear.toFixed(1)),
           flightsTrend: Number(flightsTrend.toFixed(1)),
