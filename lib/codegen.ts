@@ -1,3 +1,4 @@
+// rebuild trigger 1765397735
 import { prisma } from "./prisma";
 
 function baseCodeFromName(nombre?: string, apellido?: string): string {
