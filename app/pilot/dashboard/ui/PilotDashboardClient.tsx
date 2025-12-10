@@ -462,8 +462,8 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
         return 'bg-green-100';
       };
       
-      const oilPct = Math.min(100, Math.max(0, (oilRemaining / OIL_INTERVAL) * 100));
-      const hundredPct = Math.min(100, Math.max(0, (hundredRemaining / HUNDRED_HR_INTERVAL) * 100));
+      const oilPct = Math.min(100, Math.max(0, 100 - (oilRemaining / OIL_INTERVAL) * 100));
+      const hundredPct = Math.min(100, Math.max(0, 100 - (hundredRemaining / HUNDRED_HR_INTERVAL) * 100));
       
       return (
         <div className={`${palette.card} rounded-xl p-3 sm:p-4 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] flex flex-col`}>
