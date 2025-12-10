@@ -370,13 +370,17 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       const weightedRate = stats?.weightedRate || 0;
       const stdDev = stats?.stdDev || 0;
       const trend = stats?.trend || 0;
+      const hobbsTachRatio = overviewMetrics?.annualStats?.hobbsTachRatio || 1.14;
+      
+      // Intervals for progress calculation
+      const OIL_INTERVAL = 50; // TACH hours
+      const HUNDRED_HR_INTERVAL = 100; // TACH hours
       
       // Calculate predictions
       const calcPrediction = (hoursRemaining: number) => {
         if (weightedRate <= 0) return { days: 0, minDays: 0, maxDays: 0, date: null, minDate: null, maxDate: null };
         
         const days = Math.round(hoursRemaining / weightedRate);
-        // 95% confidence interval: ±1.96 * stdDev * sqrt(days)
         const uncertainty = 1.96 * stdDev * Math.sqrt(days) / weightedRate;
         const minDays = Math.max(1, Math.round(days - uncertainty));
         const maxDays = Math.round(days + uncertainty);
@@ -393,87 +397,111 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       const hundredPred = calcPrediction(hundredRemaining);
       
       const formatDate = (d: Date | null) => d ? d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' }) : '-';
+      const formatDateShort = (d: Date | null) => d ? d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' }).replace('.', '') : '-';
       
-      const getUrgencyColor = (days: number) => {
-        if (days <= 7) return 'text-red-600 bg-red-50 border-red-200';
-        if (days <= 15) return 'text-orange-600 bg-orange-50 border-orange-200';
-        if (days <= 30) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-        return 'text-green-600 bg-green-50 border-green-200';
+      // Progress bar color based on remaining percentage
+      const getProgressColor = (remaining: number, total: number) => {
+        const pct = (remaining / total) * 100;
+        if (pct <= 20) return 'bg-red-500';
+        if (pct <= 40) return 'bg-orange-500';
+        if (pct <= 60) return 'bg-yellow-500';
+        return 'bg-green-500';
       };
       
+      const getProgressBg = (remaining: number, total: number) => {
+        const pct = (remaining / total) * 100;
+        if (pct <= 20) return 'bg-red-100';
+        if (pct <= 40) return 'bg-orange-100';
+        if (pct <= 60) return 'bg-yellow-100';
+        return 'bg-green-100';
+      };
+      
+      const oilPct = Math.min(100, Math.max(0, (oilRemaining / OIL_INTERVAL) * 100));
+      const hundredPct = Math.min(100, Math.max(0, (hundredRemaining / HUNDRED_HR_INTERVAL) * 100));
+      
       return (
-        <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] lg:overflow-y-auto flex flex-col`}>
-          <div className="flex items-start justify-between mb-2 sm:mb-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-red-100 flex items-center justify-center">
-              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-              </svg>
+        <div className={`${palette.card} rounded-xl p-3 sm:p-4 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] flex flex-col`}>
+          {/* Header */}
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-red-100 flex items-center justify-center">
+                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <h3 className="text-slate-900 text-xs sm:text-sm font-bold uppercase tracking-wide">Inspecciones</h3>
             </div>
             <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[8px] sm:text-[10px] font-bold rounded-full">🔮 SMART</span>
           </div>
-          <h3 className="text-slate-900 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-2 sm:mb-3">Inspecciones</h3>
           
-          {/* Oil Change */}
-          <div className={`rounded-lg border p-2 mb-2 ${getUrgencyColor(oilPred.days)}`}>
+          {/* Oil Change Section */}
+          <div className="mb-2 sm:mb-3">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] sm:text-xs font-bold">🛢️ Aceite</span>
-              <div className="text-right">
-                <span className="text-[10px] sm:text-xs font-mono">{oilRemaining.toFixed(1)} TACH</span>
-                <span className="text-[8px] sm:text-[10px] text-slate-900 font-semibold ml-1">(≈{(oilRemaining * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS)</span>
-              </div>
+              <span className="text-[10px] sm:text-xs font-bold text-slate-700">🛢️ ACEITE</span>
+              <span className="text-[10px] sm:text-xs font-mono text-slate-600">{oilPct.toFixed(0)}%</span>
             </div>
-            {weightedRate > 0 && (
-              <div className="space-y-0.5">
-                <div className="flex items-center justify-between text-[9px] sm:text-[11px]">
-                  <span>📅 Est:</span>
-                  <span className="font-semibold">{formatDate(oilPred.date)} (~{oilPred.days}d)</span>
-                </div>
-                <div className="flex items-center justify-between text-[8px] sm:text-[10px] text-slate-900">
-                  <span>📈 Rango:</span>
-                  <span>{formatDate(oilPred.minDate)} - {formatDate(oilPred.maxDate)}</span>
-                </div>
-              </div>
-            )}
+            <div className={`w-full h-2 sm:h-2.5 rounded-full ${getProgressBg(oilRemaining, OIL_INTERVAL)} overflow-hidden`}>
+              <div 
+                className={`h-full rounded-full ${getProgressColor(oilRemaining, OIL_INTERVAL)} transition-all duration-500`}
+                style={{ width: `${oilPct}%` }}
+              />
+            </div>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-[9px] sm:text-[11px] text-slate-700 font-medium">
+                {oilRemaining.toFixed(1)} TACH <span className="text-slate-500">≈{(oilRemaining * hobbsTachRatio).toFixed(1)} HOBBS</span>
+              </span>
+              {weightedRate > 0 && (
+                <span className="text-[9px] sm:text-[11px] text-slate-600">
+                  📅 ~{formatDateShort(oilPred.date)} <span className="hidden sm:inline text-slate-400">({formatDateShort(oilPred.minDate)}-{formatDateShort(oilPred.maxDate)})</span> <span className="font-semibold text-slate-800">~{oilPred.days}d</span>
+                </span>
+              )}
+            </div>
           </div>
           
-          {/* 100hr Inspection */}
-          <div className={`rounded-lg border p-2 mb-2 ${getUrgencyColor(hundredPred.days)}`}>
+          {/* 100hr Inspection Section */}
+          <div className="mb-2 sm:mb-3">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] sm:text-xs font-bold">🔧 100 Hrs</span>
-              <div className="text-right">
-                <span className="text-[10px] sm:text-xs font-mono">{hundredRemaining.toFixed(1)} TACH</span>
-                <span className="text-[8px] sm:text-[10px] text-slate-900 font-semibold ml-1">(≈{(hundredRemaining * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS)</span>
-              </div>
+              <span className="text-[10px] sm:text-xs font-bold text-slate-700">⚙️ 100 HORAS</span>
+              <span className="text-[10px] sm:text-xs font-mono text-slate-600">{hundredPct.toFixed(0)}%</span>
             </div>
-            {weightedRate > 0 && (
-              <div className="space-y-0.5">
-                <div className="flex items-center justify-between text-[9px] sm:text-[11px]">
-                  <span>📅 Est:</span>
-                  <span className="font-semibold">{formatDate(hundredPred.date)} (~{hundredPred.days}d)</span>
-                </div>
-                <div className="flex items-center justify-between text-[8px] sm:text-[10px] text-slate-900">
-                  <span>📈 Rango:</span>
-                  <span>{formatDate(hundredPred.minDate)} - {formatDate(hundredPred.maxDate)}</span>
-                </div>
-              </div>
-            )}
+            <div className={`w-full h-2 sm:h-2.5 rounded-full ${getProgressBg(hundredRemaining, HUNDRED_HR_INTERVAL)} overflow-hidden`}>
+              <div 
+                className={`h-full rounded-full ${getProgressColor(hundredRemaining, HUNDRED_HR_INTERVAL)} transition-all duration-500`}
+                style={{ width: `${hundredPct}%` }}
+              />
+            </div>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-[9px] sm:text-[11px] text-slate-700 font-medium">
+                {hundredRemaining.toFixed(1)} TACH <span className="text-slate-500">≈{(hundredRemaining * hobbsTachRatio).toFixed(1)} HOBBS</span>
+              </span>
+              {weightedRate > 0 && (
+                <span className="text-[9px] sm:text-[11px] text-slate-600">
+                  📅 ~{formatDateShort(hundredPred.date)} <span className="hidden sm:inline text-slate-400">({formatDateShort(hundredPred.minDate)}-{formatDateShort(hundredPred.maxDate)})</span> <span className="font-semibold text-slate-800">~{hundredPred.days}d</span>
+                </span>
+              )}
+            </div>
           </div>
           
-          {/* Usage Stats */}
-          {stats && (
-            <div className="text-[8px] sm:text-[10px] text-slate-900 space-y-0.5 pt-1 border-t border-slate-200">
-              <div className="flex justify-between">
-                <span>Tasa:</span>
-                <span className="font-mono">{(weightedRate * 7).toFixed(1)} hrs/sem</span>
+          {/* Usage Stats Footer */}
+          <div className="mt-auto pt-2 border-t border-slate-200">
+            <div className="flex items-center justify-between text-[9px] sm:text-[11px]">
+              <div className="flex items-center gap-1 text-slate-600">
+                <span className="font-medium">📊</span>
+                <span className="font-mono font-semibold text-slate-800">{(weightedRate * 7).toFixed(1)}</span>
+                <span>hrs/sem</span>
               </div>
-              <div className="flex justify-between">
-                <span>Tendencia:</span>
-                <span className={`font-semibold ${trend > 0 ? 'text-orange-600' : trend < 0 ? 'text-green-600' : 'text-slate-700'}`}>
+              <div className="flex items-center gap-1">
+                <span className={`font-semibold ${trend > 0 ? 'text-orange-600' : trend < 0 ? 'text-green-600' : 'text-slate-600'}`}>
                   {trend > 0 ? '↗️' : trend < 0 ? '↘️' : '→'} {Math.abs(trend).toFixed(0)}%
                 </span>
               </div>
+              <div className="flex items-center gap-1 text-slate-600">
+                <span>H/T:</span>
+                <span className="font-mono font-semibold text-slate-800">{hobbsTachRatio.toFixed(2)}</span>
+              </div>
             </div>
-          )}
+          </div>
         </div>
       );
     })(),
