@@ -31,3 +31,4 @@ export async function deleteFuelLog(formData: FormData) {
 
   await prisma.fuelLog.delete({ where: { id } });
 }
+// Railway rebuild Wed Dec 10 16:59:50 -03 2025
