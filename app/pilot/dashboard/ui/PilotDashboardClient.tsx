@@ -458,7 +458,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
             </div>
             <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[8px] sm:text-[10px] font-bold rounded-full">🔮 SMART</span>
           </div>
-          <h3 className="text-slate-800 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-2 sm:mb-3">Inspecciones</h3>
+          <h3 className="text-slate-900 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-2 sm:mb-3">Inspecciones</h3>
           
           {/* Oil Change */}
           <div className={`rounded-lg border p-2 mb-2 ${getUrgencyColor(oilPred.days)}`}>
@@ -466,7 +466,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
               <span className="text-[10px] sm:text-xs font-bold">🛢️ Aceite</span>
               <div className="text-right">
                 <span className="text-[10px] sm:text-xs font-mono">{oilRemaining.toFixed(1)} TACH</span>
-                <span className="text-[8px] sm:text-[10px] text-slate-700 ml-1">(≈{(oilRemaining * (data.metrics.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS)</span>
+                <span className="text-[8px] sm:text-[10px] text-slate-900 font-semibold ml-1">(≈{(oilRemaining * (data.metrics.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS)</span>
               </div>
             </div>
             {weightedRate > 0 && (
@@ -475,7 +475,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
                   <span>📅 Est:</span>
                   <span className="font-semibold">{formatDate(oilPred.date)} (~{oilPred.days}d)</span>
                 </div>
-                <div className="flex items-center justify-between text-[8px] sm:text-[10px] text-slate-700">
+                <div className="flex items-center justify-between text-[8px] sm:text-[10px] text-slate-900">
                   <span>📈 Rango:</span>
                   <span>{formatDate(oilPred.minDate)} - {formatDate(oilPred.maxDate)}</span>
                 </div>
@@ -489,7 +489,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
               <span className="text-[10px] sm:text-xs font-bold">🔧 100 Hrs</span>
               <div className="text-right">
                 <span className="text-[10px] sm:text-xs font-mono">{hundredRemaining.toFixed(1)} TACH</span>
-                <span className="text-[8px] sm:text-[10px] text-slate-700 ml-1">(≈{(hundredRemaining * (data.metrics.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS)</span>
+                <span className="text-[8px] sm:text-[10px] text-slate-900 font-semibold ml-1">(≈{(hundredRemaining * (data.metrics.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS)</span>
               </div>
             </div>
             {weightedRate > 0 && (
@@ -498,7 +498,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
                   <span>📅 Est:</span>
                   <span className="font-semibold">{formatDate(hundredPred.date)} (~{hundredPred.days}d)</span>
                 </div>
-                <div className="flex items-center justify-between text-[8px] sm:text-[10px] text-slate-700">
+                <div className="flex items-center justify-between text-[8px] sm:text-[10px] text-slate-900">
                   <span>📈 Rango:</span>
                   <span>{formatDate(hundredPred.minDate)} - {formatDate(hundredPred.maxDate)}</span>
                 </div>
@@ -508,7 +508,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
           
           {/* Usage Stats */}
           {stats && (
-            <div className="text-[8px] sm:text-[10px] text-slate-700 space-y-0.5 pt-1 border-t border-slate-200">
+            <div className="text-[8px] sm:text-[10px] text-slate-900 space-y-0.5 pt-1 border-t border-slate-200">
               <div className="flex justify-between">
                 <span>Tasa:</span>
                 <span className="font-mono">{(weightedRate * 7).toFixed(1)} hrs/sem</span>
