@@ -20,6 +20,31 @@ interface LastComponents {
   propeller: number | null;
 }
 
+// Parsear monto en formato chileno (ej: "105.000" -> 105000, "1.500,50" -> 1500.50)
+function parseChileanMoney(value: string): number {
+  if (!value) return 0;
+  // Remover espacios y símbolo $
+  let cleaned = value.trim().replace(/\$/g, '').replace(/\s/g, '');
+  // Detectar si usa coma como decimal (formato chileno: 1.500,50)
+  if (cleaned.includes(',')) {
+    // Tiene coma: remover puntos de miles, luego cambiar coma por punto decimal
+    cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+  } else {
+    // Solo puntos: determinar si es decimal o miles
+    // Si tiene un solo punto y menos de 3 dígitos después, es decimal (ej: 105.50)
+    // Si tiene múltiples puntos o 3+ dígitos después, son separadores de miles (ej: 105.000)
+    const parts = cleaned.split('.');
+    if (parts.length === 2 && parts[1].length <= 2) {
+      // Probablemente decimal (ej: 105.50) - dejarlo como está
+    } else {
+      // Separadores de miles (ej: 105.000 o 1.000.000)
+      cleaned = cleaned.replace(/\./g, '');
+    }
+  }
+  const result = parseFloat(cleaned);
+  return isNaN(result) ? 0 : result;
+}
+
 export default function RegisterClient({ 
   pilots,
   lastCounters = { hobbs: null, tach: null },
@@ -276,7 +301,7 @@ export default function RegisterClient({
         const result = await createDeposit({
           pilotoId: resolvedPilotId,
           fecha: fecha,
-          monto: Number(formData.get('monto') || 0),
+          monto: parseChileanMoney(String(formData.get('monto') || '')),
           detalle: String(formData.get('detalle') || '') || undefined,
           file: uploadPayload,
         });
@@ -639,7 +664,15 @@ export default function RegisterClient({
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <label className="flex flex-col text-sm">
                                 <span className="mb-1">Monto</span>
-                                <input name="monto" type="number" step="0.001" required className="rounded-xl border px-3 py-3 bg-slate-50" />
+                                <input 
+                                  name="monto" 
+                                  type="text" 
+                                  inputMode="numeric"
+                                  placeholder="Ej: 105.000"
+                                  required 
+                                  className="rounded-xl border px-3 py-3 bg-slate-50" 
+                                />
+                                <span className="mt-1 text-[11px] text-slate-500">Ingrese el monto (ej: 105.000 o 105000)</span>
                               </label>
                               <label className="flex flex-col text-sm">
                                 <span className="mb-1 font-medium">Comprobante (imagen) *</span>
