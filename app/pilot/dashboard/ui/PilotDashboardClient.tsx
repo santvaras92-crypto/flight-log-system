@@ -64,6 +64,15 @@ type PilotData = {
       stdDev: number;
     };
     hobbsTachRatio: number;
+    activityStats?: {
+      flightsPerMonth: number;
+      avgDaysBetweenFlights: number;
+      daysSinceLastFlight: number | null;
+      lastFlightDate: string | null;
+      flightsThisMonth: number;
+      flightsThisYear: number;
+      activityTrend: number;
+    };
   };
 };
 
@@ -77,7 +86,7 @@ const palette = {
   shadow: 'shadow-lg'
 };
 
-const defaultCardOrder = ['totalHours', 'totalFlights', 'thisMonth', 'avgFlightTime', 'lastFlight', 'fuelRate', 'deposits', 'flightCost', 'balance', 'fuel', 'nextInspections'];
+const defaultCardOrder = ['totalHours', 'totalFlights', 'thisMonth', 'avgFlightTime', 'myActivity', 'lastFlight', 'fuelRate', 'deposits', 'flightCost', 'balance', 'fuel', 'nextInspections'];
 
 export default function PilotDashboardClient({ data }: { data: PilotData }) {
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
@@ -253,6 +262,95 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
         <p className="text-xs sm:text-sm text-slate-600 font-medium">hrs por vuelo</p>
       </div>
     ),
+    myActivity: (() => {
+      const stats = data.metrics.activityStats;
+      if (!stats) {
+        return (
+          <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] flex flex-col`}>
+            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-purple-100 flex items-center justify-center mb-2 sm:mb-4">
+              <svg className="w-4 h-4 sm:w-6 sm:h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Tu Actividad</h3>
+            <div className="text-xl sm:text-3xl font-bold text-slate-400 mb-0.5 sm:mb-1">—</div>
+            <p className="text-xs sm:text-sm text-slate-400 font-medium">Sin datos</p>
+          </div>
+        );
+      }
+      
+      const trend = stats.activityTrend;
+      const trendColor = trend > 5 ? 'text-green-600' : trend < -5 ? 'text-orange-600' : 'text-blue-600';
+      const trendIcon = trend > 5 ? '↗️' : trend < -5 ? '↘️' : '→';
+      const trendText = trend > 5 ? `+${trend}%` : trend < -5 ? `${trend}%` : 'estable';
+      
+      const formatLastFlightDate = (dateStr: string | null) => {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
+      };
+      
+      return (
+        <div className={`${palette.card} rounded-xl p-3 sm:p-4 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] flex flex-col`}>
+          {/* Header */}
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <h3 className="text-slate-900 text-xs sm:text-sm font-bold uppercase tracking-wide">Tu Actividad</h3>
+            </div>
+            <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[8px] sm:text-[10px] font-bold rounded-full">📊 STATS</span>
+          </div>
+          
+          {/* Main stat */}
+          <div className="text-center mb-2 sm:mb-3">
+            <div className="text-2xl sm:text-3xl font-bold text-slate-900">{stats.flightsPerMonth}</div>
+            <div className="text-xs sm:text-sm text-slate-600 font-medium">vuelos/mes</div>
+            <div className={`text-xs sm:text-sm font-semibold ${trendColor} mt-1`}>
+              {trendIcon} {trendText} vs mes anterior
+            </div>
+          </div>
+          
+          {/* Divider */}
+          <div className="border-t border-slate-200 my-2"></div>
+          
+          {/* Stats grid */}
+          <div className="space-y-1.5 sm:space-y-2 flex-1">
+            {stats.daysSinceLastFlight !== null && (
+              <div className="flex items-center justify-between text-[10px] sm:text-xs">
+                <span className="text-slate-600">📅 Último vuelo</span>
+                <span className="font-semibold text-slate-800">
+                  hace {stats.daysSinceLastFlight} días
+                  {stats.lastFlightDate && <span className="text-slate-500 ml-1">({formatLastFlightDate(stats.lastFlightDate)})</span>}
+                </span>
+              </div>
+            )}
+            
+            {stats.avgDaysBetweenFlights > 0 && (
+              <div className="flex items-center justify-between text-[10px] sm:text-xs">
+                <span className="text-slate-600">⏱️ Frecuencia</span>
+                <span className="font-semibold text-slate-800">cada {stats.avgDaysBetweenFlights} días</span>
+              </div>
+            )}
+          </div>
+          
+          {/* Footer */}
+          <div className="mt-auto pt-2 border-t border-slate-200">
+            <div className="flex items-center justify-between text-[10px] sm:text-xs">
+              <div className="text-slate-600">
+                🗓️ Este mes: <span className="font-semibold text-slate-800">{stats.flightsThisMonth}</span>
+              </div>
+              <div className="text-slate-600">
+                📆 Este año: <span className="font-semibold text-slate-800">{stats.flightsThisYear}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    })(),
     lastFlight: (() => {
       // Find the most recent flight
       const sortedFlights = [...data.flights].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());

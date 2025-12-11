@@ -368,6 +368,43 @@ export default async function PilotDashboardPage() {
   // Average flight time
   const avgFlightTime = pilotFlights.length > 0 ? totalFlightHours / pilotFlights.length : 0;
 
+  // === PILOT ACTIVITY STATS ===
+  // Calculate pilot's personal flight frequency and trends
+  const pilotFlights30d = pilotFlights.filter(f => new Date(f.fecha) >= thirtyDaysAgo).length;
+  const pilotFlightsPrev30d = pilotFlights.filter(f => {
+    const d = new Date(f.fecha);
+    return d >= prevThirtyStart && d < prevThirtyEnd;
+  }).length;
+  
+  // Last flight date
+  const lastFlight = pilotFlights.length > 0 ? pilotFlights[0] : null;
+  const daysSinceLastFlight = lastFlight 
+    ? Math.floor((now.getTime() - new Date(lastFlight.fecha).getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+  
+  // Flights this year (for this pilot)
+  const firstDayOfYear = new Date(now.getFullYear(), 0, 1);
+  const pilotFlightsThisYear = pilotFlights.filter(f => new Date(f.fecha) >= firstDayOfYear).length;
+  
+  // Calculate pilot's months of activity (from first flight to now)
+  const firstFlightDate = pilotFlights.length > 0 
+    ? new Date(pilotFlights[pilotFlights.length - 1].fecha) 
+    : now;
+  const monthsActive = Math.max(1, Math.ceil((now.getTime() - firstFlightDate.getTime()) / (1000 * 60 * 60 * 24 * 30)));
+  
+  // Flights per month average
+  const flightsPerMonth = pilotFlights.length / monthsActive;
+  
+  // Average days between flights
+  const avgDaysBetweenFlights = pilotFlights.length > 1 
+    ? Math.round((now.getTime() - firstFlightDate.getTime()) / (1000 * 60 * 60 * 24) / pilotFlights.length)
+    : 0;
+  
+  // Activity trend (compare last 30 days vs previous 30 days)
+  const activityTrend = pilotFlightsPrev30d > 0 
+    ? ((pilotFlights30d - pilotFlightsPrev30d) / pilotFlightsPrev30d) * 100
+    : (pilotFlights30d > 0 ? 100 : 0); // If no prev flights but has current, show +100%
+
   const data = {
     pilot: {
       id: pilot.id,
@@ -432,6 +469,16 @@ export default async function PilotDashboardPage() {
         stdDev: Number(stdDev.toFixed(3)),
       },
       hobbsTachRatio: Number(hobbsTachRatio.toFixed(2)),
+      // Activity stats for pilot
+      activityStats: {
+        flightsPerMonth: Number(flightsPerMonth.toFixed(1)),
+        avgDaysBetweenFlights: avgDaysBetweenFlights,
+        daysSinceLastFlight: daysSinceLastFlight,
+        lastFlightDate: lastFlight ? lastFlight.fecha.toISOString() : null,
+        flightsThisMonth: thisMonthFlights.length,
+        flightsThisYear: pilotFlightsThisYear,
+        activityTrend: Number(activityTrend.toFixed(0)),
+      },
     }
   };
 
