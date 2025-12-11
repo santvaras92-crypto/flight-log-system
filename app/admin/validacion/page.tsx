@@ -1,11 +1,13 @@
 import { prisma } from '@/lib/prisma';
 import ValidacionClient from './validacion-client';
+import { getUFValue, calculateUFRate } from '@/lib/uf-service';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ValidacionPage() {
-  // Fetch all pending items in parallel
-  const [pendingFuel, pendingDeposits, pendingFlights] = await Promise.all([
+  // Fetch UF value and all pending items in parallel
+  const [ufData, pendingFuel, pendingDeposits, pendingFlights] = await Promise.all([
+    getUFValue(),
     // Pending Fuel
     prisma.fuelLog.findMany({
       where: { estado: 'PENDIENTE' },
@@ -129,6 +131,13 @@ export default async function ValidacionPage() {
 
   const totalPending = fuelData.length + depositData.length + flightsDto.length;
 
+  // Calculate UF-based default rate (4.5 UF per hour)
+  const ufInfo = {
+    valor: ufData.valor,
+    fecha: ufData.fecha,
+    defaultRate: calculateUFRate(4.5, ufData.valor),
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-6">
@@ -152,6 +161,7 @@ export default async function ValidacionPage() {
         fuelData={fuelData}
         depositData={depositData}
         flightsData={flightsDto}
+        ufInfo={ufInfo}
       />
     </div>
   );

@@ -69,22 +69,46 @@ interface FlightItem {
   } | null;
 }
 
+interface UFInfo {
+  valor: number;
+  fecha: string;
+  defaultRate: number;
+}
+
 type Tab = 'flights' | 'deposits' | 'fuel';
 
 export default function ValidacionClient({
   fuelData,
   depositData,
   flightsData,
+  ufInfo,
 }: {
   fuelData: FuelItem[];
   depositData: DepositItem[];
   flightsData: FlightItem[];
+  ufInfo: UFInfo;
 }) {
   const [activeTab, setActiveTab] = useState<Tab>('flights');
   const [isPending, startTransition] = useTransition();
   const [rates, setRates] = useState<Record<number, string>>({});
   const [instructorRates, setInstructorRates] = useState<Record<number, string>>({});
   const [message, setMessage] = useState<string | null>(null);
+
+  // Format UF value for display
+  const formatUFDisplay = (value: number) => {
+    return new Intl.NumberFormat('es-CL', {
+      style: 'decimal',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  };
+
+  // Get rate for a flight (default is UF-based rate)
+  const getRate = (flightId: number) => {
+    return rates[flightId] !== undefined 
+      ? rates[flightId] 
+      : ufInfo.defaultRate.toString();
+  };
 
   const getImageUrl = (imageUrl: string | null) => {
     if (!imageUrl) return null;
@@ -105,7 +129,7 @@ export default function ValidacionClient({
   ];
 
   const handleApproveFlightSubmission = async (submissionId: number, hasCopiloto: boolean) => {
-    const rate = parseFloat(rates[submissionId] || '185000');
+    const rate = parseFloat(getRate(submissionId));
     // Default instructor rate: 30000 si hay copiloto, 0 si no
     const defaultInstRate = hasCopiloto ? '30000' : '0';
     const instructorRate = parseFloat(instructorRates[submissionId] ?? defaultInstRate);
@@ -190,7 +214,7 @@ export default function ValidacionClient({
                 const lastTach = parseFloat(flight.lastTach || '0');
                 const diffHobbs = hobbsFinal - lastHobbs;
                 const diffTach = tachFinal - lastTach;
-                const rate = parseFloat(rates[flight.id] || '185000');
+                const rate = parseFloat(getRate(flight.id));
                 const instRate = parseFloat(instructorRates[flight.id] ?? (flight.copiloto ? '30000' : '0'));
                 // Costo = horas * (tarifa + instructor_rate)
                 const estimatedCost = diffHobbs * (rate + instRate);
@@ -267,31 +291,53 @@ export default function ValidacionClient({
                         </div>
                       </div>
 
-                      {/* Rate Inputs */}
-                      <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-slate-50 rounded-lg">
-                        <div>
-                          <label className="text-xs text-slate-500 uppercase block mb-1">Tarifa/Hora</label>
-                          <input
-                            type="number"
-                            value={rates[flight.id] || '185000'}
-                            onChange={(e) => setRates({ ...rates, [flight.id]: e.target.value })}
-                            className="w-full px-3 py-2 border rounded-lg font-mono"
-                          />
+                      {/* UF Badge and Rate Inputs */}
+                      <div className="mb-6 p-4 bg-slate-50 rounded-lg">
+                        {/* UF Info Badge */}
+                        <div className="flex items-center gap-3 mb-4 pb-3 border-b border-slate-200">
+                          <div className="flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1.5 rounded-full">
+                            <span className="text-sm">📊</span>
+                            <span className="text-sm font-medium">UF del día: ${formatUFDisplay(ufInfo.valor)}</span>
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            4.5 UF × ${formatUFDisplay(ufInfo.valor)} = <span className="font-semibold">${ufInfo.defaultRate.toLocaleString('es-CL')}</span>/hora
+                          </div>
                         </div>
-                        <div>
-                          <label className="text-xs text-slate-500 uppercase block mb-1">Instructor/SP Rate</label>
-                          <input
-                            type="number"
-                            value={instructorRates[flight.id] ?? (flight.copiloto ? '30000' : '0')}
-                            onChange={(e) => setInstructorRates({ ...instructorRates, [flight.id]: e.target.value })}
-                            className="w-full px-3 py-2 border rounded-lg font-mono"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs text-slate-500 uppercase block mb-1">Costo Estimado</label>
-                          <p className="px-3 py-2 bg-green-100 text-green-800 font-bold rounded-lg font-mono">
-                            ${estimatedCost.toLocaleString('es-CL')}
-                          </p>
+
+                        {/* Rate Inputs Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className="text-xs text-slate-500 uppercase block mb-1">Tarifa/Hora (editable)</label>
+                            <input
+                              type="number"
+                              value={getRate(flight.id)}
+                              onChange={(e) => setRates({ ...rates, [flight.id]: e.target.value })}
+                              className="w-full px-3 py-2 border rounded-lg font-mono text-sm"
+                              placeholder={ufInfo.defaultRate.toString()}
+                            />
+                            <p className="text-xs text-slate-400 mt-1">Base: 4.5 UF = ${ufInfo.defaultRate.toLocaleString('es-CL')}</p>
+                          </div>
+                          <div>
+                            <label className="text-xs text-slate-500 uppercase block mb-1">Instructor/SP Rate</label>
+                            <input
+                              type="number"
+                              value={instructorRates[flight.id] ?? (flight.copiloto ? '30000' : '0')}
+                              onChange={(e) => setInstructorRates({ ...instructorRates, [flight.id]: e.target.value })}
+                              className="w-full px-3 py-2 border rounded-lg font-mono text-sm"
+                            />
+                            {flight.copiloto && (
+                              <p className="text-xs text-slate-400 mt-1">Copiloto: {flight.copiloto}</p>
+                            )}
+                          </div>
+                          <div>
+                            <label className="text-xs text-slate-500 uppercase block mb-1">Costo Estimado</label>
+                            <p className="px-3 py-2 bg-green-100 text-green-800 font-bold rounded-lg font-mono text-lg">
+                              ${estimatedCost.toLocaleString('es-CL')}
+                            </p>
+                            <p className="text-xs text-slate-500 mt-1">
+                              {diffHobbs.toFixed(2)} hrs × (${rate.toLocaleString('es-CL')} + ${instRate.toLocaleString('es-CL')})
+                            </p>
+                          </div>
                         </div>
                       </div>
 
