@@ -370,7 +370,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       const weightedRate = stats?.weightedRate || 0;
       const stdDev = stats?.stdDev || 0;
       const trend = stats?.trend || 0;
-      const hobbsTachRatio = overviewMetrics?.annualStats?.hobbsTachRatio || 1.14;
+      const hobbsTachRatio = overviewMetrics?.annualStats?.hobbsTachRatio || 1.25;
       
       // Intervals for progress calculation
       const OIL_INTERVAL = 50; // TACH hours
@@ -418,6 +418,8 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       
       const oilPct = Math.min(100, Math.max(0, 100 - (oilRemaining / OIL_INTERVAL) * 100));
       const hundredPct = Math.min(100, Math.max(0, 100 - (hundredRemaining / HUNDRED_HR_INTERVAL) * 100));
+      const oilHobbsRemaining = oilRemaining * hobbsTachRatio;
+      const hundredHobbsRemaining = hundredRemaining * hobbsTachRatio;
       
       return (
         <div className={`${palette.card} rounded-xl p-3 sm:p-4 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] flex flex-col`}>
@@ -448,13 +450,13 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               />
             </div>
             <div className="flex items-center justify-between mt-1">
-              <span className="text-[9px] sm:text-[11px] text-slate-700 font-medium">
-                {oilRemaining.toFixed(1)} TACH <span className="text-slate-500">≈{(oilRemaining * hobbsTachRatio).toFixed(1)} HOBBS</span>
-              </span>
+              <div className="text-[9px] sm:text-[11px] text-slate-900 font-extrabold">
+                {oilRemaining.toFixed(1)} TACH <span className="text-slate-600 font-semibold">({oilHobbsRemaining.toFixed(1)} HOBBS)</span>
+              </div>
               {weightedRate > 0 && (
-                <span className="text-[9px] sm:text-[11px] text-slate-600">
-                  📅 ~{formatDateShort(oilPred.date)} <span className="hidden sm:inline text-slate-400">({formatDateShort(oilPred.minDate)}-{formatDateShort(oilPred.maxDate)})</span> <span className="font-semibold text-slate-800">~{oilPred.days}d</span>
-                </span>
+                <div className="text-[9px] sm:text-[11px] text-slate-900 font-bold flex items-center gap-1">
+                  📅 ~{formatDateShort(oilPred.date)} <span className="hidden sm:inline text-slate-500">({formatDateShort(oilPred.minDate)}-{formatDateShort(oilPred.maxDate)})</span> <span className="font-semibold text-slate-800">~{oilPred.days}d</span>
+                </div>
               )}
             </div>
           </div>
@@ -472,13 +474,13 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               />
             </div>
             <div className="flex items-center justify-between mt-1">
-              <span className="text-[9px] sm:text-[11px] text-slate-700 font-medium">
-                {hundredRemaining.toFixed(1)} TACH <span className="text-slate-500">≈{(hundredRemaining * hobbsTachRatio).toFixed(1)} HOBBS</span>
-              </span>
+              <div className="text-[9px] sm:text-[11px] text-slate-900 font-extrabold">
+                {hundredRemaining.toFixed(1)} TACH <span className="text-slate-600 font-semibold">({hundredHobbsRemaining.toFixed(1)} HOBBS)</span>
+              </div>
               {weightedRate > 0 && (
-                <span className="text-[9px] sm:text-[11px] text-slate-600">
-                  📅 ~{formatDateShort(hundredPred.date)} <span className="hidden sm:inline text-slate-400">({formatDateShort(hundredPred.minDate)}-{formatDateShort(hundredPred.maxDate)})</span> <span className="font-semibold text-slate-800">~{hundredPred.days}d</span>
-                </span>
+                <div className="text-[9px] sm:text-[11px] text-slate-900 font-bold flex items-center gap-1">
+                  📅 ~{formatDateShort(hundredPred.date)} <span className="hidden sm:inline text-slate-500">({formatDateShort(hundredPred.minDate)}-{formatDateShort(hundredPred.maxDate)})</span> <span className="font-semibold text-slate-800">~{hundredPred.days}d</span>
+                </div>
               )}
             </div>
           </div>
@@ -486,19 +488,18 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           {/* Usage Stats Footer */}
           <div className="mt-auto pt-2 border-t border-slate-200">
             <div className="flex items-center justify-between text-[9px] sm:text-[11px]">
-              <div className="flex items-center gap-1 text-slate-600">
-                <span className="font-medium">📊</span>
-                <span className="font-mono font-semibold text-slate-800">{(weightedRate * 7).toFixed(1)}</span>
-                <span>hrs/sem</span>
+              <div className="flex flex-col gap-0.5 text-slate-700">
+                <span className="font-extrabold text-slate-900">{(weightedRate * 7).toFixed(1)} TACH/sem</span>
+                <span className="font-semibold text-slate-800">{(weightedRate * hobbsTachRatio * 7).toFixed(1)} HOBBS/sem</span>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex flex-col items-end gap-0.5">
                 <span className={`font-semibold ${trend > 0 ? 'text-orange-600' : trend < 0 ? 'text-green-600' : 'text-slate-600'}`}>
                   {trend > 0 ? '↗️' : trend < 0 ? '↘️' : '→'} {Math.abs(trend).toFixed(0)}%
                 </span>
-              </div>
-              <div className="flex items-center gap-1 text-slate-600">
-                <span>H/T:</span>
-                <span className="font-mono font-semibold text-slate-800">{hobbsTachRatio.toFixed(2)}</span>
+                <div className="flex items-center gap-1 text-slate-600">
+                  <span>H/T</span>
+                  <span className="font-mono font-semibold text-slate-800">{hobbsTachRatio.toFixed(2)}</span>
+                </div>
               </div>
             </div>
           </div>

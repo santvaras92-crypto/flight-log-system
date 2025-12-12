@@ -513,6 +513,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
       const stats = data.metrics.usageStats;
       const oilRemaining = data.metrics.oilChangeRemaining;
       const hundredRemaining = data.metrics.hundredHourRemaining;
+      const hobbsTachRatio = data.metrics.hobbsTachRatio || 1.25;
       const weightedRate = stats?.weightedRate || 0;
       const stdDev = stats?.stdDev || 0;
       const trend = stats?.trend || 0;
@@ -562,6 +563,8 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
       
       const oilPct = Math.min(100, Math.max(0, 100 - (oilRemaining / OIL_INTERVAL) * 100));
       const hundredPct = Math.min(100, Math.max(0, 100 - (hundredRemaining / HUNDRED_HR_INTERVAL) * 100));
+      const oilHobbsRemaining = oilRemaining * hobbsTachRatio;
+      const hundredHobbsRemaining = hundredRemaining * hobbsTachRatio;
       
       return (
         <div className={`${palette.card} rounded-xl p-3 sm:p-4 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] flex flex-col`}>
@@ -592,13 +595,13 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
               />
             </div>
             <div className="flex items-center justify-between mt-1.5">
-              <span className="text-[10px] sm:text-xs text-slate-700 font-semibold">
-                {oilRemaining.toFixed(1)} TACH restantes
-              </span>
+              <div className="text-[10px] sm:text-xs text-slate-800 font-bold">
+                {oilRemaining.toFixed(1)} TACH <span className="text-slate-500 font-semibold">({oilHobbsRemaining.toFixed(1)} HOBBS)</span>
+              </div>
               {weightedRate > 0 && (
-                <span className="text-[10px] sm:text-xs text-slate-600">
-                  📅 {formatDateShort(oilPred.date)}
-                </span>
+                <div className="text-[10px] sm:text-xs text-slate-900 font-bold flex items-center gap-1">
+                  📅 {formatDateShort(oilPred.date)} <span className="text-slate-600 font-semibold">{oilPred.days}d</span>
+                </div>
               )}
             </div>
           </div>
@@ -616,13 +619,13 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
               />
             </div>
             <div className="flex items-center justify-between mt-1.5">
-              <span className="text-[10px] sm:text-xs text-slate-700 font-semibold">
-                {hundredRemaining.toFixed(1)} TACH restantes
-              </span>
+              <div className="text-[10px] sm:text-xs text-slate-800 font-bold">
+                {hundredRemaining.toFixed(1)} TACH <span className="text-slate-500 font-semibold">({hundredHobbsRemaining.toFixed(1)} HOBBS)</span>
+              </div>
               {weightedRate > 0 && (
-                <span className="text-[10px] sm:text-xs text-slate-600">
-                  📅 {formatDateShort(hundredPred.date)}
-                </span>
+                <div className="text-[10px] sm:text-xs text-slate-900 font-bold flex items-center gap-1">
+                  📅 {formatDateShort(hundredPred.date)} <span className="text-slate-600 font-semibold">{hundredPred.days}d</span>
+                </div>
               )}
             </div>
           </div>
@@ -630,9 +633,9 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
           {/* Usage Stats Footer - Simplified for pilots */}
           <div className="mt-auto pt-2 border-t border-slate-200">
             <div className="flex items-center justify-between text-[10px] sm:text-xs">
-              <div className="flex items-center gap-1 text-slate-600">
-                <span>📊 Uso promedio:</span>
-                <span className="font-semibold text-slate-800">{(weightedRate * 7).toFixed(1)} hrs/sem</span>
+              <div className="flex flex-col gap-0.5 text-slate-700">
+                <span className="font-extrabold text-slate-900">{(weightedRate * 7).toFixed(1)} TACH/sem</span>
+                <span className="font-semibold text-slate-800">{(weightedRate * hobbsTachRatio * 7).toFixed(1)} HOBBS/sem</span>
               </div>
               <span className={`font-semibold ${trend > 0 ? 'text-orange-600' : trend < 0 ? 'text-green-600' : 'text-slate-600'}`}>
                 {trend > 0 ? '↗️' : trend < 0 ? '↘️' : '→'} {Math.abs(trend).toFixed(0)}%
