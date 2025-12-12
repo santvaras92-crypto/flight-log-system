@@ -23,9 +23,9 @@ export async function uploadToR2(params: {
   key: string;
   contentType: string;
   body: Buffer;
-}): Promise<string | null> {
+}): Promise<boolean> {
   if (!r2Client || !process.env.R2_BUCKET) {
-    return null;
+    return false;
   }
 
   try {
@@ -38,18 +38,9 @@ export async function uploadToR2(params: {
       })
     );
 
-    // Return R2 public URL if configured, otherwise construct from endpoint
-    const publicBase = process.env.R2_PUBLIC_URL_BASE;
-    if (publicBase) {
-      return `${publicBase}/${params.key}`;
-    }
-
-    // Default: construct URL from endpoint and bucket
-    const endpoint = process.env.R2_ENDPOINT!;
-    const bucket = process.env.R2_BUCKET!;
-    return `${endpoint}/${bucket}/${params.key}`;
+    return true;
   } catch (error) {
     console.error('R2 upload failed:', error);
-    return null;
+    return false;
   }
 }

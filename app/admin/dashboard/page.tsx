@@ -906,24 +906,6 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         if (seen.has(key)) continue;
         seen.add(key);
         
-        // Check if image exists
-        const filename = l.imageUrl?.startsWith('/uploads/fuel/') ? l.imageUrl.split('/').pop() || '' : '';
-        let exists = false;
-        if (filename) {
-          try {
-            const volumePath = process.env.RAILWAY_VOLUME_MOUNT_PATH
-              ? pathMod.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'fuel', filename)
-              : null;
-            const publicPath = pathMod.join(process.cwd(), 'public', 'uploads', 'fuel', filename);
-            
-            if (volumePath && fsMod.existsSync(volumePath)) {
-              exists = true;
-            } else if (fsMod.existsSync(publicPath)) {
-              exists = true;
-            }
-          } catch {}
-        }
-        
         allRecords.push({
           id: l.id,
           fecha: fecha,
@@ -934,7 +916,6 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           detalle: l.detalle || '',
           imageUrl: l.imageUrl,
           source: 'DB',
-          exists
         });
       }
       

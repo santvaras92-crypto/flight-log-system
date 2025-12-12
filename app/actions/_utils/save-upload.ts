@@ -27,10 +27,11 @@ export async function saveUpload(file: PlainUpload, subdir: 'fuel' | 'deposit') 
   const contentType = contentTypeMap[ext] || 'application/octet-stream';
 
   // 1) Try R2 upload first
-  const r2Url = await uploadToR2({ key, contentType, body: buf });
-  if (r2Url) {
-    console.log(`[R2] Uploaded ${key} → ${r2Url}`);
-    return r2Url;
+  const r2Success = await uploadToR2({ key, contentType, body: buf });
+  if (r2Success) {
+    console.log(`[R2] Uploaded ${key}`);
+    // Return API endpoint URL that will serve from R2 or fallback to local
+    return `/api/uploads/fuel-image?key=${encodeURIComponent(key)}`;
   }
 
   // 2) Fallback to local storage (Railway volume or public)
@@ -41,6 +42,7 @@ export async function saveUpload(file: PlainUpload, subdir: 'fuel' | 'deposit') 
   await fs.mkdir(baseDir, { recursive: true });
   const full = path.join(baseDir, name);
   await fs.writeFile(full, buf);
-  console.log(`[Local] Saved ${key} → /uploads/${subdir}/${name}`);
-  return `/uploads/${subdir}/${name}`;
+  console.log(`[Local] Saved ${key}`);
+  // Return API endpoint URL that will serve from local storage
+  return `/api/uploads/fuel-image?key=${encodeURIComponent(key)}`;
 }

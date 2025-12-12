@@ -1,12 +1,10 @@
 import { prisma } from '@/lib/prisma';
-import path from 'path';
-import { promises as fs } from 'fs';
 import { deleteFuelLog } from '@/app/actions/delete-fuel-log';
 
 export const dynamic = 'force-dynamic';
 
 export default async function FuelChargesPage() {
-  const logsRaw = await prisma.fuelLog.findMany({
+  const logs = await prisma.fuelLog.findMany({
     orderBy: { fecha: 'desc' },
     select: {
       id: true,
@@ -19,39 +17,6 @@ export default async function FuelChargesPage() {
       User: { select: { nombre: true, codigo: true } },
     },
   });
-  const logs = await Promise.all(
-    logsRaw.map(async (l) => {
-      // Determine existence safely: R2 URLs are assumed available; local files checked carefully
-      const isRemote = !!(l.imageUrl && /^https?:\/\//.test(l.imageUrl));
-      const filename = l.imageUrl?.startsWith('/uploads/fuel/') ? l.imageUrl.split('/').pop() || '' : '';
-      let exists = false;
-      if (isRemote) {
-        exists = true;
-      } else if (filename) {
-        try {
-          const volumePath = process.env.RAILWAY_VOLUME_MOUNT_PATH
-            ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'fuel', filename)
-            : null;
-          const publicPath = path.join(process.cwd(), 'public', 'uploads', 'fuel', filename);
-          if (volumePath) {
-            try {
-              await fs.access(volumePath);
-              exists = true;
-            } catch {
-              await fs.access(publicPath);
-              exists = true;
-            }
-          } else {
-            await fs.access(publicPath);
-            exists = true;
-          }
-        } catch {
-          exists = false;
-        }
-      }
-      return { ...l, exists };
-    })
-  );
 
   return (
     <div className="p-6">
@@ -82,14 +47,18 @@ export default async function FuelChargesPage() {
                 <td className="px-3 py-2 border">
                   {l.imageUrl ? (
                     <a
-                      href={l.imageUrl.startsWith('/uploads/fuel/')
-                        ? `/api/uploads/fuel/${l.imageUrl.split('/').pop()}`
-                        : l.imageUrl}
+                      href={
+                        l.imageUrl.startsWith('/api/uploads/fuel-image') ? l.imageUrl :
+                        l.imageUrl.startsWith('http') ? l.imageUrl :
+                        l.imageUrl.startsWith('/uploads/fuel/') 
+                          ? `/api/uploads/fuel-image?key=${encodeURIComponent(`fuel/${l.imageUrl.split('/').pop()}`)}`
+                          : l.imageUrl
+                      }
                       target="_blank"
                       rel="noreferrer"
-                      className={`underline ${l.exists ? 'text-blue-600' : 'text-slate-400 pointer-events-none'}`}
+                      className="underline text-blue-600"
                     >
-                      {l.exists ? 'Ver' : 'No disponible'}
+                      Ver
                     </a>
                   ) : (
                     '-'

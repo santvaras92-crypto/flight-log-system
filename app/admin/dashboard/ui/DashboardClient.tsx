@@ -1968,14 +1968,18 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
                     <td className="px-4 py-3 whitespace-nowrap text-sm">
                       {l.imageUrl ? (
                         <a
-                          href={l.imageUrl.startsWith('/uploads/fuel/')
-                            ? `/api/uploads/fuel/${l.imageUrl.split('/').pop()}`
-                            : l.imageUrl}
+                          href={
+                            l.imageUrl.startsWith('/api/uploads/fuel-image') ? l.imageUrl :
+                            l.imageUrl.startsWith('http') ? l.imageUrl :
+                            l.imageUrl.startsWith('/uploads/fuel/')
+                              ? `/api/uploads/fuel-image?key=${encodeURIComponent(`fuel/${l.imageUrl.split('/').pop()}`)}`
+                              : l.imageUrl
+                          }
                           target="_blank"
                           rel="noreferrer"
-                          className={`underline font-medium ${l.exists ? 'text-blue-600 hover:text-blue-800' : 'text-slate-400 pointer-events-none'}`}
+                          className="underline font-medium text-blue-600 hover:text-blue-800"
                         >
-                          {l.exists ? 'Ver' : 'No disponible'}
+                          Ver
                         </a>
                       ) : (
                         <span className="text-slate-400">-</span>

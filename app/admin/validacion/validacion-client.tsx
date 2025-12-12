@@ -112,13 +112,23 @@ export default function ValidacionClient({
 
   const getImageUrl = (imageUrl: string | null) => {
     if (!imageUrl) return null;
+    
+    // New format: /api/uploads/fuel-image?key=...
+    if (imageUrl.startsWith('/api/uploads/fuel-image')) return imageUrl;
+    
+    // Legacy R2 URLs (direct HTTPS)
     if (imageUrl.startsWith('http')) return imageUrl;
+    
+    // Legacy local paths - convert to new API format
     if (imageUrl.startsWith('/uploads/fuel/')) {
-      return `/api/uploads/fuel/${imageUrl.split('/').pop()}`;
+      const filename = imageUrl.split('/').pop();
+      return `/api/uploads/fuel-image?key=${encodeURIComponent(`fuel/${filename}`)}`;
     }
     if (imageUrl.startsWith('/uploads/deposit/')) {
-      return `/api/uploads/deposit/${imageUrl.split('/').pop()}`;
+      const filename = imageUrl.split('/').pop();
+      return `/api/uploads/fuel-image?key=${encodeURIComponent(`deposit/${filename}`)}`;
     }
+    
     return imageUrl;
   };
 
