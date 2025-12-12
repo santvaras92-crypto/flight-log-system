@@ -916,6 +916,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           detalle: l.detalle || '',
           imageUrl: l.imageUrl,
           source: 'DB',
+          exists: true, // API endpoint handles availability
         });
       }
       
