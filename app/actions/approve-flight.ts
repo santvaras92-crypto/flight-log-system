@@ -47,49 +47,41 @@ export async function approveFlightSubmission(
       const rateDec = new Prisma.Decimal(rate || 0);
       const instructorRateDec = new Prisma.Decimal(instructorRate || 0);
 
-      // 3. Obtener los últimos contadores del vuelo con mayor HOBBS/TACH
-      const maxHobbsFlight = await tx.flight.findFirst({
-        where: { aircraftId: submission.aircraftId, hobbs_fin: { not: null } },
-        orderBy: { hobbs_fin: "desc" },
-        select: { hobbs_fin: true, airframe_hours: true, engine_hours: true, propeller_hours: true },
+      // 3. Obtener el último vuelo por fecha para calcular baselines y componentes
+      const lastFlight = await tx.flight.findFirst({
+        where: { aircraftId: submission.aircraftId },
+        orderBy: [{ fecha: "desc" }, { createdAt: "desc" }],
+        select: { 
+          hobbs_fin: true, 
+          tach_fin: true,
+          airframe_hours: true, 
+          engine_hours: true, 
+          propeller_hours: true 
+        },
       });
 
-      const maxTachFlight = await tx.flight.findFirst({
-        where: { aircraftId: submission.aircraftId, tach_fin: { not: null } },
-        orderBy: { tach_fin: "desc" },
-        select: { tach_fin: true },
-      });
-
-      const lastHobbs = maxHobbsFlight?.hobbs_fin 
-        ? new Prisma.Decimal(maxHobbsFlight.hobbs_fin.toString()) 
+      const lastHobbs = lastFlight?.hobbs_fin 
+        ? new Prisma.Decimal(lastFlight.hobbs_fin.toString()) 
         : new Prisma.Decimal(submission.Aircraft.hobbs_actual.toString());
-      const lastTach = maxTachFlight?.tach_fin 
-        ? new Prisma.Decimal(maxTachFlight.tach_fin.toString()) 
+      const lastTach = lastFlight?.tach_fin 
+        ? new Prisma.Decimal(lastFlight.tach_fin.toString()) 
         : new Prisma.Decimal(submission.Aircraft.tach_actual.toString());
       
       // Obtener últimas horas de componentes
-      const lastAirframe = maxHobbsFlight?.airframe_hours ? Number(maxHobbsFlight.airframe_hours) : null;
-      const lastEngine = maxHobbsFlight?.engine_hours ? Number(maxHobbsFlight.engine_hours) : null;
-      const lastPropeller = maxHobbsFlight?.propeller_hours ? Number(maxHobbsFlight.propeller_hours) : null;
+      const lastAirframe = lastFlight?.airframe_hours ? Number(lastFlight.airframe_hours) : null;
+      const lastEngine = lastFlight?.engine_hours ? Number(lastFlight.engine_hours) : null;
+      const lastPropeller = lastFlight?.propeller_hours ? Number(lastFlight.propeller_hours) : null;
 
-      // 4. Validar que los nuevos contadores sean mayores
-      if (nuevoHobbs.lte(lastHobbs) || nuevoTach.lte(lastTach)) {
-        return { 
-          success: false, 
-          error: `Los contadores deben ser mayores a los actuales (Hobbs: ${lastHobbs}, Tach: ${lastTach})` 
-        };
-      }
-
-      // 5. Calcular diferencias
+      // 4. Calcular diferencias (validación ya hecha en el formulario de registro)
       const diffHobbs = nuevoHobbs.minus(lastHobbs);
       const diffTach = nuevoTach.minus(lastTach);
 
-      // 6. Calcular el costo total: (rate + instructor_rate) * horas
+      // 5. Calcular el costo total: (rate + instructor_rate) * horas
       // A partir del 25/nov/2025 el total se calcula con Rate + Instructor/SP
       const tarifaTotal = rateDec.plus(instructorRateDec);
       const costo = diffHobbs.mul(tarifaTotal);
 
-      // 7. Crear el registro del vuelo
+      // 6. Crear el registro del vuelo
       // Calcular nuevas horas de componentes (solo si hay valores previos)
       const newAirframe = lastAirframe !== null ? Number((lastAirframe + diffTach.toNumber()).toFixed(1)) : null;
       const newEngine = lastEngine !== null ? Number((lastEngine + diffTach.toNumber()).toFixed(1)) : null;
@@ -121,7 +113,7 @@ export async function approveFlightSubmission(
         },
       });
 
-      // 8. Actualizar los contadores del avión
+      // 7. Actualizar los contadores del avión
       await tx.aircraft.update({
         where: { matricula: submission.aircraftId },
         data: {
@@ -130,7 +122,7 @@ export async function approveFlightSubmission(
         },
       });
 
-      // 9. Actualizar los componentes del avión con los valores exactos del vuelo
+      // 8. Actualizar los componentes del avión con los valores exactos del vuelo
       if (newAirframe !== null) {
         await tx.component.updateMany({
           where: { aircraftId: submission.aircraftId, tipo: "AIRFRAME" },
@@ -150,7 +142,7 @@ export async function approveFlightSubmission(
         });
       }
 
-      // 10. Crear la transacción de cobro
+      // 9. Crear la transacción de cobro
       await tx.transaction.create({
         data: {
           monto: costo.negated().toNumber(),
@@ -160,7 +152,7 @@ export async function approveFlightSubmission(
         },
       });
 
-      // 11. Actualizar el saldo del piloto
+      // 10. Actualizar el saldo del piloto
       await tx.user.update({
         where: { id: submission.pilotoId },
         data: {
@@ -170,7 +162,7 @@ export async function approveFlightSubmission(
         },
       });
 
-      // 12. Actualizar el submission a COMPLETADO y enlazar el flight
+      // 11. Actualizar el submission a COMPLETADO y enlazar el flight
       await tx.flightSubmission.update({
         where: { id: submissionId },
         data: {
@@ -181,7 +173,7 @@ export async function approveFlightSubmission(
         },
       });
 
-      // 13. Actualizar el flight para enlazar el submission
+      // 12. Actualizar el flight para enlazar el submission
       await tx.flight.update({
         where: { id: flight.id },
         data: {
