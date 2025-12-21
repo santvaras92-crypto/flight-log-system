@@ -93,6 +93,7 @@ export default function ValidacionClient({
   const [rates, setRates] = useState<Record<number, string>>({});
   const [instructorRates, setInstructorRates] = useState<Record<number, string>>({});
   const [message, setMessage] = useState<string | null>(null);
+  const [imageModalUrl, setImageModalUrl] = useState<string | null>(null);
 
   // Format UF value for display
   const formatUFDisplay = (value: number) => {
@@ -397,13 +398,16 @@ export default function ValidacionClient({
                     {/* Image */}
                     <div className="md:w-1/3 bg-slate-100 p-4 flex items-center justify-center min-h-[200px]">
                       {dep.imageUrl ? (
-                        <a href={getImageUrl(dep.imageUrl) || '#'} target="_blank" rel="noreferrer">
+                        <button
+                          onClick={() => setImageModalUrl(getImageUrl(dep.imageUrl))}
+                          className="cursor-pointer"
+                        >
                           <img
                             src={getImageUrl(dep.imageUrl) || ''}
                             alt="Comprobante"
                             className="max-h-[300px] rounded-lg shadow-md hover:scale-105 transition-transform"
                           />
-                        </a>
+                        </button>
                       ) : (
                         <div className="text-slate-400 text-center">
                           <svg className="w-12 h-12 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -491,13 +495,16 @@ export default function ValidacionClient({
                     {/* Image */}
                     <div className="md:w-1/3 bg-slate-100 p-4 flex items-center justify-center min-h-[200px]">
                       {fuel.imageUrl ? (
-                        <a href={getImageUrl(fuel.imageUrl) || '#'} target="_blank" rel="noreferrer">
+                        <button
+                          onClick={() => setImageModalUrl(getImageUrl(fuel.imageUrl))}
+                          className="cursor-pointer"
+                        >
                           <img
                             src={getImageUrl(fuel.imageUrl) || ''}
                             alt="Boleta"
                             className="max-h-[300px] rounded-lg shadow-md hover:scale-105 transition-transform"
                           />
-                        </a>
+                        </button>
                       ) : (
                         <div className="text-slate-400 text-center">
                           <svg className="w-12 h-12 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -574,6 +581,30 @@ export default function ValidacionClient({
           </div>
         )}
       </div>
+
+      {/* Image Modal */}
+      {imageModalUrl && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setImageModalUrl(null)}
+        >
+          <button
+            onClick={() => setImageModalUrl(null)}
+            className="absolute top-4 right-4 text-white bg-black/50 rounded-full p-3 hover:bg-black/70 transition-colors z-10"
+            aria-label="Cerrar"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <img
+            src={imageModalUrl}
+            alt="Boleta"
+            className="max-h-[90vh] max-w-[90vw] object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
