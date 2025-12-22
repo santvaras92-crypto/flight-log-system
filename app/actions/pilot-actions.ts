@@ -3,6 +3,23 @@
 
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import fs from 'fs';
+import path from 'path';
+
+/**
+ * Agrega un piloto al CSV de pilotos (Base de dato pilotos.csv)
+ */
+function appendPilotToCSV(codigo: string, nombre: string): void {
+  try {
+    const csvPath = path.join(process.cwd(), 'Base de dato pilotos', 'Base de dato pilotos.csv');
+    const newLine = `\n${codigo};${nombre}`;
+    fs.appendFileSync(csvPath, newLine, 'utf-8');
+    console.log(`Piloto agregado al CSV: ${codigo};${nombre}`);
+  } catch (error) {
+    console.error('Error al agregar piloto al CSV:', error);
+    // No lanzamos error para no bloquear la creación del piloto
+  }
+}
 
 /**
  * Normaliza texto removiendo acentos y convirtiendo a minúsculas
@@ -194,6 +211,9 @@ export async function createOrUpdatePilot(data: {
       password: hashedPassword, // Default password: aqi
     }
   });
+
+  // Agregar al CSV para que aparezca en la lista desplegable
+  appendPilotToCSV(newCode, fullName);
 
   return {
     success: true,

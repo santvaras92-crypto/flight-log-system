@@ -2,6 +2,9 @@
 "use server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from 'bcryptjs';
+import { generateUniquePilotCode } from "@/lib/codegen";
+import fs from 'fs';
+import path from 'path';
 
 type Payload = {
   nombre: string;
@@ -17,8 +20,9 @@ export async function registerPilot(payload: Payload): Promise<{ ok: boolean; er
   try {
     // Build display name (nombre + apellido)
     const displayName = [payload.nombre, payload.apellido].filter(Boolean).join(" ");
-    // Minimal required fields based on current schema
     const hashedPassword = await bcrypt.hash('aqi', 10);
+    const codigo = await generateUniquePilotCode(payload.nombre, payload.apellido);
+    
     const user = await prisma.user.create({
       data: {
         nombre: displayName || payload.nombre,
@@ -27,14 +31,17 @@ export async function registerPilot(payload: Payload): Promise<{ ok: boolean; er
         saldo_cuenta: 0,
         tarifa_hora: payload.tarifa_hora ?? 170000,
         password: hashedPassword, // Default password: aqi
-        // Optional: store extra fields in codigo if empty, otherwise ignore.
-        // We avoid schema migrations here and focus on making the pilot visible in Dashboard.
-        codigo: undefined,
+        codigo: codigo,
       },
     });
 
-    // Optionally, attach a note transaction with metadata (not required for dashboard visibility)
-    // If future schema adds fields for telefono/licencia, we can migrate and backfill.
+    // Agregar al CSV para que aparezca en la lista desplegable
+    try {
+      const csvPath = path.join(process.cwd(), 'Base de dato pilotos', 'Base de dato pilotos.csv');
+      fs.appendFileSync(csvPath, `\n${codigo};${displayName || payload.nombre}`, 'utf-8');
+    } catch (csvError) {
+      console.error('Error updating pilots CSV:', csvError);
+    }
 
     return { ok: true };
   } catch (e: any) {

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateUniquePilotCode } from "@/lib/codegen";
 import bcrypt from 'bcryptjs';
+import fs from 'fs';
+import path from 'path';
 
 export async function POST(req: Request) {
   try {
@@ -29,10 +31,11 @@ export async function POST(req: Request) {
 
     const codigo = await generateUniquePilotCode(nombre, apellido);
     const hashedPassword = await bcrypt.hash('aqi', 10);
+    const fullName = `${nombre}${apellido ? " " + apellido : ""}`.trim();
 
     const user = await prisma.user.create({
       data: {
-        nombre: `${nombre}${apellido ? " " + apellido : ""}`.trim(),
+        nombre: fullName,
         email,
         telefono: telefono || null,
         licencia: numeroLicencia || null,
@@ -45,6 +48,14 @@ export async function POST(req: Request) {
         password: hashedPassword, // Default password: aqi
       }
     });
+
+    // Agregar al CSV para que aparezca en la lista desplegable
+    try {
+      const csvPath = path.join(process.cwd(), 'Base de dato pilotos', 'Base de dato pilotos.csv');
+      fs.appendFileSync(csvPath, `\n${codigo};${fullName}`, 'utf-8');
+    } catch (csvError) {
+      console.error('Error updating pilots CSV:', csvError);
+    }
 
     return NextResponse.json({ ok: true, codigo, userId: user.id });
   } catch (e: any) {
