@@ -69,11 +69,11 @@ model Flight {
   airframe_hours   Decimal?
   engine_hours     Decimal?
   propeller_hours  Decimal?
+  instructor_rate  Decimal?
   piloto_raw       String?
   tarifa           Decimal?
-  instructor_rate  Decimal?
-  aerodromoSalida  String?
   aerodromoDestino String?
+  aerodromoSalida  String?
   aprobado         Boolean           @default(false)
   Aircraft         Aircraft          @relation(fields: [aircraftId], references: [matricula])
   User             User?             @relation(fields: [pilotoId], references: [id])
@@ -82,28 +82,28 @@ model Flight {
 }
 
 model FlightSubmission {
-  id             Int        @id @default(autoincrement())
-  pilotoId       Int
-  aircraftId     String
-  estado         String     @default("PENDIENTE")
-  errorMessage   String?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-  fechaVuelo     DateTime?
-  cliente        String?
-  copiloto       String?
-  detalle        String?
-  hobbsFinal     Decimal?
-  instructorRate Decimal?
-  notificado     Boolean    @default(false)
-  tachFinal        Decimal?
+  id               Int        @id @default(autoincrement())
+  pilotoId         Int
+  aircraftId       String
+  estado           String     @default("PENDIENTE")
+  errorMessage     String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  cliente          String?
+  copiloto         String?
+  detalle          String?
+  fechaVuelo       DateTime?
+  hobbsFinal       Decimal?
+  instructorRate   Decimal?
+  notificado       Boolean    @default(false)
   rate             Decimal?
-  aerodromoSalida  String?
+  tachFinal        Decimal?
   aerodromoDestino String?
+  aerodromoSalida  String?
   Flight           Flight?
   Aircraft         Aircraft   @relation(fields: [aircraftId], references: [matricula])
-  User           User       @relation(fields: [pilotoId], references: [id])
-  ImageLog       ImageLog[]
+  User             User       @relation(fields: [pilotoId], references: [id])
+  ImageLog         ImageLog[]
 }
 
 model ImageLog {
@@ -147,8 +147,6 @@ model User {
   saldo_cuenta     Decimal            @default(0.0)
   tarifa_hora      Decimal
   password         String
-  resetToken       String?            @unique
-  resetTokenExpiry DateTime?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   fechaNacimiento  DateTime?
@@ -156,14 +154,16 @@ model User {
   telefono         String?
   documento        String?
   tipoDocumento    String?
+  resetToken       String?            @unique
+  resetTokenExpiry DateTime?
   Account          Account[]
+  Deposit          Deposit[]
+  DeviceToken      DeviceToken[]
   Flight           Flight[]
   FlightSubmission FlightSubmission[]
+  FuelLog          FuelLog[]
   Session          Session[]
   Transaction      Transaction[]
-  Deposit          Deposit[]
-  FuelLog          FuelLog[]
-  DeviceToken      DeviceToken[]
 }
 
 model VerificationToken {
@@ -174,21 +174,18 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// New: Deposits linked to pilots, optional image
 model Deposit {
   id        Int      @id @default(autoincrement())
   userId    Int
-  fecha     DateTime @default(now())
-  monto     Decimal
-  imageUrl  String?
-  detalle   String?
-  estado    String   @default("PENDIENTE") // PENDIENTE, APROBADO, RECHAZADO
   createdAt DateTime @default(now())
-
+  detalle   String?
+  fecha     DateTime @default(now())
+  imageUrl  String?
+  monto     Decimal
+  estado    String   @default("PENDIENTE")
   User      User     @relation(fields: [userId], references: [id])
 }
 
-// New: Fuel logs linked to pilots, optional image
 model FuelLog {
   id        Int      @id @default(autoincrement())
   userId    Int
@@ -197,21 +194,18 @@ model FuelLog {
   monto     Decimal
   imageUrl  String?
   detalle   String?
-  estado    String   @default("PENDIENTE") // PENDIENTE, APROBADO, RECHAZADO
   createdAt DateTime @default(now())
-
+  estado    String   @default("PENDIENTE")
   User      User     @relation(fields: [userId], references: [id])
 }
 
-// Device tokens for "Remember this device" feature (PWA persistent login)
 model DeviceToken {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  token     String   @unique
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  token      String   @unique
   deviceInfo String?
-  createdAt DateTime @default(now())
-  lastUsed  DateTime @default(now())
-  expiresAt DateTime
-  
-  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  lastUsed   DateTime @default(now())
+  expiresAt  DateTime
+  User       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

@@ -19,13 +19,17 @@ export default function ImagePreviewModal({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [initialPinchDistance, setInitialPinchDistance] = useState<number | null>(null);
   const [initialScale, setInitialScale] = useState(1);
+  const [imageError, setImageError] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Reset zoom and position when image changes
+  // Reset zoom, position and error state when image changes
   useEffect(() => {
     setScale(1);
     setPosition({ x: 0, y: 0 });
+    setImageError(false);
+    setImageLoaded(false);
   }, [imageUrl]);
 
   // Handle Escape key to close
@@ -193,45 +197,49 @@ export default function ImagePreviewModal({
         </svg>
       </button>
 
-      {/* Zoom controls */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20">
-        <button
-          onClick={() => setScale(Math.max(scale - 0.5, 1))}
-          className="text-white bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors disabled:opacity-50"
-          disabled={scale <= 1}
-          aria-label="Reducir zoom"
-        >
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-          </svg>
-        </button>
-        
-        <button
-          onClick={resetZoom}
-          className="text-white bg-black/50 rounded-full px-3 py-2 hover:bg-black/70 transition-colors text-sm font-medium min-w-[60px]"
-          aria-label="Nivel de zoom"
-        >
-          {Math.round(scale * 100)}%
-        </button>
-        
-        <button
-          onClick={() => setScale(Math.min(scale + 0.5, 5))}
-          className="text-white bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors disabled:opacity-50"
-          disabled={scale >= 5}
-          aria-label="Aumentar zoom"
-        >
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
-      </div>
+      {/* Zoom controls - only show when image loaded successfully */}
+      {imageLoaded && !imageError && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+          <button
+            onClick={() => setScale(Math.max(scale - 0.5, 1))}
+            className="text-white bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors disabled:opacity-50"
+            disabled={scale <= 1}
+            aria-label="Reducir zoom"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+            </svg>
+          </button>
+          
+          <button
+            onClick={resetZoom}
+            className="text-white bg-black/50 rounded-full px-3 py-2 hover:bg-black/70 transition-colors text-sm font-medium min-w-[60px]"
+            aria-label="Nivel de zoom"
+          >
+            {Math.round(scale * 100)}%
+          </button>
+          
+          <button
+            onClick={() => setScale(Math.min(scale + 0.5, 5))}
+            className="text-white bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors disabled:opacity-50"
+            disabled={scale >= 5}
+            aria-label="Aumentar zoom"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
+        </div>
+      )}
 
-      {/* Instructions hint */}
-      <div className="absolute top-4 left-4 text-white/70 text-xs bg-black/30 rounded px-2 py-1 z-20">
-        {scale === 1 
-          ? "Doble clic o pellizcar para zoom" 
-          : "Arrastrar para mover • Doble clic para resetear"}
-      </div>
+      {/* Instructions hint - only show when image loaded */}
+      {imageLoaded && !imageError && (
+        <div className="absolute top-4 left-4 text-white/70 text-xs bg-black/30 rounded px-2 py-1 z-20">
+          {scale === 1 
+            ? "Doble clic o pellizcar para zoom" 
+            : "Arrastrar para mover • Doble clic para resetear"}
+        </div>
+      )}
 
       {/* Image container */}
       <div
@@ -242,11 +250,31 @@ export default function ImagePreviewModal({
         onTouchEnd={handleTouchEnd}
         onWheel={handleWheel}
       >
+        {/* Loading state */}
+        {!imageLoaded && !imageError && (
+          <div className="text-white text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+            <p>Cargando imagen...</p>
+          </div>
+        )}
+
+        {/* Error state */}
+        {imageError && (
+          <div className="text-white text-center p-8">
+            <svg className="w-16 h-16 mx-auto mb-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <p className="text-lg font-medium mb-2">Imagen no encontrada</p>
+            <p className="text-white/60 text-sm">El archivo de la boleta no está disponible en el servidor.</p>
+          </div>
+        )}
+
+        {/* Image */}
         <img
           ref={imageRef}
           src={imageUrl}
           alt={alt}
-          className="max-h-[85vh] max-w-[90vw] object-contain select-none"
+          className={`max-h-[85vh] max-w-[90vw] object-contain select-none ${!imageLoaded || imageError ? 'hidden' : ''}`}
           style={{
             transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
             transition: isDragging ? "none" : "transform 0.1s ease-out",
@@ -255,6 +283,8 @@ export default function ImagePreviewModal({
           onClick={(e) => e.stopPropagation()}
           onDoubleClick={handleDoubleClick}
           onMouseDown={handleMouseDown}
+          onLoad={() => setImageLoaded(true)}
+          onError={() => setImageError(true)}
           draggable={false}
         />
       </div>
