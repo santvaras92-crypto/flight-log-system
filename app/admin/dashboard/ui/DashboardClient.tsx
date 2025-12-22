@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Chart, LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler } from "chart.js";
 import { useEffect, useRef } from "react";
 import { generateAccountStatementPDF } from "@/lib/generate-account-pdf";
+import ImagePreviewModal from "@/app/components/ImagePreviewModal";
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler);
 
@@ -1837,6 +1838,7 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
     const [filterPilot, setFilterPilot] = useState('');
     const [filterSource, setFilterSource] = useState<'ALL' | 'CSV' | 'DB'>('ALL');
     const [currentPage, setCurrentPage] = useState(1);
+    const [fuelImageModalUrl, setFuelImageModalUrl] = useState<string | null>(null);
     const pageSize = 50;
     
     // Get unique pilots for filter dropdown
@@ -1968,20 +1970,19 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm">
                       {l.imageUrl ? (
-                        <a
-                          href={
-                            l.imageUrl.startsWith('/api/uploads/fuel-image') ? l.imageUrl :
-                            l.imageUrl.startsWith('http') ? l.imageUrl :
-                            l.imageUrl.startsWith('/uploads/fuel/')
-                              ? `/api/uploads/fuel-image?key=${encodeURIComponent(`fuel/${l.imageUrl.split('/').pop()}`)}`
-                              : l.imageUrl
-                          }
-                          target="_blank"
-                          rel="noreferrer"
+                        <button
+                          onClick={() => {
+                            const url = l.imageUrl.startsWith('/api/uploads/fuel-image') ? l.imageUrl :
+                              l.imageUrl.startsWith('http') ? l.imageUrl :
+                              l.imageUrl.startsWith('/uploads/fuel/')
+                                ? `/api/uploads/fuel-image?key=${encodeURIComponent(`fuel/${l.imageUrl.split('/').pop()}`)}`
+                                : l.imageUrl;
+                            setFuelImageModalUrl(url);
+                          }}
                           className="underline font-medium text-blue-600 hover:text-blue-800"
                         >
                           Ver
-                        </a>
+                        </button>
                       ) : (
                         <span className="text-slate-400">-</span>
                       )}
@@ -2032,6 +2033,13 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
             </div>
           )}
         </div>
+        
+        {/* Image Preview Modal for FuelTable */}
+        <ImagePreviewModal
+          imageUrl={fuelImageModalUrl}
+          onClose={() => setFuelImageModalUrl(null)}
+          alt="Boleta de combustible"
+        />
       </div>
     );
   }
