@@ -1,11 +1,12 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { createFlightSubmission } from '@/app/actions/create-flight-submission';
 import { createFuel } from '@/app/actions/create-fuel';
 import { createDeposit } from '@/app/actions/create-deposit';
 import { findOrCreatePilotByCode } from '@/app/actions/find-or-create-pilot';
 import Link from 'next/link';
+import ImagePreviewModal from '@/app/components/ImagePreviewModal';
 
 type PilotOpt = { id: string | number; value: string; label: string };
 
@@ -115,6 +116,13 @@ export default function RegisterClient({
   const [fuelLitros, setFuelLitros] = useState<string>('');
   const [fuelMonto, setFuelMonto] = useState<string>('');
   
+  // Image preview states
+  const [fuelImagePreview, setFuelImagePreview] = useState<string | null>(null);
+  const [depositImagePreview, setDepositImagePreview] = useState<string | null>(null);
+  const [imageModalUrl, setImageModalUrl] = useState<string | null>(null);
+  const fuelFileInputRef = useRef<HTMLInputElement>(null);
+  const depositFileInputRef = useRef<HTMLInputElement>(null);
+  
   // Calculate fuel price per liter
   const precioLitro = useMemo(() => {
     const litros = parseFloat(fuelLitros);
@@ -160,6 +168,44 @@ export default function RegisterClient({
     }
     return null;
   }, [hobbsTachRatio]);
+
+  // Handle file input change for image preview
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'fuel' | 'deposit') => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        if (type === 'fuel') {
+          setFuelImagePreview(result);
+        } else {
+          setDepositImagePreview(result);
+        }
+      };
+      reader.readAsDataURL(file);
+    } else {
+      if (type === 'fuel') {
+        setFuelImagePreview(null);
+      } else {
+        setDepositImagePreview(null);
+      }
+    }
+  };
+
+  // Clear image preview
+  const clearImagePreview = (type: 'fuel' | 'deposit') => {
+    if (type === 'fuel') {
+      setFuelImagePreview(null);
+      if (fuelFileInputRef.current) {
+        fuelFileInputRef.current.value = '';
+      }
+    } else {
+      setDepositImagePreview(null);
+      if (depositFileInputRef.current) {
+        depositFileInputRef.current.value = '';
+      }
+    }
+  };
 
   // Calcular nuevas horas de componentes para vista previa
   const newComponents = useMemo(() => {
@@ -637,11 +683,47 @@ export default function RegisterClient({
                       className="rounded-xl border px-3 py-3 bg-slate-50" 
                     />
                   </label>
-                  <label className="flex flex-col text-sm">
+                  <div className="flex flex-col text-sm">
                     <span className="mb-1">Foto boleta</span>
-                    <input name="file" type="file" accept="image/*" required className="rounded-xl border px-3 py-2 bg-slate-50" />
-                  </label>
+                    <input 
+                      ref={fuelFileInputRef}
+                      name="file" 
+                      type="file" 
+                      accept="image/*" 
+                      required 
+                      className="rounded-xl border px-3 py-2 bg-slate-50" 
+                      onChange={(e) => handleFileChange(e, 'fuel')}
+                    />
+                  </div>
                 </div>
+                
+                {/* Fuel Image Preview */}
+                {fuelImagePreview && (
+                  <div className="relative rounded-xl border border-slate-200 bg-slate-50 p-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-slate-600 font-medium">Vista previa de boleta</span>
+                      <button
+                        type="button"
+                        onClick={() => clearImagePreview('fuel')}
+                        className="text-red-500 hover:text-red-700 text-xs font-medium"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setImageModalUrl(fuelImagePreview)}
+                      className="w-full"
+                    >
+                      <img 
+                        src={fuelImagePreview} 
+                        alt="Preview boleta" 
+                        className="max-h-32 mx-auto rounded-lg object-contain cursor-pointer hover:opacity-80 transition-opacity"
+                      />
+                      <span className="text-xs text-blue-600 mt-1 block">Tocar para ampliar</span>
+                    </button>
+                  </div>
+                )}
                 
                 {/* AVGAS Price per Liter display */}
                 {precioLitro !== null && (
@@ -674,12 +756,49 @@ export default function RegisterClient({
                                 />
                                 <span className="mt-1 text-[11px] text-slate-500">Ingrese el monto (ej: 105.000 o 105000)</span>
                               </label>
-                              <label className="flex flex-col text-sm">
+                              <div className="flex flex-col text-sm">
                                 <span className="mb-1 font-medium">Comprobante (imagen) *</span>
-                                <input name="file" type="file" accept="image/*" required className="rounded-xl border px-3 py-2 bg-slate-50" />
+                                <input 
+                                  ref={depositFileInputRef}
+                                  name="file" 
+                                  type="file" 
+                                  accept="image/*" 
+                                  required 
+                                  className="rounded-xl border px-3 py-2 bg-slate-50" 
+                                  onChange={(e) => handleFileChange(e, 'deposit')}
+                                />
                                 <span className="mt-1 text-[11px] text-slate-500">La imagen del comprobante es obligatoria.</span>
-                              </label>
+                              </div>
                             </div>
+                            
+                            {/* Deposit Image Preview */}
+                            {depositImagePreview && (
+                              <div className="relative rounded-xl border border-slate-200 bg-slate-50 p-2">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-xs text-slate-600 font-medium">Vista previa de comprobante</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => clearImagePreview('deposit')}
+                                    className="text-red-500 hover:text-red-700 text-xs font-medium"
+                                  >
+                                    Eliminar
+                                  </button>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setImageModalUrl(depositImagePreview)}
+                                  className="w-full"
+                                >
+                                  <img 
+                                    src={depositImagePreview} 
+                                    alt="Preview comprobante" 
+                                    className="max-h-32 mx-auto rounded-lg object-contain cursor-pointer hover:opacity-80 transition-opacity"
+                                  />
+                                  <span className="text-xs text-blue-600 mt-1 block">Tocar para ampliar</span>
+                                </button>
+                              </div>
+                            )}
+                            
                             <label className="flex flex-col text-sm">
                               <span className="mb-1">Detalle (opcional)</span>
                               <input name="detalle" className="rounded-xl border px-3 py-3 bg-slate-50" />
@@ -836,6 +955,13 @@ export default function RegisterClient({
           </div>
         </div>
       )}
+
+      {/* Image Preview Modal */}
+      <ImagePreviewModal
+        imageUrl={imageModalUrl}
+        onClose={() => setImageModalUrl(null)}
+        alt="Vista previa"
+      />
     </div>
   );
 }
