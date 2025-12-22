@@ -181,12 +181,12 @@ export default function ValidacionClient({
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-slate-200 pb-2">
+      <div className="flex gap-1 sm:gap-2 border-b border-slate-200 pb-2 overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-3 rounded-t-lg font-medium transition-all flex items-center gap-2 ${
+            className={`px-3 sm:px-4 py-2 sm:py-3 rounded-t-lg font-medium transition-all flex items-center gap-1 sm:gap-2 whitespace-nowrap text-sm sm:text-base flex-shrink-0 ${
               activeTab === tab.id
                 ? `bg-${tab.color}-600 text-white shadow-lg`
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -196,9 +196,9 @@ export default function ValidacionClient({
             } : {}}
           >
             <span>{tab.icon}</span>
-            <span>{tab.label}</span>
+            <span className="hidden xs:inline sm:inline">{tab.label}</span>
             {tab.count > 0 && (
-              <span className={`px-2 py-0.5 text-xs rounded-full ${
+              <span className={`px-1.5 sm:px-2 py-0.5 text-xs rounded-full ${
                 activeTab === tab.id ? 'bg-white/30' : 'bg-slate-300'
               }`}>
                 {tab.count}
