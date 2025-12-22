@@ -1,7 +1,7 @@
 // rebuild trigger 1765397735
 "use server";
 import { prisma } from "@/lib/prisma";
-import { randomUUID } from "crypto";
+import bcrypt from 'bcryptjs';
 
 type Payload = {
   nombre: string;
@@ -18,6 +18,7 @@ export async function registerPilot(payload: Payload): Promise<{ ok: boolean; er
     // Build display name (nombre + apellido)
     const displayName = [payload.nombre, payload.apellido].filter(Boolean).join(" ");
     // Minimal required fields based on current schema
+    const hashedPassword = await bcrypt.hash('aqi', 10);
     const user = await prisma.user.create({
       data: {
         nombre: displayName || payload.nombre,
@@ -25,7 +26,7 @@ export async function registerPilot(payload: Payload): Promise<{ ok: boolean; er
         rol: "PILOTO",
         saldo_cuenta: 0,
         tarifa_hora: payload.tarifa_hora ?? 170000,
-        password: randomUUID(),
+        password: hashedPassword, // Default password: aqi
         // Optional: store extra fields in codigo if empty, otherwise ignore.
         // We avoid schema migrations here and focus on making the pilot visible in Dashboard.
         codigo: undefined,

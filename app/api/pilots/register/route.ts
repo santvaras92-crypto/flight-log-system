@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateUniquePilotCode } from "@/lib/codegen";
+import bcrypt from 'bcryptjs';
 
 export async function POST(req: Request) {
   try {
@@ -27,6 +28,7 @@ export async function POST(req: Request) {
     }
 
     const codigo = await generateUniquePilotCode(nombre, apellido);
+    const hashedPassword = await bcrypt.hash('aqi', 10);
 
     const user = await prisma.user.create({
       data: {
@@ -40,7 +42,7 @@ export async function POST(req: Request) {
         codigo,
         rol: "PILOTO",
         tarifa_hora: tarifaHora != null ? Number(tarifaHora) : 0,
-          password: process.env.DEFAULT_PILOT_PASSWORD || `TEMP-${Math.random().toString(36).slice(2, 10)}`
+        password: hashedPassword, // Default password: aqi
       }
     });
 

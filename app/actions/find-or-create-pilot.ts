@@ -2,6 +2,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';
 
@@ -38,12 +39,13 @@ export async function findOrCreatePilotByCode(code: string): Promise<number> {
   }
   
   // Create new user
+  const hashedPassword = await bcrypt.hash('aqi', 10);
   user = await prisma.user.create({
     data: {
       codigo: upperCode,
       nombre: pilotName,
       email: `${upperCode.toLowerCase()}@piloto.local`,
-      password: 'placeholder', // Temporary password for CSV pilots
+      password: hashedPassword, // Default password: aqi
       rol: 'PILOTO',
       tarifa_hora: 175,
     }

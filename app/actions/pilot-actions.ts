@@ -2,6 +2,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
 
 /**
  * Normaliza texto removiendo acentos y convirtiendo a minúsculas
@@ -176,6 +177,7 @@ export async function createOrUpdatePilot(data: {
 
   // Crear nuevo piloto
   const newCode = await generateUniquePilotCode(data.nombre, data.apellido);
+  const hashedPassword = await bcrypt.hash('aqi', 10);
   
   const newPilot = await prisma.user.create({
     data: {
@@ -189,7 +191,7 @@ export async function createOrUpdatePilot(data: {
       codigo: newCode,
       rol: 'PILOTO',
       tarifa_hora: 0,
-      password: '', // Required field
+      password: hashedPassword, // Default password: aqi
     }
   });
 

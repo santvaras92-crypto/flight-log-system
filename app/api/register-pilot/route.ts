@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { randomUUID } from "crypto";
+import bcrypt from 'bcryptjs';
 import * as fs from "fs";
 import * as path from "path";
 
@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
     const displayName = [nombre, apellido].filter(Boolean).join(" ");
 
     // Crear el piloto
+    const hashedPassword = await bcrypt.hash('aqi', 10);
     const user = await prisma.user.create({
       data: {
         codigo: codigo.trim().toUpperCase(),
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
         rol: "PILOTO",
         saldo_cuenta: 0,
         tarifa_hora: 170000,
-        password: randomUUID(), // Password temporal
+        password: hashedPassword, // Default password: aqi
       },
     });
 
