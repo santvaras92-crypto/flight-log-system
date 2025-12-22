@@ -34,6 +34,13 @@ export async function GET() {
         keyPresent: Boolean(key),
         keyPrefix: key ? key.slice(0, 8) + "…" : null,
       },
+      r2: {
+        configured: !!(process.env.R2_ENDPOINT && process.env.R2_BUCKET && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY),
+        endpoint: process.env.R2_ENDPOINT ? "set" : "missing",
+        bucket: process.env.R2_BUCKET || "missing",
+        accessKeyId: process.env.R2_ACCESS_KEY_ID ? "set" : "missing",
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY ? "set" : "missing",
+      },
     });
   } catch (error) {
     return NextResponse.json(
