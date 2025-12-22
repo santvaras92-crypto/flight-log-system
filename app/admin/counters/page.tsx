@@ -19,6 +19,9 @@ export default async function CountersPage() {
       airframe_hours: true,
       engine_hours: true,
       propeller_hours: true,
+      tarifa: true,
+      instructor_rate: true,
+      costo: true,
       User: {
         select: {
           nombre: true,
@@ -63,6 +66,9 @@ export default async function CountersPage() {
             airframe_hours: lastFlight.airframe_hours?.toString() || null,
             engine_hours: lastFlight.engine_hours?.toString() || null,
             propeller_hours: lastFlight.propeller_hours?.toString() || null,
+            tarifa: lastFlight.tarifa?.toString() || null,
+            instructor_rate: lastFlight.instructor_rate?.toString() || null,
+            costo: lastFlight.costo?.toString() || null,
             User: lastFlight.User || null,
           } : null}
           aircraft={aircraft ? {

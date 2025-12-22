@@ -15,6 +15,9 @@ interface Flight {
   airframe_hours: string | null;
   engine_hours: string | null;
   propeller_hours: string | null;
+  tarifa: string | null;
+  instructor_rate: string | null;
+  costo: string | null;
   User: {
     nombre: string;
     codigo: string | null;
@@ -38,6 +41,8 @@ export default function CountersClient({
   const [hobbsFin, setHobbsFin] = useState(lastFlight?.hobbs_fin || '');
   const [tachInicio, setTachInicio] = useState(lastFlight?.tach_inicio || '');
   const [tachFin, setTachFin] = useState(lastFlight?.tach_fin || '');
+  const [tarifa, setTarifa] = useState(lastFlight?.tarifa || '');
+  const [instructorRate, setInstructorRate] = useState(lastFlight?.instructor_rate || '');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -51,6 +56,11 @@ export default function CountersClient({
 
   const deltaHobbs = hobbsFin && hobbsInicio ? (parseFloat(hobbsFin) - parseFloat(hobbsInicio)).toFixed(1) : null;
   const deltaTach = tachFin && tachInicio ? (parseFloat(tachFin) - parseFloat(tachInicio)).toFixed(1) : null;
+  
+  // Calcular costo estimado
+  const estimatedCost = deltaHobbs && (tarifa || instructorRate) 
+    ? (parseFloat(deltaHobbs) * ((parseFloat(tarifa) || 0) + (parseFloat(instructorRate) || 0))).toFixed(0)
+    : null;
 
   const handleSave = async () => {
     if (!lastFlight) return;
@@ -65,6 +75,8 @@ export default function CountersClient({
         hobbs_fin: parseFloat(hobbsFin),
         tach_inicio: parseFloat(tachInicio),
         tach_fin: parseFloat(tachFin),
+        tarifa: tarifa ? parseFloat(tarifa) : undefined,
+        instructor_rate: instructorRate ? parseFloat(instructorRate) : undefined,
       });
 
       if (result.success) {
@@ -204,6 +216,82 @@ export default function CountersClient({
             )}
           </div>
         </div>
+
+        {/* TARIFAS */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* Airplane Rate (Tarifa) */}
+          <div className="space-y-4 p-4 rounded-lg bg-purple-50 border border-purple-200">
+            <h3 className="text-sm font-bold uppercase text-purple-900">💰 Tarifa Avión</h3>
+            
+            <div>
+              <label className="block text-xs font-semibold mb-2 text-slate-700">
+                Tarifa por Hora (CLP)
+              </label>
+              <input
+                type="number"
+                step="1000"
+                value={tarifa}
+                onChange={(e) => setTarifa(e.target.value)}
+                placeholder="Ej: 270000"
+                className="w-full rounded-lg border px-3 py-2 font-mono font-bold text-lg"
+              />
+            </div>
+
+            {tarifa && (
+              <div className="p-3 bg-purple-100 rounded-lg">
+                <p className="text-xs font-bold text-purple-700">Airplane Rate</p>
+                <p className="text-xl font-mono font-bold text-purple-900">
+                  ${parseInt(tarifa).toLocaleString('es-CL')}/hr
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Instructor Rate */}
+          <div className="space-y-4 p-4 rounded-lg bg-orange-50 border border-orange-200">
+            <h3 className="text-sm font-bold uppercase text-orange-900">👨‍✈️ Instructor/SP Rate</h3>
+            
+            <div>
+              <label className="block text-xs font-semibold mb-2 text-slate-700">
+                Tarifa Instructor por Hora (CLP)
+              </label>
+              <input
+                type="number"
+                step="1000"
+                value={instructorRate}
+                onChange={(e) => setInstructorRate(e.target.value)}
+                placeholder="Ej: 30000"
+                className="w-full rounded-lg border px-3 py-2 font-mono font-bold text-lg"
+              />
+            </div>
+
+            {instructorRate && (
+              <div className="p-3 bg-orange-100 rounded-lg">
+                <p className="text-xs font-bold text-orange-700">Instructor Rate</p>
+                <p className="text-xl font-mono font-bold text-orange-900">
+                  ${parseInt(instructorRate).toLocaleString('es-CL')}/hr
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Costo Estimado */}
+        {estimatedCost && deltaHobbs && (
+          <div className="mb-6 p-4 rounded-lg bg-yellow-50 border-2 border-yellow-400">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-yellow-700 mb-1">💵 Costo Estimado del Vuelo</p>
+                <p className="text-xs text-yellow-600">
+                  ({deltaHobbs} hrs × ${((parseFloat(tarifa) || 0) + (parseFloat(instructorRate) || 0)).toLocaleString('es-CL')}/hr)
+                </p>
+              </div>
+              <p className="text-3xl font-mono font-bold text-yellow-900">
+                ${parseInt(estimatedCost).toLocaleString('es-CL')}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Ratio validation */}
         {deltaHobbs && deltaTach && parseFloat(deltaTach) > 0 && (

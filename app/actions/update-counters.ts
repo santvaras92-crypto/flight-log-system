@@ -11,11 +11,13 @@ interface UpdateCountersInput {
   hobbs_fin: number;
   tach_inicio: number;
   tach_fin: number;
+  tarifa?: number;
+  instructor_rate?: number;
 }
 
 export async function updateCounters(input: UpdateCountersInput) {
   try {
-    const { flightId, hobbs_inicio, hobbs_fin, tach_inicio, tach_fin } = input;
+    const { flightId, hobbs_inicio, hobbs_fin, tach_inicio, tach_fin, tarifa, instructor_rate } = input;
 
     // Validar que los valores finales sean mayores a los iniciales
     if (hobbs_fin <= hobbs_inicio) {
@@ -59,6 +61,18 @@ export async function updateCounters(input: UpdateCountersInput) {
       ? new Prisma.Decimal(currentFlight.propeller_hours.toString()).plus(adjustment)
       : null;
 
+    // Calcular tarifas y costo
+    const tarifaDec = tarifa !== undefined ? new Prisma.Decimal(tarifa) : undefined;
+    const instructorRateDec = instructor_rate !== undefined ? new Prisma.Decimal(instructor_rate) : undefined;
+    
+    // Calcular nuevo costo si se actualizaron las tarifas o el diff_hobbs
+    let newCosto: Prisma.Decimal | undefined = undefined;
+    if (tarifaDec !== undefined || instructorRateDec !== undefined) {
+      const tarifaFinal = tarifaDec ?? new Prisma.Decimal(0);
+      const instructorFinal = instructorRateDec ?? new Prisma.Decimal(0);
+      newCosto = diff_hobbs.mul(tarifaFinal.plus(instructorFinal));
+    }
+
     // Actualizar el vuelo
     await prisma.flight.update({
       where: { id: flightId },
@@ -72,6 +86,9 @@ export async function updateCounters(input: UpdateCountersInput) {
         airframe_hours: newAirframeHours,
         engine_hours: newEngineHours,
         propeller_hours: newPropellerHours,
+        ...(tarifaDec !== undefined && { tarifa: tarifaDec }),
+        ...(instructorRateDec !== undefined && { instructor_rate: instructorRateDec }),
+        ...(newCosto !== undefined && { costo: newCosto }),
       },
     });
 
