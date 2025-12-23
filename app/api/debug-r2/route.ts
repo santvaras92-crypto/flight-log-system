@@ -4,13 +4,15 @@ import { S3Client, ListObjectsV2Command, HeadBucketCommand } from '@aws-sdk/clie
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const endpoint = process.env.R2_ENDPOINT || '';
+  const endpointRaw = process.env.R2_ENDPOINT || '';
+  const endpoint = endpointRaw.trim();
   
   const results: any = {
     timestamp: new Date().toISOString(),
     config: {
       endpoint: endpoint ? `${endpoint.slice(0, 30)}...` : 'missing',
       endpointFormat: endpoint.includes('.r2.cloudflarestorage.com') ? 'correct' : 'possibly incorrect',
+      endpointTrimmed: endpoint !== endpointRaw ? 'trimmed to remove whitespace' : 'unchanged',
       bucket: process.env.R2_BUCKET || 'missing',
       accessKeyId: process.env.R2_ACCESS_KEY_ID ? `${process.env.R2_ACCESS_KEY_ID.slice(0,8)}...` : 'missing',
       secretAccessKey: process.env.R2_SECRET_ACCESS_KEY ? 'set (hidden)' : 'missing',
@@ -29,7 +31,7 @@ export async function GET() {
   try {
     const client = new S3Client({
       region: 'auto',
-      endpoint: process.env.R2_ENDPOINT,
+      endpoint,
       credentials: {
         accessKeyId: process.env.R2_ACCESS_KEY_ID,
         secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,

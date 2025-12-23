@@ -1,25 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { r2Client } from '@/lib/r2-storage';
 
-const hasR2Config = !!(
-  process.env.R2_ENDPOINT &&
-  process.env.R2_BUCKET &&
-  process.env.R2_ACCESS_KEY_ID &&
-  process.env.R2_SECRET_ACCESS_KEY
-);
-
-const r2Client = hasR2Config
-  ? new S3Client({
-      region: 'auto',
-      endpoint: process.env.R2_ENDPOINT,
-      credentials: {
-        accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-      },
-    })
-  : null;
+async function streamToBuffer(stream: any) {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -46,74 +37,70 @@ export async function GET(request: NextRequest) {
       ext === 'pdf' ? 'application/pdf' :
       'application/octet-stream';
 
-    // 1) Try local storage FIRST (Railway volume)
-    const volumePath = process.env.RAILWAY_VOLUME_MOUNT_PATH
-      ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, subdir, filename)
-      : null;
-    
-    const publicPath = path.join(process.cwd(), 'public', 'uploads', subdir, filename);
-
-    // Check volume path first
-    if (volumePath) {
-      try {
-        const data = await fs.readFile(volumePath);
-        console.log(`[Local] Served from volume: ${volumePath}`);
-        return new NextResponse(new Uint8Array(data), {
-          headers: {
-            'Content-Type': contentType,
-            'Cache-Control': 'public, max-age=31536000, immutable',
-          },
-        });
-      } catch {
-        // File not in volume, continue
-      }
-    }
-
-    // Check public path
-    try {
-      const data = await fs.readFile(publicPath);
-      console.log(`[Local] Served from public: ${publicPath}`);
-      return new NextResponse(new Uint8Array(data), {
-        headers: {
-          'Content-Type': contentType,
-          'Cache-Control': 'public, max-age=31536000, immutable',
-        },
-      });
-    } catch {
-      // File not in public, continue to R2
-    }
-
-    // 2) Try R2 as fallback
+    // Try R2 first if configured
     if (r2Client && process.env.R2_BUCKET) {
       try {
-        const command = new GetObjectCommand({
+        const object = await r2Client.send(new GetObjectCommand({
           Bucket: process.env.R2_BUCKET,
           Key: key,
-        });
+        }));
 
-        const response = await r2Client.send(command);
-        
-        if (response.Body) {
-          const chunks: Uint8Array[] = [];
-          for await (const chunk of response.Body as any) {
-            chunks.push(chunk);
-          }
-          const buffer = Buffer.concat(chunks);
-          console.log(`[R2] Served from R2: ${key}`);
+        if (object.Body) {
+          const data = await streamToBuffer(object.Body);
+          console.log(`[Storage] Served from R2: ${key}`);
 
-          return new NextResponse(buffer, {
+          return new NextResponse(new Uint8Array(data), {
             headers: {
               'Content-Type': contentType,
               'Cache-Control': 'public, max-age=31536000, immutable',
             },
           });
         }
-      } catch (r2Error: any) {
-        console.error('[R2] Fetch failed:', r2Error.message);
+      } catch (err) {
+        console.warn(`[R2] Fallback to local for ${key}:`, err instanceof Error ? err.message : err);
       }
     }
 
-    // Not found anywhere
+    // Try Railway volume next (production)
+    const volumePath = process.env.RAILWAY_VOLUME_MOUNT_PATH
+      ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, subdir, filename)
+      : null;
+    
+    // Then try public folder (local dev)
+    const publicPath = path.join(process.cwd(), 'public', 'uploads', subdir, filename);
+
+    let data: Buffer | null = null;
+
+    // Check volume path first
+    if (volumePath) {
+      try {
+        data = await fs.readFile(volumePath);
+        console.log(`[Storage] Served from volume: ${volumePath}`);
+      } catch {
+        // Not in volume, try public
+      }
+    }
+
+    // Check public path if not found in volume
+    if (!data) {
+      try {
+        data = await fs.readFile(publicPath);
+        console.log(`[Storage] Served from public: ${publicPath}`);
+      } catch {
+        // Not found anywhere
+      }
+    }
+
+    if (data) {
+      return new NextResponse(new Uint8Array(data), {
+        headers: {
+          'Content-Type': contentType,
+          'Cache-Control': 'public, max-age=31536000, immutable',
+        },
+      });
+    }
+
+    // Not found
     console.error(`[404] Image not found: ${key}`);
     return NextResponse.json(
       { error: 'Image not found', key },

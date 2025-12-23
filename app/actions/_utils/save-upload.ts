@@ -16,17 +16,14 @@ export async function saveUpload(file: PlainUpload, subdir: 'fuel' | 'deposit') 
   const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
   const name = `${Date.now()}-${randomUUID()}.${ext}`;
   const key = `${subdir}/${name}`;
-  
-  // Detect content type
-  const contentTypeMap: Record<string, string> = {
-    jpg: 'image/jpeg',
-    jpeg: 'image/jpeg',
-    png: 'image/png',
-    pdf: 'application/pdf',
-  };
-  const contentType = contentTypeMap[ext] || 'application/octet-stream';
 
-  // Always save to local storage first (Railway volume for persistence)
+  const contentType =
+    ext === 'png' ? 'image/png' :
+    ext === 'webp' ? 'image/webp' :
+    ext === 'pdf' ? 'application/pdf' :
+    'image/jpeg';
+
+  // Save to Railway volume (persistent) or public folder (local dev)
   const baseDir = process.env.RAILWAY_VOLUME_MOUNT_PATH 
     ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, subdir)
     : path.join(process.cwd(), 'public', 'uploads', subdir);
@@ -34,21 +31,20 @@ export async function saveUpload(file: PlainUpload, subdir: 'fuel' | 'deposit') 
   await fs.mkdir(baseDir, { recursive: true });
   const full = path.join(baseDir, name);
   await fs.writeFile(full, buf);
-  console.log(`[Local] Saved to ${full}`);
+  
+  console.log(`[Storage] Saved ${key} to ${full}`);
 
-  // Try R2 upload in background (non-blocking)
-  uploadToR2({ key, contentType, body: buf })
-    .then(success => {
-      if (success) {
-        console.log(`[R2] Also uploaded ${key}`);
-      } else {
-        console.log(`[R2] Upload failed for ${key}, local copy exists`);
-      }
-    })
-    .catch(err => {
-      console.error(`[R2] Error uploading ${key}:`, err.message);
-    });
+  // Best effort R2 upload; keep local copy for durability
+  const uploaded = await uploadToR2({
+    key,
+    contentType,
+    body: buf,
+  });
 
-  // Return API endpoint URL that will serve from local or R2
+  if (uploaded) {
+    console.log(`[R2] Uploaded ${key}`);
+  }
+
+  // Return API endpoint URL
   return `/api/uploads/fuel-image?key=${encodeURIComponent(key)}`;
 }

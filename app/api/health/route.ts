@@ -17,6 +17,14 @@ export async function GET() {
     const key = process.env.OPENAI_API_KEY || "";
     const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
+    const r2Endpoint = process.env.R2_ENDPOINT?.trim();
+    const r2Configured = !!(
+      r2Endpoint &&
+      process.env.R2_BUCKET &&
+      process.env.R2_ACCESS_KEY_ID &&
+      process.env.R2_SECRET_ACCESS_KEY
+    );
+
     return NextResponse.json({
       status: "ok",
       timestamp: new Date().toISOString(),
@@ -35,11 +43,14 @@ export async function GET() {
         keyPrefix: key ? key.slice(0, 8) + "…" : null,
       },
       r2: {
-        configured: !!(process.env.R2_ENDPOINT && process.env.R2_BUCKET && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY),
-        endpoint: process.env.R2_ENDPOINT ? "set" : "missing",
-        bucket: process.env.R2_BUCKET || "missing",
-        accessKeyId: process.env.R2_ACCESS_KEY_ID ? "set" : "missing",
-        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY ? "set" : "missing",
+        status: r2Configured ? "enabled" : "disabled",
+        note: r2Configured ? "Uploads try R2 first with local fallback" : "Using Railway volume for persistent storage",
+        configured: r2Configured,
+        endpointPrefix: r2Endpoint ? `${r2Endpoint.slice(0, 30)}...` : null,
+      },
+      storage: {
+        type: process.env.RAILWAY_VOLUME_MOUNT_PATH ? "railway-volume" : "local-public",
+        path: process.env.RAILWAY_VOLUME_MOUNT_PATH || "public/uploads",
       },
     });
   } catch (error) {
