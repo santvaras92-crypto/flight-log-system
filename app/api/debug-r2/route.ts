@@ -4,14 +4,18 @@ import { S3Client, ListObjectsV2Command, HeadBucketCommand } from '@aws-sdk/clie
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const endpoint = process.env.R2_ENDPOINT || '';
+  
   const results: any = {
     timestamp: new Date().toISOString(),
     config: {
-      endpoint: process.env.R2_ENDPOINT ? 'set' : 'missing',
+      endpoint: endpoint ? `${endpoint.slice(0, 30)}...` : 'missing',
+      endpointFormat: endpoint.includes('.r2.cloudflarestorage.com') ? 'correct' : 'possibly incorrect',
       bucket: process.env.R2_BUCKET || 'missing',
-      accessKeyId: process.env.R2_ACCESS_KEY_ID ? `${process.env.R2_ACCESS_KEY_ID.slice(0,4)}...` : 'missing',
+      accessKeyId: process.env.R2_ACCESS_KEY_ID ? `${process.env.R2_ACCESS_KEY_ID.slice(0,8)}...` : 'missing',
       secretAccessKey: process.env.R2_SECRET_ACCESS_KEY ? 'set (hidden)' : 'missing',
     },
+    expectedEndpointFormat: 'https://<ACCOUNT_ID>.r2.cloudflarestorage.com',
     connection: null,
     objects: null,
     error: null,
