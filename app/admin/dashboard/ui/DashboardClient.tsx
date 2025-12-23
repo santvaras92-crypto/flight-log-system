@@ -1524,7 +1524,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
         </div>
       )}
 
-      <div className="overflow-x-auto -mx-4 sm:mx-0">
+      <div className="overflow-x-auto px-4 sm:px-0">
         <table className="min-w-full divide-y divide-slate-200" style={{ minWidth: '1400px' }}>
           <thead className="bg-slate-50">
             <tr>
@@ -1616,10 +1616,20 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                   </td>
                   
                   {/* Piloto */}
-                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-700 font-medium max-w-[60px] sm:max-w-none truncate">
+                  <td
+                    className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-700 font-medium"
+                    title={pilotName}
+                  >
                     {editMode ? (
-                      <input type="text" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-full" defaultValue={pilotName} onChange={e=>handleChange(f.id,'piloto_raw',e.target.value)} />
-                    ) : pilotName}
+                      <input
+                        type="text"
+                        className="px-1 py-1 border rounded text-[10px] sm:text-xs w-full"
+                        defaultValue={pilotName}
+                        onChange={e=>handleChange(f.id,'piloto_raw',e.target.value)}
+                      />
+                    ) : (
+                      pilotName
+                    )}
                   </td>
                   
                   {/* Copiloto-instructor */}
