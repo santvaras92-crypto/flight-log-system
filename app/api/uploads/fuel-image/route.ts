@@ -30,7 +30,60 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing key parameter' }, { status: 400 });
     }
 
-    // Try R2 first
+    const filename = key.split('/').pop();
+    if (!filename) {
+      return NextResponse.json({ error: 'Invalid key format' }, { status: 400 });
+    }
+
+    const subdir = key.startsWith('fuel/') ? 'fuel' : 'deposit';
+    
+    // Determine content type from key extension
+    const ext = key.split('.').pop()?.toLowerCase();
+    const contentType = 
+      ext === 'png' ? 'image/png' :
+      ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' :
+      ext === 'webp' ? 'image/webp' :
+      ext === 'pdf' ? 'application/pdf' :
+      'application/octet-stream';
+
+    // 1) Try local storage FIRST (Railway volume)
+    const volumePath = process.env.RAILWAY_VOLUME_MOUNT_PATH
+      ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, subdir, filename)
+      : null;
+    
+    const publicPath = path.join(process.cwd(), 'public', 'uploads', subdir, filename);
+
+    // Check volume path first
+    if (volumePath) {
+      try {
+        const data = await fs.readFile(volumePath);
+        console.log(`[Local] Served from volume: ${volumePath}`);
+        return new NextResponse(new Uint8Array(data), {
+          headers: {
+            'Content-Type': contentType,
+            'Cache-Control': 'public, max-age=31536000, immutable',
+          },
+        });
+      } catch {
+        // File not in volume, continue
+      }
+    }
+
+    // Check public path
+    try {
+      const data = await fs.readFile(publicPath);
+      console.log(`[Local] Served from public: ${publicPath}`);
+      return new NextResponse(new Uint8Array(data), {
+        headers: {
+          'Content-Type': contentType,
+          'Cache-Control': 'public, max-age=31536000, immutable',
+        },
+      });
+    } catch {
+      // File not in public, continue to R2
+    }
+
+    // 2) Try R2 as fallback
     if (r2Client && process.env.R2_BUCKET) {
       try {
         const command = new GetObjectCommand({
@@ -46,15 +99,7 @@ export async function GET(request: NextRequest) {
             chunks.push(chunk);
           }
           const buffer = Buffer.concat(chunks);
-
-          // Determine content type from key extension
-          const ext = key.split('.').pop()?.toLowerCase();
-          const contentType = 
-            ext === 'png' ? 'image/png' :
-            ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' :
-            ext === 'webp' ? 'image/webp' :
-            ext === 'pdf' ? 'application/pdf' :
-            'application/octet-stream';
+          console.log(`[R2] Served from R2: ${key}`);
 
           return new NextResponse(buffer, {
             headers: {
@@ -63,53 +108,18 @@ export async function GET(request: NextRequest) {
             },
           });
         }
-      } catch (r2Error) {
-        console.error('R2 fetch failed:', r2Error);
-        // Fall through to local storage
+      } catch (r2Error: any) {
+        console.error('[R2] Fetch failed:', r2Error.message);
       }
     }
 
-    // Fallback to local storage
-    const filename = key.split('/').pop();
-    if (!filename) {
-      return NextResponse.json({ error: 'Invalid key format' }, { status: 400 });
-    }
-
-    const subdir = key.startsWith('fuel/') ? 'fuel' : 'deposit';
-    
-    const volumePath = process.env.RAILWAY_VOLUME_MOUNT_PATH
-      ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, subdir, filename)
-      : null;
-    
-    const publicPath = path.join(process.cwd(), 'public', 'uploads', subdir, filename);
-    
-    let data: Buffer;
-    
-    if (volumePath) {
-      try {
-        data = await fs.readFile(volumePath);
-      } catch {
-        data = await fs.readFile(publicPath);
-      }
-    } else {
-      data = await fs.readFile(publicPath);
-    }
-    
-    const ext = filename.split('.').pop()?.toLowerCase();
-    const contentType = 
-      ext === 'png' ? 'image/png' :
-      ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' :
-      ext === 'webp' ? 'image/webp' :
-      ext === 'pdf' ? 'application/pdf' :
-      'application/octet-stream';
-
-    return new NextResponse(new Uint8Array(data), {
-      headers: {
-        'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=31536000, immutable',
-      },
-    });
-  } catch (error) {
+    // Not found anywhere
+    console.error(`[404] Image not found: ${key}`);
+    return NextResponse.json(
+      { error: 'Image not found', key },
+      { status: 404 }
+    );
+  } catch (error: any) {
     console.error('Error serving image:', error);
     return NextResponse.json(
       { error: 'Image not found' },

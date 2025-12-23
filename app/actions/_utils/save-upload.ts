@@ -26,15 +26,7 @@ export async function saveUpload(file: PlainUpload, subdir: 'fuel' | 'deposit') 
   };
   const contentType = contentTypeMap[ext] || 'application/octet-stream';
 
-  // 1) Try R2 upload first
-  const r2Success = await uploadToR2({ key, contentType, body: buf });
-  if (r2Success) {
-    console.log(`[R2] Uploaded ${key}`);
-    // Return API endpoint URL that will serve from R2 or fallback to local
-    return `/api/uploads/fuel-image?key=${encodeURIComponent(key)}`;
-  }
-
-  // 2) Fallback to local storage (Railway volume or public)
+  // Always save to local storage first (Railway volume for persistence)
   const baseDir = process.env.RAILWAY_VOLUME_MOUNT_PATH 
     ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, subdir)
     : path.join(process.cwd(), 'public', 'uploads', subdir);
@@ -42,7 +34,21 @@ export async function saveUpload(file: PlainUpload, subdir: 'fuel' | 'deposit') 
   await fs.mkdir(baseDir, { recursive: true });
   const full = path.join(baseDir, name);
   await fs.writeFile(full, buf);
-  console.log(`[Local] Saved ${key}`);
-  // Return API endpoint URL that will serve from local storage
+  console.log(`[Local] Saved to ${full}`);
+
+  // Try R2 upload in background (non-blocking)
+  uploadToR2({ key, contentType, body: buf })
+    .then(success => {
+      if (success) {
+        console.log(`[R2] Also uploaded ${key}`);
+      } else {
+        console.log(`[R2] Upload failed for ${key}, local copy exists`);
+      }
+    })
+    .catch(err => {
+      console.error(`[R2] Error uploading ${key}:`, err.message);
+    });
+
+  // Return API endpoint URL that will serve from local or R2
   return `/api/uploads/fuel-image?key=${encodeURIComponent(key)}`;
 }
