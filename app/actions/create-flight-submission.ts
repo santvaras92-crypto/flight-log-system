@@ -222,35 +222,39 @@ export async function createFlightSubmission(input: Input) {
     select: { nombre: true, codigo: true, email: true }
   });
 
-  // Get last counters from aircraft
+  // Get last flight to calculate baselines (same logic as approveFlightSubmission)
+  const lastFlight = await prisma.flight.findFirst({
+    where: { aircraftId: 'CC-AQI' },
+    orderBy: [{ fecha: 'desc' }, { createdAt: 'desc' }],
+    select: { 
+      hobbs_fin: true, 
+      tach_fin: true,
+      airframe_hours: true,
+      engine_hours: true,
+      propeller_hours: true,
+    },
+  });
+
+  // If no previous flight exists, get counters from aircraft
   const aircraft = await prisma.aircraft.findUnique({
     where: { matricula: 'CC-AQI' },
     select: { hobbs_actual: true, tach_actual: true }
   });
-  
-  // Get last component hours
-  const components = await prisma.component.findMany({
-    where: { aircraftId: 'CC-AQI' },
-    select: { tipo: true, horas_acumuladas: true }
-  });
 
   const lastCounters = {
-    hobbs: aircraft?.hobbs_actual ? Number(aircraft.hobbs_actual) : null,
-    tach: aircraft?.tach_actual ? Number(aircraft.tach_actual) : null
+    hobbs: lastFlight?.hobbs_fin ? Number(lastFlight.hobbs_fin) : (aircraft?.hobbs_actual ? Number(aircraft.hobbs_actual) : 0),
+    tach: lastFlight?.tach_fin ? Number(lastFlight.tach_fin) : (aircraft?.tach_actual ? Number(aircraft.tach_actual) : 0),
   };
 
   const lastComponents = {
-    airframe: components.find(c => c.tipo.toLowerCase() === 'airframe')?.horas_acumuladas 
-      ? Number(components.find(c => c.tipo.toLowerCase() === 'airframe')!.horas_acumuladas) : null,
-    engine: components.find(c => c.tipo.toLowerCase() === 'engine')?.horas_acumuladas 
-      ? Number(components.find(c => c.tipo.toLowerCase() === 'engine')!.horas_acumuladas) : null,
-    propeller: components.find(c => c.tipo.toLowerCase() === 'propeller')?.horas_acumuladas 
-      ? Number(components.find(c => c.tipo.toLowerCase() === 'propeller')!.horas_acumuladas) : null
+    airframe: lastFlight?.airframe_hours ? Number(lastFlight.airframe_hours) : null,
+    engine: lastFlight?.engine_hours ? Number(lastFlight.engine_hours) : null,
+    propeller: lastFlight?.propeller_hours ? Number(lastFlight.propeller_hours) : null,
   };
 
   // Calcular diferencias y nuevas horas de componentes
-  const hobbs_inicio = lastCounters.hobbs ?? 0;
-  const tach_inicio = lastCounters.tach ?? 0;
+  const hobbs_inicio = lastCounters.hobbs;
+  const tach_inicio = lastCounters.tach;
   const diffHobbs = input.hobbs_fin - hobbs_inicio;
   const diffTach = input.tach_fin - tach_inicio;
 
