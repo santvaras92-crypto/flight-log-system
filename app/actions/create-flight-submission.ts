@@ -248,21 +248,101 @@ export async function createFlightSubmission(input: Input) {
       ? Number(components.find(c => c.tipo.toLowerCase() === 'propeller')!.horas_acumuladas) : null
   };
 
-  const submission = await prisma.flightSubmission.create({
-    data: {
-      pilotoId: input.pilotoId,
-      aircraftId: 'CC-AQI',
-      estado: 'PENDIENTE',
-      fechaVuelo,
-      copiloto: input.copiloto,
-      detalle: input.detalle,
-      hobbsFinal: input.hobbs_fin,
-      tachFinal: input.tach_fin,
-      aerodromoSalida: input.aerodromoSalida || 'SCCV',
-      aerodromoDestino: input.aerodromoDestino || 'SCCV',
-    },
-    select: { id: true },
+  // Calcular diferencias y nuevas horas de componentes
+  const hobbs_inicio = lastCounters.hobbs ?? 0;
+  const tach_inicio = lastCounters.tach ?? 0;
+  const diffHobbs = input.hobbs_fin - hobbs_inicio;
+  const diffTach = input.tach_fin - tach_inicio;
+
+  const newAirframe = lastComponents.airframe !== null ? Number((lastComponents.airframe + diffTach).toFixed(1)) : null;
+  const newEngine = lastComponents.engine !== null ? Number((lastComponents.engine + diffTach).toFixed(1)) : null;
+  const newPropeller = lastComponents.propeller !== null ? Number((lastComponents.propeller + diffTach).toFixed(1)) : null;
+
+  // Crear Flight y FlightSubmission en transacción
+  const result = await prisma.$transaction(async (tx) => {
+    // 1. Crear el Flight inmediatamente con todos los datos excepto tarifa e instructor_rate
+    const flight = await tx.flight.create({
+      data: {
+        fecha: fechaVuelo,
+        hobbs_inicio: hobbs_inicio,
+        hobbs_fin: input.hobbs_fin,
+        tach_inicio: tach_inicio,
+        tach_fin: input.tach_fin,
+        diff_hobbs: diffHobbs,
+        diff_tach: diffTach,
+        costo: 0, // Se calculará al aprobar
+        tarifa: null, // Se asignará al aprobar
+        instructor_rate: null, // Se asignará al aprobar
+        airframe_hours: newAirframe,
+        engine_hours: newEngine,
+        propeller_hours: newPropeller,
+        pilotoId: input.pilotoId,
+        aircraftId: 'CC-AQI',
+        cliente: piloto?.codigo || null,
+        copiloto: input.copiloto,
+        detalle: input.detalle,
+        aerodromoSalida: input.aerodromoSalida || 'SCCV',
+        aerodromoDestino: input.aerodromoDestino || 'SCCV',
+        aprobado: false,
+      },
+    });
+
+    // 2. Crear FlightSubmission vinculado al Flight
+    const submission = await tx.flightSubmission.create({
+      data: {
+        pilotoId: input.pilotoId,
+        aircraftId: 'CC-AQI',
+        estado: 'PENDIENTE',
+        fechaVuelo,
+        copiloto: input.copiloto,
+        detalle: input.detalle,
+        hobbsFinal: input.hobbs_fin,
+        tachFinal: input.tach_fin,
+        aerodromoSalida: input.aerodromoSalida || 'SCCV',
+        aerodromoDestino: input.aerodromoDestino || 'SCCV',
+      },
+      select: { id: true },
+    });
+
+    // 3. Actualizar Flight para vincular con FlightSubmission
+    await tx.flight.update({
+      where: { id: flight.id },
+      data: { submissionId: submission.id },
+    });
+
+    // 4. Actualizar contadores del avión
+    await tx.aircraft.update({
+      where: { matricula: 'CC-AQI' },
+      data: {
+        hobbs_actual: input.hobbs_fin,
+        tach_actual: input.tach_fin,
+      },
+    });
+
+    // 5. Actualizar horas de componentes
+    if (newAirframe !== null) {
+      await tx.component.updateMany({
+        where: { aircraftId: 'CC-AQI', tipo: 'AIRFRAME' },
+        data: { horas_acumuladas: newAirframe },
+      });
+    }
+    if (newEngine !== null) {
+      await tx.component.updateMany({
+        where: { aircraftId: 'CC-AQI', tipo: 'ENGINE' },
+        data: { horas_acumuladas: newEngine },
+      });
+    }
+    if (newPropeller !== null) {
+      await tx.component.updateMany({
+        where: { aircraftId: 'CC-AQI', tipo: 'PROPELLER' },
+        data: { horas_acumuladas: newPropeller },
+      });
+    }
+
+    return { submission, flight };
   });
+
+  const submission = result.submission;
 
   // Send emails
   const submissionData = {

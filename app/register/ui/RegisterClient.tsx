@@ -63,6 +63,10 @@ export default function RegisterClient({
   const [userRole, setUserRole] = useState<string | null>(null);
   const [sessionChecked, setSessionChecked] = useState(false);
 
+  // Estado para contadores actualizados (inicia con los valores del servidor)
+  const [currentCounters, setCurrentCounters] = useState<LastCounters>(lastCounters);
+  const [currentComponents, setCurrentComponents] = useState<LastComponents>(lastComponents);
+
   // Detectar si hay sesión activa para mostrar botón de volver y pre-seleccionar piloto
   useEffect(() => {
     async function checkSession() {
@@ -135,16 +139,16 @@ export default function RegisterClient({
 
   // Calcular deltas en tiempo real para modo flight
   const deltaHobbs = useMemo(() => {
-    if (mode !== 'flight' || !hobbsFin || lastCounters.hobbs === null) return null;
-    const val = parseFloat(hobbsFin) - lastCounters.hobbs;
+    if (mode !== 'flight' || !hobbsFin || currentCounters.hobbs === null) return null;
+    const val = parseFloat(hobbsFin) - currentCounters.hobbs;
     return isNaN(val) || val <= 0 ? null : Number(val.toFixed(1));
-  }, [mode, hobbsFin, lastCounters.hobbs]);
+  }, [mode, hobbsFin, currentCounters.hobbs]);
 
   const deltaTach = useMemo(() => {
-    if (mode !== 'flight' || !tachFin || lastCounters.tach === null) return null;
-    const val = parseFloat(tachFin) - lastCounters.tach;
+    if (mode !== 'flight' || !tachFin || currentCounters.tach === null) return null;
+    const val = parseFloat(tachFin) - currentCounters.tach;
     return isNaN(val) || val <= 0 ? null : Number(val.toFixed(1));
-  }, [mode, tachFin, lastCounters.tach]);
+  }, [mode, tachFin, currentCounters.tach]);
 
   // Validar ratio entre deltaHobbs y deltaTach (esperado: ~1.25x basado en análisis de 1,328 vuelos)
   const hobbsTachRatio = useMemo(() => {
@@ -211,11 +215,11 @@ export default function RegisterClient({
   const newComponents = useMemo(() => {
     if (!deltaTach) return null;
     return {
-      airframe: lastComponents.airframe !== null ? lastComponents.airframe + deltaTach : null,
-      engine: lastComponents.engine !== null ? lastComponents.engine + deltaTach : null,
-      propeller: lastComponents.propeller !== null ? lastComponents.propeller + deltaTach : null,
+      airframe: currentComponents.airframe !== null ? currentComponents.airframe + deltaTach : null,
+      engine: currentComponents.engine !== null ? currentComponents.engine + deltaTach : null,
+      propeller: currentComponents.propeller !== null ? currentComponents.propeller + deltaTach : null,
     };
-  }, [deltaTach, lastComponents]);
+  }, [deltaTach, currentComponents]);
 
   // Handler for initial form submit - validates and shows modal for flights
   const onFormSubmit = async (formData: FormData) => {
@@ -229,14 +233,14 @@ export default function RegisterClient({
       const tachVal = Number(tachFin);
       
       // HOBBS: puede ser igual o mayor al último registrado
-      if (lastCounters.hobbs !== null && hobbsVal < lastCounters.hobbs) {
-        setFormError(`HOBBS Final debe ser mayor o igual a ${lastCounters.hobbs.toFixed(1)} (último registrado)`);
+      if (currentCounters.hobbs !== null && hobbsVal < currentCounters.hobbs) {
+        setFormError(`HOBBS Final debe ser mayor o igual a ${currentCounters.hobbs.toFixed(1)} (último registrado)`);
         return;
       }
       
       // TACH: debe ser estrictamente mayor al último registrado
-      if (lastCounters.tach !== null && tachVal <= lastCounters.tach) {
-        setFormError(`TACH Final debe ser mayor a ${lastCounters.tach.toFixed(1)} (último registrado)`);
+      if (currentCounters.tach !== null && tachVal <= currentCounters.tach) {
+        setFormError(`TACH Final debe ser mayor a ${currentCounters.tach.toFixed(1)} (último registrado)`);
         return;
       }
       
@@ -357,6 +361,22 @@ export default function RegisterClient({
         }
       }
       setFormSuccess('Registro enviado correctamente.');
+      
+      // Si fue un vuelo, refetch contadores actualizados
+      if (mode === 'flight') {
+        try {
+          const flightRes = await fetch('/api/last-flight');
+          if (flightRes.ok) {
+            const flightData = await flightRes.json();
+            setCurrentCounters(flightData.lastCounters);
+            setCurrentComponents(flightData.lastComponents);
+            setAerodromoSalida(flightData.lastAerodromoDestino || 'SCCV');
+          }
+        } catch (e) {
+          console.warn('Error actualizando contadores:', e);
+        }
+      }
+
       // Reset form
       setPilotValue('');
       setFecha(new Date().toISOString().split('T')[0]);
@@ -366,8 +386,10 @@ export default function RegisterClient({
       setDetalle('');
       setFuelLitros('');
       setFuelMonto('');
-      // Después de enviar, el nuevo aeródromo de salida es el destino que acabamos de registrar
-      setAerodromoSalida(aerodromoDestino);
+      // Para fuel/deposit, el nuevo aeródromo de salida es el destino que acabamos de registrar
+      if (mode !== 'flight') {
+        setAerodromoSalida(aerodromoDestino);
+      }
       setAerodromoDestino('SCCV');
       (document.getElementById('registro-form') as HTMLFormElement)?.reset();
     } catch (e: any) {
@@ -491,7 +513,7 @@ export default function RegisterClient({
                 </div>
 
                 {/* Últimos contadores registrados */}
-                {(lastCounters.hobbs !== null || lastCounters.tach !== null) && (
+                {(currentCounters.hobbs !== null || currentCounters.tach !== null) && (
                   <div className="rounded-xl p-4 bg-amber-50 border border-amber-200">
                     <h3 className="text-sm font-bold text-amber-900 mb-2 flex items-center gap-2">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -503,13 +525,13 @@ export default function RegisterClient({
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold text-slate-600">HOBBS:</span>
                         <span className="font-mono font-bold text-blue-600">
-                          {lastCounters.hobbs !== null ? lastCounters.hobbs.toFixed(1) : "N/A"}
+                          {currentCounters.hobbs !== null ? currentCounters.hobbs.toFixed(1) : "N/A"}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold text-slate-600">TACH:</span>
                         <span className="font-mono font-bold text-blue-600">
-                          {lastCounters.tach !== null ? lastCounters.tach.toFixed(1) : "N/A"}
+                          {currentCounters.tach !== null ? currentCounters.tach.toFixed(1) : "N/A"}
                         </span>
                       </div>
                     </div>
@@ -535,8 +557,8 @@ export default function RegisterClient({
                         step="0.1"
                         value={hobbsFin}
                         onChange={(e) => setHobbsFin(e.target.value)}
-                        min={lastCounters.hobbs !== null ? lastCounters.hobbs : 0}
-                        placeholder={lastCounters.hobbs !== null ? `≥ ${lastCounters.hobbs.toFixed(1)}` : "Ej: 2058.5"}
+                        min={currentCounters.hobbs !== null ? currentCounters.hobbs : 0}
+                        placeholder={currentCounters.hobbs !== null ? `≥ ${currentCounters.hobbs.toFixed(1)}` : "Ej: 2058.5"}
                         required
                         className="w-full rounded-xl border px-3 py-3 bg-white font-mono font-bold text-lg"
                       />
@@ -557,8 +579,8 @@ export default function RegisterClient({
                         step="0.1"
                         value={tachFin}
                         onChange={(e) => setTachFin(e.target.value)}
-                        min={lastCounters.tach !== null ? lastCounters.tach + 0.1 : 0}
-                        placeholder={lastCounters.tach !== null ? `Mayor a ${lastCounters.tach.toFixed(1)}` : "Ej: 570.5"}
+                        min={currentCounters.tach !== null ? currentCounters.tach + 0.1 : 0}
+                        placeholder={currentCounters.tach !== null ? `Mayor a ${currentCounters.tach.toFixed(1)}` : "Ej: 570.5"}
                         required
                         className="w-full rounded-xl border px-3 py-3 bg-white font-mono font-bold text-lg"
                       />
