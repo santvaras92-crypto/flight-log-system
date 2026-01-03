@@ -222,10 +222,10 @@ export async function createFlightSubmission(input: Input) {
     select: { nombre: true, codigo: true, email: true }
   });
 
-  // Get last flight to calculate baselines (same logic as approveFlightSubmission)
+  // Get last flight to calculate baselines (by highest hobbs_fin, not fecha)
   const lastFlight = await prisma.flight.findFirst({
-    where: { aircraftId: 'CC-AQI' },
-    orderBy: [{ fecha: 'desc' }, { createdAt: 'desc' }],
+    where: { aircraftId: 'CC-AQI', hobbs_fin: { not: null } },
+    orderBy: { hobbs_fin: 'desc' },
     select: { 
       hobbs_fin: true, 
       tach_fin: true,

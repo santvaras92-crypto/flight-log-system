@@ -54,15 +54,25 @@ export default async function ValidacionPage() {
 
   // Process flight submissions with last counter values
   const flightsDto = await Promise.all(pendingFlights.map(async (s) => {
-    // Get the last flight using same logic as registration form: fecha desc, createdAt desc
-    const lastFlight = await prisma.flight.findFirst({
-      where: { aircraftId: s.Aircraft.matricula },
-      orderBy: [{ fecha: 'desc' }, { createdAt: 'desc' }],
-      select: { hobbs_fin: true, tach_fin: true },
-    });
+    // If submission already has a Flight, use its data directly
+    let lastHobbs: string;
+    let lastTach: string;
 
-    const lastHobbs = (lastFlight?.hobbs_fin ?? s.Aircraft.hobbs_actual).toString();
-    const lastTach = (lastFlight?.tach_fin ?? s.Aircraft.tach_actual).toString();
+    if (s.Flight) {
+      // Use the Flight's inicio values (already calculated correctly)
+      lastHobbs = s.Flight.hobbs_inicio?.toString() || '0';
+      lastTach = s.Flight.tach_inicio?.toString() || '0';
+    } else {
+      // If no Flight yet, get the last flight by hobbs_fin DESC
+      const lastFlight = await prisma.flight.findFirst({
+        where: { aircraftId: s.Aircraft.matricula, hobbs_fin: { not: null } },
+        orderBy: { hobbs_fin: 'desc' },
+        select: { hobbs_fin: true, tach_fin: true },
+      });
+
+      lastHobbs = (lastFlight?.hobbs_fin ?? s.Aircraft.hobbs_actual).toString();
+      lastTach = (lastFlight?.tach_fin ?? s.Aircraft.tach_actual).toString();
+    }
 
     return {
       id: s.id,
