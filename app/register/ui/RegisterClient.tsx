@@ -377,6 +377,9 @@ export default function RegisterClient({
         }
       }
 
+      // Esperar 800ms para que el usuario vea el feedback visual (spinner + mensaje de éxito)
+      await new Promise(resolve => setTimeout(resolve, 800));
+
       // Reset form
       setPilotValue('');
       setFecha(new Date().toISOString().split('T')[0]);
