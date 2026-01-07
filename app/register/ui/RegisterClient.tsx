@@ -251,8 +251,16 @@ export default function RegisterClient({
     }
     
     // For fuel and deposit, submit directly
+    console.log('[DEBUG] Setting submitting=true for mode:', mode);
     setSubmitting(true);
-    await executeSubmit(formData);
+    try {
+      // Small delay to ensure React re-renders the button before async operation
+      await new Promise(resolve => setTimeout(resolve, 50));
+      await executeSubmit(formData);
+    } finally {
+      console.log('[DEBUG] Setting submitting=false');
+      setSubmitting(false);
+    }
   };
 
   // Execute actual submission
@@ -326,7 +334,6 @@ export default function RegisterClient({
         const rawFile = formData.get('file') as File | null;
         if (!rawFile) {
           setFormError('Debe adjuntar imagen del comprobante.');
-          setSubmitting(false);
           return;
         }
         let uploadPayload: { name: string; base64: string } | null = null;
@@ -345,7 +352,6 @@ export default function RegisterClient({
         } catch (e) {
           console.warn('Error leyendo archivo depósito:', e);
           setFormError('No se pudo leer la imagen del comprobante');
-          setSubmitting(false);
           return;
         }
         const result = await createDeposit({
@@ -398,8 +404,6 @@ export default function RegisterClient({
     } catch (e: any) {
       console.error('Error guardando registro:', e);
       setFormError(e.message || 'Error desconocido guardando registro');
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -970,7 +974,14 @@ export default function RegisterClient({
                   disabled={submitting}
                   onClick={async () => {
                     if (pendingFormData) {
-                      await executeSubmit(pendingFormData);
+                      setSubmitting(true);
+                      try {
+                        // Small delay to ensure React re-renders before async operation
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                        await executeSubmit(pendingFormData);
+                      } finally {
+                        setSubmitting(false);
+                      }
                       setShowConfirmModal(false);
                       setPendingFormData(null);
                     }
