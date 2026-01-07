@@ -42,8 +42,8 @@ export async function generateCompleteExcelBackup(): Promise<Buffer> {
   console.log('[Excel Backup] All sheets created, generating buffer...');
   
   // Generate buffer
-  const buffer = (await workbook.xlsx.writeBuffer()) as Buffer;
-  const bufferSize = Buffer.byteLength(buffer);
+  const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
+  const bufferSize = buffer.byteLength;
   console.log(`[Excel Backup] Complete! Buffer size: ${(bufferSize / 1024 / 1024).toFixed(2)} MB`);
   
   return buffer;
