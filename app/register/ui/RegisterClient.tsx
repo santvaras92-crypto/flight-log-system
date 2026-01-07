@@ -61,10 +61,6 @@ export default function RegisterClient({
   const [pilotValue, setPilotValue] = useState<string>('');
   const [mode, setMode] = useState<'flight' | 'fuel' | 'deposit'>('flight');
   const [submitting, setSubmitting] = useState(false);
-  
-  // Debug: log submitting state on every render
-  console.log('[RENDER] submitting state:', submitting);
-  
   const [userRole, setUserRole] = useState<string | null>(null);
   const [sessionChecked, setSessionChecked] = useState(false);
 
@@ -256,20 +252,16 @@ export default function RegisterClient({
     }
     
     // For fuel and deposit, submit directly
-    console.log('[SUBMIT] Mode:', mode, '- About to set submitting=true');
     flushSync(() => {
       setSubmitting(true);
     });
-    console.log('[SUBMIT] After flushSync setSubmitting(true), state should update now');
     try {
       // Execute submission and ensure spinner is visible for at least 1 second
       const [_, result] = await Promise.all([
         new Promise(resolve => setTimeout(resolve, 1000)), // Minimum 1 second
         executeSubmit(formData)
       ]);
-      console.log('[SUBMIT] Completed successfully');
     } finally {
-      console.log('[SUBMIT] Setting submitting=false');
       setSubmitting(false);
     }
   };
