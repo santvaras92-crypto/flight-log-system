@@ -58,13 +58,13 @@ export async function POST(req: NextRequest) {
       });
     } else {
       // Return file for download
-      return new NextResponse(buffer, {
+      return new NextResponse(new Blob([buffer]), {
         status: 200,
         headers: {
           'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           'Content-Disposition': `attachment; filename="${filename}"`,
-          'Content-Length': buffer.length.toString()
-        }
+          'Content-Length': buffer.length.toString(),
+        },
       });
     }
   } catch (error) {
