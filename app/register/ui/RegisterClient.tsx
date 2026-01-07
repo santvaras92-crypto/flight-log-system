@@ -251,13 +251,13 @@ export default function RegisterClient({
     }
     
     // For fuel and deposit, submit directly
+    setSubmitting(true);
     await executeSubmit(formData);
   };
 
   // Execute actual submission
   const executeSubmit = async (formData: FormData) => {
     if (!pilotValue) return;
-    setSubmitting(true);
     setFormError(null);
     setFormSuccess(null);
     try {
