@@ -251,14 +251,14 @@ export default function RegisterClient({
     }
     
     // For fuel and deposit, submit directly
-    console.log('[DEBUG] Setting submitting=true for mode:', mode);
     setSubmitting(true);
     try {
-      // Small delay to ensure React re-renders the button before async operation
-      await new Promise(resolve => setTimeout(resolve, 50));
-      await executeSubmit(formData);
+      // Execute submission and ensure spinner is visible for at least 1 second
+      const [_, result] = await Promise.all([
+        new Promise(resolve => setTimeout(resolve, 1000)), // Minimum 1 second
+        executeSubmit(formData)
+      ]);
     } finally {
-      console.log('[DEBUG] Setting submitting=false');
       setSubmitting(false);
     }
   };
@@ -976,9 +976,11 @@ export default function RegisterClient({
                     if (pendingFormData) {
                       setSubmitting(true);
                       try {
-                        // Small delay to ensure React re-renders before async operation
-                        await new Promise(resolve => setTimeout(resolve, 50));
-                        await executeSubmit(pendingFormData);
+                        // Execute submission and ensure spinner is visible for at least 1 second
+                        await Promise.all([
+                          new Promise(resolve => setTimeout(resolve, 1000)), // Minimum 1 second
+                          executeSubmit(pendingFormData)
+                        ]);
                       } finally {
                         setSubmitting(false);
                       }
