@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import { createFlightSubmission } from '@/app/actions/create-flight-submission';
 import { createFuel } from '@/app/actions/create-fuel';
 import { createDeposit } from '@/app/actions/create-deposit';
@@ -256,8 +257,10 @@ export default function RegisterClient({
     
     // For fuel and deposit, submit directly
     console.log('[SUBMIT] Mode:', mode, '- About to set submitting=true');
-    setSubmitting(true);
-    console.log('[SUBMIT] After setSubmitting(true), state should update now');
+    flushSync(() => {
+      setSubmitting(true);
+    });
+    console.log('[SUBMIT] After flushSync setSubmitting(true), state should update now');
     try {
       // Execute submission and ensure spinner is visible for at least 1 second
       const [_, result] = await Promise.all([
@@ -982,7 +985,9 @@ export default function RegisterClient({
                   disabled={submitting}
                   onClick={async () => {
                     if (pendingFormData) {
-                      setSubmitting(true);
+                      flushSync(() => {
+                        setSubmitting(true);
+                      });
                       try {
                         // Execute submission and ensure spinner is visible for at least 1 second
                         await Promise.all([
