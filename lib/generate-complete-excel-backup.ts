@@ -570,7 +570,8 @@ async function createDepositsSheet(workbook: ExcelJS.Workbook, data: BackupData)
   sortedDeposits.forEach(deposit => {
     const pilotName = deposit.User?.nombre || 'N/A';
     const pilotCode = deposit.User?.codigo || 'N/A';
-    const fecha = new Date(deposit.fecha).toLocaleDateString('es-CL');
+    const dateObj = new Date(deposit.fecha);
+    const fecha = `${String(dateObj.getDate()).padStart(2, '0')}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${dateObj.getFullYear()}`;
     
     sheet.addRow([
       fecha,                                             // Date (formatted as string like dashboard)
@@ -612,7 +613,8 @@ async function createFuelSheet(workbook: ExcelJS.Workbook, data: BackupData) {
   
   sortedFuel.forEach(fuel => {
     const source = fuel.source === 'CSV' ? 'Histórico' : 'App';
-    const fecha = new Date(fuel.fecha).toLocaleDateString('es-CL');
+    const dateObj = new Date(fuel.fecha);
+    const fecha = `${String(dateObj.getDate()).padStart(2, '0')}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${dateObj.getFullYear()}`;
     
     sheet.addRow([
       fecha,                                             // Fecha (formatted as string)
@@ -992,16 +994,16 @@ function formatDepositsColumnsDashboard(sheet: ExcelJS.Worksheet) {
     
     row.height = 20;
     
-    // Date column - medium gray, medium font
-    row.getCell(1).font = { size: 11, color: { argb: 'FF475569' } };
+    // Date column - text-slate-700
+    row.getCell(1).font = { size: 11, color: { argb: 'FF334155' } };
     
-    // Pilot column - bold dark (dashboard uses font-semibold)
+    // Pilot column - font-semibold text-slate-900
     row.getCell(2).font = { size: 11, bold: true, color: { argb: 'FF0F172A' } };
     
-    // Description column - normal gray
-    row.getCell(3).font = { size: 11, color: { argb: 'FF64748B' } };
+    // Description column - text-slate-600
+    row.getCell(3).font = { size: 11, color: { argb: 'FF475569' } };
     
-    // Amount column - bold green (dashboard uses text-green-700)
+    // Amount column - font-bold text-green-700
     row.getCell(4).font = { size: 11, bold: true, color: { argb: 'FF15803D' } };
     
     // Add hover effect simulation with subtle border
@@ -1063,20 +1065,20 @@ function formatFuelColumnsDashboard(sheet: ExcelJS.Worksheet) {
     
     row.height = 20;
     
-    // Date column - text-slate-700
-    row.getCell(1).font = { size: 10, color: { argb: 'FF334155' } };
+    // Date column - text-slate-700 (size 11)
+    row.getCell(1).font = { size: 11, color: { argb: 'FF334155' } };
     
-    // Piloto column - font-semibold text-slate-900
-    row.getCell(2).font = { size: 10, bold: true, color: { argb: 'FF0F172A' } };
+    // Piloto column - font-semibold text-slate-900 (size 11)
+    row.getCell(2).font = { size: 11, bold: true, color: { argb: 'FF0F172A' } };
     
-    // Código column - font-mono text-indigo-600
-    row.getCell(3).font = { size: 10, name: 'Consolas', color: { argb: 'FF4F46E5' } };
+    // Código column - font-mono text-indigo-600 (size 11)
+    row.getCell(3).font = { size: 11, name: 'Consolas', color: { argb: 'FF4F46E5' } };
     
-    // Litros column - font-mono text-slate-600
-    row.getCell(4).font = { size: 10, name: 'Consolas', color: { argb: 'FF475569' } };
+    // Litros column - text-slate-600 font-mono (size 11)
+    row.getCell(4).font = { size: 11, name: 'Consolas', color: { argb: 'FF475569' } };
     
-    // Monto column - font-bold text-green-600
-    row.getCell(5).font = { size: 10, bold: true, color: { argb: 'FF16A34A' } };
+    // Monto column - font-bold text-green-600 (size 11)
+    row.getCell(5).font = { size: 11, bold: true, color: { argb: 'FF16A34A' } };
     
     // Check if this is a CSV (Histórico) row and apply background color
     const sourceCell = row.getCell(6);
@@ -1090,7 +1092,7 @@ function formatFuelColumnsDashboard(sheet: ExcelJS.Worksheet) {
         };
       });
       // Badge style for Histórico (bg-slate-200 text-slate-700)
-      sourceCell.font = { size: 9, bold: true, color: { argb: 'FF334155' } };
+      sourceCell.font = { size: 10, bold: true, color: { argb: 'FF334155' } };
       sourceCell.fill = {
         type: 'pattern',
         pattern: 'solid',
@@ -1098,7 +1100,7 @@ function formatFuelColumnsDashboard(sheet: ExcelJS.Worksheet) {
       };
     } else {
       // Badge style for App (bg-blue-100 text-blue-700)
-      sourceCell.font = { size: 9, bold: true, color: { argb: 'FF1D4ED8' } };
+      sourceCell.font = { size: 10, bold: true, color: { argb: 'FF1D4ED8' } };
       sourceCell.fill = {
         type: 'pattern',
         pattern: 'solid',
@@ -1107,7 +1109,7 @@ function formatFuelColumnsDashboard(sheet: ExcelJS.Worksheet) {
     }
     
     // Detalle column - text-slate-600
-    row.getCell(7).font = { size: 10, color: { argb: 'FF475569' } };
+    row.getCell(7).font = { size: 11, color: { argb: 'FF475569' } };
     
     // Row border (divide-y divide-slate-100)
     row.border = {
