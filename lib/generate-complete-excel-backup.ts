@@ -296,68 +296,95 @@ async function createSummarySheet(workbook: ExcelJS.Workbook, data: BackupData) 
 }
 
 /**
- * Create Flights Sheet
+ * Create Flights Sheet - Exact match with Dashboard table columns
+ * Columns: Fecha, Tac. 1, Tac. 2, Dif. Taco, Hobbs I, Hobbs F, Horas, Piloto, Copiloto, 
+ *          ID, Tarifa, Inst. Rate, Total, AIRFRAME, ENGINE, PROPELLER, AD Sal, AD Dest, Detalle, Año, Mes
  */
 async function createFlightsSheet(workbook: ExcelJS.Workbook, data: BackupData) {
   const sheet = workbook.addWorksheet('02-Vuelos');
   
-  // Headers
+  // Headers - Exact match with dashboard table
   const headers = [
-    'ID', 'Fecha', 'Piloto', 'Código Piloto', 'Cliente', 'Código Cliente',
-    'Matrícula', 'Hobbs Fin', 'Tach Fin', 'Δ Hobbs', 'Δ Tach',
-    'Costo', 'Tarifa/Hora', 'Copiloto', 'Instructor', 'Rate Instructor',
-    'Aeródromo Salida', 'Aeródromo Destino', 'Detalle', 'Aprobado', 'Fecha Creación'
+    'Fecha',       // Date
+    'Tac. 1',      // tach_inicio
+    'Tac. 2',      // tach_fin
+    'Dif. Taco',   // diff_tach
+    'Hobbs I',     // hobbs_inicio
+    'Hobbs F',     // hobbs_fin
+    'Horas',       // diff_hobbs
+    'Piloto',      // Pilot name
+    'Copiloto',    // copiloto
+    'ID',          // cliente (pilot code)
+    'Tarifa',      // tarifa (airplane rate)
+    'Inst. Rate',  // instructor_rate
+    'Total',       // costo
+    'AIRFRAME',    // airframe_hours
+    'ENGINE',      // engine_hours
+    'PROPELLER',   // propeller_hours
+    'AD Sal',      // aerodromoSalida
+    'AD Dest',     // aerodromoDestino
+    'Detalle',     // detalle
+    'Año',         // year
+    'Mes'          // month
   ];
   
   sheet.addRow(headers);
   styleHeaderRow(sheet, 1, headers.length);
   
-  // Data rows
-  data.flights.forEach(flight => {
+  // Data rows - sorted by date descending (most recent first, like dashboard)
+  const sortedFlights = [...data.flights].sort((a, b) => 
+    new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+  );
+  
+  sortedFlights.forEach(flight => {
+    const fecha = new Date(flight.fecha);
+    const año = fecha.getFullYear();
+    const mes = fecha.toLocaleString('es-CL', { month: 'short' });
+    
     sheet.addRow([
-      flight.id,
-      new Date(flight.fecha),
-      flight.User?.nombre || 'N/A',
-      flight.User?.codigo || 'N/A',
-      flight.clienteNombre || 'N/A',
-      flight.clienteCodigo || 'N/A',
-      flight.aircraftId,
-      Number(flight.hobbs_fin || 0),
-      Number(flight.tach_fin || 0),
-      Number(flight.diff_hobbs || 0),
-      Number(flight.diff_tach || 0),
-      Number(flight.costo || 0),
-      Number(flight.tarifa || 0),
-      flight.copiloto || '',
-      flight.instructor || '',
-      Number(flight.instructor_rate || 0),
-      flight.aerodromoSalida || '',
-      flight.aerodromoDestino || '',
-      flight.detalle || '',
-      flight.aprobado ? 'SÍ' : 'NO',
-      flight.createdAt ? new Date(flight.createdAt) : null
+      fecha,                                          // Fecha
+      Number(flight.tach_inicio || 0),               // Tac. 1
+      Number(flight.tach_fin || 0),                  // Tac. 2
+      Number(flight.diff_tach || 0),                 // Dif. Taco
+      flight.hobbs_inicio != null ? Number(flight.hobbs_inicio) : null,  // Hobbs I
+      flight.hobbs_fin != null ? Number(flight.hobbs_fin) : null,        // Hobbs F
+      flight.diff_hobbs != null ? Number(flight.diff_hobbs) : null,      // Horas
+      flight.User?.nombre || flight.piloto_raw || 'N/A',                 // Piloto
+      flight.copiloto || '',                         // Copiloto
+      flight.cliente || '',                          // ID (código cliente)
+      flight.tarifa ? Number(flight.tarifa) : null,  // Tarifa
+      flight.instructor_rate ? Number(flight.instructor_rate) : null,    // Inst. Rate
+      flight.costo != null ? Number(flight.costo) : null,                // Total
+      flight.airframe_hours != null ? Number(flight.airframe_hours) : null,   // AIRFRAME
+      flight.engine_hours != null ? Number(flight.engine_hours) : null,       // ENGINE
+      flight.propeller_hours != null ? Number(flight.propeller_hours) : null, // PROPELLER
+      flight.aerodromoSalida || '',                  // AD Sal
+      flight.aerodromoDestino || '',                 // AD Dest
+      flight.detalle || '',                          // Detalle
+      año,                                           // Año
+      mes                                            // Mes
     ]);
   });
   
-  // Format columns
-  formatFlightsColumns(sheet);
+  // Format columns to match dashboard style
+  formatFlightsColumnsDashboard(sheet);
   
-  // Add totals row - calculate directly instead of using formulas
+  // Add totals row - calculate directly
   const lastRow = sheet.rowCount + 1;
-  const totalDiffHobbs = data.flights.reduce((sum, f) => sum + Number(f.diff_hobbs || 0), 0);
   const totalDiffTach = data.flights.reduce((sum, f) => sum + Number(f.diff_tach || 0), 0);
+  const totalHoras = data.flights.reduce((sum, f) => sum + Number(f.diff_hobbs || 0), 0);
   const totalCosto = data.flights.reduce((sum, f) => sum + Number(f.costo || 0), 0);
   
   sheet.getCell(`A${lastRow}`).value = 'TOTALES:';
   sheet.getCell(`A${lastRow}`).font = { bold: true };
-  sheet.getCell(`J${lastRow}`).value = totalDiffHobbs;
-  sheet.getCell(`K${lastRow}`).value = totalDiffTach;
-  sheet.getCell(`L${lastRow}`).value = totalCosto;
+  sheet.getCell(`D${lastRow}`).value = totalDiffTach;  // Dif. Taco
+  sheet.getCell(`G${lastRow}`).value = totalHoras;     // Horas
+  sheet.getCell(`M${lastRow}`).value = totalCosto;     // Total
   
   styleCell(sheet.getCell(`A${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
-  styleCell(sheet.getCell(`J${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
-  styleCell(sheet.getCell(`K${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
-  styleCell(sheet.getCell(`L${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
+  styleCell(sheet.getCell(`D${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
+  styleCell(sheet.getCell(`G${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
+  styleCell(sheet.getCell(`M${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
   
   // Auto-filter
   sheet.autoFilter = {
@@ -686,6 +713,69 @@ function styleCell(cell: ExcelJS.Cell, options: { bold?: boolean; bgColor?: stri
       fgColor: { argb: `FF${options.bgColor}` }
     };
   }
+}
+
+/**
+ * Format columns for Dashboard-style Flights sheet
+ * Columns: Fecha, Tac. 1, Tac. 2, Dif. Taco, Hobbs I, Hobbs F, Horas, Piloto, Copiloto, 
+ *          ID, Tarifa, Inst. Rate, Total, AIRFRAME, ENGINE, PROPELLER, AD Sal, AD Dest, Detalle, Año, Mes
+ */
+function formatFlightsColumnsDashboard(sheet: ExcelJS.Worksheet) {
+  // Column A: Fecha
+  sheet.getColumn(1).numFmt = 'dd/mm/yyyy';
+  sheet.getColumn(1).width = 12;
+  
+  // Columns B-D: Tac. 1, Tac. 2, Dif. Taco (numeric with 1 decimal)
+  sheet.getColumn(2).numFmt = '#,##0.0';
+  sheet.getColumn(2).width = 10;
+  sheet.getColumn(3).numFmt = '#,##0.0';
+  sheet.getColumn(3).width = 10;
+  sheet.getColumn(4).numFmt = '#,##0.0';
+  sheet.getColumn(4).width = 10;
+  
+  // Columns E-G: Hobbs I, Hobbs F, Horas (numeric with 1 decimal)
+  sheet.getColumn(5).numFmt = '#,##0.0';
+  sheet.getColumn(5).width = 10;
+  sheet.getColumn(6).numFmt = '#,##0.0';
+  sheet.getColumn(6).width = 10;
+  sheet.getColumn(7).numFmt = '#,##0.0';
+  sheet.getColumn(7).width = 10;
+  
+  // Column H: Piloto
+  sheet.getColumn(8).width = 20;
+  
+  // Column I: Copiloto
+  sheet.getColumn(9).width = 15;
+  
+  // Column J: ID (código cliente)
+  sheet.getColumn(10).width = 8;
+  
+  // Columns K-M: Tarifa, Inst. Rate, Total (currency)
+  sheet.getColumn(11).numFmt = '$#,##0';
+  sheet.getColumn(11).width = 12;
+  sheet.getColumn(12).numFmt = '$#,##0';
+  sheet.getColumn(12).width = 12;
+  sheet.getColumn(13).numFmt = '$#,##0';
+  sheet.getColumn(13).width = 12;
+  
+  // Columns N-P: AIRFRAME, ENGINE, PROPELLER (numeric with 1 decimal)
+  sheet.getColumn(14).numFmt = '#,##0.0';
+  sheet.getColumn(14).width = 10;
+  sheet.getColumn(15).numFmt = '#,##0.0';
+  sheet.getColumn(15).width = 10;
+  sheet.getColumn(16).numFmt = '#,##0.0';
+  sheet.getColumn(16).width = 10;
+  
+  // Columns Q-R: AD Sal, AD Dest
+  sheet.getColumn(17).width = 10;
+  sheet.getColumn(18).width = 10;
+  
+  // Column S: Detalle
+  sheet.getColumn(19).width = 25;
+  
+  // Columns T-U: Año, Mes
+  sheet.getColumn(20).width = 8;
+  sheet.getColumn(21).width = 8;
 }
 
 function formatFlightsColumns(sheet: ExcelJS.Worksheet) {
