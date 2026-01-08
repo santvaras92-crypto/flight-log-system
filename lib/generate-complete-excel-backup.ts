@@ -257,10 +257,11 @@ async function readFuelCSV(): Promise<any[]> {
       const parts = lines[i].split(';');
       if (parts.length < 4) continue;
       
-      const fecha = (parts[0] || '').trim();
-      const litrosStr = (parts[1] || '').trim();
-      const montoStr = (parts[2] || '').trim();
-      const codigo = (parts[3] || '').trim().toUpperCase();
+      const fecha = (parts[0] || '').trim();          // Fecha
+      const codigo = (parts[1] || '').trim().toUpperCase();  // Cuenta (código)
+      const litrosStr = (parts[2] || '').trim();      // Litros cargados
+      const montoStr = (parts[3] || '').trim();       // Monto
+      // parts[4] is "Precio por litro" which we don't use
       
       const litros = parseFloat(litrosStr.replace(',', '.')) || 0;
       const monto = parseFloat(montoStr.replace(/\$/g, '').replace(/\./g, '').replace(',', '.')) || 0;
