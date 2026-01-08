@@ -1109,7 +1109,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       <div className="mt-8 flex justify-center pb-8">
         <button
           onClick={() => setShowBackupModal(true)}
-          className="px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold hover:from-purple-700 hover:to-indigo-700 transition-all shadow-lg flex items-center gap-3 text-lg"
+          className="px-8 py-4 bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 text-white rounded-xl font-bold hover:from-blue-800 hover:via-blue-900 hover:to-indigo-950 transition-all shadow-lg flex items-center gap-3 text-lg"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
