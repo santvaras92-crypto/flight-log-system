@@ -1055,25 +1055,25 @@ async function createAccountStatementsSheet(workbook: ExcelJS.Workbook, data: Ba
     
     // Cargos (Rojo)
     row.getCell(5).value = pilot.cargos;
-    row.getCell(5).numFmt = '"$"#.##0';
+    row.getCell(5).numFmt = '"$"#,##0';
     row.getCell(5).font = { size: 10, bold: true, color: { argb: 'FFDC2626' } };
     row.getCell(5).alignment = { horizontal: 'right', vertical: 'middle' };
     
     // Depósitos (Verde)
     row.getCell(6).value = pilot.depositos;
-    row.getCell(6).numFmt = '"$"#.##0';
+    row.getCell(6).numFmt = '"$"#,##0';
     row.getCell(6).font = { size: 10, bold: true, color: { argb: 'FF059669' } };
     row.getCell(6).alignment = { horizontal: 'right', vertical: 'middle' };
     
     // Fuel (Amarillo/Amber)
     row.getCell(7).value = pilot.fuel;
-    row.getCell(7).numFmt = '"$"#.##0';
+    row.getCell(7).numFmt = '"$"#,##0';
     row.getCell(7).font = { size: 10, bold: true, color: { argb: 'FFF59E0B' } };
     row.getCell(7).alignment = { horizontal: 'right', vertical: 'middle' };
     
     // Balance (Verde si positivo, Rojo si negativo)
     row.getCell(8).value = pilot.balance;
-    row.getCell(8).numFmt = '"$"#.##0';
+    row.getCell(8).numFmt = '"$"#,##0';
     row.getCell(8).font = { 
       size: 11, 
       bold: true, 
@@ -1158,7 +1158,7 @@ async function createAccountStatementsSheet(workbook: ExcelJS.Workbook, data: Ba
   
   const totalCargos = Math.round(pilotData.reduce((sum, p) => sum + p.cargos, 0));
   totalRow.getCell(5).value = totalCargos;
-  totalRow.getCell(5).numFmt = '"$"#.##0';
+  totalRow.getCell(5).numFmt = '"$"#,##0';
   totalRow.getCell(5).font = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
   totalRow.getCell(5).alignment = { horizontal: 'right', vertical: 'middle' };
   totalRow.getCell(5).fill = {
@@ -1169,7 +1169,7 @@ async function createAccountStatementsSheet(workbook: ExcelJS.Workbook, data: Ba
   
   const totalDepositos = Math.round(pilotData.reduce((sum, p) => sum + p.depositos, 0));
   totalRow.getCell(6).value = totalDepositos;
-  totalRow.getCell(6).numFmt = '"$"#.##0';
+  totalRow.getCell(6).numFmt = '"$"#,##0';
   totalRow.getCell(6).font = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
   totalRow.getCell(6).alignment = { horizontal: 'right', vertical: 'middle' };
   totalRow.getCell(6).fill = {
@@ -1180,7 +1180,7 @@ async function createAccountStatementsSheet(workbook: ExcelJS.Workbook, data: Ba
   
   const totalFuel = Math.round(pilotData.reduce((sum, p) => sum + p.fuel, 0));
   totalRow.getCell(7).value = totalFuel;
-  totalRow.getCell(7).numFmt = '"$"#.##0';
+  totalRow.getCell(7).numFmt = '"$"#,##0';
   totalRow.getCell(7).font = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
   totalRow.getCell(7).alignment = { horizontal: 'right', vertical: 'middle' };
   totalRow.getCell(7).fill = {
@@ -1191,7 +1191,7 @@ async function createAccountStatementsSheet(workbook: ExcelJS.Workbook, data: Ba
   
   const totalBalance = Math.round(pilotData.reduce((sum, p) => sum + p.balance, 0));
   totalRow.getCell(8).value = totalBalance;
-  totalRow.getCell(8).numFmt = '"$"#.##0';
+  totalRow.getCell(8).numFmt = '"$"#,##0';
   totalRow.getCell(8).font = { 
     bold: true, 
     size: 11, 
@@ -1363,7 +1363,7 @@ function formatDepositsColumnsDashboard(sheet: ExcelJS.Worksheet) {
   sheet.getColumn(3).alignment = { horizontal: 'left', vertical: 'middle' };
   
   // Column D: Amount (currency format without decimals, Chilean format with dot separator)
-  sheet.getColumn(4).numFmt = '"$"#.##0';
+  sheet.getColumn(4).numFmt = '"$"#,##0';  // Use comma as thousands separator
   sheet.getColumn(4).width = 16;
   sheet.getColumn(4).alignment = { horizontal: 'right', vertical: 'middle' };
   
@@ -1425,7 +1425,7 @@ function formatFuelColumnsDashboard(sheet: ExcelJS.Worksheet) {
   sheet.getColumn(4).alignment = { horizontal: 'left', vertical: 'middle' };
   
   // Column E: Monto (currency format without decimals, Chilean format with dot separator)
-  sheet.getColumn(5).numFmt = '"$"#.##0';
+  sheet.getColumn(5).numFmt = '"$"#,##0';
   sheet.getColumn(5).width = 14;
   sheet.getColumn(5).alignment = { horizontal: 'left', vertical: 'middle' };
   
