@@ -317,8 +317,8 @@ async function createFlightsSheet(workbook: ExcelJS.Workbook, data: BackupData) 
     sheet.addRow([
       flight.id,
       new Date(flight.fecha),
-      flight.piloto?.nombre || 'N/A',
-      flight.piloto?.codigo || 'N/A',
+      flight.User?.nombre || 'N/A',
+      flight.User?.codigo || 'N/A',
       flight.clienteNombre || 'N/A',
       flight.clienteCodigo || 'N/A',
       flight.aircraftId,
@@ -378,8 +378,8 @@ async function createDepositsSheet(workbook: ExcelJS.Workbook, data: BackupData)
       sheet.addRow([
         deposit.id || 'CSV',
         new Date(deposit.fecha),
-        deposit.user?.nombre || 'N/A',
-        deposit.user?.codigo || 'N/A',
+        deposit.User?.nombre || 'N/A',
+        deposit.User?.codigo || 'N/A',
         Number(deposit.monto || 0),
         deposit.detalle || '',
         deposit.estado || 'APROBADO',
@@ -416,8 +416,8 @@ async function createFuelSheet(workbook: ExcelJS.Workbook, data: BackupData) {
       sheet.addRow([
         fuel.id || 'CSV',
         new Date(fuel.fecha),
-        fuel.user?.nombre || 'N/A',
-        fuel.user?.codigo || 'N/A',
+        fuel.User?.nombre || 'N/A',
+        fuel.User?.codigo || 'N/A',
         Number(fuel.litros || 0),
         Number(fuel.monto || 0),
         pricePerLiter,
@@ -459,8 +459,8 @@ async function createPilotsSheet(workbook: ExcelJS.Workbook, data: BackupData) {
   
   data.users.forEach(user => {
     const userFlights = data.flights.filter(f => f.pilotoId === user.id);
-    const userDeposits = data.deposits.filter(d => d.user?.codigo === user.codigo);
-    const userFuel = data.fuelLogs.filter(f => f.user?.codigo === user.codigo);
+    const userDeposits = data.deposits.filter(d => d.User?.codigo === user.codigo);
+    const userFuel = data.fuelLogs.filter(f => f.User?.codigo === user.codigo);
     
     const totalHours = userFlights.reduce((sum, f) => sum + Number(f.diff_hobbs || 0), 0);
     const totalSpent = userFlights.reduce((sum, f) => sum + Number(f.costo || 0), 0);
@@ -561,8 +561,8 @@ async function createTransactionsSheet(workbook: ExcelJS.Workbook, data: BackupD
       tx.id,
       tx.createdAt ? new Date(tx.createdAt) : null,
       tx.tipo,
-      tx.user?.nombre || 'N/A',
-      tx.user?.codigo || 'N/A',
+      tx.User?.nombre || 'N/A',
+      tx.User?.codigo || 'N/A',
       Number(tx.monto || 0),
       tx.flightId || '',
       tx.tipo === 'FLIGHT' ? `Vuelo ${tx.flight?.id || ''}` :
@@ -594,8 +594,8 @@ async function createPendingSheet(workbook: ExcelJS.Workbook, data: BackupData) 
       sheet.addRow([
         sub.id,
         sub.createdAt ? new Date(sub.createdAt) : null,
-        sub.piloto?.nombre || 'N/A',
-        sub.piloto?.codigo || 'N/A',
+        sub.User?.nombre || 'N/A',
+        sub.User?.codigo || 'N/A',
         Number(sub.hobbsFinal || 0),
         Number(sub.tachFinal || 0),
         sub.estado,
@@ -619,8 +619,8 @@ async function createPendingSheet(workbook: ExcelJS.Workbook, data: BackupData) 
       sheet.addRow([
         dep.id,
         new Date(dep.fecha),
-        dep.user?.nombre || 'N/A',
-        dep.user?.codigo || 'N/A',
+        dep.User?.nombre || 'N/A',
+        dep.User?.codigo || 'N/A',
         Number(dep.monto || 0),
         dep.detalle || ''
       ]);
@@ -641,8 +641,8 @@ async function createPendingSheet(workbook: ExcelJS.Workbook, data: BackupData) 
       sheet.addRow([
         fuel.id,
         new Date(fuel.fecha),
-        fuel.user?.nombre || 'N/A',
-        fuel.user?.codigo || 'N/A',
+        fuel.User?.nombre || 'N/A',
+        fuel.User?.codigo || 'N/A',
         Number(fuel.litros || 0),
         Number(fuel.monto || 0),
         fuel.detalle || ''
