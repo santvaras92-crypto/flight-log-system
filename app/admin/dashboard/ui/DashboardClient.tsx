@@ -929,17 +929,6 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           </button>
         ))}
       </nav>
-      
-      {/* Backup Button */}
-      <button
-        onClick={() => setShowBackupModal(true)}
-        className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold hover:from-purple-700 hover:to-indigo-700 transition-all shadow-lg flex items-center justify-center gap-2"
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-        </svg>
-        <span>💾 Generar Backup Completo</span>
-      </button>
     </div>
 
       {tab === "overview" && overviewMetrics && cardOrder.length > 0 && (
@@ -1115,6 +1104,19 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       {tab === "fuel" && <FuelTable logs={initialData.fuelLogs || []} />}
       {tab === "maintenance" && <MaintenanceTable components={initialData.components} aircraft={initialData.aircraft} aircraftYearlyStats={initialData.aircraftYearlyStats || []} overviewMetrics={overviewMetrics} />}
       {tab === "finance" && <FinanceCharts flights={initialData.flights} transactions={initialData.transactions} palette={palette} />}
+
+      {/* Backup Button - Final de la página */}
+      <div className="mt-8 flex justify-center pb-8">
+        <button
+          onClick={() => setShowBackupModal(true)}
+          className="px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold hover:from-purple-700 hover:to-indigo-700 transition-all shadow-lg flex items-center gap-3 text-lg"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+          </svg>
+          <span>💾 Generar Backup Completo</span>
+        </button>
+      </div>
     </div>
   );
 }
