@@ -227,7 +227,7 @@ async function readFuelCSV(): Promise<any[]> {
  * Create Summary Sheet (Resumen Ejecutivo)
  */
 async function createSummarySheet(workbook: ExcelJS.Workbook, data: BackupData) {
-  const sheet = workbook.addWorksheet('📋 Resumen', {
+  const sheet = workbook.addWorksheet('01-Resumen', {
     views: [{ state: 'frozen', xSplit: 0, ySplit: 3 }]
   });
   
@@ -299,7 +299,7 @@ async function createSummarySheet(workbook: ExcelJS.Workbook, data: BackupData) 
  * Create Flights Sheet
  */
 async function createFlightsSheet(workbook: ExcelJS.Workbook, data: BackupData) {
-  const sheet = workbook.addWorksheet('✈️ Vuelos');
+  const sheet = workbook.addWorksheet('02-Vuelos');
   
   // Headers
   const headers = [
@@ -342,13 +342,17 @@ async function createFlightsSheet(workbook: ExcelJS.Workbook, data: BackupData) 
   // Format columns
   formatFlightsColumns(sheet);
   
-  // Add totals row
+  // Add totals row - calculate directly instead of using formulas
   const lastRow = sheet.rowCount + 1;
+  const totalDiffHobbs = data.flights.reduce((sum, f) => sum + Number(f.diff_hobbs || 0), 0);
+  const totalDiffTach = data.flights.reduce((sum, f) => sum + Number(f.diff_tach || 0), 0);
+  const totalCosto = data.flights.reduce((sum, f) => sum + Number(f.costo || 0), 0);
+  
   sheet.getCell(`A${lastRow}`).value = 'TOTALES:';
   sheet.getCell(`A${lastRow}`).font = { bold: true };
-  sheet.getCell(`J${lastRow}`).value = { formula: `SUM(J2:J${lastRow - 1})` };
-  sheet.getCell(`K${lastRow}`).value = { formula: `SUM(K2:K${lastRow - 1})` };
-  sheet.getCell(`L${lastRow}`).value = { formula: `SUM(L2:L${lastRow - 1})` };
+  sheet.getCell(`J${lastRow}`).value = totalDiffHobbs;
+  sheet.getCell(`K${lastRow}`).value = totalDiffTach;
+  sheet.getCell(`L${lastRow}`).value = totalCosto;
   
   styleCell(sheet.getCell(`A${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
   styleCell(sheet.getCell(`J${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
@@ -366,7 +370,7 @@ async function createFlightsSheet(workbook: ExcelJS.Workbook, data: BackupData) 
  * Create Deposits Sheet
  */
 async function createDepositsSheet(workbook: ExcelJS.Workbook, data: BackupData) {
-  const sheet = workbook.addWorksheet('💰 Depósitos');
+  const sheet = workbook.addWorksheet('03-Depositos');
   
   const headers = ['ID', 'Fecha', 'Piloto', 'Código', 'Monto', 'Detalle', 'Estado', 'Comprobante', 'Fuente'];
   sheet.addRow(headers);
@@ -390,9 +394,11 @@ async function createDepositsSheet(workbook: ExcelJS.Workbook, data: BackupData)
   
   formatDepositsColumns(sheet);
   
+  // Calculate total directly
+  const totalDeposits = data.deposits.reduce((sum, d) => sum + Number(d.monto || 0), 0);
   const lastRow = sheet.rowCount + 1;
   sheet.getCell(`A${lastRow}`).value = 'TOTAL:';
-  sheet.getCell(`E${lastRow}`).value = { formula: `SUM(E2:E${lastRow - 1})` };
+  sheet.getCell(`E${lastRow}`).value = totalDeposits;
   styleCell(sheet.getCell(`A${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
   styleCell(sheet.getCell(`E${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
   
@@ -403,7 +409,7 @@ async function createDepositsSheet(workbook: ExcelJS.Workbook, data: BackupData)
  * Create Fuel Sheet
  */
 async function createFuelSheet(workbook: ExcelJS.Workbook, data: BackupData) {
-  const sheet = workbook.addWorksheet('⛽ Combustible');
+  const sheet = workbook.addWorksheet('04-Combustible');
   
   const headers = ['ID', 'Fecha', 'Piloto', 'Código', 'Litros', 'Monto', '$/Litro', 'Detalle', 'Estado', 'Comprobante', 'Fuente'];
   sheet.addRow(headers);
@@ -430,11 +436,16 @@ async function createFuelSheet(workbook: ExcelJS.Workbook, data: BackupData) {
   
   formatFuelColumns(sheet);
   
+  // Calculate totals directly
+  const totalLitros = data.fuelLogs.reduce((sum, f) => sum + Number(f.litros || 0), 0);
+  const totalMonto = data.fuelLogs.reduce((sum, f) => sum + Number(f.monto || 0), 0);
+  const avgPrice = totalLitros > 0 ? totalMonto / totalLitros : 0;
+  
   const lastRow = sheet.rowCount + 1;
   sheet.getCell(`A${lastRow}`).value = 'TOTALES:';
-  sheet.getCell(`E${lastRow}`).value = { formula: `SUM(E2:E${lastRow - 1})` };
-  sheet.getCell(`F${lastRow}`).value = { formula: `SUM(F2:F${lastRow - 1})` };
-  sheet.getCell(`G${lastRow}`).value = { formula: `AVERAGE(G2:G${lastRow - 1})` };
+  sheet.getCell(`E${lastRow}`).value = totalLitros;
+  sheet.getCell(`F${lastRow}`).value = totalMonto;
+  sheet.getCell(`G${lastRow}`).value = Math.round(avgPrice);
   styleCell(sheet.getCell(`A${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
   styleCell(sheet.getCell(`E${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
   styleCell(sheet.getCell(`F${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
@@ -447,7 +458,7 @@ async function createFuelSheet(workbook: ExcelJS.Workbook, data: BackupData) {
  * Create Pilots Sheet
  */
 async function createPilotsSheet(workbook: ExcelJS.Workbook, data: BackupData) {
-  const sheet = workbook.addWorksheet('👥 Pilotos');
+  const sheet = workbook.addWorksheet('05-Pilotos');
   
   const headers = [
     'ID', 'Código', 'Nombre', 'Email', 'Rol', 'Vuelos', 'Horas HOBBS',
@@ -495,7 +506,7 @@ async function createPilotsSheet(workbook: ExcelJS.Workbook, data: BackupData) {
  * Create Aircraft Sheet
  */
 async function createAircraftSheet(workbook: ExcelJS.Workbook, data: BackupData) {
-  const sheet = workbook.addWorksheet('🛩️ Aeronaves');
+  const sheet = workbook.addWorksheet('06-Aeronaves');
   
   sheet.getCell('A1').value = 'AERONAVE';
   sheet.getCell('A1').font = { bold: true, size: 14 };
@@ -579,7 +590,7 @@ async function createTransactionsSheet(workbook: ExcelJS.Workbook, data: BackupD
  * Create Pending Approvals Sheet
  */
 async function createPendingSheet(workbook: ExcelJS.Workbook, data: BackupData) {
-  const sheet = workbook.addWorksheet('⏳ Pendientes');
+  const sheet = workbook.addWorksheet('08-Pendientes');
   
   sheet.getCell('A1').value = 'FLIGHT SUBMISSIONS PENDIENTES';
   sheet.getCell('A1').font = { bold: true, size: 14 };
