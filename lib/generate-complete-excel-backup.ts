@@ -74,13 +74,13 @@ async function fetchAllData(): Promise<BackupData> {
     prisma.deposit.findMany({
       orderBy: { fecha: 'asc' },
       include: {
-        user: { select: { nombre: true, codigo: true } }
+        User: { select: { nombre: true, codigo: true } }
       }
     }),
     prisma.fuelLog.findMany({
       orderBy: { fecha: 'asc' },
       include: {
-        user: { select: { nombre: true, codigo: true } }
+        User: { select: { nombre: true, codigo: true } }
       }
     }),
     prisma.transaction.findMany({
@@ -109,7 +109,7 @@ async function fetchAllData(): Promise<BackupData> {
     prisma.component.findMany({
       orderBy: { id: 'asc' },
       include: {
-        aircraft: { select: { matricula: true, modelo: true } }
+        Aircraft: { select: { matricula: true, modelo: true } }
       }
     })
   ]);
