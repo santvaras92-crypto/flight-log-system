@@ -616,11 +616,13 @@ async function createFuelSheet(workbook: ExcelJS.Workbook, data: BackupData) {
     const dateObj = new Date(fuel.fecha);
     const fecha = `${String(dateObj.getDate()).padStart(2, '0')}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${dateObj.getFullYear()}`;
     
+    const litrosFormatted = fuel.litros > 0 ? `${Number(fuel.litros).toFixed(1)} L` : '-';
+    
     sheet.addRow([
       fecha,                                             // Fecha (formatted as string)
       fuel.User?.nombre || 'N/A',                       // Piloto
       fuel.User?.codigo || '-',                         // Código
-      fuel.litros > 0 ? Number(fuel.litros) : null,     // Litros (null if 0)
+      litrosFormatted,                                   // Litros (con ' L' al final)
       Number(fuel.monto || 0),                          // Monto
       source,                                            // Fuente (Histórico/App)
       fuel.detalle || '-'                                // Detalle
@@ -635,7 +637,7 @@ async function createFuelSheet(workbook: ExcelJS.Workbook, data: BackupData) {
   
   const lastRow = sheet.rowCount + 1;
   sheet.getCell(`A${lastRow}`).value = 'TOTALES:';
-  sheet.getCell(`D${lastRow}`).value = totalLitros;   // Litros
+  sheet.getCell(`D${lastRow}`).value = `${totalLitros.toFixed(1)} L`;   // Litros
   sheet.getCell(`E${lastRow}`).value = totalMonto;    // Monto
   styleCell(sheet.getCell(`A${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
   styleCell(sheet.getCell(`D${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
@@ -980,8 +982,8 @@ function formatDepositsColumnsDashboard(sheet: ExcelJS.Worksheet) {
   sheet.getColumn(3).width = 40;
   sheet.getColumn(3).alignment = { horizontal: 'left', vertical: 'middle' };
   
-  // Column D: Amount
-  sheet.getColumn(4).numFmt = '$#,##0';
+  // Column D: Amount (formato chileno: punto como separador de miles)
+  sheet.getColumn(4).numFmt = '$#.##0';
   sheet.getColumn(4).width = 16;
   sheet.getColumn(4).alignment = { horizontal: 'right', vertical: 'middle' };
   
@@ -1038,13 +1040,12 @@ function formatFuelColumnsDashboard(sheet: ExcelJS.Worksheet) {
   sheet.getColumn(3).width = 11;
   sheet.getColumn(3).alignment = { horizontal: 'left', vertical: 'middle' };
   
-  // Column D: Litros
-  sheet.getColumn(4).numFmt = '#,##0.0" L"';
+  // Column D: Litros (text format like dashboard)
   sheet.getColumn(4).width = 12;
   sheet.getColumn(4).alignment = { horizontal: 'left', vertical: 'middle' };
   
-  // Column E: Monto
-  sheet.getColumn(5).numFmt = '$#,##0';
+  // Column E: Monto (formato chileno: punto como separador de miles)
+  sheet.getColumn(5).numFmt = '$#.##0';
   sheet.getColumn(5).width = 14;
   sheet.getColumn(5).alignment = { horizontal: 'left', vertical: 'middle' };
   
