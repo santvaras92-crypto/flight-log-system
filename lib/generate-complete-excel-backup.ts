@@ -394,89 +394,91 @@ async function createFlightsSheet(workbook: ExcelJS.Workbook, data: BackupData) 
 }
 
 /**
- * Create Deposits Sheet
+ * Create Deposits Sheet - Exact match with Dashboard table
+ * Columns: Date, Pilot, Description, Amount
  */
 async function createDepositsSheet(workbook: ExcelJS.Workbook, data: BackupData) {
   const sheet = workbook.addWorksheet('03-Depositos');
   
-  const headers = ['ID', 'Fecha', 'Piloto', 'Código', 'Monto', 'Detalle', 'Estado', 'Comprobante', 'Fuente'];
+  // Headers - Exact match with dashboard
+  const headers = ['Date', 'Pilot', 'Description', 'Amount'];
   sheet.addRow(headers);
   styleHeaderRow(sheet, 1, headers.length);
   
-  data.deposits
-    .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime())
-    .forEach(deposit => {
-      sheet.addRow([
-        deposit.id || 'CSV',
-        new Date(deposit.fecha),
-        deposit.User?.nombre || 'N/A',
-        deposit.User?.codigo || 'N/A',
-        Number(deposit.monto || 0),
-        deposit.detalle || '',
-        deposit.estado || 'APROBADO',
-        deposit.comprobante || '',
-        deposit.source || 'DB'
-      ]);
-    });
+  // Sort by date descending (most recent first, like dashboard)
+  const sortedDeposits = [...data.deposits].sort((a, b) => 
+    new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+  );
   
-  formatDepositsColumns(sheet);
+  sortedDeposits.forEach(deposit => {
+    const pilotName = deposit.User?.nombre || 'N/A';
+    const pilotCode = deposit.User?.codigo || 'N/A';
+    
+    sheet.addRow([
+      new Date(deposit.fecha),                           // Date
+      `${pilotName} (${pilotCode})`,                    // Pilot (with code)
+      deposit.detalle || '',                             // Description
+      Number(deposit.monto || 0)                         // Amount
+    ]);
+  });
+  
+  formatDepositsColumnsDashboard(sheet);
   
   // Calculate total directly
   const totalDeposits = data.deposits.reduce((sum, d) => sum + Number(d.monto || 0), 0);
   const lastRow = sheet.rowCount + 1;
   sheet.getCell(`A${lastRow}`).value = 'TOTAL:';
-  sheet.getCell(`E${lastRow}`).value = totalDeposits;
+  sheet.getCell(`D${lastRow}`).value = totalDeposits;  // Amount column
   styleCell(sheet.getCell(`A${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
-  styleCell(sheet.getCell(`E${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
+  styleCell(sheet.getCell(`D${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
   
   sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: headers.length } };
 }
 
 /**
- * Create Fuel Sheet
+ * Create Fuel Sheet - Exact match with Dashboard table
+ * Columns: Fecha, Piloto, Código, Litros, Monto, Fuente, Detalle
  */
 async function createFuelSheet(workbook: ExcelJS.Workbook, data: BackupData) {
   const sheet = workbook.addWorksheet('04-Combustible');
   
-  const headers = ['ID', 'Fecha', 'Piloto', 'Código', 'Litros', 'Monto', '$/Litro', 'Detalle', 'Estado', 'Comprobante', 'Fuente'];
+  // Headers - Exact match with dashboard
+  const headers = ['Fecha', 'Piloto', 'Código', 'Litros', 'Monto', 'Fuente', 'Detalle'];
   sheet.addRow(headers);
   styleHeaderRow(sheet, 1, headers.length);
   
-  data.fuelLogs
-    .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime())
-    .forEach(fuel => {
-      const pricePerLiter = fuel.litros > 0 ? fuel.monto / fuel.litros : 0;
-      sheet.addRow([
-        fuel.id || 'CSV',
-        new Date(fuel.fecha),
-        fuel.User?.nombre || 'N/A',
-        fuel.User?.codigo || 'N/A',
-        Number(fuel.litros || 0),
-        Number(fuel.monto || 0),
-        pricePerLiter,
-        fuel.detalle || '',
-        fuel.estado || 'APROBADO',
-        fuel.comprobante || '',
-        fuel.source || 'DB'
-      ]);
-    });
+  // Sort by date descending (most recent first, like dashboard pagination)
+  const sortedFuel = [...data.fuelLogs].sort((a, b) => 
+    new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+  );
   
-  formatFuelColumns(sheet);
+  sortedFuel.forEach(fuel => {
+    const source = fuel.source === 'CSV' ? 'Histórico' : 'App';
+    
+    sheet.addRow([
+      new Date(fuel.fecha),                              // Fecha
+      fuel.User?.nombre || 'N/A',                       // Piloto
+      fuel.User?.codigo || '-',                         // Código
+      fuel.litros > 0 ? Number(fuel.litros) : null,     // Litros (null if 0)
+      Number(fuel.monto || 0),                          // Monto
+      source,                                            // Fuente (Histórico/App)
+      fuel.detalle || '-'                                // Detalle
+    ]);
+  });
+  
+  formatFuelColumnsDashboard(sheet);
   
   // Calculate totals directly
   const totalLitros = data.fuelLogs.reduce((sum, f) => sum + Number(f.litros || 0), 0);
   const totalMonto = data.fuelLogs.reduce((sum, f) => sum + Number(f.monto || 0), 0);
-  const avgPrice = totalLitros > 0 ? totalMonto / totalLitros : 0;
   
   const lastRow = sheet.rowCount + 1;
   sheet.getCell(`A${lastRow}`).value = 'TOTALES:';
-  sheet.getCell(`E${lastRow}`).value = totalLitros;
-  sheet.getCell(`F${lastRow}`).value = totalMonto;
-  sheet.getCell(`G${lastRow}`).value = Math.round(avgPrice);
+  sheet.getCell(`D${lastRow}`).value = totalLitros;   // Litros
+  sheet.getCell(`E${lastRow}`).value = totalMonto;    // Monto
   styleCell(sheet.getCell(`A${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
+  styleCell(sheet.getCell(`D${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
   styleCell(sheet.getCell(`E${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
-  styleCell(sheet.getCell(`F${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
-  styleCell(sheet.getCell(`G${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
   
   sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: headers.length } };
 }
@@ -800,12 +802,62 @@ function formatDepositsColumns(sheet: ExcelJS.Worksheet) {
   [2, 3, 4, 6, 7, 8, 9].forEach(col => sheet.getColumn(col).width = 15);
 }
 
+/**
+ * Format columns for Dashboard-style Deposits sheet
+ * Columns: Date, Pilot, Description, Amount
+ */
+function formatDepositsColumnsDashboard(sheet: ExcelJS.Worksheet) {
+  // Column A: Date
+  sheet.getColumn(1).numFmt = 'dd/mm/yyyy';
+  sheet.getColumn(1).width = 12;
+  
+  // Column B: Pilot
+  sheet.getColumn(2).width = 30;
+  
+  // Column C: Description
+  sheet.getColumn(3).width = 35;
+  
+  // Column D: Amount
+  sheet.getColumn(4).numFmt = '$#,##0';
+  sheet.getColumn(4).width = 15;
+}
+
 function formatFuelColumns(sheet: ExcelJS.Worksheet) {
   sheet.getColumn(2).numFmt = 'dd/mm/yyyy';
   sheet.getColumn(5).numFmt = '#,##0.0';
   sheet.getColumn(6).numFmt = '$#,##0';
   sheet.getColumn(7).numFmt = '$#,##0';
   [2, 3, 4, 5, 6, 7, 8, 9, 10, 11].forEach(col => sheet.getColumn(col).width = 15);
+}
+
+/**
+ * Format columns for Dashboard-style Fuel sheet
+ * Columns: Fecha, Piloto, Código, Litros, Monto, Fuente, Detalle
+ */
+function formatFuelColumnsDashboard(sheet: ExcelJS.Worksheet) {
+  // Column A: Fecha
+  sheet.getColumn(1).numFmt = 'dd/mm/yyyy';
+  sheet.getColumn(1).width = 12;
+  
+  // Column B: Piloto
+  sheet.getColumn(2).width = 25;
+  
+  // Column C: Código
+  sheet.getColumn(3).width = 10;
+  
+  // Column D: Litros
+  sheet.getColumn(4).numFmt = '#,##0.0';
+  sheet.getColumn(4).width = 10;
+  
+  // Column E: Monto
+  sheet.getColumn(5).numFmt = '$#,##0';
+  sheet.getColumn(5).width = 12;
+  
+  // Column F: Fuente
+  sheet.getColumn(6).width = 12;
+  
+  // Column G: Detalle
+  sheet.getColumn(7).width = 30;
 }
 
 function formatPilotsColumns(sheet: ExcelJS.Worksheet) {
