@@ -7,6 +7,8 @@ interface BackupData {
   users: any[];
   flights: any[];
   deposits: any[];
+  depositsDetailsByCode?: Record<string, { fecha: string; descripcion: string; monto: number }[]>;
+  csvPilotNames?: Record<string, string>;
   fuelLogs: any[];
   transactions: any[];
   submissions: any[];
@@ -118,6 +120,64 @@ async function fetchAllData(): Promise<BackupData> {
   const csvDeposits = await readDepositCSV();
   const allDeposits = [...deposits, ...csvDeposits];
   
+  // Build depositsDetailsByCode (same logic as dashboard)
+  const depositsDetailsByCode: Record<string, { fecha: string; descripcion: string; monto: number }[]> = {};
+  const csvPilotNames: Record<string, string> = {};
+  
+  // Read pilot names from CSV
+  try {
+    const pilotsPath = path.join(process.cwd(), 'Base de dato pilotos', 'Base de dato pilotos.csv');
+    if (fs.existsSync(pilotsPath)) {
+      const content = fs.readFileSync(pilotsPath, 'utf-8');
+      const lines = content.split('\n').filter(l => l.trim());
+      for (let i = 1; i < lines.length; i++) {
+        const parts = lines[i].split(';');
+        const code = (parts[0] || '').trim().toUpperCase();
+        const name = (parts[1] || '').trim();
+        if (code && name) csvPilotNames[code] = name;
+      }
+    }
+  } catch (err) {
+    console.error('[Excel Backup] Error reading pilot names CSV:', err);
+  }
+  
+  // Build depositsDetailsByCode from CSV
+  try {
+    const depositsPath = path.join(process.cwd(), 'Pago pilotos', 'Pago pilotos.csv');
+    if (fs.existsSync(depositsPath)) {
+      const content = fs.readFileSync(depositsPath, 'utf-8');
+      const lines = content.split('\n').filter(l => l.trim());
+      for (let i = 1; i < lines.length; i++) {
+        const parts = lines[i].split(';');
+        const fecha = (parts[0] || '').trim();
+        const descripcion = (parts[1] || '').trim();
+        const montoStr = (parts[2] || '').trim();
+        const code = (parts[3] || '').trim().toUpperCase();
+        if (!code) continue;
+        const cleaned = montoStr.replace(/\$/g, '').replace(/\./g, '').replace(',', '.');
+        const monto = parseFloat(cleaned) || 0;
+        if (!depositsDetailsByCode[code]) depositsDetailsByCode[code] = [];
+        depositsDetailsByCode[code].push({ fecha, descripcion, monto });
+      }
+    }
+  } catch (err) {
+    console.error('[Excel Backup] Error building depositsDetailsByCode from CSV:', err);
+  }
+  
+  // Add database deposits to depositsDetailsByCode
+  deposits.forEach(dep => {
+    const code = dep.User?.codigo?.toUpperCase();
+    if (code) {
+      if (!depositsDetailsByCode[code]) depositsDetailsByCode[code] = [];
+      const monto = typeof dep.monto === 'number' ? dep.monto : parseFloat(dep.monto.toString());
+      depositsDetailsByCode[code].push({ 
+        fecha: dep.fecha.toISOString().split('T')[0], 
+        descripcion: dep.detalle || 'Depósito (BD)', 
+        monto 
+      });
+    }
+  });
+  
   // Read CSV fuel
   const csvFuel = await readFuelCSV();
   const allFuel = [...fuelLogs, ...csvFuel];
@@ -128,6 +188,8 @@ async function fetchAllData(): Promise<BackupData> {
     users,
     flights,
     deposits: allDeposits,
+    depositsDetailsByCode,
+    csvPilotNames,
     fuelLogs: allFuel,
     transactions,
     submissions,
@@ -562,29 +624,40 @@ async function createDepositsSheet(workbook: ExcelJS.Workbook, data: BackupData)
   sheet.addRow(headers);
   styleHeaderRow(sheet, 1, headers.length);
   
-  // Sort by date descending (most recent first, like dashboard)
-  const sortedDeposits = [...data.deposits].sort((a, b) => 
-    new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
-  );
+  // Build deposits array from depositsDetailsByCode (same logic as dashboard)
+  const allDeposits: { code: string; pilotName: string; fecha: string; descripcion: string; monto: number }[] = [];
   
-  sortedDeposits.forEach(deposit => {
-    const pilotName = deposit.User?.nombre || 'N/A';
-    const pilotCode = deposit.User?.codigo || 'N/A';
-    const dateObj = new Date(deposit.fecha);
-    const fecha = `${String(dateObj.getDate()).padStart(2, '0')}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${dateObj.getFullYear()}`;
-    
+  if (data.depositsDetailsByCode) {
+    Object.entries(data.depositsDetailsByCode).forEach(([code, records]) => {
+      const pilotName = data.csvPilotNames?.[code] || code;
+      records.forEach(r => {
+        allDeposits.push({ 
+          code, 
+          pilotName, 
+          fecha: r.fecha,          // Already in yyyy-mm-dd format from dashboard
+          descripcion: r.descripcion, 
+          monto: r.monto 
+        });
+      });
+    });
+  }
+  
+  // Sort by date descending (most recent first, like dashboard)
+  allDeposits.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+  
+  allDeposits.forEach(deposit => {
     sheet.addRow([
-      fecha,                                             // Date (formatted as string like dashboard)
-      pilotName,                                         // Pilot name only
-      deposit.detalle || '',                             // Description
-      Number(deposit.monto || 0)                         // Amount
+      deposit.fecha,                                      // Date (yyyy-mm-dd format like dashboard)
+      `${deposit.pilotName} (${deposit.code})`,          // Pilot with code in parentheses
+      deposit.descripcion || '',                          // Description
+      Number(deposit.monto || 0)                          // Amount
     ]);
   });
   
   formatDepositsColumnsDashboard(sheet);
   
   // Calculate total directly
-  const totalDeposits = data.deposits.reduce((sum, d) => sum + Number(d.monto || 0), 0);
+  const totalDeposits = allDeposits.reduce((sum, d) => sum + Number(d.monto || 0), 0);
   const lastRow = sheet.rowCount + 1;
   sheet.getCell(`A${lastRow}`).value = 'TOTAL:';
   sheet.getCell(`D${lastRow}`).value = totalDeposits;  // Amount column
@@ -613,9 +686,9 @@ async function createFuelSheet(workbook: ExcelJS.Workbook, data: BackupData) {
   
   sortedFuel.forEach(fuel => {
     const source = fuel.source === 'CSV' ? 'Histórico' : 'App';
+    // Match dashboard format: toLocaleDateString('es-CL') gives dd-mm-yyyy
     const dateObj = new Date(fuel.fecha);
-    const fecha = `${String(dateObj.getDate()).padStart(2, '0')}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${dateObj.getFullYear()}`;
-    
+    const fecha = dateObj.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const litrosFormatted = fuel.litros > 0 ? `${Number(fuel.litros).toFixed(1)} L` : '-';
     
     sheet.addRow([
