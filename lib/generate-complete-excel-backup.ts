@@ -694,8 +694,6 @@ async function createFuelSheet(workbook: ExcelJS.Workbook, data: BackupData) {
     const year = dateObj.getFullYear();
     const fecha = `${day}-${month}-${year}`;
     
-    const litrosFormatted = fuel.litros > 0 ? `${Number(fuel.litros).toFixed(1)} L` : '-';
-    
     // Get pilot info - use csvPilotNames for CSV records
     const pilotCode = fuel.User?.codigo || fuel.user?.codigo || '-';
     let pilotName = fuel.User?.nombre || fuel.user?.nombre || 'N/A';
@@ -709,8 +707,8 @@ async function createFuelSheet(workbook: ExcelJS.Workbook, data: BackupData) {
       fecha,                                             // Fecha (formatted as string)
       pilotName,                                         // Piloto
       pilotCode,                                         // Código
-      litrosFormatted,                                   // Litros (con ' L' al final)
-      Number(fuel.monto || 0),                          // Monto
+      Number(fuel.litros || 0),                         // Litros (as number for Excel formulas)
+      Math.round(Number(fuel.monto || 0)),              // Monto (rounded)
       source,                                            // Fuente (Histórico/App)
       fuel.detalle || '-'                                // Detalle
     ]);
@@ -724,7 +722,7 @@ async function createFuelSheet(workbook: ExcelJS.Workbook, data: BackupData) {
   
   const lastRow = sheet.rowCount + 1;
   sheet.getCell(`A${lastRow}`).value = 'TOTALES:';
-  sheet.getCell(`D${lastRow}`).value = `${totalLitros.toFixed(1)} L`;   // Litros
+  sheet.getCell(`D${lastRow}`).value = totalLitros;   // Litros (as number)
   sheet.getCell(`E${lastRow}`).value = totalMonto;    // Monto
   styleCell(sheet.getCell(`A${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
   styleCell(sheet.getCell(`D${lastRow}`), { bold: true, bgColor: 'C6EFCE' });
@@ -1420,7 +1418,8 @@ function formatFuelColumnsDashboard(sheet: ExcelJS.Worksheet) {
   sheet.getColumn(3).width = 11;
   sheet.getColumn(3).alignment = { horizontal: 'left', vertical: 'middle' };
   
-  // Column D: Litros (text format like dashboard)
+  // Column D: Litros (numeric with 1 decimal)
+  sheet.getColumn(4).numFmt = '#,##0.0';
   sheet.getColumn(4).width = 12;
   sheet.getColumn(4).alignment = { horizontal: 'left', vertical: 'middle' };
   
