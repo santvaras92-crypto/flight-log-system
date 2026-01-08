@@ -1443,10 +1443,10 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
     const clientName = csvPilotNames?.[code] || code;
     
     const totalHours = filteredFlights.reduce((sum, f) => sum + (Number(f.diff_hobbs) || 0), 0);
-    const totalSpent = filteredFlights.reduce((sum, f) => sum + (Number(f.costo) || 0), 0);
-    const totalDeposits = depositsByCode?.[code] || 0;
-    const totalFuel = fuelByCode?.[code] || 0;
-    const balance = Math.round(totalDeposits - totalSpent + totalFuel);
+    const totalSpent = Math.round(filteredFlights.reduce((sum, f) => sum + (Number(f.costo) || 0), 0));
+    const totalDeposits = Math.round(depositsByCode?.[code] || 0);
+    const totalFuel = Math.round(fuelByCode?.[code] || 0);
+    const balance = totalDeposits - totalSpent + totalFuel;
 
     const deposits = depositsDetailsByCode?.[code] || [];
     const fuelCredits = fuelDetailsByCode?.[code] || [];
@@ -1519,10 +1519,10 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                   const clientName = csvPilotNames?.[code] || code;
                   
                   const totalHours = filteredFlights.reduce((sum, f) => sum + (Number(f.diff_hobbs) || 0), 0);
-                  const totalSpent = filteredFlights.reduce((sum, f) => sum + (Number(f.costo) || 0), 0);
-                  const totalDeposits = depositsByCode?.[code] || 0;
-                  const totalFuel = fuelByCode?.[code] || 0;
-                  const balance = Math.round(totalDeposits - totalSpent + totalFuel);
+                  const totalSpent = Math.round(filteredFlights.reduce((sum, f) => sum + (Number(f.costo) || 0), 0));
+                  const totalDeposits = Math.round(depositsByCode?.[code] || 0);
+                  const totalFuel = Math.round(fuelByCode?.[code] || 0);
+                  const balance = totalDeposits - totalSpent + totalFuel;
 
                   const clientDeposits = (depositsDetailsByCode?.[code] || []).map(d => ({
                     fecha: d.fecha,
