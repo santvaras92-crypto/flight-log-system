@@ -265,14 +265,20 @@ async function readFuelCSV(): Promise<any[]> {
       const litros = parseFloat(litrosStr.replace(',', '.')) || 0;
       const monto = parseFloat(montoStr.replace(/\$/g, '').replace(/\./g, '').replace(',', '.')) || 0;
       
+      // Parse DD-MM-YY to proper Date
+      const dateParts = fecha.split('-');
+      let year = parseInt(dateParts[2]);
+      if (year < 100) year += 2000; // Convert 25 to 2025
+      const parsedDate = new Date(year, parseInt(dateParts[1]) - 1, parseInt(dateParts[0]));
+      
       fuelLogs.push({
-        id: null,
-        fecha: new Date(fecha.split('-').reverse().join('-')),
+        id: `csv-${i}`,
+        fecha: parsedDate,
         litros,
         monto,
         detalle: 'Combustible (CSV)',
         estado: 'APROBADO',
-        user: { codigo, nombre: codigo },
+        User: { codigo, nombre: codigo },  // Capital U to match DB structure (will be mapped later)
         comprobante: null,
         source: 'CSV'
       });
@@ -686,15 +692,28 @@ async function createFuelSheet(workbook: ExcelJS.Workbook, data: BackupData) {
   
   sortedFuel.forEach(fuel => {
     const source = fuel.source === 'CSV' ? 'Histórico' : 'App';
-    // Match dashboard format: toLocaleDateString('es-CL') gives dd-mm-yyyy
+    // Format date as dd-mm-yyyy (dashboard format)
     const dateObj = new Date(fuel.fecha);
-    const fecha = dateObj.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const year = dateObj.getFullYear();
+    const fecha = `${day}-${month}-${year}`;
+    
     const litrosFormatted = fuel.litros > 0 ? `${Number(fuel.litros).toFixed(1)} L` : '-';
+    
+    // Get pilot info - use csvPilotNames for CSV records
+    const pilotCode = fuel.User?.codigo || fuel.user?.codigo || '-';
+    let pilotName = fuel.User?.nombre || fuel.user?.nombre || 'N/A';
+    
+    // If this is a CSV record and we have the pilot name mapping, use it
+    if (fuel.source === 'CSV' && data.csvPilotNames && data.csvPilotNames[pilotCode.toUpperCase()]) {
+      pilotName = data.csvPilotNames[pilotCode.toUpperCase()];
+    }
     
     sheet.addRow([
       fecha,                                             // Fecha (formatted as string)
-      fuel.User?.nombre || 'N/A',                       // Piloto
-      fuel.User?.codigo || '-',                         // Código
+      pilotName,                                         // Piloto
+      pilotCode,                                         // Código
       litrosFormatted,                                   // Litros (con ' L' al final)
       Number(fuel.monto || 0),                          // Monto
       source,                                            // Fuente (Histórico/App)
