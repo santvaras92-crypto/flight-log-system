@@ -14,6 +14,7 @@ interface BackupData {
   submissions: any[];
   aircraft: any[];
   components: any[];
+  overviewMetrics?: any; // Metrics from dashboard
 }
 
 /**
@@ -293,7 +294,8 @@ async function readFuelCSV(): Promise<any[]> {
 }
 
 /**
- * Create Summary Sheet - Dashboard-style overview with emojis
+ * Create Summary Sheet - Exact match with Dashboard Overview
+ * Shows ONLY what the dashboard shows, nothing more, nothing less
  */
 async function createSummarySheet(workbook: ExcelJS.Workbook, data: BackupData) {
   const sheet = workbook.addWorksheet('📋 Resumen');
@@ -310,224 +312,210 @@ async function createSummarySheet(workbook: ExcelJS.Workbook, data: BackupData) 
   sheet.getCell('A2').font = { size: 11, color: { argb: 'FF64748B' } };
   sheet.mergeCells('A2:D2');
   
-  const firstFlight = data.flights[0];
-  const lastFlight = data.flights[data.flights.length - 1];
+  let row = 4;
   
-  sheet.getCell('A3').value = `⏰ Período: Desde ${firstFlight ? new Date(firstFlight.fecha).toLocaleDateString('es-CL') : 'N/A'} hasta ${new Date().toLocaleDateString('es-CL')}`;
-  sheet.getCell('A3').font = { size: 11, color: { argb: 'FF64748B' } };
-  sheet.mergeCells('A3:D3');
-  
-  let row = 5;
-  
-  // ==================== OPERATIONAL METRICS ====================
-  sheet.getCell(`A${row}`).value = '📊 MÉTRICAS OPERACIONALES';
-  sheet.getCell(`A${row}`).font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
-  sheet.getCell(`A${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
-  sheet.mergeCells(`A${row}:D${row}`);
-  row++;
-  
-  const totalFlights = data.flights.length;
-  const totalHobbs = data.flights.reduce((sum, f) => sum + Number(f.diff_hobbs || 0), 0);
-  const totalTach = data.flights.reduce((sum, f) => sum + Number(f.diff_tach || 0), 0);
-  const avgFlightDuration = totalFlights > 0 ? totalHobbs / totalFlights : 0;
-  
-  const metrics = [
-    ['✈️ Total Vuelos', totalFlights.toLocaleString('es-CL'), '🕐 Horas HOBBS Totales', `${totalHobbs.toFixed(1)} hrs`],
-    ['⏱️ Horas TACH Totales', `${totalTach.toFixed(1)} hrs`, '📈 Promedio Duración Vuelo', `${avgFlightDuration.toFixed(1)} hrs`],
-    ['📅 Primer Vuelo', firstFlight ? new Date(firstFlight.fecha).toLocaleDateString('es-CL') : 'N/A', '📅 Último Vuelo', lastFlight ? new Date(lastFlight.fecha).toLocaleDateString('es-CL') : 'N/A']
-  ];
-  
-  metrics.forEach(([label1, value1, label2, value2]) => {
-    sheet.getCell(`A${row}`).value = label1;
-    sheet.getCell(`A${row}`).font = { bold: true, size: 11 };
-    sheet.getCell(`B${row}`).value = value1;
-    sheet.getCell(`B${row}`).font = { size: 11, color: { argb: 'FF1E40AF' }, bold: true };
-    
-    sheet.getCell(`C${row}`).value = label2;
-    sheet.getCell(`C${row}`).font = { bold: true, size: 11 };
-    sheet.getCell(`D${row}`).value = value2;
-    sheet.getCell(`D${row}`).font = { size: 11, color: { argb: 'FF1E40AF' }, bold: true };
-    row++;
-  });
-  
-  row++; // Spacing
-  
-  // ==================== FUEL METRICS ====================
-  sheet.getCell(`A${row}`).value = '⛽ COMBUSTIBLE';
-  sheet.getCell(`A${row}`).font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
-  sheet.getCell(`A${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEA580C' } };
-  sheet.mergeCells(`A${row}:D${row}`);
-  row++;
-  
-  // Filter fuel since Sep 9, 2020 (same as dashboard)
+  // ==================== CALCULATE METRICS (Same as Dashboard) ====================
   const sep9_2020 = new Date('2020-09-09');
   const fuelSinceSep = data.fuelLogs.filter(f => new Date(f.fecha) >= sep9_2020);
   const flightsSinceSep = data.flights.filter(f => new Date(f.fecha) >= sep9_2020);
   
+  const totalFlights = data.flights.length;
+  const totalHobbs = data.flights.reduce((sum, f) => sum + Number(f.diff_hobbs || 0), 0);
   const totalLiters = fuelSinceSep.reduce((sum, f) => sum + Number(f.litros || 0), 0);
-  const totalFuelCost = fuelSinceSep.reduce((sum, f) => sum + Number(f.monto || 0), 0);
   const hobbsSinceSep = flightsSinceSep.reduce((sum, f) => sum + Number(f.diff_hobbs || 0), 0);
   
-  // Apply 10% idle adjustment: divide by 90% of hours (same as dashboard)
+  // Apply 10% idle adjustment
   const effectiveHours = hobbsSinceSep > 0 ? hobbsSinceSep * 0.9 : 0;
-  const avgFuelRate = effectiveHours > 0 ? totalLiters / effectiveHours : 0;
-  const avgFuelRateGal = avgFuelRate / 3.78541;
-  const avgPricePerLiter = totalLiters > 0 ? totalFuelCost / totalLiters : 0;
+  const fuelRateLph = effectiveHours > 0 ? totalLiters / effectiveHours : 0;
+  const fuelRateGph = fuelRateLph / 3.78541;
+  const totalGallons = totalLiters / 3.78541;
   
-  const fuelMetrics = [
-    ['🛢️ Total Litros Consumidos', `${totalLiters.toFixed(1)} L`, '🇺🇸 Total Galones', `${(totalLiters / 3.78541).toFixed(0)} GAL`],
-    ['💰 Gasto Total Combustible', `$${totalFuelCost.toLocaleString('es-CL')}`, '💵 Precio Promedio/Litro', `$${Math.round(avgPricePerLiter).toLocaleString('es-CL')}`],
-    ['📊 Tasa Consumo (L/H)', `${avgFuelRate.toFixed(2)} L/H`, '📊 Tasa Consumo (GAL/H)', `${avgFuelRateGal.toFixed(2)} GAL/H`]
-  ];
+  // Calculate pending balance
+  const totalRevenue = data.flights.reduce((sum, f) => sum + Number(f.costo || 0), 0);
+  const totalDeposits = data.deposits.reduce((sum, d) => sum + Number(d.monto || 0), 0);
+  const totalFuelCost = data.fuelLogs.reduce((sum, f) => sum + Number(f.monto || 0), 0);
+  const pendingBalance = totalDeposits - totalRevenue - totalFuelCost;
   
-  fuelMetrics.forEach(([label1, value1, label2, value2]) => {
-    sheet.getCell(`A${row}`).value = label1;
-    sheet.getCell(`A${row}`).font = { bold: true, size: 11 };
-    sheet.getCell(`B${row}`).value = value1;
-    sheet.getCell(`B${row}`).font = { size: 11, color: { argb: 'FFEA580C' }, bold: true };
-    
-    sheet.getCell(`C${row}`).value = label2;
-    sheet.getCell(`C${row}`).font = { bold: true, size: 11 };
-    sheet.getCell(`D${row}`).value = value2;
-    sheet.getCell(`D${row}`).font = { size: 11, color: { argb: 'FFEA580C' }, bold: true };
-    row++;
-  });
+  // Calculate active pilots (last 60 days)
+  const sixtyDaysAgo = new Date();
+  sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+  const recentFlights = data.flights.filter(f => new Date(f.fecha) >= sixtyDaysAgo);
+  const activePilotCodes = new Set(recentFlights.map(f => f.cliente).filter(Boolean));
+  const activePilotsCount = activePilotCodes.size;
   
-  row++; // Spacing
-  
-  // ==================== FINANCIAL OVERVIEW ====================
-  sheet.getCell(`A${row}`).value = '💰 BALANCE FINANCIERO';
+  // ==================== FUEL RATE CARD ====================
+  sheet.getCell(`A${row}`).value = '⛽ FUEL RATE';
   sheet.getCell(`A${row}`).font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
-  sheet.getCell(`A${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF059669' } };
+  sheet.getCell(`A${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFBBF24' } };
   sheet.mergeCells(`A${row}:D${row}`);
   row++;
   
-  const totalRevenue = data.flights.reduce((sum, f) => sum + Number(f.costo || 0), 0);
-  const totalDeposits = data.deposits.reduce((sum, d) => sum + Number(d.monto || 0), 0);
-  const balance = totalDeposits - totalRevenue - totalFuelCost;
-  const avgRevenuePerFlight = totalFlights > 0 ? totalRevenue / totalFlights : 0;
-  
-  const financialMetrics = [
-    ['✈️ Ingresos por Vuelos', `$${totalRevenue.toLocaleString('es-CL')}`, '💳 Depósitos Recibidos', `$${totalDeposits.toLocaleString('es-CL')}`],
-    ['⛽ Cargos Combustible', `$${totalFuelCost.toLocaleString('es-CL')}`, '📊 Ingreso Promedio/Vuelo', `$${Math.round(avgRevenuePerFlight).toLocaleString('es-CL')}`],
-    ['💵 Balance Pendiente', `$${balance.toLocaleString('es-CL')}`, '📈 Margen Operativo', `${totalRevenue > 0 ? ((totalRevenue - totalFuelCost) / totalRevenue * 100).toFixed(1) : 0}%`]
+  const fuelRateData = [
+    ['Litros/Hora', `${fuelRateLph.toFixed(2)} L/H`, '', ''],
+    ['Galones/Hora', `${fuelRateGph.toFixed(2)} GAL/H`, '', ''],
+    ['Nota', 'Since Sep 9, 2020 • Excludes 10% idle', '', '']
   ];
   
-  financialMetrics.forEach(([label1, value1, label2, value2]) => {
-    sheet.getCell(`A${row}`).value = label1;
+  fuelRateData.forEach(([label, value]) => {
+    sheet.getCell(`A${row}`).value = label;
     sheet.getCell(`A${row}`).font = { bold: true, size: 11 };
-    const isBalance = label1.includes('Balance');
-    sheet.getCell(`B${row}`).value = value1;
-    sheet.getCell(`B${row}`).font = { 
-      size: 11, 
-      color: { argb: isBalance && balance < 0 ? 'FFDC2626' : 'FF059669' }, 
-      bold: true 
-    };
-    
-    sheet.getCell(`C${row}`).value = label2;
-    sheet.getCell(`C${row}`).font = { bold: true, size: 11 };
-    sheet.getCell(`D${row}`).value = value2;
-    sheet.getCell(`D${row}`).font = { size: 11, color: { argb: 'FF059669' }, bold: true };
+    sheet.getCell(`B${row}`).value = value;
+    sheet.getCell(`B${row}`).font = { size: 11, color: { argb: 'FFFBBF24' }, bold: true };
     row++;
   });
   
   row++; // Spacing
   
-  // ==================== PILOTS SUMMARY ====================
-  sheet.getCell(`A${row}`).value = '👥 PILOTOS';
+  // ==================== TOTAL HOURS CARD ====================
+  sheet.getCell(`A${row}`).value = '🕐 TOTAL HOURS';
+  sheet.getCell(`A${row}`).font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
+  sheet.getCell(`A${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3B82F6' } };
+  sheet.mergeCells(`A${row}:D${row}`);
+  row++;
+  
+  sheet.getCell(`A${row}`).value = 'Flight Hours';
+  sheet.getCell(`A${row}`).font = { bold: true, size: 11 };
+  sheet.getCell(`B${row}`).value = `${totalHobbs.toFixed(1)} hrs`;
+  sheet.getCell(`B${row}`).font = { size: 11, color: { argb: 'FF3B82F6' }, bold: true };
+  row++;
+  
+  sheet.getCell(`A${row}`).value = 'Since';
+  sheet.getCell(`A${row}`).font = { size: 11 };
+  sheet.getCell(`B${row}`).value = 'Dec 2, 2017';
+  sheet.getCell(`B${row}`).font = { size: 11 };
+  row++;
+  
+  row++; // Spacing
+  
+  // ==================== TOTAL FLIGHTS CARD ====================
+  sheet.getCell(`A${row}`).value = '✈️ TOTAL FLIGHTS';
+  sheet.getCell(`A${row}`).font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
+  sheet.getCell(`A${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6366F1' } };
+  sheet.mergeCells(`A${row}:D${row}`);
+  row++;
+  
+  sheet.getCell(`A${row}`).value = 'Completed';
+  sheet.getCell(`A${row}`).font = { bold: true, size: 11 };
+  sheet.getCell(`B${row}`).value = totalFlights.toLocaleString('es-CL');
+  sheet.getCell(`B${row}`).font = { size: 11, color: { argb: 'FF6366F1' }, bold: true };
+  row++;
+  
+  sheet.getCell(`A${row}`).value = 'Operations';
+  sheet.getCell(`A${row}`).font = { size: 11 };
+  sheet.getCell(`B${row}`).value = '8+ years';
+  sheet.getCell(`B${row}`).font = { size: 11 };
+  row++;
+  
+  row++; // Spacing
+  
+  // ==================== NEXT INSPECTIONS CARD ====================
+  sheet.getCell(`A${row}`).value = '🔧 NEXT INSPECTIONS';
+  sheet.getCell(`A${row}`).font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
+  sheet.getCell(`A${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDC2626' } };
+  sheet.mergeCells(`A${row}:D${row}`);
+  row++;
+  
+  sheet.getCell(`A${row}`).value = '🛢️ Cambio Aceite';
+  sheet.getCell(`A${row}`).font = { bold: true, size: 11 };
+  sheet.getCell(`B${row}`).value = 'Ver dashboard para detalles';
+  sheet.getCell(`B${row}`).font = { size: 11, italic: true };
+  row++;
+  
+  sheet.getCell(`A${row}`).value = '⚙️ 100 Horas';
+  sheet.getCell(`A${row}`).font = { bold: true, size: 11 };
+  sheet.getCell(`B${row}`).value = 'Ver dashboard para predicciones';
+  sheet.getCell(`B${row}`).font = { size: 11, italic: true };
+  row++;
+  
+  sheet.getCell(`A${row}`).value = 'Nota';
+  sheet.getCell(`A${row}`).font = { size: 11 };
+  sheet.getCell(`B${row}`).value = 'Cálculos avanzados con predicciones';
+  sheet.getCell(`B${row}`).font = { size: 11, color: { argb: 'FF64748B' } };
+  row++;
+  
+  row++; // Spacing
+  
+  // ==================== FUEL CONSUMED CARD ====================
+  sheet.getCell(`A${row}`).value = '🛢️ FUEL CONSUMED';
+  sheet.getCell(`A${row}`).font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
+  sheet.getCell(`A${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF97316' } };
+  sheet.mergeCells(`A${row}:D${row}`);
+  row++;
+  
+  const fuelData = [
+    ['Litros', `${totalLiters.toFixed(0)} L`, '', ''],
+    ['Galones', `${totalGallons.toFixed(0)} GAL`, '', ''],
+    ['Período', 'Since Sep 9, 2020', '', '']
+  ];
+  
+  fuelData.forEach(([label, value]) => {
+    sheet.getCell(`A${row}`).value = label;
+    sheet.getCell(`A${row}`).font = { bold: true, size: 11 };
+    sheet.getCell(`B${row}`).value = value;
+    sheet.getCell(`B${row}`).font = { size: 11, color: { argb: 'FFF97316' }, bold: true };
+    row++;
+  });
+  
+  row++; // Spacing
+  
+  // ==================== ACTIVE PILOTS CARD ====================
+  sheet.getCell(`A${row}`).value = '👥 PILOTOS ACTIVOS';
   sheet.getCell(`A${row}`).font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
   sheet.getCell(`A${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF7C3AED' } };
   sheet.mergeCells(`A${row}:D${row}`);
   row++;
   
-  const totalPilots = data.users.filter(u => u.rol === 'PILOTO').length;
-  const activePilots = data.users.filter(u => u.Flight.length > 0).length;
-  const totalAdmins = data.users.filter(u => u.rol === 'ADMIN').length;
-  const pilotsWithPositiveBalance = data.users.filter(u => {
-    const deposits = data.deposits.filter(d => d.User?.codigo === u.codigo).reduce((s, d) => s + Number(d.monto || 0), 0);
-    const flights = data.flights.filter(f => f.pilotoId === u.id).reduce((s, f) => s + Number(f.costo || 0), 0);
-    const fuel = data.fuelLogs.filter(f => f.User?.codigo === u.codigo).reduce((s, f) => s + Number(f.monto || 0), 0);
-    return (deposits - flights - fuel) > 0;
-  }).length;
+  sheet.getCell(`A${row}`).value = 'Pilotos activos';
+  sheet.getCell(`A${row}`).font = { bold: true, size: 11 };
+  sheet.getCell(`B${row}`).value = activePilotsCount.toLocaleString('es-CL');
+  sheet.getCell(`B${row}`).font = { size: 11, color: { argb: 'FF7C3AED' }, bold: true };
+  row++;
   
-  const pilotMetrics = [
-    ['👤 Total Pilotos Registrados', totalPilots.toLocaleString('es-CL'), '✈️ Pilotos con Vuelos', activePilots.toLocaleString('es-CL')],
-    ['💰 Pilotos con Saldo Positivo', pilotsWithPositiveBalance.toLocaleString('es-CL'), '🔧 Administradores', totalAdmins.toLocaleString('es-CL')]
-  ];
-  
-  pilotMetrics.forEach(([label1, value1, label2, value2]) => {
-    sheet.getCell(`A${row}`).value = label1;
-    sheet.getCell(`A${row}`).font = { bold: true, size: 11 };
-    sheet.getCell(`B${row}`).value = value1;
-    sheet.getCell(`B${row}`).font = { size: 11, color: { argb: 'FF7C3AED' }, bold: true };
-    
-    sheet.getCell(`C${row}`).value = label2;
-    sheet.getCell(`C${row}`).font = { bold: true, size: 11 };
-    sheet.getCell(`D${row}`).value = value2;
-    sheet.getCell(`D${row}`).font = { size: 11, color: { argb: 'FF7C3AED' }, bold: true };
-    row++;
-  });
+  sheet.getCell(`A${row}`).value = 'Período';
+  sheet.getCell(`A${row}`).font = { size: 11 };
+  sheet.getCell(`B${row}`).value = 'Últimos 60 días';
+  sheet.getCell(`B${row}`).font = { size: 11 };
+  row++;
   
   row++; // Spacing
   
-  // ==================== AIRCRAFT INFO ====================
-  sheet.getCell(`A${row}`).value = '🛩️ AERONAVES';
+  // ==================== PENDING BALANCE CARD ====================
+  sheet.getCell(`A${row}`).value = '💰 PENDING BALANCE';
   sheet.getCell(`A${row}`).font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
-  sheet.getCell(`A${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0891B2' } };
+  sheet.getCell(`A${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEAB308' } };
   sheet.mergeCells(`A${row}:D${row}`);
   row++;
   
-  const totalAircraft = data.aircraft.length;
-  
-  data.aircraft.forEach(aircraft => {
-    const aircraftFlights = data.flights.filter(f => f.aircraftId === aircraft.matricula);
-    const aircraftHours = aircraftFlights.reduce((sum, f) => sum + Number(f.diff_hobbs || 0), 0);
-    
-    sheet.getCell(`A${row}`).value = `✈️ ${aircraft.matricula}`;
-    sheet.getCell(`A${row}`).font = { bold: true, size: 11 };
-    sheet.getCell(`B${row}`).value = `${aircraftFlights.length} vuelos`;
-    sheet.getCell(`B${row}`).font = { size: 11 };
-    
-    sheet.getCell(`C${row}`).value = `⏱️ ${aircraftHours.toFixed(1)} hrs`;
-    sheet.getCell(`C${row}`).font = { bold: true, size: 11 };
-    sheet.getCell(`D${row}`).value = aircraft.modelo || '';
-    sheet.getCell(`D${row}`).font = { size: 11, italic: true };
-    row++;
-  });
-  
-  row++; // Spacing
-  
-  // ==================== DATA SUMMARY ====================
-  sheet.getCell(`A${row}`).value = '📦 RESUMEN DE DATOS';
-  sheet.getCell(`A${row}`).font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
-  sheet.getCell(`A${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF64748B' } };
-  sheet.mergeCells(`A${row}:D${row}`);
+  sheet.getCell(`A${row}`).value = 'Balance Pendiente';
+  sheet.getCell(`A${row}`).font = { bold: true, size: 11 };
+  sheet.getCell(`B${row}`).value = `$${pendingBalance.toLocaleString('es-CL')}`;
+  sheet.getCell(`B${row}`).font = { size: 11, color: { argb: pendingBalance < 0 ? 'FFDC2626' : 'FF059669' }, bold: true };
   row++;
   
-  const dataSummary = [
-    ['✈️ Vuelos Registrados', data.flights.length.toLocaleString('es-CL'), '💰 Depósitos Registrados', data.deposits.length.toLocaleString('es-CL')],
-    ['⛽ Registros Combustible', data.fuelLogs.length.toLocaleString('es-CL'), '📝 Transacciones Totales', data.transactions.length.toLocaleString('es-CL')],
-    ['👥 Usuarios en Sistema', data.users.length.toLocaleString('es-CL'), '🛩️ Aeronaves Activas', totalAircraft.toLocaleString('es-CL')]
-  ];
+  sheet.getCell(`A${row}`).value = 'Estado';
+  sheet.getCell(`A${row}`).font = { size: 11 };
+  sheet.getCell(`B${row}`).value = 'Unpaid';
+  sheet.getCell(`B${row}`).font = { size: 11 };
+  row++;
   
-  dataSummary.forEach(([label1, value1, label2, value2]) => {
-    sheet.getCell(`A${row}`).value = label1;
-    sheet.getCell(`A${row}`).font = { bold: true, size: 11 };
-    sheet.getCell(`B${row}`).value = value1;
-    sheet.getCell(`B${row}`).font = { size: 11, bold: true };
-    
-    sheet.getCell(`C${row}`).value = label2;
-    sheet.getCell(`C${row}`).font = { bold: true, size: 11 };
-    sheet.getCell(`D${row}`).value = value2;
-    sheet.getCell(`D${row}`).font = { size: 11, bold: true };
-    row++;
-  });
+  sheet.getCell(`A${row}`).value = 'Nota';
+  sheet.getCell(`A${row}`).font = { size: 11 };
+  sheet.getCell(`B${row}`).value = 'Auto-calculated';
+  sheet.getCell(`B${row}`).font = { size: 11, color: { argb: 'FF64748B' } };
+  row++;
   
-  // Column widths
-  sheet.getColumn('A').width = 32;
-  sheet.getColumn('B').width = 22;
-  sheet.getColumn('C').width = 32;
-  sheet.getColumn('D').width = 22;
+  // Set column widths
+  sheet.getColumn(1).width = 25;
+  sheet.getColumn(2).width = 30;
+  sheet.getColumn(3).width = 25;
+  sheet.getColumn(4).width = 30;
+}
+  
+  // Set column widths
+  sheet.getColumn(1).width = 25;
+  sheet.getColumn(2).width = 30;
+  sheet.getColumn(3).width = 25;
+  sheet.getColumn(4).width = 30;
 }
 
 /**
