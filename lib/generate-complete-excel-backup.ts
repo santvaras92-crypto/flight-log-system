@@ -572,9 +572,9 @@ async function createFlightsSheet(workbook: ExcelJS.Workbook, data: BackupData) 
       flight.User?.nombre || flight.piloto_raw || 'N/A',                 // Piloto
       flight.copiloto || '',                         // Copiloto
       flight.cliente || '',                          // ID (código cliente)
-      flight.tarifa ? Number(flight.tarifa) : null,  // Tarifa
-      flight.instructor_rate ? Number(flight.instructor_rate) : null,    // Inst. Rate
-      flight.costo != null ? Number(flight.costo) : null,                // Total
+      flight.tarifa ? Math.round(Number(flight.tarifa)) : null,  // Tarifa
+      flight.instructor_rate ? Math.round(Number(flight.instructor_rate)) : null,    // Inst. Rate
+      flight.costo != null ? Math.round(Number(flight.costo)) : null,                // Total
       flight.airframe_hours != null ? Number(flight.airframe_hours) : null,   // AIRFRAME
       flight.engine_hours != null ? Number(flight.engine_hours) : null,       // ENGINE
       flight.propeller_hours != null ? Number(flight.propeller_hours) : null, // PROPELLER
@@ -593,7 +593,7 @@ async function createFlightsSheet(workbook: ExcelJS.Workbook, data: BackupData) 
   const lastRow = sheet.rowCount + 1;
   const totalDiffTach = data.flights.reduce((sum, f) => sum + Number(f.diff_tach || 0), 0);
   const totalHoras = data.flights.reduce((sum, f) => sum + Number(f.diff_hobbs || 0), 0);
-  const totalCosto = data.flights.reduce((sum, f) => sum + Number(f.costo || 0), 0);
+  const totalCosto = Math.round(data.flights.reduce((sum, f) => sum + Number(f.costo || 0), 0));
   
   sheet.getCell(`A${lastRow}`).value = 'TOTALES:';
   sheet.getCell(`A${lastRow}`).font = { bold: true };
@@ -651,14 +651,14 @@ async function createDepositsSheet(workbook: ExcelJS.Workbook, data: BackupData)
       deposit.fecha,                                      // Date (yyyy-mm-dd format like dashboard)
       `${deposit.pilotName} (${deposit.code})`,          // Pilot with code in parentheses
       deposit.descripcion || '',                          // Description
-      Number(deposit.monto || 0)                          // Amount
+      Math.round(Number(deposit.monto || 0))              // Amount (rounded to avoid decimals)
     ]);
   });
   
   formatDepositsColumnsDashboard(sheet);
   
   // Calculate total directly
-  const totalDeposits = allDeposits.reduce((sum, d) => sum + Number(d.monto || 0), 0);
+  const totalDeposits = Math.round(allDeposits.reduce((sum, d) => sum + Number(d.monto || 0), 0));
   const lastRow = sheet.rowCount + 1;
   sheet.getCell(`A${lastRow}`).value = 'TOTAL:';
   sheet.getCell(`D${lastRow}`).value = totalDeposits;  // Amount column
@@ -720,7 +720,7 @@ async function createFuelSheet(workbook: ExcelJS.Workbook, data: BackupData) {
   
   // Calculate totals directly
   const totalLitros = data.fuelLogs.reduce((sum, f) => sum + Number(f.litros || 0), 0);
-  const totalMonto = data.fuelLogs.reduce((sum, f) => sum + Number(f.monto || 0), 0);
+  const totalMonto = Math.round(data.fuelLogs.reduce((sum, f) => sum + Number(f.monto || 0), 0));
   
   const lastRow = sheet.rowCount + 1;
   sheet.getCell(`A${lastRow}`).value = 'TOTALES:';
@@ -993,9 +993,9 @@ async function createAccountStatementsSheet(workbook: ExcelJS.Workbook, data: Ba
     // Calculate totals
     const vuelos = pilotFlights.length;
     const horas = pilotFlights.reduce((sum, f) => sum + Number(f.diff_hobbs || 0), 0);
-    const cargos = pilotFlights.reduce((sum, f) => sum + Number(f.costo || 0), 0);
-    const depositos = pilotDeposits.reduce((sum, d) => sum + Number(d.monto || 0), 0);
-    const fuel = pilotFuel.reduce((sum, f) => sum + Number(f.monto || 0), 0);
+    const cargos = Math.round(pilotFlights.reduce((sum, f) => sum + Number(f.costo || 0), 0));
+    const depositos = Math.round(pilotDeposits.reduce((sum, d) => sum + Number(d.monto || 0), 0));
+    const fuel = Math.round(pilotFuel.reduce((sum, f) => sum + Number(f.monto || 0), 0));
     const balance = depositos + fuel - cargos;
     
     // Only include pilots with any activity
@@ -1156,7 +1156,7 @@ async function createAccountStatementsSheet(workbook: ExcelJS.Workbook, data: Ba
     fgColor: { argb: 'FF1F4E78' }
   };
   
-  const totalCargos = pilotData.reduce((sum, p) => sum + p.cargos, 0);
+  const totalCargos = Math.round(pilotData.reduce((sum, p) => sum + p.cargos, 0));
   totalRow.getCell(5).value = totalCargos;
   totalRow.getCell(5).numFmt = '"$"#.##0';
   totalRow.getCell(5).font = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
@@ -1167,7 +1167,7 @@ async function createAccountStatementsSheet(workbook: ExcelJS.Workbook, data: Ba
     fgColor: { argb: 'FF1F4E78' }
   };
   
-  const totalDepositos = pilotData.reduce((sum, p) => sum + p.depositos, 0);
+  const totalDepositos = Math.round(pilotData.reduce((sum, p) => sum + p.depositos, 0));
   totalRow.getCell(6).value = totalDepositos;
   totalRow.getCell(6).numFmt = '"$"#.##0';
   totalRow.getCell(6).font = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
@@ -1178,7 +1178,7 @@ async function createAccountStatementsSheet(workbook: ExcelJS.Workbook, data: Ba
     fgColor: { argb: 'FF1F4E78' }
   };
   
-  const totalFuel = pilotData.reduce((sum, p) => sum + p.fuel, 0);
+  const totalFuel = Math.round(pilotData.reduce((sum, p) => sum + p.fuel, 0));
   totalRow.getCell(7).value = totalFuel;
   totalRow.getCell(7).numFmt = '"$"#.##0';
   totalRow.getCell(7).font = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
@@ -1189,7 +1189,7 @@ async function createAccountStatementsSheet(workbook: ExcelJS.Workbook, data: Ba
     fgColor: { argb: 'FF1F4E78' }
   };
   
-  const totalBalance = pilotData.reduce((sum, p) => sum + p.balance, 0);
+  const totalBalance = Math.round(pilotData.reduce((sum, p) => sum + p.balance, 0));
   totalRow.getCell(8).value = totalBalance;
   totalRow.getCell(8).numFmt = '"$"#.##0';
   totalRow.getCell(8).font = { 
