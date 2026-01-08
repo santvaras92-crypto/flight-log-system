@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Chart, LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler } from "chart.js";
 import { useEffect, useRef } from "react";
-import { generateAccountStatementPDF } from "../../../lib/generate-account-pdf";
+import { generateAccountStatementPDF } from "../../../../lib/generate-account-pdf";
 import ImagePreviewModal from "../../../components/ImagePreviewModal";
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler);
