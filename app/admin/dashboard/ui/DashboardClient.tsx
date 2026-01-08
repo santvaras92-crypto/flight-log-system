@@ -8,6 +8,11 @@ import ImagePreviewModal from "../../../components/ImagePreviewModal";
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler);
 
+// Helper function to format currency with Chilean format (dot as thousands separator, no decimals)
+const formatCurrency = (value: number): string => {
+  return value.toLocaleString('es-CL', { maximumFractionDigits: 0 });
+};
+
 type InitialData = {
   users: any[];
   aircraft: any[];
@@ -644,7 +649,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-yellow-100 text-yellow-700 text-[9px] sm:text-xs font-semibold rounded-full">PEND</span>
         </div>
         <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Balance</h3>
-        <div className="text-lg sm:text-3xl font-bold text-slate-900 mb-0.5 sm:mb-1">${overviewMetrics.pendingBalance.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</div>
+        <div className="text-lg sm:text-3xl font-bold text-slate-900 mb-0.5 sm:mb-1">${formatCurrency(overviewMetrics.pendingBalance)}</div>
         <p className="text-xs sm:text-sm text-slate-600 font-medium">Unpaid</p>
         <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">Auto-calculated</p>
       </div>
@@ -1589,12 +1594,12 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
             </div>
             <div className="bg-white rounded-lg p-3 border border-amber-200 shadow-sm">
               <div className="text-xs text-slate-500 font-medium mb-1">Total Spent</div>
-              <div className="text-xl font-bold text-amber-700">${pilotBalanceSummary.totalSpent.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</div>
+              <div className="text-xl font-bold text-amber-700">${formatCurrency(pilotBalanceSummary.totalSpent)}</div>
             </div>
             <div className={`bg-white rounded-lg p-3 border-2 shadow-md ${pilotBalanceSummary.balance >= 0 ? 'border-emerald-400' : 'border-red-400'}`}>
               <div className="text-xs text-slate-500 font-medium mb-1">Balance</div>
               <div className={`text-2xl font-bold ${pilotBalanceSummary.balance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                ${pilotBalanceSummary.balance.toLocaleString('es-CL', { maximumFractionDigits: 0 })}
+                ${formatCurrency(pilotBalanceSummary.balance)}
               </div>
             </div>
           </div>
@@ -1610,14 +1615,14 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                   </svg>
                   Deposits
                 </h5>
-                <span className="text-lg font-bold text-emerald-600">${pilotBalanceSummary.totalDeposits.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                <span className="text-lg font-bold text-emerald-600">${formatCurrency(pilotBalanceSummary.totalDeposits)}</span>
               </div>
               <div className="max-h-32 overflow-y-auto text-xs space-y-1">
                 {pilotBalanceSummary.deposits.length > 0 ? (
                   pilotBalanceSummary.deposits.map((d, i) => (
                     <div key={i} className="flex justify-between text-slate-600 border-b border-slate-100 pb-1">
                       <span className="truncate mr-2">{d.fecha}: {d.descripcion}</span>
-                      <span className="font-semibold whitespace-nowrap">${d.monto.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                      <span className="font-semibold whitespace-nowrap">${formatCurrency(d.monto)}</span>
                     </div>
                   ))
                 ) : (
@@ -1635,14 +1640,14 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                   </svg>
                   Fuel Credits
                 </h5>
-                <span className="text-lg font-bold text-amber-600">${pilotBalanceSummary.totalFuel.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                <span className="text-lg font-bold text-amber-600">${formatCurrency(pilotBalanceSummary.totalFuel)}</span>
               </div>
               <div className="max-h-32 overflow-y-auto text-xs space-y-1">
                 {pilotBalanceSummary.fuelCredits.length > 0 ? (
                   pilotBalanceSummary.fuelCredits.map((f, i) => (
                     <div key={i} className="flex justify-between text-slate-600 border-b border-slate-100 pb-1">
                       <span className="truncate mr-2">{f.fecha}: {f.litros}L</span>
-                      <span className="font-semibold whitespace-nowrap">${f.monto.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                      <span className="font-semibold whitespace-nowrap">${formatCurrency(f.monto)}</span>
                     </div>
                   ))
                 ) : (
@@ -1657,24 +1662,24 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-slate-600">Deposits:</span>
-                  <span className="font-semibold text-emerald-700">+${pilotBalanceSummary.totalDeposits.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                  <span className="font-semibold text-emerald-700">+${formatCurrency(pilotBalanceSummary.totalDeposits)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-600">Fuel Credits:</span>
-                  <span className="font-semibold text-amber-700">+${pilotBalanceSummary.totalFuel.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                  <span className="font-semibold text-amber-700">+${formatCurrency(pilotBalanceSummary.totalFuel)}</span>
                 </div>
                 <div className="flex justify-between border-t border-slate-300 pt-2">
                   <span className="text-slate-600">Total Credit:</span>
-                  <span className="font-bold text-blue-700">${(pilotBalanceSummary.totalDeposits + pilotBalanceSummary.totalFuel).toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                  <span className="font-bold text-blue-700">${formatCurrency(pilotBalanceSummary.totalDeposits + pilotBalanceSummary.totalFuel)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-600">Flight Charges:</span>
-                  <span className="font-semibold text-red-600">-${pilotBalanceSummary.totalSpent.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                  <span className="font-semibold text-red-600">-${formatCurrency(pilotBalanceSummary.totalSpent)}</span>
                 </div>
                 <div className={`flex justify-between border-t-2 pt-2 ${pilotBalanceSummary.balance >= 0 ? 'border-emerald-400' : 'border-red-400'}`}>
                   <span className="font-bold text-slate-800">Balance:</span>
                   <span className={`font-bold text-lg ${pilotBalanceSummary.balance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                    ${pilotBalanceSummary.balance.toLocaleString('es-CL', { maximumFractionDigits: 0 })}
+                    ${formatCurrency(pilotBalanceSummary.balance)}
                   </span>
                 </div>
               </div>
