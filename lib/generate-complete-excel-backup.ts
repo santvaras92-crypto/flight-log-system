@@ -570,10 +570,11 @@ async function createDepositsSheet(workbook: ExcelJS.Workbook, data: BackupData)
   sortedDeposits.forEach(deposit => {
     const pilotName = deposit.User?.nombre || 'N/A';
     const pilotCode = deposit.User?.codigo || 'N/A';
+    const fecha = new Date(deposit.fecha).toLocaleDateString('es-CL');
     
     sheet.addRow([
-      new Date(deposit.fecha),                           // Date
-      `${pilotName} (${pilotCode})`,                    // Pilot (with code)
+      fecha,                                             // Date (formatted as string like dashboard)
+      pilotName,                                         // Pilot name only
       deposit.detalle || '',                             // Description
       Number(deposit.monto || 0)                         // Amount
     ]);
@@ -611,9 +612,10 @@ async function createFuelSheet(workbook: ExcelJS.Workbook, data: BackupData) {
   
   sortedFuel.forEach(fuel => {
     const source = fuel.source === 'CSV' ? 'Histórico' : 'App';
+    const fecha = new Date(fuel.fecha).toLocaleDateString('es-CL');
     
     sheet.addRow([
-      new Date(fuel.fecha),                              // Fecha
+      fecha,                                             // Fecha (formatted as string)
       fuel.User?.nombre || 'N/A',                       // Piloto
       fuel.User?.codigo || '-',                         // Código
       fuel.litros > 0 ? Number(fuel.litros) : null,     // Litros (null if 0)
@@ -964,19 +966,49 @@ function formatDepositsColumns(sheet: ExcelJS.Worksheet) {
  * Columns: Date, Pilot, Description, Amount
  */
 function formatDepositsColumnsDashboard(sheet: ExcelJS.Worksheet) {
-  // Column A: Date
-  sheet.getColumn(1).numFmt = 'dd/mm/yyyy';
-  sheet.getColumn(1).width = 12;
+  // Column A: Date (text format from dashboard)
+  sheet.getColumn(1).width = 14;
+  sheet.getColumn(1).alignment = { horizontal: 'left', vertical: 'middle' };
   
   // Column B: Pilot
-  sheet.getColumn(2).width = 30;
+  sheet.getColumn(2).width = 35;
+  sheet.getColumn(2).alignment = { horizontal: 'left', vertical: 'middle' };
   
   // Column C: Description
-  sheet.getColumn(3).width = 35;
+  sheet.getColumn(3).width = 40;
+  sheet.getColumn(3).alignment = { horizontal: 'left', vertical: 'middle' };
   
   // Column D: Amount
   sheet.getColumn(4).numFmt = '$#,##0';
-  sheet.getColumn(4).width = 15;
+  sheet.getColumn(4).width = 16;
+  sheet.getColumn(4).alignment = { horizontal: 'right', vertical: 'middle' };
+  
+  // Style data rows (skip header)
+  for (let i = 2; i <= sheet.rowCount; i++) {
+    const row = sheet.getRow(i);
+    
+    // Skip total row
+    if (row.getCell(1).value === 'TOTAL:') continue;
+    
+    row.height = 20;
+    
+    // Date column - medium gray, medium font
+    row.getCell(1).font = { size: 11, color: { argb: 'FF475569' } };
+    
+    // Pilot column - bold dark (dashboard uses font-semibold)
+    row.getCell(2).font = { size: 11, bold: true, color: { argb: 'FF0F172A' } };
+    
+    // Description column - normal gray
+    row.getCell(3).font = { size: 11, color: { argb: 'FF64748B' } };
+    
+    // Amount column - bold green (dashboard uses text-green-700)
+    row.getCell(4).font = { size: 11, bold: true, color: { argb: 'FF15803D' } };
+    
+    // Add hover effect simulation with subtle border
+    row.border = {
+      bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+    };
+  }
 }
 
 function formatFuelColumns(sheet: ExcelJS.Worksheet) {
@@ -992,29 +1024,96 @@ function formatFuelColumns(sheet: ExcelJS.Worksheet) {
  * Columns: Fecha, Piloto, Código, Litros, Monto, Fuente, Detalle
  */
 function formatFuelColumnsDashboard(sheet: ExcelJS.Worksheet) {
-  // Column A: Fecha
-  sheet.getColumn(1).numFmt = 'dd/mm/yyyy';
-  sheet.getColumn(1).width = 12;
+  // Column A: Fecha (text format from dashboard)
+  sheet.getColumn(1).width = 13;
+  sheet.getColumn(1).alignment = { horizontal: 'left', vertical: 'middle' };
   
   // Column B: Piloto
-  sheet.getColumn(2).width = 25;
+  sheet.getColumn(2).width = 28;
+  sheet.getColumn(2).alignment = { horizontal: 'left', vertical: 'middle' };
   
   // Column C: Código
-  sheet.getColumn(3).width = 10;
+  sheet.getColumn(3).width = 11;
+  sheet.getColumn(3).alignment = { horizontal: 'left', vertical: 'middle' };
   
   // Column D: Litros
-  sheet.getColumn(4).numFmt = '#,##0.0';
-  sheet.getColumn(4).width = 10;
+  sheet.getColumn(4).numFmt = '#,##0.0" L"';
+  sheet.getColumn(4).width = 12;
+  sheet.getColumn(4).alignment = { horizontal: 'left', vertical: 'middle' };
   
   // Column E: Monto
   sheet.getColumn(5).numFmt = '$#,##0';
-  sheet.getColumn(5).width = 12;
+  sheet.getColumn(5).width = 14;
+  sheet.getColumn(5).alignment = { horizontal: 'left', vertical: 'middle' };
   
   // Column F: Fuente
-  sheet.getColumn(6).width = 12;
+  sheet.getColumn(6).width = 13;
+  sheet.getColumn(6).alignment = { horizontal: 'center', vertical: 'middle' };
   
   // Column G: Detalle
-  sheet.getColumn(7).width = 30;
+  sheet.getColumn(7).width = 35;
+  sheet.getColumn(7).alignment = { horizontal: 'left', vertical: 'middle' };
+  
+  // Style data rows (skip header and totals row)
+  for (let i = 2; i < sheet.rowCount; i++) {
+    const row = sheet.getRow(i);
+    
+    // Skip total row
+    if (row.getCell(1).value === 'TOTALES:') continue;
+    
+    row.height = 20;
+    
+    // Date column - text-slate-700
+    row.getCell(1).font = { size: 10, color: { argb: 'FF334155' } };
+    
+    // Piloto column - font-semibold text-slate-900
+    row.getCell(2).font = { size: 10, bold: true, color: { argb: 'FF0F172A' } };
+    
+    // Código column - font-mono text-indigo-600
+    row.getCell(3).font = { size: 10, name: 'Consolas', color: { argb: 'FF4F46E5' } };
+    
+    // Litros column - font-mono text-slate-600
+    row.getCell(4).font = { size: 10, name: 'Consolas', color: { argb: 'FF475569' } };
+    
+    // Monto column - font-bold text-green-600
+    row.getCell(5).font = { size: 10, bold: true, color: { argb: 'FF16A34A' } };
+    
+    // Check if this is a CSV (Histórico) row and apply background color
+    const sourceCell = row.getCell(6);
+    if (sourceCell.value === 'Histórico') {
+      // Light gray background for CSV rows (bg-slate-50/50)
+      [1, 2, 3, 4, 5, 6, 7].forEach(col => {
+        row.getCell(col).fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFF8FAFC' }
+        };
+      });
+      // Badge style for Histórico (bg-slate-200 text-slate-700)
+      sourceCell.font = { size: 9, bold: true, color: { argb: 'FF334155' } };
+      sourceCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE2E8F0' }
+      };
+    } else {
+      // Badge style for App (bg-blue-100 text-blue-700)
+      sourceCell.font = { size: 9, bold: true, color: { argb: 'FF1D4ED8' } };
+      sourceCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFDBEAFE' }
+      };
+    }
+    
+    // Detalle column - text-slate-600
+    row.getCell(7).font = { size: 10, color: { argb: 'FF475569' } };
+    
+    // Row border (divide-y divide-slate-100)
+    row.border = {
+      bottom: { style: 'thin', color: { argb: 'FFF1F5F9' } }
+    };
+  }
 }
 
 function formatPilotsColumns(sheet: ExcelJS.Worksheet) {
