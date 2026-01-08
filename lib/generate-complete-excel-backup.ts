@@ -1075,8 +1075,8 @@ function formatDepositsColumnsDashboard(sheet: ExcelJS.Worksheet) {
   sheet.getColumn(3).width = 40;
   sheet.getColumn(3).alignment = { horizontal: 'left', vertical: 'middle' };
   
-  // Column D: Amount (formato chileno: punto como separador de miles)
-  sheet.getColumn(4).numFmt = '$#.##0';
+  // Column D: Amount (currency format without decimals)
+  sheet.getColumn(4).numFmt = '"$"#,##0';
   sheet.getColumn(4).width = 16;
   sheet.getColumn(4).alignment = { horizontal: 'right', vertical: 'middle' };
   
@@ -1137,8 +1137,8 @@ function formatFuelColumnsDashboard(sheet: ExcelJS.Worksheet) {
   sheet.getColumn(4).width = 12;
   sheet.getColumn(4).alignment = { horizontal: 'left', vertical: 'middle' };
   
-  // Column E: Monto (formato chileno: punto como separador de miles)
-  sheet.getColumn(5).numFmt = '$#.##0';
+  // Column E: Monto (currency format without decimals)
+  sheet.getColumn(5).numFmt = '"$"#,##0';
   sheet.getColumn(5).width = 14;
   sheet.getColumn(5).alignment = { horizontal: 'left', vertical: 'middle' };
   
