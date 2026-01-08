@@ -548,10 +548,13 @@ async function createFlightsSheet(workbook: ExcelJS.Workbook, data: BackupData) 
   sheet.addRow(headers);
   styleHeaderRow(sheet, 1, headers.length);
   
-  // Data rows - sorted by date descending (most recent first, like dashboard)
-  const sortedFlights = [...data.flights].sort((a, b) => 
-    new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
-  );
+  // Data rows - sorted by date descending, then by tach_inicio ascending (chronological order within same day)
+  const sortedFlights = [...data.flights].sort((a, b) => {
+    const dateCompare = new Date(b.fecha).getTime() - new Date(a.fecha).getTime();
+    if (dateCompare !== 0) return dateCompare;
+    // Same date - sort by tach_inicio ascending (earlier flights first)
+    return Number(a.tach_inicio || 0) - Number(b.tach_inicio || 0);
+  });
   
   sortedFlights.forEach(flight => {
     const fecha = new Date(flight.fecha);
