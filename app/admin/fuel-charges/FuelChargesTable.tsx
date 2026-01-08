@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import ImagePreviewModal from "@/app/components/ImagePreviewModal";
+import ImagePreviewModal from "../../components/ImagePreviewModal";
 import { deleteFuelLog } from "@/app/actions/delete-fuel-log";
 
 interface FuelLog {

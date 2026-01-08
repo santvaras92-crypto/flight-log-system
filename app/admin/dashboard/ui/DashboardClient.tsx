@@ -3,8 +3,8 @@ import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Chart, LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler } from "chart.js";
 import { useEffect, useRef } from "react";
-import { generateAccountStatementPDF } from "@/lib/generate-account-pdf";
-import ImagePreviewModal from "@/app/components/ImagePreviewModal";
+import { generateAccountStatementPDF } from "../../../lib/generate-account-pdf";
+import ImagePreviewModal from "../../../components/ImagePreviewModal";
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler);
 
@@ -2156,7 +2156,7 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm">
                       {l.source === 'DB' && typeof l.id === 'number' ? (
-                        <form action={require('@/app/actions/delete-fuel-log').deleteFuelLog} onSubmit={(e)=>{ if(!confirm(`¿Eliminar registro ${l.id}?`)) { e.preventDefault(); } }}>
+                        <form action={require('../../../actions/delete-fuel-log').deleteFuelLog} onSubmit={(e)=>{ if(!confirm(`¿Eliminar registro ${l.id}?`)) { e.preventDefault(); } }}>
                           <input type="hidden" name="fuelLogId" value={l.id} />
                           <button type="submit" className="px-2 py-1 rounded-lg bg-red-600 text-white hover:bg-red-700 text-xs">
                             Eliminar

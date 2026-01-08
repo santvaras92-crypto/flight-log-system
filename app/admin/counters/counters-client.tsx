@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { updateCounters } from "@/app/actions/update-counters";
+import { updateCounters } from "../../actions/update-counters";
 
 interface Flight {
   id: number;
