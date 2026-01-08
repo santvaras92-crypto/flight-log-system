@@ -67,8 +67,8 @@ async function fetchAllData(): Promise<BackupData> {
     prisma.flight.findMany({
       orderBy: { fecha: 'asc' },
       include: {
-        user: { select: { nombre: true, codigo: true } },
-        aircraft: { select: { matricula: true, modelo: true } }
+        User: { select: { nombre: true, codigo: true } },
+        Aircraft: { select: { matricula: true, modelo: true } }
       }
     }),
     prisma.deposit.findMany({
@@ -86,15 +86,16 @@ async function fetchAllData(): Promise<BackupData> {
     prisma.transaction.findMany({
       orderBy: { createdAt: 'asc' },
       include: {
-        user: { select: { nombre: true, codigo: true } },
-        flight: { select: { id: true, fecha: true } }
+        User: { select: { nombre: true, codigo: true } },
+        Flight: { select: { id: true, fecha: true } }
       }
     }),
     prisma.flightSubmission.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
-        user: { select: { nombre: true, codigo: true } },
-        ImageLog: true
+        User: { select: { nombre: true, codigo: true } },
+        ImageLog: true,
+        Aircraft: { select: { matricula: true, modelo: true } }
       }
     }),
     prisma.aircraft.findMany({
