@@ -359,14 +359,23 @@ async function createSummarySheet(workbook: ExcelJS.Workbook, data: BackupData) 
   sheet.mergeCells(`A${row}:D${row}`);
   row++;
   
-  const totalLiters = data.fuelLogs.reduce((sum, f) => sum + Number(f.litros || 0), 0);
-  const totalFuelCost = data.fuelLogs.reduce((sum, f) => sum + Number(f.monto || 0), 0);
-  const avgFuelRate = totalHobbs > 0 ? totalLiters / totalHobbs : 0;
+  // Filter fuel since Sep 9, 2020 (same as dashboard)
+  const sep9_2020 = new Date('2020-09-09');
+  const fuelSinceSep = data.fuelLogs.filter(f => new Date(f.fecha) >= sep9_2020);
+  const flightsSinceSep = data.flights.filter(f => new Date(f.fecha) >= sep9_2020);
+  
+  const totalLiters = fuelSinceSep.reduce((sum, f) => sum + Number(f.litros || 0), 0);
+  const totalFuelCost = fuelSinceSep.reduce((sum, f) => sum + Number(f.monto || 0), 0);
+  const hobbsSinceSep = flightsSinceSep.reduce((sum, f) => sum + Number(f.diff_hobbs || 0), 0);
+  
+  // Apply 10% idle adjustment: divide by 90% of hours (same as dashboard)
+  const effectiveHours = hobbsSinceSep > 0 ? hobbsSinceSep * 0.9 : 0;
+  const avgFuelRate = effectiveHours > 0 ? totalLiters / effectiveHours : 0;
   const avgFuelRateGal = avgFuelRate / 3.78541;
   const avgPricePerLiter = totalLiters > 0 ? totalFuelCost / totalLiters : 0;
   
   const fuelMetrics = [
-    ['🛢️ Total Litros Consumidos', `${totalLiters.toLocaleString('es-CL')} L`, '🇺🇸 Total Galones', `${(totalLiters / 3.78541).toFixed(0)} GAL`],
+    ['🛢️ Total Litros Consumidos', `${totalLiters.toFixed(1)} L`, '🇺🇸 Total Galones', `${(totalLiters / 3.78541).toFixed(0)} GAL`],
     ['💰 Gasto Total Combustible', `$${totalFuelCost.toLocaleString('es-CL')}`, '💵 Precio Promedio/Litro', `$${Math.round(avgPricePerLiter).toLocaleString('es-CL')}`],
     ['📊 Tasa Consumo (L/H)', `${avgFuelRate.toFixed(2)} L/H`, '📊 Tasa Consumo (GAL/H)', `${avgFuelRateGal.toFixed(2)} GAL/H`]
   ];
