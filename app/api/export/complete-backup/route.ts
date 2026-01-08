@@ -57,8 +57,10 @@ export async function POST(req: NextRequest) {
         generationTime: `${generationTime}s`
       });
     } else {
-      // Return file for download
-      return new NextResponse(new Blob([new Uint8Array(buffer)]), {
+      // Return file for download - use Response directly with ArrayBuffer
+      const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+      
+      return new Response(arrayBuffer, {
         status: 200,
         headers: {
           'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
