@@ -284,7 +284,7 @@ async function createSummarySheet(workbook: ExcelJS.Workbook, data: BackupData) 
     sheet.getCell(`A${row}`).value = label;
     sheet.getCell(`B${row}`).value = value;
     
-    if (label.toUpperCase() === label && label !== '') {
+    if (typeof label === 'string' && label.toUpperCase() === label && label !== '') {
       sheet.getCell(`A${row}`).font = { bold: true, color: { argb: 'FF1F4E78' } };
     }
     
