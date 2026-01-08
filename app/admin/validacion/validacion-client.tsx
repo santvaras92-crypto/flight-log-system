@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { approveFuel, rejectFuel } from '@/app/actions/validate-fuel';
-import { approveDeposit, rejectDeposit } from '@/app/actions/validate-deposit';
-import { approveFlightSubmission } from '@/app/actions/approve-flight';
-import { cancelFlightSubmission } from '@/app/actions/cancel-submission';
-import ImagePreviewModal from '@/app/components/ImagePreviewModal';
+import { approveFuel, rejectFuel } from '../../actions/validate-fuel';
+import { approveDeposit, rejectDeposit } from '../../actions/validate-deposit';
+import { approveFlightSubmission } from '../../actions/approve-flight';
+import { cancelFlightSubmission } from '../../actions/cancel-submission';
+import ImagePreviewModal from '../../components/ImagePreviewModal';
 
 interface FuelItem {
   id: number;

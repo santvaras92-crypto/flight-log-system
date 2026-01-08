@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import ImagePreviewModal from "../../components/ImagePreviewModal";
-import { deleteFuelLog } from "@/app/actions/delete-fuel-log";
+import { deleteFuelLog } from "../../actions/delete-fuel-log";
 
 interface FuelLog {
   id: number;
