@@ -299,34 +299,61 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
       return (
         <div className={`${palette.card} rounded-xl p-3 sm:p-4 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] flex flex-col`}>
           {/* Header */}
-          <div className="flex items-center justify-between mb-2 sm:mb-4">
-            <div className="flex items-center gap-1">
-              <div className="w-8 h-8 sm:w-8 sm:h-8 rounded-full bg-purple-100 flex items-center justify-center">
-                <svg className="w-4 h-4 sm:w-4 sm:h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="flex items-center justify-between mb-1.5 sm:mb-3">
+            <div className="flex items-center gap-1.5">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
               </div>
-              <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide">Tu Actividad</h3>
+              <h3 className="text-slate-900 text-[10px] sm:text-xs font-bold uppercase tracking-wide">Tu Actividad</h3>
+            </div>
+            <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[8px] sm:text-[10px] font-bold rounded-full">📊</span>
+          </div>
+          
+          {/* Main number - inline con label */}
+          <div className="text-center mb-1 sm:mb-3">
+            <div className="text-lg sm:text-2xl font-bold text-slate-900 leading-none">
+              {stats.flightsPerMonth} <span className="text-xs sm:text-sm font-medium text-slate-600">vuelos/mes</span>
             </div>
           </div>
           
-          {/* Title */}
-          <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Tu Actividad</h3>
+          {/* Grid + Trend inline */}
+          <div className="flex items-start gap-1.5">
+            {/* Grid 3 columnas */}
+            <div className="grid grid-cols-3 gap-0.5 flex-1">
+              <div className="text-center bg-slate-50 rounded px-1 py-0.5 sm:p-1.5">
+                <div className="text-[7px] sm:text-[8px] text-slate-500 font-semibold leading-tight">Mes</div>
+                <div className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">{thisMonthHours.toFixed(1)}h</div>
+                <div className="text-[8px] sm:text-[9px] text-slate-600 leading-tight">{stats.flightsThisMonth}</div>
+              </div>
+              
+              <div className="text-center bg-slate-50 rounded px-1 py-0.5 sm:p-1.5">
+                <div className="text-[7px] sm:text-[8px] text-slate-500 font-semibold leading-tight">3M</div>
+                <div className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">{stats.hours3Months.toFixed(1)}h</div>
+                <div className="text-[8px] sm:text-[9px] text-slate-600 leading-tight">{stats.flights3Months}</div>
+              </div>
+              
+              <div className="text-center bg-slate-50 rounded px-1 py-0.5 sm:p-1.5">
+                <div className="text-[7px] sm:text-[8px] text-slate-500 font-semibold leading-tight">6M</div>
+                <div className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">{stats.hours6Months.toFixed(1)}h</div>
+                <div className="text-[8px] sm:text-[9px] text-slate-600 leading-tight">{stats.flights6Months}</div>
+              </div>
+            </div>
+            
+            {/* Trend + días al lado */}
+            <div className="text-[9px] sm:text-xs text-slate-600 leading-tight">
+              <div className={`font-semibold ${trendColor}`}>{trendIcon}{trend > 0 ? '+' : ''}{trend}%</div>
+              {stats.daysSinceLastFlight !== null && (
+                <div className="text-slate-500">{stats.daysSinceLastFlight}d</div>
+              )}
+            </div>
+          </div>
           
-          {/* Main stat */}
-          <div className="text-xl sm:text-3xl font-bold text-slate-900 mb-0.5 sm:mb-1">{stats.flightsPerMonth}</div>
-          
-          {/* ALL INFO IN ONE LINE - different for mobile/desktop */}
-          <p className="text-xs sm:text-sm text-slate-600 font-medium">
-            {/* Mobile: ultra compact, all info visible */}
-            <span className="sm:hidden">
-              {trendIcon}{trend > 0 ? '+' : ''}{trend}%•{stats.daysSinceLastFlight !== null && `${stats.daysSinceLastFlight}d•`}⏱️{thisMonthHours.toFixed(1)}h({stats.flightsThisMonth})•{stats.hours3Months.toFixed(1)}h(3M)•{stats.hours6Months.toFixed(1)}h(6M)
-            </span>
-            {/* Desktop: readable with spaces */}
-            <span className="hidden sm:inline">
-              vuelos/mes • {trendIcon}{trend > 0 ? '+' : ''}{trend}% • hace {stats.daysSinceLastFlight}d • ⏱️ {thisMonthHours.toFixed(1)}h ({stats.flightsThisMonth}) • {stats.hours3Months.toFixed(1)}h (3M,{stats.flights3Months}) • {stats.hours6Months.toFixed(1)}h (6M,{stats.flights6Months}) • {stats.flightsThisYear} este año
-            </span>
-          </p>
+          {/* Info año - solo desktop */}
+          <div className="hidden sm:block mt-auto pt-2 text-[9px] text-slate-500">
+            📆 {stats.flightsThisYear} este año
+          </div>
         </div>
       );
     })(),
