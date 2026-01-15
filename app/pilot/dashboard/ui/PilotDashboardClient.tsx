@@ -298,7 +298,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
       
       return (
         <div className={`${palette.card} rounded-xl p-4 sm:p-4 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] flex flex-col justify-between`}>
-          {/* Header */}
+          {/* Header - Activity Card */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-purple-100 flex items-center justify-center">
