@@ -1919,7 +1919,7 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
     users.forEach(u => {
       const code = (u.codigo || '').toUpperCase();
       if (!code) return;
-      if (allCodes.size === 0 || allCodes.has(code)) userByCode.set(code, u);
+      userByCode.set(code, u);
     });
 
     // Aggregate flights ONLY by cliente code (who paid)
