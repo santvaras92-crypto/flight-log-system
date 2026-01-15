@@ -299,61 +299,33 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
       return (
         <div className={`${palette.card} rounded-xl p-3 sm:p-4 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] flex flex-col`}>
           {/* Header */}
-          <div className="flex items-center justify-between mb-2 sm:mb-3">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-purple-100 flex items-center justify-center">
-                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="flex items-center justify-between mb-2 sm:mb-4">
+            <div className="flex items-center gap-1">
+              <div className="w-8 h-8 sm:w-8 sm:h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                <svg className="w-4 h-4 sm:w-4 sm:h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
               </div>
-              <h3 className="text-slate-900 text-xs sm:text-sm font-bold uppercase tracking-wide">Tu Actividad</h3>
+              <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide">Tu Actividad</h3>
             </div>
-            <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[8px] sm:text-[10px] font-bold rounded-full">📊 STATS</span>
           </div>
+          
+          {/* Title */}
+          <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Tu Actividad</h3>
           
           {/* Main stat */}
-          <div className="text-center mb-1 sm:mb-3">
-            <div className="text-2xl sm:text-3xl font-bold text-slate-900">{stats.flightsPerMonth}</div>
-            <div className="text-xs sm:text-sm text-slate-600 font-medium">vuelos/mes</div>
-            <div className={`text-xs sm:text-sm font-semibold ${trendColor} mt-1`}>
-              {trendIcon} {trendText} vs mes anterior
-            </div>
-          </div>
+          <div className="text-xl sm:text-3xl font-bold text-slate-900 mb-0.5 sm:mb-1">{stats.flightsPerMonth}</div>
           
-          {/* Divider */}
-          <div className="border-t border-slate-200 my-1"></div>
+          {/* Compact info - all in one line on mobile */}
+          <p className="text-xs sm:text-sm text-slate-600 font-medium">
+            vuelos/mes • {trendIcon}{trend > 0 ? '+' : ''}{trend}%
+            {stats.daysSinceLastFlight !== null && ` • ${stats.daysSinceLastFlight}d`}
+          </p>
           
-          {/* Last flight and hours inline */}
-          <div className="space-y-0.5 sm:space-y-1.5">
-            {stats.daysSinceLastFlight !== null && (
-              <div className="text-[10px] sm:text-xs">
-                <span className="text-slate-600">📅 Último:</span>
-                <span className="ml-1 font-semibold text-slate-900">hace {stats.daysSinceLastFlight}d</span>
-                {stats.lastFlightDate && <span className="text-slate-500 ml-1">({formatLastFlightDate(stats.lastFlightDate)})</span>}
-              </div>
-            )}
-            
-            <div className="text-[10px] sm:text-xs text-slate-700 flex flex-wrap items-center gap-x-1">
-              <span className="text-slate-600">⏱️</span>
-              <span className="font-semibold text-slate-900">{thisMonthHours.toFixed(1)}h</span>
-              <span className="text-slate-500">({stats.flightsThisMonth})</span>
-              <span className="text-slate-400">•</span>
-              <span className="font-semibold text-slate-900">{stats.hours3Months.toFixed(1)}h</span>
-              <span className="text-slate-500">(3M,{stats.flights3Months})</span>
-              <span className="text-slate-400">•</span>
-              <span className="font-semibold text-slate-900">{stats.hours6Months.toFixed(1)}h</span>
-              <span className="text-slate-500">(6M,{stats.flights6Months})</span>
-            </div>
-          </div>
-          
-          {/* Footer */}
-          <div className="mt-auto pt-1 border-t border-slate-200">
-            <div className="flex items-center justify-between text-[10px] sm:text-xs">
-              <div className="text-slate-600">
-                📆 Este año: <span className="font-semibold text-slate-800">{stats.flightsThisYear}</span>
-              </div>
-            </div>
-          </div>
+          {/* Extended details - hidden on mobile */}
+          <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">
+            ⏱️ {thisMonthHours.toFixed(1)}h ({stats.flightsThisMonth}) • {stats.hours3Months.toFixed(1)}h (3M,{stats.flights3Months}) • {stats.hours6Months.toFixed(1)}h (6M,{stats.flights6Months}) • {stats.flightsThisYear} este año
+          </p>
         </div>
       );
     })(),
