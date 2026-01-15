@@ -312,7 +312,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
           </div>
           
           {/* Main stat */}
-          <div className="text-center mb-2 sm:mb-3">
+          <div className="text-center mb-1 sm:mb-3">
             <div className="text-2xl sm:text-3xl font-bold text-slate-900">{stats.flightsPerMonth}</div>
             <div className="text-xs sm:text-sm text-slate-600 font-medium">vuelos/mes</div>
             <div className={`text-xs sm:text-sm font-semibold ${trendColor} mt-1`}>
@@ -321,17 +321,15 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
           </div>
           
           {/* Divider */}
-          <div className="border-t border-slate-200 my-2"></div>
+          <div className="border-t border-slate-200 my-1"></div>
           
           {/* Last flight and hours inline */}
-          <div className="space-y-1 sm:space-y-1.5">
+          <div className="space-y-0.5 sm:space-y-1.5">
             {stats.daysSinceLastFlight !== null && (
               <div className="text-[10px] sm:text-xs">
                 <span className="text-slate-600">📅 Último:</span>
-                <span className="ml-1 font-semibold text-slate-800">
-                  hace {stats.daysSinceLastFlight}d
-                  {stats.lastFlightDate && <span className="text-slate-500 ml-1">({formatLastFlightDate(stats.lastFlightDate)})</span>}
-                </span>
+                <span className="ml-1 font-semibold text-slate-900">hace {stats.daysSinceLastFlight}d</span>
+                {stats.lastFlightDate && <span className="text-slate-500 ml-1">({formatLastFlightDate(stats.lastFlightDate)})</span>}
               </div>
             )}
             
@@ -349,7 +347,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
           </div>
           
           {/* Footer */}
-          <div className="mt-auto pt-2 border-t border-slate-200">
+          <div className="mt-auto pt-1 border-t border-slate-200">
             <div className="flex items-center justify-between text-[10px] sm:text-xs">
               <div className="text-slate-600">
                 📆 Este año: <span className="font-semibold text-slate-800">{stats.flightsThisYear}</span>
