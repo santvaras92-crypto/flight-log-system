@@ -316,15 +316,16 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
           {/* Main stat */}
           <div className="text-xl sm:text-3xl font-bold text-slate-900 mb-0.5 sm:mb-1">{stats.flightsPerMonth}</div>
           
-          {/* Compact info - all in one line on mobile */}
+          {/* ALL INFO IN ONE LINE - different for mobile/desktop */}
           <p className="text-xs sm:text-sm text-slate-600 font-medium">
-            vuelos/mes • {trendIcon}{trend > 0 ? '+' : ''}{trend}%
-            {stats.daysSinceLastFlight !== null && ` • ${stats.daysSinceLastFlight}d`}
-          </p>
-          
-          {/* Extended details - hidden on mobile */}
-          <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">
-            ⏱️ {thisMonthHours.toFixed(1)}h ({stats.flightsThisMonth}) • {stats.hours3Months.toFixed(1)}h (3M,{stats.flights3Months}) • {stats.hours6Months.toFixed(1)}h (6M,{stats.flights6Months}) • {stats.flightsThisYear} este año
+            {/* Mobile: ultra compact, all info visible */}
+            <span className="sm:hidden">
+              {trendIcon}{trend > 0 ? '+' : ''}{trend}%•{stats.daysSinceLastFlight !== null && `${stats.daysSinceLastFlight}d•`}⏱️{thisMonthHours.toFixed(1)}h({stats.flightsThisMonth})•{stats.hours3Months.toFixed(1)}h(3M)•{stats.hours6Months.toFixed(1)}h(6M)
+            </span>
+            {/* Desktop: readable with spaces */}
+            <span className="hidden sm:inline">
+              vuelos/mes • {trendIcon}{trend > 0 ? '+' : ''}{trend}% • hace {stats.daysSinceLastFlight}d • ⏱️ {thisMonthHours.toFixed(1)}h ({stats.flightsThisMonth}) • {stats.hours3Months.toFixed(1)}h (3M,{stats.flights3Months}) • {stats.hours6Months.toFixed(1)}h (6M,{stats.flights6Months}) • {stats.flightsThisYear} este año
+            </span>
           </p>
         </div>
       );
