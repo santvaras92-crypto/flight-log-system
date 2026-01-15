@@ -297,7 +297,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
       const thisMonthHours = data.metrics.thisMonthHours;
       
       return (
-        <div className={`${palette.card} rounded-xl p-4 sm:p-4 ${palette.shadow} h-[118px] sm:min-h-[200px] lg:h-[280px] flex flex-col justify-between`}>
+        <div className={`${palette.card} rounded-xl p-4 sm:p-4 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] flex flex-col justify-between`}>
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
