@@ -734,7 +734,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
                   <td className="px-4 py-3 text-right text-slate-700">
                     {formatCurrency(flight.costo)}
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{flight.instructor || '-'}</td>
+                  <td className="px-4 py-3 text-slate-600">{flight.copiloto || flight.instructor || '-'}</td>
                   <td className="px-4 py-3 text-slate-500 truncate max-w-[200px]" title={flight.detalle || ''}>
                     {flight.detalle || '-'}
                   </td>
