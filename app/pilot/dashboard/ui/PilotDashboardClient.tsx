@@ -72,6 +72,10 @@ type PilotData = {
       flightsThisMonth: number;
       flightsThisYear: number;
       activityTrend: number;
+      hours3Months: number;
+      hours6Months: number;
+      flights3Months: number;
+      flights6Months: number;
     };
   };
 };
@@ -290,6 +294,9 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
         return d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
       };
       
+      const thisMonthHours = data.metrics.thisMonthHours;
+      const currentMonth = new Date().toLocaleDateString('es-CL', { month: 'short' });
+      
       return (
         <div className={`${palette.card} rounded-xl p-3 sm:p-4 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] flex flex-col`}>
           {/* Header */}
@@ -317,32 +324,45 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
           {/* Divider */}
           <div className="border-t border-slate-200 my-2"></div>
           
-          {/* Stats grid */}
-          <div className="space-y-1.5 sm:space-y-2 flex-1">
-            {stats.daysSinceLastFlight !== null && (
-              <div className="flex items-center justify-between text-[10px] sm:text-xs">
-                <span className="text-slate-600">📅 Último vuelo</span>
-                <span className="font-semibold text-slate-800">
-                  hace {stats.daysSinceLastFlight} días
-                  {stats.lastFlightDate && <span className="text-slate-500 ml-1">({formatLastFlightDate(stats.lastFlightDate)})</span>}
-                </span>
+          {/* Last flight info */}
+          {stats.daysSinceLastFlight !== null && (
+            <div className="flex items-center justify-between text-[10px] sm:text-xs mb-2">
+              <span className="text-slate-600">📅 Último vuelo</span>
+              <span className="font-semibold text-slate-800">
+                hace {stats.daysSinceLastFlight} días
+                {stats.lastFlightDate && <span className="text-slate-500 ml-1">({formatLastFlightDate(stats.lastFlightDate)})</span>}
+              </span>
+            </div>
+          )}
+          
+          {/* Divider */}
+          <div className="border-t border-slate-200 my-2"></div>
+          
+          {/* Hours section */}
+          <div className="mb-2">
+            <div className="text-[10px] sm:text-xs font-semibold text-slate-700 mb-1.5">⏱️ HORAS VOLADAS</div>
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+              <div className="bg-slate-50 rounded-lg p-1.5 sm:p-2 text-center border border-slate-200">
+                <div className="text-[9px] sm:text-[10px] text-slate-600 mb-0.5">Este mes</div>
+                <div className="text-base sm:text-lg font-bold text-slate-900">{thisMonthHours.toFixed(1)}h</div>
+                <div className="text-[8px] sm:text-[9px] text-slate-500">{stats.flightsThisMonth} vuelo{stats.flightsThisMonth !== 1 ? 's' : ''}</div>
               </div>
-            )}
-            
-            {stats.avgDaysBetweenFlights > 0 && (
-              <div className="flex items-center justify-between text-[10px] sm:text-xs">
-                <span className="text-slate-600">⏱️ Frecuencia</span>
-                <span className="font-semibold text-slate-800">cada {stats.avgDaysBetweenFlights} días</span>
+              <div className="bg-slate-50 rounded-lg p-1.5 sm:p-2 text-center border border-slate-200">
+                <div className="text-[9px] sm:text-[10px] text-slate-600 mb-0.5">Últimos 3M</div>
+                <div className="text-base sm:text-lg font-bold text-slate-900">{stats.hours3Months.toFixed(1)}h</div>
+                <div className="text-[8px] sm:text-[9px] text-slate-500">{stats.flights3Months} vuelo{stats.flights3Months !== 1 ? 's' : ''}</div>
               </div>
-            )}
+              <div className="bg-slate-50 rounded-lg p-1.5 sm:p-2 text-center border border-slate-200">
+                <div className="text-[9px] sm:text-[10px] text-slate-600 mb-0.5">Últimos 6M</div>
+                <div className="text-base sm:text-lg font-bold text-slate-900">{stats.hours6Months.toFixed(1)}h</div>
+                <div className="text-[8px] sm:text-[9px] text-slate-500">{stats.flights6Months} vuelo{stats.flights6Months !== 1 ? 's' : ''}</div>
+              </div>
+            </div>
           </div>
           
           {/* Footer */}
           <div className="mt-auto pt-2 border-t border-slate-200">
             <div className="flex items-center justify-between text-[10px] sm:text-xs">
-              <div className="text-slate-600">
-                🗓️ Este mes: <span className="font-semibold text-slate-800">{stats.flightsThisMonth}</span>
-              </div>
               <div className="text-slate-600">
                 📆 Este año: <span className="font-semibold text-slate-800">{stats.flightsThisYear}</span>
               </div>

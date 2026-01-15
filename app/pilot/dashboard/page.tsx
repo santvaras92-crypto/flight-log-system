@@ -405,6 +405,18 @@ export default async function PilotDashboardPage() {
     ? ((pilotFlights30d - pilotFlightsPrev30d) / pilotFlightsPrev30d) * 100
     : (pilotFlights30d > 0 ? 100 : 0); // If no prev flights but has current, show +100%
 
+  // Hours and flights for last 3 and 6 months
+  const threeMonthsAgo = new Date(now);
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+  const sixMonthsAgo = new Date(now);
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  
+  const flights3Months = pilotFlights.filter(f => new Date(f.fecha) >= threeMonthsAgo);
+  const flights6Months = pilotFlights.filter(f => new Date(f.fecha) >= sixMonthsAgo);
+  
+  const hours3Months = flights3Months.reduce((sum, f) => sum + (Number(f.diff_hobbs) || 0), 0);
+  const hours6Months = flights6Months.reduce((sum, f) => sum + (Number(f.diff_hobbs) || 0), 0);
+
   const data = {
     pilot: {
       id: pilot.id,
@@ -478,6 +490,10 @@ export default async function PilotDashboardPage() {
         flightsThisMonth: thisMonthFlights.length,
         flightsThisYear: pilotFlightsThisYear,
         activityTrend: Number(activityTrend.toFixed(0)),
+        hours3Months: Number(hours3Months.toFixed(1)),
+        hours6Months: Number(hours6Months.toFixed(1)),
+        flights3Months: flights3Months.length,
+        flights6Months: flights6Months.length,
       },
     }
   };
