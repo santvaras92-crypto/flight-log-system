@@ -324,24 +324,27 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
           <div className="border-t border-slate-200 my-2"></div>
           
           {/* Last flight and hours inline */}
-          <div className="space-y-1.5 sm:space-y-2">
+          <div className="space-y-1 sm:space-y-1.5">
             {stats.daysSinceLastFlight !== null && (
-              <div className="flex items-center justify-between text-[10px] sm:text-xs">
-                <span className="text-slate-600">📅 Último vuelo:</span>
-                <span className="font-semibold text-slate-800">
-                  hace {stats.daysSinceLastFlight} días
+              <div className="text-[10px] sm:text-xs">
+                <span className="text-slate-600">📅 Último:</span>
+                <span className="ml-1 font-semibold text-slate-800">
+                  hace {stats.daysSinceLastFlight}d
                   {stats.lastFlightDate && <span className="text-slate-500 ml-1">({formatLastFlightDate(stats.lastFlightDate)})</span>}
                 </span>
               </div>
             )}
             
-            <div className="text-[10px] sm:text-xs text-slate-700">
-              <span className="text-slate-600">⏱️ Horas:</span>
-              <span className="ml-1 font-semibold text-slate-900">{thisMonthHours.toFixed(1)}h</span> <span className="text-slate-500">({stats.flightsThisMonth})</span>
-              <span className="mx-1">•</span>
-              <span className="font-semibold text-slate-900">{stats.hours3Months.toFixed(1)}h</span> <span className="text-slate-500">(3M, {stats.flights3Months})</span>
-              <span className="mx-1">•</span>
-              <span className="font-semibold text-slate-900">{stats.hours6Months.toFixed(1)}h</span> <span className="text-slate-500">(6M, {stats.flights6Months})</span>
+            <div className="text-[10px] sm:text-xs text-slate-700 flex flex-wrap items-center gap-x-1">
+              <span className="text-slate-600">⏱️</span>
+              <span className="font-semibold text-slate-900">{thisMonthHours.toFixed(1)}h</span>
+              <span className="text-slate-500">({stats.flightsThisMonth})</span>
+              <span className="text-slate-400">•</span>
+              <span className="font-semibold text-slate-900">{stats.hours3Months.toFixed(1)}h</span>
+              <span className="text-slate-500">(3M,{stats.flights3Months})</span>
+              <span className="text-slate-400">•</span>
+              <span className="font-semibold text-slate-900">{stats.hours6Months.toFixed(1)}h</span>
+              <span className="text-slate-500">(6M,{stats.flights6Months})</span>
             </div>
           </div>
           
