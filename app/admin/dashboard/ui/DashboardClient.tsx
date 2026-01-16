@@ -951,12 +951,17 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             allFlightsComplete={initialData.allFlightsComplete}
             users={initialData.users} 
             editMode={editMode} 
-            clientOptions={
-              (allowedPilotCodes || []).map(code => ({
-                code: code.toUpperCase(),
-                name: csvPilotNames?.[code.toUpperCase()] || code
-              })).sort((a, b) => a.name.localeCompare(b.name))
-            }
+            clientOptions={(() => {
+              // Combine CSV pilots and registered pilots
+              const allCodes = new Set<string>();
+              (allowedPilotCodes || []).forEach(c => allCodes.add(c.toUpperCase()));
+              (registeredPilotCodes || []).forEach(c => allCodes.add(c.toUpperCase()));
+              
+              return Array.from(allCodes).map(code => ({
+                code,
+                name: csvPilotNames?.[code] || initialData.users.find(u => u.codigo === code)?.nombre || code
+              })).sort((a, b) => a.name.localeCompare(b.name));
+            })()}
             depositsByCode={initialData.depositsByCode}
             depositsDetailsByCode={initialData.depositsDetailsByCode}
             fuelByCode={initialData.fuelByCode}
