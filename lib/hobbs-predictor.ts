@@ -29,7 +29,6 @@ export async function calculateHobbsTachRatios(
       aprobado: true,
       diff_hobbs: { not: null, gt: 0 },
       diff_tach: { not: null, gt: 0 },
-      hobbsEstimado: { not: true }, // Excluir estimados para evitar circularidad
     },
     select: {
       diff_hobbs: true,

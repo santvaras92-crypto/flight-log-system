@@ -92,22 +92,62 @@ export default function FlightUploadForm({
     return isNaN(val) || val <= 0 ? null : Number(val.toFixed(1));
   }, [tachManual, lastCounters.tach]);
 
-  // Verificar relación Hobbs/Tach (~1.25x basado en análisis de 1,328 vuelos)
-  const ratioWarning = useMemo(() => {
+  // Calcular ratio actual Hobbs/Tach
+  const hobbsTachRatio = useMemo(() => {
     if (deltaHobbs === null || deltaTach === null || deltaTach === 0) return null;
-    const ratio = deltaHobbs / deltaTach;
-    // Esperado: 1.25 (rango P5-P95: 1.00 - 1.70)
-    if (ratio < 1.00 || ratio > 1.70) {
+    return deltaHobbs / deltaTach;
+  }, [deltaHobbs, deltaTach]);
+
+  // Estado para ratio esperado basado en buckets
+  const [expectedRatioData, setExpectedRatioData] = React.useState<{
+    expectedRatio: number;
+    minRatio: number;
+    maxRatio: number;
+    bucket: string;
+    sampleSize: number;
+  } | null>(null);
+
+  // Obtener ratio esperado basado en deltaTach
+  React.useEffect(() => {
+    if (deltaTach === null || deltaTach <= 0) {
+      setExpectedRatioData(null);
+      return;
+    }
+
+    async function fetchExpectedRatio() {
+      try {
+        const response = await fetch(`/api/expected-ratio?tachDelta=${deltaTach}`);
+        if (response.ok) {
+          const data = await response.json();
+          setExpectedRatioData(data);
+        }
+      } catch (error) {
+        console.error('Error fetching expected ratio:', error);
+      }
+    }
+
+    fetchExpectedRatio();
+  }, [deltaTach]);
+
+  // Validar ratio con rangos específicos por bucket
+  const ratioWarning = useMemo(() => {
+    if (hobbsTachRatio === null || !expectedRatioData) return null;
+    
+    const { expectedRatio, minRatio, maxRatio, bucket, sampleSize } = expectedRatioData;
+    
+    if (hobbsTachRatio < minRatio || hobbsTachRatio > maxRatio) {
       return {
-        ratio: ratio.toFixed(2),
-        expected: "~1.25",
-        message: ratio < 1.00 
+        ratio: hobbsTachRatio.toFixed(2),
+        expected: expectedRatio.toFixed(2),
+        bucket,
+        sampleSize,
+        message: hobbsTachRatio < minRatio 
           ? "Δ Hobbs parece bajo respecto a Δ Tach" 
           : "Δ Hobbs parece alto respecto a Δ Tach"
       };
     }
     return null;
-  }, [deltaHobbs, deltaTach]);
+  }, [hobbsTachRatio, expectedRatioData]);
 
   // Obtener nombre del piloto seleccionado
   const selectedPilot = useMemo(() => {
@@ -360,10 +400,11 @@ export default function FlightUploadForm({
                     <div>
                       <p className="font-bold text-sm sm:text-base" style={{ color: 'var(--accent-warning)' }}>⚠️ Verificar Contadores</p>
                       <p className="text-xs sm:text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
-                        {ratioWarning.message}. Ratio actual: <span className="font-mono font-bold">{ratioWarning.ratio}</span> (esperado: {ratioWarning.expected})
+                        {ratioWarning.message}. Ratio actual: <span className="font-mono font-bold">{ratioWarning.ratio}</span>{' '}
+                        (esperado: {ratioWarning.expected} para {ratioWarning.bucket}h)
                       </p>
                       <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
-                        Generalmente Δ Hobbs ≈ 1.3 × Δ Tach. Verifica que los valores ingresados sean correctos.
+                        Para vuelos de {ratioWarning.bucket}h Tach, se espera ratio {ratioWarning.expected} (basado en {ratioWarning.sampleSize} vuelos). Verifica los valores.
                       </p>
                     </div>
                   </div>
