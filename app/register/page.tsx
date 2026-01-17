@@ -44,7 +44,7 @@ export default async function RegistroPage() {
     })
     .map(u => ({
       id: String(u.id),
-      value: String(u.id),
+      value: u.codigo || String(u.id), // Usar código como value para que coincida con la búsqueda
       label: `${u.nombre} (${u.codigo})`,
     }));
 

@@ -58,6 +58,7 @@ export default function RegisterClient({
   lastComponents?: LastComponents;
   lastAerodromoDestino?: string;
 }) {
+  const [pilotNameLoaded, setPilotNameLoaded] = React.useState(false);
   const [pilotValue, setPilotValue] = useState<string>('');
   const [mode, setMode] = useState<'flight' | 'fuel' | 'deposit'>('flight');
   const [submitting, setSubmitting] = useState(false);
@@ -85,11 +86,18 @@ export default function RegisterClient({
             const pilotData = await pilotRes.json();
             
             if (pilotData.found && pilotData.codigo) {
-              // Buscar en la lista por código
-              const matchingPilot = pilots.find(p => 
-                p.value === pilotData.codigo || 
-                p.value.toString().toUpperCase() === pilotData.codigo.toUpperCase()
+              // Buscar por código primero (funciona para CSV y registrados)
+              let matchingPilot = pilots.find(p => 
+                String(p.value).toUpperCase() === pilotData.codigo.toUpperCase()
               );
+              
+              // Si no encuentra por código, buscar por ID (fallback)
+              if (!matchingPilot && pilotData.userId) {
+                matchingPilot = pilots.find(p => 
+                  String(p.value) === String(pilotData.userId)
+                );
+              }
+              
               if (matchingPilot) {
                 setPilotValue(matchingPilot.value);
               }
@@ -100,6 +108,7 @@ export default function RegisterClient({
         // No session
       }
       setSessionChecked(true);
+      setPilotNameLoaded(true);
     }
     checkSession();
   }, [pilots]);
@@ -439,7 +448,10 @@ export default function RegisterClient({
               {userRole === 'PILOTO' || userRole === 'PILOT' ? (
                 // Si es piloto logueado, mostrar su nombre como texto fijo
                 <div className="rounded-xl border px-3 py-3 bg-slate-100 text-slate-700 font-medium">
-                  {pilots.find(p => p.value === pilotValue)?.label || 'Cargando...'}
+                  {!pilotNameLoaded 
+                    ? 'Cargando...' 
+                    : (pilots.find(p => p.value === pilotValue)?.label || 'Nombre no encontrado')
+                  }
                 </div>
               ) : (
                 // Si es admin o sin sesión, mostrar dropdown
