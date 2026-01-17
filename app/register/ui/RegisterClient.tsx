@@ -58,7 +58,7 @@ export default function RegisterClient({
   lastComponents?: LastComponents;
   lastAerodromoDestino?: string;
 }) {
-  const [pilotNameLoaded, setPilotNameLoaded] = React.useState(false);
+  const [pilotNameLoaded, setPilotNameLoaded] = useState(false);
   const [pilotValue, setPilotValue] = useState<string>('');
   const [mode, setMode] = useState<'flight' | 'fuel' | 'deposit'>('flight');
   const [submitting, setSubmitting] = useState(false);
