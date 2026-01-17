@@ -160,28 +160,60 @@ export default function RegisterClient({
     return isNaN(val) || val <= 0 ? null : Number(val.toFixed(1));
   }, [mode, tachFin, currentCounters.tach]);
 
-  // Validar ratio entre deltaHobbs y deltaTach (esperado: ~1.25x basado en análisis de 1,328 vuelos)
+  // Calcular ratio actual Hobbs/Tach
   const hobbsTachRatio = useMemo(() => {
     if (deltaHobbs === null || deltaTach === null || deltaTach === 0) return null;
     return deltaHobbs / deltaTach;
   }, [deltaHobbs, deltaTach]);
 
-  // El ratio esperado es 1.25 (rango P5-P95: 1.00 - 1.70)
+  // Estado para ratio esperado basado en buckets
+  const [expectedRatioData, setExpectedRatioData] = useState<{
+    expectedRatio: number;
+    minRatio: number;
+    maxRatio: number;
+    bucket: string;
+    sampleSize: number;
+  } | null>(null);
+
+  // Obtener ratio esperado basado en deltaTach
+  useEffect(() => {
+    if (deltaTach === null || deltaTach <= 0) {
+      setExpectedRatioData(null);
+      return;
+    }
+
+    async function fetchExpectedRatio() {
+      try {
+        const response = await fetch(`/api/expected-ratio?tachDelta=${deltaTach}`);
+        if (response.ok) {
+          const data = await response.json();
+          setExpectedRatioData(data);
+        }
+      } catch (error) {
+        console.error('Error fetching expected ratio:', error);
+      }
+    }
+
+    fetchExpectedRatio();
+  }, [deltaTach]);
+
+  // Validar ratio con rangos específicos por bucket
   const ratioWarning = useMemo(() => {
-    if (hobbsTachRatio === null) return null;
-    const expectedRatio = 1.25;
-    const minRatio = 1.00;
-    const maxRatio = 1.70;
+    if (hobbsTachRatio === null || !expectedRatioData) return null;
+    
+    const { expectedRatio, minRatio, maxRatio, bucket, sampleSize } = expectedRatioData;
     
     if (hobbsTachRatio < minRatio || hobbsTachRatio > maxRatio) {
       return {
         ratio: hobbsTachRatio,
         expected: expectedRatio,
+        bucket,
+        sampleSize,
         outOfRange: true
       };
     }
     return null;
-  }, [hobbsTachRatio]);
+  }, [hobbsTachRatio, expectedRatioData]);
 
   // Handle file input change for image preview
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'fuel' | 'deposit') => {
@@ -637,7 +669,9 @@ export default function RegisterClient({
                             {' '}(Δ HOBBS: {deltaHobbs?.toFixed(1)} hrs ÷ Δ TACH: {deltaTach?.toFixed(1)} hrs)
                           </p>
                           <p className="text-sm text-red-800">
-                            Se espera un ratio de aproximadamente <strong className="font-mono">1.25x</strong> (rango: 1.00 - 1.70).
+                            Para vuelos de <strong>{ratioWarning.bucket}h Tach</strong>, se espera un ratio de{' '}
+                            <strong className="font-mono">{ratioWarning.expected.toFixed(2)}x</strong>{' '}
+                            (basado en {ratioWarning.sampleSize} vuelos similares).
                             Por favor verifica que los valores ingresados sean correctos.
                           </p>
                         </div>
@@ -974,7 +1008,8 @@ export default function RegisterClient({
                     <div className="flex-1">
                       <h4 className="text-sm font-bold text-red-900 mb-1">⚠️ RATIO HOBBS/TACH FUERA DE RANGO</h4>
                       <p className="text-sm text-red-800">
-                        Ratio: <strong className="font-mono">{ratioWarning.ratio.toFixed(2)}x</strong> (esperado: 1.25x, rango 1.00-1.70)
+                        Ratio: <strong className="font-mono">{ratioWarning.ratio.toFixed(2)}x</strong>{' '}
+                        (esperado: {ratioWarning.expected.toFixed(2)}x para {ratioWarning.bucket}h, N={ratioWarning.sampleSize})
                       </p>
                     </div>
                   </div>
