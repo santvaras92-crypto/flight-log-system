@@ -64,6 +64,7 @@ export default function RegisterClient({
   const [submitting, setSubmitting] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [sessionChecked, setSessionChecked] = useState(false);
+  const [hobbsAutoApplied, setHobbsAutoApplied] = useState(false);
 
   // Estado para contadores actualizados (inicia con los valores del servidor)
   const [currentCounters, setCurrentCounters] = useState<LastCounters>(lastCounters);
@@ -214,6 +215,27 @@ export default function RegisterClient({
     }
     return null;
   }, [hobbsTachRatio, expectedRatioData]);
+
+  // Función para aplicar Hobbs automático
+  const applyAutoHobbs = async () => {
+    if (deltaTach === null || deltaTach <= 0 || currentCounters.hobbs === null) return;
+
+    try {
+      const response = await fetch(`/api/expected-ratio?tachDelta=${deltaTach}`);
+      if (response.ok) {
+        const data = await response.json();
+        const predictedHobbsDelta = deltaTach * data.expectedRatio;
+        const predictedHobbsFin = currentCounters.hobbs + predictedHobbsDelta;
+        setHobbsFin(predictedHobbsFin.toFixed(1));
+        setHobbsAutoApplied(true);
+        
+        // Ocultar el mensaje después de 3 segundos
+        setTimeout(() => setHobbsAutoApplied(false), 3000);
+      }
+    } catch (error) {
+      console.error('Error applying auto Hobbs:', error);
+    }
+  };
 
   // Handle file input change for image preview
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'fuel' | 'deposit') => {
@@ -614,16 +636,42 @@ export default function RegisterClient({
                       <label className="block text-xs font-bold uppercase tracking-wide text-slate-700">
                         Hobbs Final *
                       </label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={hobbsFin}
-                        onChange={(e) => setHobbsFin(e.target.value)}
-                        min={currentCounters.hobbs !== null ? currentCounters.hobbs : 0}
-                        placeholder={currentCounters.hobbs !== null ? `≥ ${currentCounters.hobbs.toFixed(1)}` : "Ej: 2058.5"}
-                        required
-                        className="w-full rounded-xl border px-3 py-3 bg-white font-mono font-bold text-lg"
-                      />
+                      <div className="flex gap-2 items-start">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={hobbsFin}
+                          onChange={(e) => setHobbsFin(e.target.value)}
+                          min={currentCounters.hobbs !== null ? currentCounters.hobbs : 0}
+                          placeholder={currentCounters.hobbs !== null ? `≥ ${currentCounters.hobbs.toFixed(1)}` : "Ej: 2058.5"}
+                          required
+                          className="flex-1 rounded-xl border px-3 py-3 bg-white font-mono font-bold text-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={applyAutoHobbs}
+                          disabled={!deltaTach || deltaTach <= 0}
+                          title={deltaTach && deltaTach > 0 ? "Calcular Hobbs automáticamente" : "Ingresa Tach Fin primero"}
+                          className={`p-3 rounded-xl border-2 transition-all ${
+                            deltaTach && deltaTach > 0
+                              ? 'bg-slate-50 border-slate-300 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 cursor-pointer'
+                              : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-50'
+                          }`}
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                        </button>
+                      </div>
+                      {hobbsAutoApplied && (
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-green-100 border border-green-300 animate-pulse">
+                          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span className="text-xs font-bold text-green-700">Hobbs estimado aplicado</span>
+                        </div>
+                      )}
                       {deltaHobbs !== null && (
                         <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-100">
                           <span className="text-xs font-bold uppercase text-blue-700">Δ Hobbs:</span>
