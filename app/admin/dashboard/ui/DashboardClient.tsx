@@ -603,8 +603,16 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       const activePilotsData = Array.from(codeToLastFlight.entries())
         .map(([code, lastFlightDate]) => {
           const daysSince = Math.floor((today.getTime() - lastFlightDate.getTime()) / (1000 * 60 * 60 * 24));
+          
+          // Try to find name from CSV pilot names first, then from registered users
+          let name = csvPilotNames?.[code];
+          if (!name) {
+            const user = initialData.users.find(u => u.codigo?.toUpperCase() === code);
+            name = user?.nombre || code;
+          }
+          
           return {
-            name: csvPilotNames?.[code] || code,
+            name,
             daysSince
           };
         })
