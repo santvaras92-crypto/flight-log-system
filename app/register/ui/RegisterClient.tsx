@@ -436,14 +436,22 @@ export default function RegisterClient({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="flex flex-col text-sm">
               <span className="mb-1 font-medium">Piloto</span>
-              <select
-                className="rounded-xl border px-3 py-3 bg-slate-50"
-                value={pilotValue}
-                onChange={e => setPilotValue(e.target.value)}
-              >
-                <option value="" disabled>Selecciona piloto</option>
-                {pilots.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-              </select>
+              {userRole === 'PILOTO' || userRole === 'PILOT' ? (
+                // Si es piloto logueado, mostrar su nombre como texto fijo
+                <div className="rounded-xl border px-3 py-3 bg-slate-100 text-slate-700 font-medium">
+                  {pilots.find(p => p.value === pilotValue)?.label || 'Cargando...'}
+                </div>
+              ) : (
+                // Si es admin o sin sesión, mostrar dropdown
+                <select
+                  className="rounded-xl border px-3 py-3 bg-slate-50"
+                  value={pilotValue}
+                  onChange={e => setPilotValue(e.target.value)}
+                >
+                  <option value="" disabled>Selecciona piloto</option>
+                  {pilots.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                </select>
+              )}
             </label>
 
             <label className="flex flex-col text-sm">
