@@ -365,5 +365,30 @@ export async function createFlightSubmission(input: Input) {
     sendPilotConfirmationEmail(submissionData, piloto, lastCounters, lastComponents)
   ]);
 
-  return { ok: true, id: submission.id };
+  // Return complete flight data for PDF generation
+  return {
+    ok: true,
+    data: {
+      submissionId: submission.id,
+      flightId: result.flight.id,
+      piloto: {
+        nombre: piloto?.nombre || 'Unknown',
+        codigo: piloto?.codigo || 'N/A',
+      },
+      fecha: input.fecha,
+      hobbs_inicio: hobbs_inicio,
+      hobbs_fin: input.hobbs_fin,
+      diff_hobbs: diffHobbs,
+      tach_inicio: tach_inicio,
+      tach_fin: input.tach_fin,
+      diff_tach: diffTach,
+      airframe: newAirframe || 0,
+      engine: newEngine || 0,
+      propeller: newPropeller || 0,
+      copiloto: input.copiloto || '',
+      detalle: input.detalle || '',
+      aerodromoSalida: input.aerodromoSalida || 'SCCV',
+      aerodromoDestino: input.aerodromoDestino || 'SCCV',
+    }
+  };
 }

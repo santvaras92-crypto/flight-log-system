@@ -8,6 +8,7 @@ import { createDeposit } from '@/app/actions/create-deposit';
 import { findOrCreatePilotByCode } from '@/app/actions/find-or-create-pilot';
 import Link from 'next/link';
 import ImagePreviewModal from '@/app/components/ImagePreviewModal';
+import { generateFlightLogbookPDF, type FlightLogbookData } from '@/lib/generate-flight-logbook-pdf';
 
 type PilotOpt = { id: string | number; value: string; label: string };
 
@@ -126,6 +127,8 @@ export default function RegisterClient({
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [flightData, setFlightData] = useState<FlightLogbookData | null>(null);
   
   // Fuel form fields
   const [fuelLitros, setFuelLitros] = useState<string>('');
@@ -364,6 +367,12 @@ export default function RegisterClient({
           setFormError('Error creando vuelo');
           return;
         }
+        
+        // Store flight data for success modal and PDF generation
+        if (result.data) {
+          setFlightData(result.data);
+          setShowSuccessModal(true);
+        }
       } else if (mode === 'fuel') {
         const rawFile = formData.get('file') as File | null;
         let uploadPayload: { name: string; base64: string } | null = null;
@@ -432,27 +441,33 @@ export default function RegisterClient({
           return;
         }
       }
-      setFormSuccess('Registro enviado correctamente.');
       
-      // Si fue un vuelo, refetch contadores actualizados
+      // Only show old success message and reset for fuel/deposit (not flight)
+      if (mode !== 'flight') {
+        setFormSuccess('Registro enviado correctamente.');
+      }
+      
+      // Si fue un vuelo, refetch contadores actualizados (for next flight)
       if (mode === 'flight') {
         try {
           const flightRes = await fetch('/api/last-flight');
           if (flightRes.ok) {
-            const flightData = await flightRes.json();
-            setCurrentCounters(flightData.lastCounters);
-            setCurrentComponents(flightData.lastComponents);
-            setAerodromoSalida(flightData.lastAerodromoDestino || 'SCCV');
+            const updatedData = await flightRes.json();
+            setCurrentCounters(updatedData.lastCounters);
+            setCurrentComponents(updatedData.lastComponents);
+            setAerodromoSalida(updatedData.lastAerodromoDestino || 'SCCV');
           }
         } catch (e) {
           console.warn('Error actualizando contadores:', e);
         }
+        // Don't reset form here for flights - success modal will handle it
+        return;
       }
 
       // Esperar 800ms para que el usuario vea el feedback visual (spinner + mensaje de éxito)
       await new Promise(resolve => setTimeout(resolve, 800));
 
-      // Reset form
+      // Reset form (only for fuel/deposit)
       setPilotValue('');
       setFecha(new Date().toISOString().split('T')[0]);
       setHobbsFin('');
@@ -462,9 +477,7 @@ export default function RegisterClient({
       setFuelLitros('');
       setFuelMonto('');
       // Para fuel/deposit, el nuevo aeródromo de salida es el destino que acabamos de registrar
-      if (mode !== 'flight') {
-        setAerodromoSalida(aerodromoDestino);
-      }
+      setAerodromoSalida(aerodromoDestino);
       setAerodromoDestino('SCCV');
       (document.getElementById('registro-form') as HTMLFormElement)?.reset();
     } catch (e: any) {
@@ -1109,6 +1122,145 @@ export default function RegisterClient({
                   ) : (
                     <>✓ Confirmar y Enviar</>
                   )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal with PDF Download */}
+      {showSuccessModal && flightData && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-green-200 bg-gradient-to-r from-green-50 to-emerald-50">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center">
+                  <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-green-800">Vuelo Registrado Exitosamente</h2>
+                  <p className="text-sm text-green-600 mt-1">Registro #{flightData.submissionId} • Pendiente de validación</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <div className="mb-6">
+                <h3 className="text-lg font-bold text-slate-700 mb-3 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Vista Previa - Bitácora CC-AQI
+                </h3>
+                
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-sm">
+                    <tbody>
+                      <tr className="border-b border-slate-200">
+                        <td className="py-3 px-4 font-semibold text-slate-600 bg-slate-50 w-1/3">FECHA</td>
+                        <td className="py-3 px-4 text-slate-800">{new Date(flightData.fecha).toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' })}</td>
+                      </tr>
+                      <tr className="border-b border-slate-200">
+                        <td className="py-3 px-4 font-semibold text-slate-600 bg-slate-50">HOBBS</td>
+                        <td className="py-3 px-4">
+                          <span className="font-mono text-slate-800">{flightData.hobbs_inicio.toFixed(1)}</span>
+                          <span className="mx-2 text-slate-400">→</span>
+                          <span className="font-mono text-slate-800">{flightData.hobbs_fin.toFixed(1)}</span>
+                          <span className="ml-3 px-2 py-1 bg-blue-100 text-blue-800 rounded font-bold text-xs">
+                            {flightData.diff_hobbs.toFixed(1)} hrs
+                          </span>
+                        </td>
+                      </tr>
+                      <tr className="border-b border-slate-200">
+                        <td className="py-3 px-4 font-semibold text-slate-600 bg-slate-50">TACH</td>
+                        <td className="py-3 px-4">
+                          <span className="font-mono text-slate-800">{flightData.tach_inicio.toFixed(1)}</span>
+                          <span className="mx-2 text-slate-400">→</span>
+                          <span className="font-mono text-slate-800">{flightData.tach_fin.toFixed(1)}</span>
+                          <span className="ml-3 px-2 py-1 bg-blue-100 text-blue-800 rounded font-bold text-xs">
+                            {flightData.diff_tach.toFixed(1)} hrs
+                          </span>
+                        </td>
+                      </tr>
+                      <tr className="border-b border-slate-200">
+                        <td className="py-3 px-4 font-semibold text-slate-600 bg-slate-50">AIRFRAME</td>
+                        <td className="py-3 px-4 font-mono text-slate-800">{flightData.airframe.toFixed(1)} hrs</td>
+                      </tr>
+                      <tr className="border-b border-slate-200">
+                        <td className="py-3 px-4 font-semibold text-slate-600 bg-slate-50">ENGINE</td>
+                        <td className="py-3 px-4 font-mono text-slate-800">{flightData.engine.toFixed(1)} hrs</td>
+                      </tr>
+                      <tr className="border-b border-slate-200">
+                        <td className="py-3 px-4 font-semibold text-slate-600 bg-slate-50">PROPELLER</td>
+                        <td className="py-3 px-4 font-mono text-slate-800">{flightData.propeller.toFixed(1)} hrs</td>
+                      </tr>
+                      <tr className="border-b border-slate-200">
+                        <td className="py-3 px-4 font-semibold text-slate-600 bg-slate-50">PILOTO</td>
+                        <td className="py-3 px-4 text-slate-800">{flightData.piloto.nombre} ({flightData.piloto.codigo})</td>
+                      </tr>
+                      {flightData.copiloto && (
+                        <tr className="border-b border-slate-200">
+                          <td className="py-3 px-4 font-semibold text-slate-600 bg-slate-50">INSTRUCTOR / COPILOTO</td>
+                          <td className="py-3 px-4 text-slate-800">{flightData.copiloto}</td>
+                        </tr>
+                      )}
+                      <tr className="border-b border-slate-200">
+                        <td className="py-3 px-4 font-semibold text-slate-600 bg-slate-50">RUTA</td>
+                        <td className="py-3 px-4 text-slate-800">{flightData.aerodromoSalida} → {flightData.aerodromoDestino}</td>
+                      </tr>
+                      {flightData.detalle && (
+                        <tr className="border-b border-slate-200">
+                          <td className="py-3 px-4 font-semibold text-slate-600 bg-slate-50">OBSERVACIONES</td>
+                          <td className="py-3 px-4 text-slate-800">{flightData.detalle}</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await generateFlightLogbookPDF(flightData);
+                    } catch (error) {
+                      console.error('Error generating PDF:', error);
+                      alert('Error al generar el PDF. Por favor intenta nuevamente.');
+                    }
+                  }}
+                  className="flex-1 px-6 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  💾 Guardar PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSuccessModal(false);
+                    setFlightData(null);
+                    // Reset form
+                    setPilotValue('');
+                    setFecha(new Date().toISOString().split('T')[0]);
+                    setHobbsFin('');
+                    setTachFin('');
+                    setCopiloto('');
+                    setDetalle('');
+                    setAerodromoDestino('SCCV');
+                    (document.getElementById('registro-form') as HTMLFormElement)?.reset();
+                  }}
+                  className="flex-1 px-6 py-3 rounded-xl bg-slate-600 text-white font-bold hover:bg-slate-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                  Volver a Inicio
                 </button>
               </div>
             </div>
