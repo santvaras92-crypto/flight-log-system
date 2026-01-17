@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 interface UploadResponse {
   success: boolean;
@@ -99,7 +99,7 @@ export default function FlightUploadForm({
   }, [deltaHobbs, deltaTach]);
 
   // Estado para ratio esperado basado en buckets
-  const [expectedRatioData, setExpectedRatioData] = React.useState<{
+  const [expectedRatioData, setExpectedRatioData] = useState<{
     expectedRatio: number;
     minRatio: number;
     maxRatio: number;
@@ -108,7 +108,7 @@ export default function FlightUploadForm({
   } | null>(null);
 
   // Obtener ratio esperado basado en deltaTach
-  React.useEffect(() => {
+  useEffect(() => {
     if (deltaTach === null || deltaTach <= 0) {
       setExpectedRatioData(null);
       return;
