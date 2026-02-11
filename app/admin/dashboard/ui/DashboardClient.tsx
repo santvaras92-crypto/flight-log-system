@@ -1702,31 +1702,31 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
       )}
 
       <div className="overflow-x-auto px-4 sm:px-0">
-        <table className="min-w-full divide-y divide-slate-200" style={{ minWidth: '1400px' }}>
+        <table className="min-w-full divide-y divide-slate-200 table-fixed" style={{ minWidth: '1400px' }}>
           <thead className="bg-slate-50">
             <tr>
-              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Fecha</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Tac. 1</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Tac. 2</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Dif. Taco</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Hobbs I</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Hobbs F</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Horas</th>
-              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Piloto</th>
-              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Copiloto</th>
-              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">ID</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Tarifa</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Inst. Rate</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Total</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">AIRFRAME</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">ENGINE</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">PROPELLER</th>
-              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">AD Sal</th>
-              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">AD Dest</th>
-              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Detalle</th>
-              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Año</th>
-              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Mes</th>
-              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-red-600 uppercase tracking-wider whitespace-nowrap">🗑️</th>
+              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap resize-x overflow-auto" style={{ width: '90px', minWidth: '70px' }}>Fecha</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap resize-x overflow-auto" style={{ width: '70px', minWidth: '60px' }}>Tac. 1</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap resize-x overflow-auto" style={{ width: '70px', minWidth: '60px' }}>Tac. 2</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap resize-x overflow-auto" style={{ width: '80px', minWidth: '70px' }}>Dif. Taco</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap resize-x overflow-auto" style={{ width: '70px', minWidth: '60px' }}>Hobbs I</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap resize-x overflow-auto" style={{ width: '70px', minWidth: '60px' }}>Hobbs F</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap resize-x overflow-auto" style={{ width: '60px', minWidth: '50px' }}>Horas</th>
+              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap resize-x overflow-auto" style={{ width: '120px', minWidth: '80px' }}>Piloto</th>
+              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap resize-x overflow-auto" style={{ width: '120px', minWidth: '80px' }}>Copiloto</th>
+              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap resize-x overflow-auto" style={{ width: '60px', minWidth: '50px' }}>ID</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap resize-x overflow-auto" style={{ width: '90px', minWidth: '70px' }}>Tarifa</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap resize-x overflow-auto" style={{ width: '90px', minWidth: '70px' }}>Inst. Rate</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap resize-x overflow-auto" style={{ width: '90px', minWidth: '70px' }}>Total</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap resize-x overflow-auto" style={{ width: '90px', minWidth: '70px' }}>AIRFRAME</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap resize-x overflow-auto" style={{ width: '80px', minWidth: '60px' }}>ENGINE</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap resize-x overflow-auto" style={{ width: '90px', minWidth: '70px' }}>PROPELLER</th>
+              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap resize-x overflow-auto" style={{ width: '70px', minWidth: '60px' }}>AD Sal</th>
+              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap resize-x overflow-auto" style={{ width: '70px', minWidth: '60px' }}>AD Dest</th>
+              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider resize-x overflow-auto" style={{ width: '200px', minWidth: '100px' }}>Detalle</th>
+              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap resize-x overflow-auto" style={{ width: '60px', minWidth: '50px' }}>Año</th>
+              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap resize-x overflow-auto" style={{ width: '80px', minWidth: '70px' }}>Mes</th>
+              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-red-600 uppercase tracking-wider whitespace-nowrap" style={{ width: '50px', minWidth: '50px' }}>🗑️</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-slate-100">
@@ -1870,10 +1870,12 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                   </td>
                   
                   {/* Detalle */}
-                  <td className="px-2 py-2 text-[10px] sm:text-xs text-slate-600 max-w-[80px] truncate">
+                  <td className="px-2 py-2 text-[10px] sm:text-xs text-slate-600 overflow-hidden">
                     {editMode ? (
                       <input type="text" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-full" defaultValue={f.detalle || ''} onChange={e=>handleChange(f.id,'detalle',e.target.value)} />
-                    ) : (f.detalle || '-')}
+                    ) : (
+                      <div className="whitespace-normal break-words">{f.detalle || '-'}</div>
+                    )}
                   </td>
                   
                   {/* Año */}
