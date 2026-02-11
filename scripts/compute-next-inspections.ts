@@ -14,7 +14,7 @@ function toNumber(v: any): number | null {
 
 async function getCurrentTach(): Promise<number | null> {
   const latest = await prisma.flight.findFirst({
-    orderBy: { fecha: 'desc' },
+    orderBy: [{ fecha: 'desc' }, { id: 'desc' }],
     select: { tach_fin: true, tach_inicio: true, diff_tach: true }
   });
   if (!latest) return null;
