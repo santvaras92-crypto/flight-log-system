@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { Resend } from "resend";
 import crypto from "crypto";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resendApiKey = process.env.RESEND_API_KEY;
+const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 export async function POST(req: NextRequest) {
   try {
@@ -45,6 +46,10 @@ export async function POST(req: NextRequest) {
 
     // Send email
     try {
+      if (!resend) {
+        throw new Error("Missing RESEND_API_KEY");
+      }
+
       await resend.emails.send({
         from: "CC-AQI Flight Log <onboarding@resend.dev>",
         to: user.email!,
