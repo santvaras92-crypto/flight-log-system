@@ -1,4 +1,4 @@
-// railway-rebuild 1771354074
+"use client";
 import { useState, useEffect, useRef } from "react";
 import { searchExistingPilots, createOrUpdatePilot } from "@/app/actions/pilot-actions";
 
