@@ -1870,11 +1870,11 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                   </td>
                   
                   {/* Detalle */}
-                  <td className="px-2 py-2 text-[10px] sm:text-xs text-slate-600 overflow-hidden">
+                  <td className="px-2 py-2 text-[10px] sm:text-xs text-slate-600 whitespace-nowrap max-w-[300px] overflow-x-auto">
                     {editMode ? (
                       <input type="text" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-full" defaultValue={f.detalle || ''} onChange={e=>handleChange(f.id,'detalle',e.target.value)} />
                     ) : (
-                      <div className="whitespace-normal break-words">{f.detalle || '-'}</div>
+                      <span>{f.detalle || '-'}</span>
                     )}
                   </td>
                   
