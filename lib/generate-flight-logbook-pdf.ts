@@ -104,7 +104,10 @@ export async function generateFlightLogbookPDF(data: FlightLogbookData): Promise
   
   // Helper functions
   const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
+    // Parse as local date to avoid UTC timezone shift
+    // "2026-02-16" → parts [2026, 02, 16] → new Date(2026, 1, 16)
+    const parts = dateStr.split('-').map(Number);
+    const d = new Date(parts[0], parts[1] - 1, parts[2]);
     const day = d.getDate().toString().padStart(2, '0');
     const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     const month = months[d.getMonth()];
