@@ -955,6 +955,18 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
 
       {tab === "flights" && (
         <>
+          <div className="flex justify-end mb-3">
+            <button
+              onClick={() => setEditMode(!editMode)}
+              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 ${
+                editMode 
+                  ? 'bg-yellow-500 hover:bg-yellow-600 text-white shadow-lg' 
+                  : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+              }`}
+            >
+              {editMode ? '✏️ Modo Edición ON' : '✏️ Editar Celdas'}
+            </button>
+          </div>
           <FlightsTable 
             flights={flights} 
             allFlightsComplete={initialData.allFlightsComplete}
