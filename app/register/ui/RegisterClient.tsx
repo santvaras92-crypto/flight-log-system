@@ -1171,7 +1171,7 @@ export default function RegisterClient({
                     <tbody>
                       <tr className="border-b border-slate-200">
                         <td className="py-3 px-4 font-semibold text-slate-600 bg-slate-50 w-1/3">FECHA</td>
-                        <td className="py-3 px-4 text-slate-800">{new Date(flightData.fecha).toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' })}</td>
+                        <td className="py-3 px-4 text-slate-800">{(() => { const p = flightData.fecha.split('-').map(Number); return new Date(p[0], p[1]-1, p[2]).toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' }); })()}</td>
                       </tr>
                       <tr className="border-b border-slate-200">
                         <td className="py-3 px-4 font-semibold text-slate-600 bg-slate-50">HOBBS</td>
