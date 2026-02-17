@@ -584,7 +584,9 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       // Calculate active pilots from last 60 days
       const sixtyDaysAgo = new Date();
       sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+      // Normalize "today" to midnight local time for accurate day diff
       const today = new Date();
+      today.setHours(0, 0, 0, 0);
       const recentFlights = (initialData.allFlightsComplete || initialData.flights || [])
         .filter(f => new Date(f.fecha) >= sixtyDaysAgo);
       
@@ -593,7 +595,9 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       recentFlights.forEach(f => {
         const code = ((f as any).cliente || '').toUpperCase().trim();
         if (!code) return;
-        const flightDate = new Date(f.fecha);
+        // Parse flight date as local date to avoid UTC shift
+        const raw = new Date(f.fecha);
+        const flightDate = new Date(raw.getFullYear(), raw.getMonth(), raw.getDate());
         const existing = codeToLastFlight.get(code);
         if (!existing || flightDate > existing) {
           codeToLastFlight.set(code, flightDate);
@@ -603,7 +607,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       // Build array with name and days since last flight
       const activePilotsData = Array.from(codeToLastFlight.entries())
         .map(([code, lastFlightDate]) => {
-          const daysSince = Math.floor((today.getTime() - lastFlightDate.getTime()) / (1000 * 60 * 60 * 24));
+          const daysSince = Math.round((today.getTime() - lastFlightDate.getTime()) / (1000 * 60 * 60 * 24));
           
           // Try to find name from CSV pilot names first, then from registered users
           let name = csvPilotNames?.[code];
