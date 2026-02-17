@@ -2,9 +2,18 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
+  let dbConnected = false;
+  let userCount = 0;
+  let aircraftCount = 0;
+  let flightCount = 0;
+  let dbError: string | null = null;
+
   try {
-    // Test database connection
-    await prisma.$queryRaw`SELECT 1`;
+    // Test database connection with timeout
+    await Promise.race([
+      prisma.$queryRaw`SELECT 1`,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('DB timeout')), 5000))
+    ]);
     
     // Get some basic stats
     const results = await Promise.all([
@@ -12,7 +21,14 @@ export async function GET() {
       prisma.aircraft.count(),
       prisma.flight.count(),
     ]);
-    const [userCount, aircraftCount, flightCount] = results;
+    [userCount, aircraftCount, flightCount] = results;
+    dbConnected = true;
+  } catch (error) {
+    dbError = error instanceof Error ? error.message : 'Unknown error';
+    console.warn('Health check DB connection failed:', dbError);
+  }
+
+  try {
 
     const key = process.env.OPENAI_API_KEY || "";
     const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
@@ -26,15 +42,20 @@ export async function GET() {
     );
 
     return NextResponse.json({
-      status: "ok",
+      status: dbConnected ? "ok" : "degraded",
       timestamp: new Date().toISOString(),
       database: {
-        connected: true,
-        stats: {
-          users: userCount,
-          aircraft: aircraftCount,
-          flights: flightCount,
-        },
+        connected: dbConnected,
+        ...(dbConnected ? {
+          stats: {
+            users: userCount,
+            aircraft: aircraftCount,
+            flights: flightCount,
+          }
+        } : {
+          error: dbError,
+          note: "Application is running but database is not ready"
+        }),
       },
       environment: process.env.NODE_ENV,
       ocr: {
