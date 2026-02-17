@@ -378,12 +378,6 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       const rate90d = hours90d / 90;
       const ratePrev30d = hoursPrev30d / 30;
       
-      // Annual rate from rolling 365 days
-      const rateAnnual = tachThisYear / 365;  // hrs/day
-      
-      // Hybrid rate: 2/3 annual (stability) + 1/3 last 90d (recent trend)
-      const weightedRate = rateAnnual > 0 ? (rateAnnual * 2 + rate90d) / 3 : (rate30d * 3 + rate60d * 2 + rate90d) / 6;
-      
       // Trend: compare last 30d vs previous 30d
       const trend = ratePrev30d > 0 ? ((rate30d - ratePrev30d) / ratePrev30d) * 100 : 0;
       
@@ -423,6 +417,12 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       const tachPrevYear = computeTachHours(flightsPrevYear);
       const hobbsThisYear = computeHobbsHours(flightsThisYear);
       const hobbsPrevYear = computeHobbsHours(flightsPrevYear);
+      
+      // Annual rate from rolling 365 days
+      const rateAnnual = tachThisYear / 365;  // hrs/day
+      
+      // Hybrid rate: 2/3 annual (stability) + 1/3 last 90d (recent trend)
+      const weightedRate = rateAnnual > 0 ? (rateAnnual * 2 + rate90d) / 3 : (rate30d * 3 + rate60d * 2 + rate90d) / 6;
       const flightsCountThisYear = flightsThisYear.length;
       const flightsCountPrevYear = flightsPrevYear.length;
       
