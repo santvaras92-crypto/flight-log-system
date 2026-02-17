@@ -56,7 +56,8 @@ type OverviewMetrics = {
       rate30d: number;  // hrs/day last 30 days
       rate60d: number;  // hrs/day last 60 days  
       rate90d: number;  // hrs/day last 90 days
-      weightedRate: number;  // weighted average
+      rateAnnual: number;  // hrs/day last 365 days
+      weightedRate: number;  // hybrid: 2/3 annual + 1/3 90d
       trend: number;  // % change vs previous period
       stdDev: number;  // standard deviation
     };
@@ -458,6 +459,14 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       const formatDate = (d: Date | null) => d ? d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' }) : '-';
       const formatDateShort = (d: Date | null) => d ? d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' }).replace('.', '') : '-';
       
+      // Format days as human-readable: "X,Y a" / "Xm" / "Xd"
+      const fmtTime = (days: number): string => {
+        if (days <= 0) return '0d';
+        if (days < 30) return `${days}d`;
+        if (days < 365) return `${Math.floor(days / 30)}m`;
+        return `${(days / 365).toFixed(1)}a`;
+      };
+      
       // Progress bar color based on remaining percentage
       const getProgressColor = (remaining: number, total: number) => {
         const pct = (remaining / total) * 100;
@@ -514,7 +523,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               </div>
               {weightedRate > 0 && (
                 <div className="text-[9px] sm:text-[11px] text-slate-900 font-bold flex items-center gap-1">
-                  📅 ~{formatDateShort(oilPred.date)} <span className="hidden sm:inline text-slate-500">({formatDateShort(oilPred.minDate)}-{formatDateShort(oilPred.maxDate)})</span> <span className="font-semibold text-slate-800">~{oilPred.days}d</span>
+                  ⏱️ ~{fmtTime(oilPred.days)} <span className="hidden sm:inline text-slate-500">({fmtTime(oilPred.minDays)}-{fmtTime(oilPred.maxDays)})</span>
                 </div>
               )}
             </div>
@@ -538,7 +547,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               </div>
               {weightedRate > 0 && (
                 <div className="text-[9px] sm:text-[11px] text-slate-900 font-bold flex items-center gap-1">
-                  📅 ~{formatDateShort(hundredPred.date)} <span className="hidden sm:inline text-slate-500">({formatDateShort(hundredPred.minDate)}-{formatDateShort(hundredPred.maxDate)})</span> <span className="font-semibold text-slate-800">~{hundredPred.days}d</span>
+                  ⏱️ ~{fmtTime(hundredPred.days)} <span className="hidden sm:inline text-slate-500">({fmtTime(hundredPred.minDays)}-{fmtTime(hundredPred.maxDays)})</span>
                 </div>
               )}
             </div>
@@ -2615,6 +2624,18 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
   const formatDate = (d: Date) => d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' });
   const formatShortDate = (d: Date) => d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
   
+  // Format days remaining as human-readable: "X,Y años" / "X meses" / "X días"
+  const formatTimeRemaining = (days: number): string => {
+    if (days <= 0) return '0 días';
+    if (days < 30) return `${days} días`;
+    if (days < 365) {
+      const months = Math.floor(days / 30);
+      return `${months} ${months === 1 ? 'mes' : 'meses'}`;
+    }
+    const years = days / 365;
+    return `${years.toFixed(1)} años`;
+  };
+  
   const getUrgencyClass = (days: number) => {
     if (days <= 7) return { row: 'bg-red-50 border-l-4 border-red-500', badge: 'bg-red-100 text-red-700', text: 'text-red-600' };
     if (days <= 15) return { row: 'bg-orange-50 border-l-4 border-orange-500', badge: 'bg-orange-100 text-orange-700', text: 'text-orange-600' };
@@ -2702,7 +2723,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
               <span className="text-3xl">🔮</span>
               <div>
                 <h3 className="text-xl font-bold">Sistema Predictivo SMART</h3>
-                <p className="text-indigo-200 text-sm">Análisis estadístico basado en los últimos 90 días</p>
+                <p className="text-indigo-200 text-sm">Tasa híbrida: ⅔ anual + ⅓ últimos 90 días</p>
               </div>
             </div>
             <div className="flex gap-6">
@@ -2724,7 +2745,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
               </div>
             </div>
           </div>
-          <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
+          <div className="mt-4 grid grid-cols-4 gap-4 text-sm">
             <div className="bg-white/10 rounded-lg p-3">
               <div className="text-indigo-200 text-xs">Tasa 30 días</div>
               <div className="font-mono font-bold">{(rate30d * 30).toFixed(1)} TACH/mes</div>
@@ -2739,6 +2760,11 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
               <div className="text-indigo-200 text-xs">Tasa 90 días</div>
               <div className="font-mono font-bold">{((stats.rate90d || 0) * 30).toFixed(1)} TACH/mes</div>
               <div className="text-indigo-300/70 text-xs">≈{((stats.rate90d || 0) * 30 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS</div>
+            </div>
+            <div className="bg-white/15 rounded-lg p-3 border border-white/20">
+              <div className="text-indigo-200 text-xs">📊 Tasa Anual</div>
+              <div className="font-mono font-bold">{((stats.rateAnnual || 0) * 30).toFixed(1)} TACH/mes</div>
+              <div className="text-indigo-300/70 text-xs">≈{((stats.rateAnnual || 0) * 30 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS</div>
             </div>
           </div>
         </div>
@@ -2784,20 +2810,19 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
                 {pred && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-200">
                     <div className="bg-slate-50 rounded-lg p-3">
+                      <div className="text-xs text-slate-500 mb-1">⏱️ Tiempo Restante</div>
+                      <div className={`font-bold text-lg ${urgency.text}`}>{formatTimeRemaining(pred.days)}</div>
+                    </div>
+                    <div className="bg-slate-50 rounded-lg p-3">
                       <div className="text-xs text-slate-500 mb-1">📅 Fecha Estimada</div>
                       <div className="font-bold text-slate-900">{formatDate(pred.date)}</div>
                     </div>
                     <div className="bg-slate-50 rounded-lg p-3">
-                      <div className="text-xs text-slate-500 mb-1">📈 Rango de Confianza (95%)</div>
-                      <div className="font-semibold text-slate-700">{formatShortDate(pred.minDate)} - {formatShortDate(pred.maxDate)}</div>
-                    </div>
-                    <div className="bg-slate-50 rounded-lg p-3">
-                      <div className="text-xs text-slate-500 mb-1">⏱️ Días Restantes</div>
+                      <div className="text-xs text-slate-500 mb-1">📈 Rango (95%)</div>
                       <div className="flex items-center gap-2">
                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ${urgency.badge}`}>
-                          {pred.days} días
+                          {formatTimeRemaining(pred.minDays)} - {formatTimeRemaining(pred.maxDays)}
                         </span>
-                        <span className="text-xs text-slate-500">({pred.minDays} - {pred.maxDays})</span>
                       </div>
                     </div>
                   </div>
@@ -2875,7 +2900,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
                     {weightedRate > 0 && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                         {tboPred ? (
-                          <span className="font-mono">{formatShortDate(tboPred.date)} ({tboPred.days}d)</span>
+                          <span className="font-mono font-semibold">{formatTimeRemaining(tboPred.days)}</span>
                         ) : '-'}
                       </td>
                     )}

@@ -378,8 +378,11 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       const rate90d = hours90d / 90;
       const ratePrev30d = hoursPrev30d / 30;
       
-      // Weighted average: 30d weights 3x, 60d weights 2x, 90d weights 1x
-      const weightedRate = (rate30d * 3 + rate60d * 2 + rate90d * 1) / 6;
+      // Annual rate from rolling 365 days
+      const rateAnnual = tachThisYear / 365;  // hrs/day
+      
+      // Hybrid rate: 2/3 annual (stability) + 1/3 last 90d (recent trend)
+      const weightedRate = rateAnnual > 0 ? (rateAnnual * 2 + rate90d) / 3 : (rate30d * 3 + rate60d * 2 + rate90d) / 6;
       
       // Trend: compare last 30d vs previous 30d
       const trend = ratePrev30d > 0 ? ((rate30d - ratePrev30d) / ratePrev30d) * 100 : 0;
@@ -470,6 +473,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
             rate30d: Number(rate30d.toFixed(3)),
             rate60d: Number(rate60d.toFixed(3)),
             rate90d: Number(rate90d.toFixed(3)),
+            rateAnnual: Number(rateAnnual.toFixed(3)),
             weightedRate: Number(weightedRate.toFixed(3)),
             trend: Number(trend.toFixed(1)),
             stdDev: Number(stdDev.toFixed(3)),
