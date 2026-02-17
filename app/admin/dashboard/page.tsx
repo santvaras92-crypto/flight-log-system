@@ -617,7 +617,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     })
   );
 
-  // Build maintenance items: get values directly from last flight in Flight Log Entries
+  // Build maintenance items: get values directly from last flight + overhaul data from Component table
   const maintenanceComponents = await Promise.all(
     aircraft.map(async (a) => {
       // Get the last flight for this aircraft
@@ -631,15 +631,53 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         }
       });
 
+      // Get overhaul data from Component table
+      const dbComponents = await prisma.component.findMany({
+        where: { aircraftId: a.matricula },
+        select: {
+          id: true,
+          tipo: true,
+          last_overhaul_airframe: true,
+          last_overhaul_date: true,
+          overhaul_notes: true,
+        }
+      });
+
       // Use values from Flight Log Entries, or default to 0 if no flights exist
       const airframeHours = lastFlight?.airframe_hours ? Number(lastFlight.airframe_hours) : 0;
-      const engineHours = lastFlight?.engine_hours ? Number(lastFlight.engine_hours) : 0;
-      const propellerHours = lastFlight?.propeller_hours ? Number(lastFlight.propeller_hours) : 0;
+      const engineHoursRaw = lastFlight?.engine_hours ? Number(lastFlight.engine_hours) : 0;
+      const propellerHoursRaw = lastFlight?.propeller_hours ? Number(lastFlight.propeller_hours) : 0;
+
+      // Build a map of overhaul data by component type
+      const overhaulMap: Record<string, { dbId: number; airframe: number | null; date: string | null; notes: string | null }> = {};
+      for (const c of dbComponents) {
+        overhaulMap[c.tipo] = {
+          dbId: c.id,
+          airframe: c.last_overhaul_airframe ? Number(c.last_overhaul_airframe) : null,
+          date: c.last_overhaul_date?.toISOString() || null,
+          notes: c.overhaul_notes || null,
+        };
+      }
+
+      // Calculate hours-since-overhaul using AIRFRAME as reference
+      // If overhaul is registered: hours_used = current_airframe - overhaul_airframe
+      // If no overhaul: use raw accumulated hours from flight log
+      const engineOverhaul = overhaulMap['ENGINE'];
+      const propellerOverhaul = overhaulMap['PROPELLER'];
+      const airframeOverhaul = overhaulMap['AIRFRAME'];
+
+      const engineHours = engineOverhaul?.airframe != null
+        ? Number((airframeHours - engineOverhaul.airframe).toFixed(1))
+        : engineHoursRaw;
+
+      const propellerHours = propellerOverhaul?.airframe != null
+        ? Number((airframeHours - propellerOverhaul.airframe).toFixed(1))
+        : propellerHoursRaw;
 
       return [
-        { id: `${a.matricula}-AF`, aircraftId: a.matricula, tipo: 'AIRFRAME', horas_acumuladas: airframeHours, limite_tbo: 30000 },
-        { id: `${a.matricula}-EN`, aircraftId: a.matricula, tipo: 'ENGINE', horas_acumuladas: engineHours, limite_tbo: 2000 },
-        { id: `${a.matricula}-PR`, aircraftId: a.matricula, tipo: 'PROPELLER', horas_acumuladas: propellerHours, limite_tbo: 2000 },
+        { id: `${a.matricula}-AF`, dbId: airframeOverhaul?.dbId || null, aircraftId: a.matricula, tipo: 'AIRFRAME', horas_acumuladas: airframeHours, limite_tbo: 30000, overhaul_airframe: airframeOverhaul?.airframe || null, overhaul_date: airframeOverhaul?.date || null, overhaul_notes: airframeOverhaul?.notes || null },
+        { id: `${a.matricula}-EN`, dbId: engineOverhaul?.dbId || null, aircraftId: a.matricula, tipo: 'ENGINE', horas_acumuladas: engineHours, limite_tbo: 2000, overhaul_airframe: engineOverhaul?.airframe || null, overhaul_date: engineOverhaul?.date || null, overhaul_notes: engineOverhaul?.notes || null },
+        { id: `${a.matricula}-PR`, dbId: propellerOverhaul?.dbId || null, aircraftId: a.matricula, tipo: 'PROPELLER', horas_acumuladas: propellerHours, limite_tbo: 2000, overhaul_airframe: propellerOverhaul?.airframe || null, overhaul_date: propellerOverhaul?.date || null, overhaul_notes: propellerOverhaul?.notes || null },
       ];
     })
   );
@@ -652,7 +690,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     allFlights: allFlightsLight.map((f: any) => ({ id: f.id, fecha: f.fecha, cliente: f.cliente || null, diff_hobbs: Number(f.diff_hobbs), costo: Number(f.costo) })), // Lightweight for Active Pilots
     allFlightsComplete: allFlightsComplete.map((f: any) => ({ ...f, hobbs_inicio: Number(f.hobbs_inicio), hobbs_fin: Number(f.hobbs_fin), tach_inicio: Number(f.tach_inicio), tach_fin: Number(f.tach_fin), diff_hobbs: Number(f.diff_hobbs), diff_tach: Number(f.diff_tach), costo: Number(f.costo), tarifa: f.tarifa ? Number(f.tarifa) : null, piloto_raw: f.piloto_raw || null })), // Complete data for FlightsTable client filter
     submissions: submissions.map(s => ({ ...s, imageLogs: s.ImageLog.map(img => ({ ...img, valorExtraido: img.valorExtraido ? Number(img.valorExtraido) : null, confianza: img.confianza ? Number(img.confianza) : null })), flight: s.Flight ? { ...s.Flight, diff_hobbs: Number(s.Flight.diff_hobbs), diff_tach: Number(s.Flight.diff_tach), costo: Number(s.Flight.costo) } : null })),
-    components: computedComponents.map(c => ({ ...c, horas_acumuladas: Number(c.horas_acumuladas), limite_tbo: Number(c.limite_tbo) })),
+    components: computedComponents.map(c => ({ ...c, horas_acumuladas: Number(c.horas_acumuladas), limite_tbo: Number(c.limite_tbo), dbId: c.dbId || null, overhaul_airframe: c.overhaul_airframe || null, overhaul_date: c.overhaul_date || null, overhaul_notes: c.overhaul_notes || null })),
     aircraftYearlyStats,
     transactions: transactions.map(t => ({ ...t, monto: Number(t.monto) })),
     fuelByCode: (() => {

@@ -5,6 +5,7 @@ import { Chart, LineController, LineElement, PointElement, LinearScale, Title, C
 import { useEffect, useRef } from "react";
 import { generateAccountStatementPDF } from "../../../../lib/generate-account-pdf";
 import ImagePreviewModal from "../../../components/ImagePreviewModal";
+import { registerOverhaul } from "../../../actions/register-overhaul";
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler);
 
@@ -2543,6 +2544,13 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
   const trend = stats?.trend || 0;
   const rate30d = stats?.rate30d || 0;
   
+  // Overhaul modal state
+  const [overhaulModal, setOverhaulModal] = useState<{ open: boolean; component: any | null }>({ open: false, component: null });
+  const [overhaulForm, setOverhaulForm] = useState({ airframeHours: '', date: '', notes: '' });
+  const [overhaulSubmitting, setOverhaulSubmitting] = useState(false);
+  const [overhaulResult, setOverhaulResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
+  const router = useRouter();
+  
   // Calculate predicted inspection with confidence interval
   const getPrediction = (hoursRemaining: number) => {
     if (weightedRate <= 0) return null;
@@ -2587,6 +2595,76 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
     if (days <= 30) return { row: 'bg-yellow-50 border-l-4 border-yellow-500', badge: 'bg-yellow-100 text-yellow-700', text: 'text-yellow-600' };
     return { row: 'hover:bg-blue-50', badge: 'bg-green-100 text-green-700', text: 'text-green-600' };
   };
+
+  // Overhaul functions
+  const openOverhaulModal = (component: any) => {
+    setOverhaulModal({ open: true, component });
+    setOverhaulForm({
+      airframeHours: component.overhaul_airframe?.toString() || '',
+      date: component.overhaul_date ? new Date(component.overhaul_date).toISOString().split('T')[0] : '',
+      notes: component.overhaul_notes || '',
+    });
+    setOverhaulResult(null);
+  };
+
+  const handleOverhaulSubmit = async () => {
+    if (!overhaulModal.component) return;
+    const c = overhaulModal.component;
+    
+    if (!overhaulForm.airframeHours || !overhaulForm.date) {
+      setOverhaulResult({ success: false, error: 'Horas de airframe y fecha son requeridas' });
+      return;
+    }
+
+    setOverhaulSubmitting(true);
+    setOverhaulResult(null);
+
+    try {
+      // If no dbId, we need to create the component first
+      let componentDbId = c.dbId;
+      
+      if (!componentDbId) {
+        // We'll handle this in the server action - create component on the fly
+        setOverhaulResult({ success: false, error: 'Componente no encontrado en la base de datos. Ejecute el script de inicialización primero.' });
+        setOverhaulSubmitting(false);
+        return;
+      }
+
+      const result = await registerOverhaul({
+        componentId: componentDbId,
+        tipo: c.tipo,
+        aircraftId: c.aircraftId,
+        overhaulAirframeHours: parseFloat(overhaulForm.airframeHours),
+        overhaulDate: overhaulForm.date,
+        notes: overhaulForm.notes || undefined,
+      });
+
+      setOverhaulResult(result);
+      if (result.success) {
+        // Refresh data after 1.5 seconds
+        setTimeout(() => {
+          router.refresh();
+          setOverhaulModal({ open: false, component: null });
+        }, 1500);
+      }
+    } catch (err: any) {
+      setOverhaulResult({ success: false, error: err.message || 'Error desconocido' });
+    }
+    setOverhaulSubmitting(false);
+  };
+
+  // Calculate preview for overhaul modal
+  const overhaulPreview = useMemo(() => {
+    if (!overhaulModal.component || !overhaulForm.airframeHours) return null;
+    const currentAirframe = components.find(c => c.tipo === 'AIRFRAME' && c.aircraftId === overhaulModal.component?.aircraftId)?.horas_acumuladas || 0;
+    const overhaulAt = parseFloat(overhaulForm.airframeHours);
+    if (isNaN(overhaulAt) || overhaulAt <= 0) return null;
+    const hoursSinceOverhaul = currentAirframe - overhaulAt;
+    const tbo = Number(overhaulModal.component.limite_tbo);
+    const remaining = tbo - hoursSinceOverhaul;
+    const pct = (hoursSinceOverhaul / tbo) * 100;
+    return { hoursSinceOverhaul: hoursSinceOverhaul.toFixed(1), remaining: remaining.toFixed(1), pct: pct.toFixed(1), currentAirframe };
+  }, [overhaulForm.airframeHours, overhaulModal.component, components]);
 
   return (
     <div className="space-y-6">
@@ -2738,6 +2816,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Restante</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Vida %</th>
                 {weightedRate > 0 && <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Est. TBO</th>}
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Overhaul</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-slate-100">
@@ -2746,11 +2825,19 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
                 const pct = (Number(c.horas_acumuladas)/Number(c.limite_tbo))*100;
                 const colorClass = pct > 80 ? 'text-red-600 font-bold' : pct > 60 ? 'text-orange-500 font-bold' : 'text-green-600 font-bold';
                 const tboPred = weightedRate > 0 ? getPrediction(restante) : null;
+                const hasOverhaul = c.overhaul_airframe != null;
                 
                 return (
                   <tr key={c.id} className="hover:bg-blue-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-600 font-mono">{c.aircraftId}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">{c.tipo}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">
+                      {c.tipo}
+                      {hasOverhaul && (
+                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800" title={`Overhaul @ AF ${c.overhaul_airframe}${c.overhaul_date ? ' - ' + new Date(c.overhaul_date).toLocaleDateString('es-CL') : ''}`}>
+                          ✅ OH
+                        </span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{Number(c.horas_acumuladas).toFixed(1)} hrs</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{Number(c.limite_tbo).toFixed(0)} hrs</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{restante.toFixed(1)} hrs</td>
@@ -2766,6 +2853,17 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
                         ) : '-'}
                       </td>
                     )}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {c.tipo !== 'AIRFRAME' && (
+                        <button
+                          onClick={() => openOverhaulModal(c)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-semibold transition-colors border border-indigo-200"
+                          title={hasOverhaul ? 'Editar overhaul' : 'Registrar overhaul'}
+                        >
+                          🔧 {hasOverhaul ? 'Editar' : 'Registrar'}
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -2773,6 +2871,125 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
           </table>
         </div>
       </div>
+
+      {/* Overhaul Registration Modal */}
+      {overhaulModal.open && overhaulModal.component && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setOverhaulModal({ open: false, component: null })}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="bg-gradient-to-r from-indigo-600 to-blue-700 px-6 py-5 rounded-t-2xl">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                🔧 Overhaul - {overhaulModal.component.tipo}
+              </h3>
+              <p className="text-indigo-200 text-sm mt-1">Aeronave: {overhaulModal.component.aircraftId}</p>
+            </div>
+            
+            <div className="p-6 space-y-5">
+              {/* Explanation */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
+                <p className="font-semibold mb-1">💡 ¿Cómo funciona?</p>
+                <p>Se usa AIRFRAME como referencia estable (no se reinicia con overhauls de motor). Las horas desde el overhaul se calculan como:</p>
+                <p className="font-mono mt-1 text-center font-bold">Horas = AIRFRAME actual − AIRFRAME al overhaul</p>
+              </div>
+
+              {/* Form */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">
+                    Horas AIRFRAME al momento del overhaul *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={overhaulForm.airframeHours}
+                    onChange={(e) => setOverhaulForm(f => ({ ...f, airframeHours: e.target.value }))}
+                    className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all font-mono text-lg"
+                    placeholder="ej: 2745.5"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">
+                    Fecha del overhaul *
+                  </label>
+                  <input
+                    type="date"
+                    value={overhaulForm.date}
+                    onChange={(e) => setOverhaulForm(f => ({ ...f, date: e.target.value }))}
+                    className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">
+                    Notas (opcional)
+                  </label>
+                  <textarea
+                    value={overhaulForm.notes}
+                    onChange={(e) => setOverhaulForm(f => ({ ...f, notes: e.target.value }))}
+                    className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                    rows={2}
+                    placeholder="ej: Overhaul completo en taller XYZ"
+                  />
+                </div>
+              </div>
+
+              {/* Preview */}
+              {overhaulPreview && (
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-4">
+                  <h4 className="font-bold text-green-800 mb-3 flex items-center gap-2">📊 Vista Previa</h4>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="bg-white rounded-lg p-3 text-center">
+                      <div className="text-slate-500 text-xs">AIRFRAME actual</div>
+                      <div className="font-mono font-bold text-lg">{overhaulPreview.currentAirframe.toFixed(1)}</div>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 text-center">
+                      <div className="text-slate-500 text-xs">Overhaul @</div>
+                      <div className="font-mono font-bold text-lg">{parseFloat(overhaulForm.airframeHours).toFixed(1)}</div>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 text-center">
+                      <div className="text-slate-500 text-xs">Horas desde OH</div>
+                      <div className="font-mono font-bold text-lg text-indigo-600">{overhaulPreview.hoursSinceOverhaul}</div>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 text-center">
+                      <div className="text-slate-500 text-xs">Restante TBO</div>
+                      <div className="font-mono font-bold text-lg text-green-600">{overhaulPreview.remaining}</div>
+                    </div>
+                  </div>
+                  <div className="mt-3 text-center">
+                    <span className={`inline-flex items-center px-4 py-1 rounded-full text-sm font-bold ${parseFloat(overhaulPreview.pct) > 80 ? 'bg-red-100 text-red-700' : parseFloat(overhaulPreview.pct) > 60 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
+                      {overhaulPreview.pct}% vida usada
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Result message */}
+              {overhaulResult && (
+                <div className={`rounded-lg p-4 text-sm font-semibold ${overhaulResult.success ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+                  {overhaulResult.success ? `✅ ${overhaulResult.message}` : `❌ ${overhaulResult.error}`}
+                </div>
+              )}
+
+              {/* Buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setOverhaulModal({ open: false, component: null })}
+                  className="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleOverhaulSubmit}
+                  disabled={overhaulSubmitting || !overhaulForm.airframeHours || !overhaulForm.date}
+                  className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white rounded-lg font-semibold transition-colors"
+                >
+                  {overhaulSubmitting ? '⏳ Guardando...' : '💾 Guardar Overhaul'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

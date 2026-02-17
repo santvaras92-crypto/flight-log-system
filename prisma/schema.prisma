@@ -38,14 +38,17 @@ model Aircraft {
 }
 
 model Component {
-  id               Int      @id @default(autoincrement())
-  tipo             String
-  horas_acumuladas Decimal  @default(0.0)
-  limite_tbo       Decimal
-  aircraftId       String
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  Aircraft         Aircraft @relation(fields: [aircraftId], references: [matricula])
+  id                     Int       @id @default(autoincrement())
+  tipo                   String
+  horas_acumuladas       Decimal   @default(0.0)
+  limite_tbo             Decimal
+  aircraftId             String
+  last_overhaul_airframe Decimal?
+  last_overhaul_date     DateTime?
+  overhaul_notes         String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  Aircraft               Aircraft  @relation(fields: [aircraftId], references: [matricula])
 }
 
 model Flight {
