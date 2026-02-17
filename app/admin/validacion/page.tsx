@@ -146,6 +146,7 @@ export default async function ValidacionPage() {
     valor: ufData.valor,
     fecha: ufData.fecha,
     defaultRate: calculateUFRate(4.5, ufData.valor),
+    defaultInstructorRate: calculateUFRate(1.3, ufData.valor),
   };
 
   return (

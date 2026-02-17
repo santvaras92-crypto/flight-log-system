@@ -74,6 +74,7 @@ interface UFInfo {
   valor: number;
   fecha: string;
   defaultRate: number;
+  defaultInstructorRate: number;
 }
 
 type Tab = 'flights' | 'deposits' | 'fuel';
@@ -142,8 +143,8 @@ export default function ValidacionClient({
 
   const handleApproveFlightSubmission = async (submissionId: number, hasCopiloto: boolean) => {
     const rate = parseFloat(getRate(submissionId));
-    // Default instructor rate: 30000 si hay copiloto, 0 si no
-    const defaultInstRate = hasCopiloto ? '30000' : '0';
+    // Default instructor rate: 1.3 UF si hay copiloto, 0 si no
+    const defaultInstRate = hasCopiloto ? ufInfo.defaultInstructorRate.toString() : '0';
     const instructorRate = parseFloat(instructorRates[submissionId] ?? defaultInstRate);
 
     startTransition(async () => {
@@ -227,7 +228,7 @@ export default function ValidacionClient({
                 const diffHobbs = hobbsFinal - lastHobbs;
                 const diffTach = tachFinal - lastTach;
                 const rate = parseFloat(getRate(flight.id));
-                const instRate = parseFloat(instructorRates[flight.id] ?? (flight.copiloto ? '30000' : '0'));
+                const instRate = parseFloat(instructorRates[flight.id] ?? (flight.copiloto ? ufInfo.defaultInstructorRate.toString() : '0'));
                 // Costo = horas * (tarifa + instructor_rate)
                 const estimatedCost = diffHobbs * (rate + instRate);
 
@@ -312,7 +313,9 @@ export default function ValidacionClient({
                             <span className="text-sm font-medium">UF del día: ${formatUFDisplay(ufInfo.valor)}</span>
                           </div>
                           <div className="text-xs text-slate-500">
-                            4.5 UF × ${formatUFDisplay(ufInfo.valor)} = <span className="font-semibold">${ufInfo.defaultRate.toLocaleString('es-CL')}</span>/hora
+                            Tarifa: 4.5 UF × ${formatUFDisplay(ufInfo.valor)} = <span className="font-semibold">${ufInfo.defaultRate.toLocaleString('es-CL')}</span>/hora
+                            <br/>
+                            Instructor: 1.3 UF × ${formatUFDisplay(ufInfo.valor)} = <span className="font-semibold">${ufInfo.defaultInstructorRate.toLocaleString('es-CL')}</span>/hora
                           </div>
                         </div>
 
@@ -333,10 +336,12 @@ export default function ValidacionClient({
                             <label className="text-xs text-slate-500 uppercase block mb-1">Instructor/SP Rate</label>
                             <input
                               type="number"
-                              value={instructorRates[flight.id] ?? (flight.copiloto ? '30000' : '0')}
+                              value={instructorRates[flight.id] ?? (flight.copiloto ? ufInfo.defaultInstructorRate.toString() : '0')}
                               onChange={(e) => setInstructorRates({ ...instructorRates, [flight.id]: e.target.value })}
                               className="w-full px-3 py-2 border rounded-lg font-mono text-sm"
+                              placeholder={flight.copiloto ? ufInfo.defaultInstructorRate.toString() : '0'}
                             />
+                            <p className="text-xs text-slate-400 mt-1">Base: 1.3 UF = ${ufInfo.defaultInstructorRate.toLocaleString('es-CL')}</p>
                             {flight.copiloto && (
                               <p className="text-xs text-slate-400 mt-1">Copiloto: {flight.copiloto}</p>
                             )}
