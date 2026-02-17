@@ -1,4 +1,4 @@
-'use client'
+// railway-rebuild 1771354074
 
 import React from 'react'
 import { generateAccountStatementPDF } from '@/lib/generate-account-pdf'

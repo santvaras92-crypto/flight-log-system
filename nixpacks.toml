@@ -1,4 +1,4 @@
-# Force clean install and build - Jan 7 2026 v3
+# Force clean install and build - Feb 17 2026 v4
 [phases.setup]
 nixPkgs = ["nodejs_18", "npm-9_x", "openssl"]
 
@@ -6,7 +6,7 @@ nixPkgs = ["nodejs_18", "npm-9_x", "openssl"]
 cmds = ["rm -rf node_modules/.cache", "npm ci --force"]
 
 [phases.build]
-cmds = ["npm run build"]
+cmds = ["echo 'Verifying source files...' && ls -la app/actions/create-flight-submission.ts app/actions/create-fuel.ts app/actions/create-deposit.ts app/actions/pilot-actions.ts lib/generate-account-pdf.ts && npm run build"]
 
 [start]
 cmd = "npm start"
