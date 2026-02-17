@@ -105,6 +105,16 @@ export default function RegisterClient({
               }
             }
           }
+          
+          // Si es admin, pre-seleccionar "Stratus" por defecto
+          if (role === 'ADMIN') {
+            const stratusPilot = pilots.find(p => 
+              String(p.value).toUpperCase() === 'STRATUS'
+            );
+            if (stratusPilot) {
+              setPilotValue(stratusPilot.value);
+            }
+          }
         }
       } catch {
         // No session
