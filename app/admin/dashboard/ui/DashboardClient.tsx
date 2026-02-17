@@ -2159,6 +2159,7 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
                   <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Código</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Litros</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Monto</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">$/L</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fuente</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Detalle</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Boleta</th>
@@ -2182,6 +2183,9 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-green-600">
                       ${l.monto.toLocaleString('es-CL')}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-mono text-slate-700">
+                      {l.litros > 0 && l.monto > 0 ? `$${Math.round(l.monto / l.litros).toLocaleString('es-CL')}` : '-'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm">
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
