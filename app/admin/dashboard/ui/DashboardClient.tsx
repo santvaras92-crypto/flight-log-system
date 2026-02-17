@@ -1847,27 +1847,37 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                   
                   {/* AIRFRAME */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
-                    {f.airframe_hours != null ? Number(f.airframe_hours).toFixed(1) : '-'}
+                    {editMode ? (
+                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.airframe_hours != null ? Number(f.airframe_hours).toFixed(1) : ''} onChange={e=>handleChange(f.id,'airframe_hours',e.target.value)} />
+                    ) : (f.airframe_hours != null ? Number(f.airframe_hours).toFixed(1) : '-')}
                   </td>
                   
                   {/* ENGINE */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
-                    {f.engine_hours != null ? Number(f.engine_hours).toFixed(1) : '-'}
+                    {editMode ? (
+                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.engine_hours != null ? Number(f.engine_hours).toFixed(1) : ''} onChange={e=>handleChange(f.id,'engine_hours',e.target.value)} />
+                    ) : (f.engine_hours != null ? Number(f.engine_hours).toFixed(1) : '-')}
                   </td>
                   
                   {/* PROPELLER */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
-                    {f.propeller_hours != null ? Number(f.propeller_hours).toFixed(1) : '-'}
+                    {editMode ? (
+                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.propeller_hours != null ? Number(f.propeller_hours).toFixed(1) : ''} onChange={e=>handleChange(f.id,'propeller_hours',e.target.value)} />
+                    ) : (f.propeller_hours != null ? Number(f.propeller_hours).toFixed(1) : '-')}
                   </td>
                   
                   {/* AD Salida */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600">
-                    {f.aerodromoSalida || '-'}
+                    {editMode ? (
+                      <input type="text" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-16" defaultValue={f.aerodromoSalida || ''} onChange={e=>handleChange(f.id,'aerodromoSalida',e.target.value)} />
+                    ) : (f.aerodromoSalida || '-')}
                   </td>
                   
                   {/* AD Destino */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600">
-                    {f.aerodromoDestino || '-'}
+                    {editMode ? (
+                      <input type="text" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-16" defaultValue={f.aerodromoDestino || ''} onChange={e=>handleChange(f.id,'aerodromoDestino',e.target.value)} />
+                    ) : (f.aerodromoDestino || '-')}
                   </td>
                   
                   {/* Detalle */}

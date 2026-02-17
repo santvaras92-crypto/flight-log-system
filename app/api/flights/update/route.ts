@@ -72,20 +72,48 @@ export async function POST(req: NextRequest) {
         ...(up.cliente !== undefined ? { cliente: String(up.cliente) } : {}),
         ...(up.instructor !== undefined ? { instructor: String(up.instructor) } : {}),
         ...(up.detalle !== undefined ? { detalle: String(up.detalle) } : {}),
+        ...(up.aerodromoSalida !== undefined ? { aerodromoSalida: String(up.aerodromoSalida) } : {}),
+        ...(up.aerodromoDestino !== undefined ? { aerodromoDestino: String(up.aerodromoDestino) } : {}),
+        ...(up.airframe_hours !== undefined ? { airframe_hours: up.airframe_hours === '' ? null : Number(up.airframe_hours) } : {}),
+        ...(up.engine_hours !== undefined ? { engine_hours: up.engine_hours === '' ? null : Number(up.engine_hours) } : {}),
+        ...(up.propeller_hours !== undefined ? { propeller_hours: up.propeller_hours === '' ? null : Number(up.propeller_hours) } : {}),
       };
 
-      // Recompute costo preserving the historical per-flight rate from CSV when possible
-      // Determine previous effective rate from the stored flight (fallback to pilot's tarifa_hora)
-      const pilot = flight.pilotoId ? await prisma.user.findUnique({ where: { id: flight.pilotoId } }) : null;
-      const prevHoras = flight.diff_hobbs != null ? Number(flight.diff_hobbs) : 0;
-      const prevCosto = flight.costo != null ? Number(flight.costo) : 0;
-      const historicalRate = prevHoras > 0 ? (prevCosto / prevHoras) : Number(pilot?.tarifa_hora || 170000);
-      const horasVal = data.diff_hobbs ?? diff_hobbs ?? flight.diff_hobbs;
-      if (horasVal == null) {
-        data.costo = null;
+      // Handle tarifa and instructor_rate if explicitly edited
+      if (up.tarifa !== undefined) {
+        data.tarifa = up.tarifa === '' ? null : Number(up.tarifa);
+      }
+      if (up.instructor_rate !== undefined) {
+        data.instructor_rate = up.instructor_rate === '' ? null : Number(up.instructor_rate);
+      }
+
+      // Recompute costo: if costo is explicitly set, use it. Otherwise recalculate.
+      if (up.costo !== undefined) {
+        data.costo = up.costo === '' ? null : Number(up.costo);
       } else {
-        const horas = Number(horasVal) || 0;
-        data.costo = Number((historicalRate * horas).toFixed(0));
+        // Recalculate based on tarifa + instructor_rate if either was changed, or diff_hobbs changed
+        const finalTarifa = data.tarifa !== undefined ? (data.tarifa || 0) : (flight.tarifa ? Number(flight.tarifa) : 0);
+        const finalInstructorRate = data.instructor_rate !== undefined ? (data.instructor_rate || 0) : (flight.instructor_rate ? Number(flight.instructor_rate) : 0);
+        const totalRate = finalTarifa + finalInstructorRate;
+        
+        if (totalRate > 0 && (up.tarifa !== undefined || up.instructor_rate !== undefined || data.diff_hobbs !== undefined)) {
+          const horasVal = data.diff_hobbs ?? flight.diff_hobbs;
+          if (horasVal != null) {
+            data.costo = Number((totalRate * Number(horasVal)).toFixed(0));
+          }
+        } else if (data.diff_hobbs !== undefined) {
+          // Fallback: preserve historical rate
+          const pilot = flight.pilotoId ? await prisma.user.findUnique({ where: { id: flight.pilotoId } }) : null;
+          const prevHoras = flight.diff_hobbs != null ? Number(flight.diff_hobbs) : 0;
+          const prevCosto = flight.costo != null ? Number(flight.costo) : 0;
+          const historicalRate = prevHoras > 0 ? (prevCosto / prevHoras) : Number(pilot?.tarifa_hora || 170000);
+          const horasVal = data.diff_hobbs ?? flight.diff_hobbs;
+          if (horasVal == null) {
+            data.costo = null;
+          } else {
+            data.costo = Number((historicalRate * Number(horasVal)).toFixed(0));
+          }
+        }
       }
 
       await prisma.flight.update({ where: { id }, data });
