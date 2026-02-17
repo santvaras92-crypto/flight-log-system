@@ -1,4 +1,4 @@
-// rebuild 1736371200
+// rebuild trigger 1771326213
 // Railway rebuild fix - Jan 8, 2026
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
