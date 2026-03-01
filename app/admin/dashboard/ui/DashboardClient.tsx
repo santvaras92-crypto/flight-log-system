@@ -688,7 +688,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           <div className="text-lg sm:text-3xl font-bold text-slate-900">{overviewMetrics.thisMonthFlights} <span className="text-xs sm:text-lg text-slate-600">flights</span></div>
           <div className="text-base sm:text-xl font-semibold text-cyan-600">{overviewMetrics.thisMonthHours.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-xs sm:text-base text-slate-600">hrs</span></div>
         </div>
-        <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">Dec 2025</p>
+        <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">{new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'America/Santiago' })}</p>
       </div>
     ),
     avgFlightTime: (

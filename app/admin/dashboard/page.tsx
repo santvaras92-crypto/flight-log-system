@@ -108,7 +108,9 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     (async () => {
       const sep9_2020 = new Date('2020-09-09');
       const sixMonthsAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
-      const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+      // Use Chile timezone to avoid UTC midnight issues on Railway
+      const nowChile = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Santiago' }));
+      const firstDayOfMonth = new Date(nowChile.getFullYear(), nowChile.getMonth(), 1);
 
       const [
         totalFlights,
