@@ -18,7 +18,7 @@ export default function MainNav() {
         <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-3 sm:gap-4 group">
+            <Link href="/admin/dashboard" className="flex items-center gap-3 sm:gap-4 group">
               <div className="relative w-12 h-10 sm:w-16 sm:h-12 transition-transform group-hover:scale-105">
                 <Image
                   src="/LOGO_BLANCO.png"
