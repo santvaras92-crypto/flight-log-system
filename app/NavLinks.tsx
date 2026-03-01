@@ -16,7 +16,7 @@ export default function NavLinks() {
 
     const fetchCount = async () => {
       try {
-        const res = await fetch('/api/pending-count', { cache: 'no-store' })
+        const res = await fetch('/api/pending-count', { cache: 'no-store', credentials: 'include' })
         if (res.ok) {
           const data = await res.json()
           setPendingCount(data.count || 0)
