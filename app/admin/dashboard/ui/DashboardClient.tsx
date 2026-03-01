@@ -28,7 +28,7 @@ type InitialData = {
   fuelDetailsByCode?: Record<string, { fecha: string; litros: number; monto: number }[]>;
   csvPilotStats?: Record<string, { flights: number; hours: number; spent: number }>;
   depositsByCode?: Record<string, number>;
-  depositsDetailsByCode?: Record<string, { fecha: string; descripcion: string; monto: number }[]>;
+  depositsDetailsByCode?: Record<string, { id?: number; fecha: string; descripcion: string; monto: number; source?: 'CSV' | 'DB' }[]>;
   pilotDirectory?: {
     initial: { id: number | null; code: string; name: string; email?: string | null; createdAt?: Date | null; fechaNacimiento?: Date | null; telefono?: string | null; numeroLicencia?: string | null; tipoDocumento?: string | null; documento?: string | null; source?: string }[];
     registered: { id: number; code: string; name: string; email: string | null; createdAt: string | Date; fechaNacimiento?: Date | null; telefono?: string | null; numeroLicencia?: string | null; tipoDocumento?: string | null; documento?: string | null }[];
@@ -1349,7 +1349,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
   editMode?: boolean; 
   clientOptions?: { code: string; name: string }[];
   depositsByCode?: Record<string, number>;
-  depositsDetailsByCode?: Record<string, { fecha: string; descripcion: string; monto: number }[]>;
+  depositsDetailsByCode?: Record<string, { id?: number; fecha: string; descripcion: string; monto: number; source?: 'CSV' | 'DB' }[]>;
   fuelByCode?: Record<string, number>;
   fuelDetailsByCode?: Record<string, { fecha: string; litros: number; monto: number }[]>;
   csvPilotNames?: Record<string, string>;
@@ -3137,18 +3137,20 @@ function FinanceCharts({ flights, transactions, palette }: { flights: any[]; tra
   );
 }
 
-function DepositsTable({ depositsDetailsByCode, csvPilotNames }: { depositsDetailsByCode?: Record<string, { fecha: string; descripcion: string; monto: number }[]>; csvPilotNames?: Record<string, string> }) {
+function DepositsTable({ depositsDetailsByCode, csvPilotNames }: { depositsDetailsByCode?: Record<string, { id?: number; fecha: string; descripcion: string; monto: number; source?: 'CSV' | 'DB' }[]>; csvPilotNames?: Record<string, string> }) {
   const [sortBy, setSortBy] = useState<"date" | "pilot" | "amount">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const router = useRouter();
 
   const allDeposits = useMemo(() => {
-    const deposits: { code: string; pilotName: string; fecha: string; descripcion: string; monto: number }[] = [];
+    const deposits: { id?: number; code: string; pilotName: string; fecha: string; descripcion: string; monto: number; source: string }[] = [];
     if (!depositsDetailsByCode) return deposits;
 
     Object.entries(depositsDetailsByCode).forEach(([code, records]) => {
       const pilotName = csvPilotNames?.[code] || code;
       records.forEach(r => {
-        deposits.push({ code, pilotName, fecha: r.fecha, descripcion: r.descripcion, monto: r.monto });
+        deposits.push({ id: r.id, code, pilotName, fecha: r.fecha, descripcion: r.descripcion, monto: r.monto, source: r.source || 'CSV' });
       });
     });
 
@@ -3177,6 +3179,25 @@ function DepositsTable({ depositsDetailsByCode, csvPilotNames }: { depositsDetai
     } else {
       setSortBy(column);
       setSortOrder("desc");
+    }
+  };
+
+  const handleDelete = async (depositId: number, pilotName: string, monto: number) => {
+    if (!confirm(`¿Eliminar este depósito?\n\nPiloto: ${pilotName}\nMonto: $${monto.toLocaleString('es-CL')}\n\nEsto también eliminará la transacción ABONO asociada y afectará el saldo del piloto.`)) return;
+    setDeletingId(depositId);
+    try {
+      const { deleteDeposit } = await import('@/app/actions/delete-deposit');
+      const result = await deleteDeposit(depositId);
+      if (result.ok) {
+        alert('Depósito eliminado correctamente');
+        router.refresh();
+      } else {
+        alert(result.error || 'Error al eliminar');
+      }
+    } catch (e) {
+      alert('Error al eliminar el depósito');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -3227,11 +3248,14 @@ function DepositsTable({ depositsDetailsByCode, csvPilotNames }: { depositsDetai
               >
                 Amount {sortBy === "amount" && (sortOrder === "desc" ? "↓" : "↑")}
               </th>
+              <th className="px-6 py-4 text-center font-bold text-slate-700 uppercase tracking-wider">
+                Acciones
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
             {allDeposits.map((d, idx) => (
-              <tr key={idx} className="hover:bg-blue-50 transition">
+              <tr key={d.id || idx} className="hover:bg-blue-50 transition">
                 <td className="px-6 py-4 text-slate-700 font-medium">{d.fecha}</td>
                 <td className="px-6 py-4 text-slate-900 font-semibold">
                   {d.pilotName}
@@ -3240,6 +3264,19 @@ function DepositsTable({ depositsDetailsByCode, csvPilotNames }: { depositsDetai
                 <td className="px-6 py-4 text-slate-600">{d.descripcion}</td>
                 <td className="px-6 py-4 text-right text-green-700 font-bold">
                   ${d.monto.toLocaleString('es-CL')}
+                </td>
+                <td className="px-6 py-4 text-center">
+                  {d.source === 'DB' && d.id ? (
+                    <button
+                      onClick={() => handleDelete(d.id!, d.pilotName, d.monto)}
+                      disabled={deletingId === d.id}
+                      className="px-2 py-1 rounded-lg bg-red-600 text-white hover:bg-red-700 text-xs font-semibold disabled:opacity-50 transition-colors"
+                    >
+                      {deletingId === d.id ? '...' : 'Eliminar'}
+                    </button>
+                  ) : (
+                    <span className="text-slate-400 text-xs">—</span>
+                  )}
                 </td>
               </tr>
             ))}

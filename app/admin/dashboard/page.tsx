@@ -838,7 +838,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     })(),
     // Detailed deposit records by code for PDF
     depositsDetailsByCode: (() => {
-      const map: Record<string, { fecha: string; descripcion: string; monto: number }[]> = {};
+      const map: Record<string, { id?: number; fecha: string; descripcion: string; monto: number; source: 'CSV' | 'DB' }[]> = {};
       // 1. Read from CSV
       try {
         const depositsPath = path.join(process.cwd(), 'Pago pilotos', 'Pago pilotos.csv');
@@ -855,7 +855,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
             const cleaned = montoStr.replace(/\$/g, '').replace(/\./g, '').replace(',', '.');
             const monto = parseFloat(cleaned) || 0;
             if (!map[code]) map[code] = [];
-            map[code].push({ fecha, descripcion, monto });
+            map[code].push({ fecha, descripcion, monto, source: 'CSV' });
           }
         }
       } catch {}
@@ -866,9 +866,11 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           if (!map[code]) map[code] = [];
           const monto = typeof dep.monto === 'number' ? dep.monto : parseFloat(dep.monto.toString());
           map[code].push({ 
+            id: dep.id,
             fecha: dep.fecha.toISOString().split('T')[0], 
             descripcion: dep.detalle || 'Depósito (BD)', 
-            monto 
+            monto,
+            source: 'DB'
           });
         }
       });
