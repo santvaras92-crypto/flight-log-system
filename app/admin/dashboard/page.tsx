@@ -529,6 +529,14 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     allowedPilotCodes = [];
   }
 
+  // Supplement csvPilotNames with DB user names for codes not in the CSV
+  users.forEach((u: any) => {
+    const code = (u.codigo || '').trim().toUpperCase();
+    if (code && !csvPilotNames[code] && u.nombre) {
+      csvPilotNames[code] = u.nombre;
+    }
+  });
+
   const csvPilotStats: Record<string, { flights: number; hours: number; spent: number }> = {};
   try {
     const flightsCsvPath = path.join(process.cwd(), "Base de dato AQI.csv");
