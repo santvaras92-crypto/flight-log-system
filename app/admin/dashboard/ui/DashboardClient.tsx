@@ -99,7 +99,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
   const [filterPilot, setFilterPilot] = useState("");
   const [theme, setTheme] = useState<string>('hybrid');
   const [yearFilter, setYearFilter] = useState<string>("");
-  const [sortOrder, setSortOrder] = useState<"desc"|"asc">("desc");
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(pagination?.page || 1);
@@ -110,7 +110,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
   const [draggedCard, setDraggedCard] = useState<string | null>(null);
   const pageSize = pagination?.pageSize || 100;
   useEffect(() => { localStorage.setItem('dash-theme', theme); }, [theme]);
-  
+
   // Load card order from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('overview-card-order');
@@ -145,15 +145,15 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         const before = endDate ? new Date(endDate).getTime() : Infinity;
         return d >= after && d <= before;
       });
-    const sorted = filtered.slice().sort((a,b)=>{
+    const sorted = filtered.slice().sort((a, b) => {
       const da = new Date(a.fecha).getTime();
       const db = new Date(b.fecha).getTime();
       return sortOrder === 'desc' ? db - da : da - db;
     });
     // Client-side slice when no server pagination is provided; otherwise server already paginated.
     if (!pagination) {
-      const start = (currentPage-1)*pageSize;
-      return sorted.slice(start, start+pageSize);
+      const start = (currentPage - 1) * pageSize;
+      return sorted.slice(start, start + pageSize);
     }
     return sorted;
   }, [initialData.flights, filterAircraft, yearFilter, sortOrder, startDate, endDate, currentPage, pageSize, pagination]);
@@ -195,19 +195,19 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       setDraggedCard(null);
       return;
     }
-    
+
     const newOrder = [...cardOrder];
     const draggedIndex = newOrder.indexOf(draggedCard);
     const targetIndex = newOrder.indexOf(targetCardId);
-    
+
     if (draggedIndex === -1 || targetIndex === -1) {
       setDraggedCard(null);
       return;
     }
-    
+
     newOrder.splice(draggedIndex, 1);
     newOrder.splice(targetIndex, 0, draggedCard);
-    
+
     setCardOrder(newOrder);
     localStorage.setItem('overview-card-order', JSON.stringify(newOrder));
     setDraggedCard(null);
@@ -221,7 +221,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
   const handleTouchStart = (e: React.TouchEvent, cardId: string) => {
     const touch = e.touches[0];
     setTouchStartPos({ x: touch.clientX, y: touch.clientY });
-    
+
     // Start a timer - only enable drag after 300ms hold
     const timer = setTimeout(() => {
       setDraggedCard(cardId);
@@ -229,17 +229,17 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       // Haptic feedback on supported devices
       if (navigator.vibrate) navigator.vibrate(50);
     }, 300);
-    
+
     setTouchHoldTimer(timer);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!touchStartPos) return;
-    
+
     const touch = e.touches[0];
     const deltaX = Math.abs(touch.clientX - touchStartPos.x);
     const deltaY = Math.abs(touch.clientY - touchStartPos.y);
-    
+
     // If moved before hold timer completes, cancel drag and allow scroll
     if (!isDragEnabled && (deltaX > 10 || deltaY > 10)) {
       if (touchHoldTimer) {
@@ -249,7 +249,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       setTouchStartPos(null);
       return;
     }
-    
+
     // If drag is enabled, prevent scrolling
     if (isDragEnabled && draggedCard) {
       e.preventDefault();
@@ -262,31 +262,31 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       clearTimeout(touchHoldTimer);
       setTouchHoldTimer(null);
     }
-    
+
     if (!draggedCard || !isDragEnabled) {
       setDraggedCard(null);
       setIsDragEnabled(false);
       setTouchStartPos(null);
       return;
     }
-    
+
     const touch = e.changedTouches[0];
     const element = document.elementFromPoint(touch.clientX, touch.clientY);
-    
+
     // Find the card element
     let cardElement = element;
     while (cardElement && !cardElement.getAttribute('data-card-id')) {
       cardElement = cardElement.parentElement;
     }
-    
+
     const droppedOnCardId = cardElement?.getAttribute('data-card-id');
-    
+
     if (droppedOnCardId && droppedOnCardId !== draggedCard) {
       handleDrop(droppedOnCardId);
     } else {
       setDraggedCard(null);
     }
-    
+
     setIsDragEnabled(false);
     setTouchStartPos(null);
   };
@@ -295,17 +295,17 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
   const handleGenerateBackup = async (action: 'email' | 'download') => {
     setBackupLoading(true);
     setBackupMessage(null);
-    
+
     try {
       const response = await fetch(`/api/export/complete-backup?action=${action}`, {
         method: 'POST'
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Error generando backup');
       }
-      
+
       if (action === 'download') {
         // Download file
         const blob = await response.blob();
@@ -317,23 +317,23 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        
+
         setBackupMessage({ type: 'success', text: '✓ Backup descargado exitosamente' });
       } else {
         // Email sent
         const result = await response.json();
         setBackupMessage({ type: 'success', text: `✓ Backup enviado a santvaras92@gmail.com` });
       }
-      
+
       setTimeout(() => {
         setShowBackupModal(false);
         setBackupMessage(null);
       }, 3000);
     } catch (error) {
       console.error('Error generating backup:', error);
-      setBackupMessage({ 
-        type: 'error', 
-        text: `⚠ Error: ${error instanceof Error ? error.message : 'Error desconocido'}` 
+      setBackupMessage({
+        type: 'error',
+        text: `⚠ Error: ${error instanceof Error ? error.message : 'Error desconocido'}`
       });
     } finally {
       setBackupLoading(false);
@@ -359,7 +359,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         onTouchMove={handleTouchMove}
         onTouchEnd={(e) => handleTouchEnd(e, cardId)}
         className={`${isDragging ? 'opacity-50 scale-95' : 'opacity-100'} ${isComplexCard ? 'col-span-2 lg:col-span-1' : ''} transition-all duration-150 cursor-move select-none`}
-        style={{ 
+        style={{
           WebkitUserSelect: 'none',
           WebkitTouchCallout: 'none',
           touchAction: isBeingDragged ? 'none' : 'auto'
@@ -385,13 +385,13 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Fuel Rate</h3>
         <div className="space-y-0.5 sm:space-y-1">
           <div className="text-lg sm:text-3xl font-bold text-slate-900">
-            {typeof overviewMetrics?.fuelRateLph === 'number' 
-              ? overviewMetrics.fuelRateLph.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
+            {typeof overviewMetrics?.fuelRateLph === 'number'
+              ? overviewMetrics.fuelRateLph.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
               : '0,00'} <span className="text-sm sm:text-xl text-slate-600">L/H</span>
           </div>
           <div className="text-base sm:text-xl font-semibold text-amber-600">
-            {typeof overviewMetrics?.fuelRateGph === 'number' 
-              ? overviewMetrics.fuelRateGph.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
+            {typeof overviewMetrics?.fuelRateGph === 'number'
+              ? overviewMetrics.fuelRateGph.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
               : '0,00'} <span className="text-xs sm:text-base text-slate-600">GAL/H</span>
           </div>
         </div>
@@ -432,34 +432,34 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       const stdDev = stats?.stdDev || 0;
       const trend = stats?.trend || 0;
       const hobbsTachRatio = overviewMetrics?.annualStats?.hobbsTachRatio || 1.25;
-      
+
       // Intervals for progress calculation
       const OIL_INTERVAL = 50; // TACH hours
       const HUNDRED_HR_INTERVAL = 100; // TACH hours
-      
+
       // Calculate predictions
       const calcPrediction = (hoursRemaining: number) => {
         if (weightedRate <= 0) return { days: 0, minDays: 0, maxDays: 0, date: null, minDate: null, maxDate: null };
-        
+
         const days = Math.round(hoursRemaining / weightedRate);
         const uncertainty = 1.96 * stdDev * Math.sqrt(days) / weightedRate;
         const minDays = Math.max(1, Math.round(days - uncertainty));
         const maxDays = Math.round(days + uncertainty);
-        
+
         const today = new Date();
         const date = new Date(today.getTime() + days * 24 * 60 * 60 * 1000);
         const minDate = new Date(today.getTime() + minDays * 24 * 60 * 60 * 1000);
         const maxDate = new Date(today.getTime() + maxDays * 24 * 60 * 60 * 1000);
-        
+
         return { days, minDays, maxDays, date, minDate, maxDate };
       };
-      
+
       const oilPred = calcPrediction(oilRemaining);
       const hundredPred = calcPrediction(hundredRemaining);
-      
+
       const formatDate = (d: Date | null) => d ? d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' }) : '-';
       const formatDateShort = (d: Date | null) => d ? d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' }).replace('.', '') : '-';
-      
+
       // Format days as human-readable: "X,Y a" / "Xm" / "Xd"
       const fmtTime = (days: number): string => {
         if (days <= 0) return '0d';
@@ -467,7 +467,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         if (days < 365) return `${Math.floor(days / 30)}m`;
         return `${(days / 365).toFixed(1)}a`;
       };
-      
+
       // Progress bar color based on remaining percentage
       const getProgressColor = (remaining: number, total: number) => {
         const pct = (remaining / total) * 100;
@@ -476,7 +476,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         if (pct <= 60) return 'bg-yellow-500';
         return 'bg-green-500';
       };
-      
+
       const getProgressBg = (remaining: number, total: number) => {
         const pct = (remaining / total) * 100;
         if (pct <= 20) return 'bg-red-100';
@@ -484,12 +484,12 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         if (pct <= 60) return 'bg-yellow-100';
         return 'bg-green-100';
       };
-      
+
       const oilPct = Math.min(100, Math.max(0, 100 - (oilRemaining / OIL_INTERVAL) * 100));
       const hundredPct = Math.min(100, Math.max(0, 100 - (hundredRemaining / HUNDRED_HR_INTERVAL) * 100));
       const oilHobbsRemaining = oilRemaining * hobbsTachRatio;
       const hundredHobbsRemaining = hundredRemaining * hobbsTachRatio;
-      
+
       return (
         <div className={`${palette.card} rounded-xl p-3 sm:p-4 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] flex flex-col`}>
           {/* Header */}
@@ -505,7 +505,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             </div>
             <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[8px] sm:text-[10px] font-bold rounded-full">🔮 SMART</span>
           </div>
-          
+
           {/* Oil Change Section */}
           <div className="mb-2 sm:mb-3">
             <div className="flex items-center justify-between mb-1">
@@ -513,7 +513,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               <span className="text-[10px] sm:text-xs font-mono text-slate-600">{oilPct.toFixed(0)}%</span>
             </div>
             <div className={`w-full h-2 sm:h-2.5 rounded-full ${getProgressBg(oilRemaining, OIL_INTERVAL)} overflow-hidden`}>
-              <div 
+              <div
                 className={`h-full rounded-full ${getProgressColor(oilRemaining, OIL_INTERVAL)} transition-all duration-500`}
                 style={{ width: `${oilPct}%` }}
               />
@@ -529,7 +529,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               )}
             </div>
           </div>
-          
+
           {/* 100hr Inspection Section */}
           <div className="mb-2 sm:mb-3">
             <div className="flex items-center justify-between mb-1">
@@ -537,7 +537,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               <span className="text-[10px] sm:text-xs font-mono text-slate-600">{hundredPct.toFixed(0)}%</span>
             </div>
             <div className={`w-full h-2 sm:h-2.5 rounded-full ${getProgressBg(hundredRemaining, HUNDRED_HR_INTERVAL)} overflow-hidden`}>
-              <div 
+              <div
                 className={`h-full rounded-full ${getProgressColor(hundredRemaining, HUNDRED_HR_INTERVAL)} transition-all duration-500`}
                 style={{ width: `${hundredPct}%` }}
               />
@@ -553,7 +553,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               )}
             </div>
           </div>
-          
+
           {/* Usage Stats Footer */}
           <div className="mt-auto pt-2 border-t border-slate-200">
             <div className="flex items-center justify-between text-[9px] sm:text-[11px]">
@@ -599,7 +599,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       today.setHours(0, 0, 0, 0);
       const recentFlights = (initialData.allFlightsComplete || initialData.flights || [])
         .filter(f => new Date(f.fecha) >= sixtyDaysAgo);
-      
+
       // Map each code to their most recent flight date
       const codeToLastFlight = new Map<string, Date>();
       recentFlights.forEach(f => {
@@ -613,7 +613,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           codeToLastFlight.set(code, flightDate);
         }
       });
-      
+
       // Pre-compute total spent per pilot code from ALL DB flights (same source as Flights tab)
       const allFlights = initialData.allFlightsComplete || initialData.flights || [];
       const spentByCode = new Map<string, number>();
@@ -627,7 +627,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       const activePilotsData = Array.from(codeToLastFlight.entries())
         .map(([code, lastFlightDate]) => {
           const daysSince = Math.round((today.getTime() - lastFlightDate.getTime()) / (1000 * 60 * 60 * 24));
-          
+
           // Try to find name from CSV pilot names first, then from registered users
           let name = csvPilotNames?.[code];
           if (!name) {
@@ -640,7 +640,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           const deposits = Math.round(initialData.depositsByCode?.[code] || 0);
           const fuel = Math.round(initialData.fuelByCode?.[code] || 0);
           const balance = deposits - spent + fuel;
-          
+
           return {
             name,
             code,
@@ -649,7 +649,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           };
         })
         .sort((a, b) => a.daysSince - b.daysSince); // Sort by most recent first
-      
+
       return (
         <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] lg:overflow-y-auto flex flex-col`}>
           <div className="flex items-start justify-between mb-2 sm:mb-3">
@@ -728,132 +728,132 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       </div>
     ),
     ...(overviewMetrics?.annualStats ? {
-    annualStats: (() => {
-      const stats = overviewMetrics.annualStats;
-      
-      // Calculate max values for bar scaling
-      const maxHobbs = Math.max(stats.hobbsThisYear, stats.hobbsPrevYear);
-      const maxTach = Math.max(stats.tachThisYear, stats.tachPrevYear);
-      const maxFlights = Math.max(stats.avgMonthlyFlightsThisYear, stats.avgMonthlyFlightsPrevYear);
-      
-      const renderTrend = (value: number) => (
-        <div className={`flex items-center gap-0.5 sm:gap-1 text-[9px] sm:text-xs font-semibold ${value >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-          <span>{value >= 0 ? '↗' : '↘'}</span>
-          <span>{value >= 0 ? '+' : ''}{value.toFixed(0)}%</span>
-        </div>
-      );
-      
-      const renderBar = (current: number, max: number, color: string, isPrevious = false) => {
-        const pct = max > 0 ? (current / max) * 100 : 0;
-        return (
-          <div className="w-full h-1.5 sm:h-2 rounded-full bg-slate-200 overflow-hidden">
-            <div 
-              className={`h-full rounded-full transition-all ${isPrevious ? 'bg-slate-400' : color}`}
-              style={{ width: `${pct}%` }}
-            />
+      annualStats: (() => {
+        const stats = overviewMetrics.annualStats;
+
+        // Calculate max values for bar scaling
+        const maxHobbs = Math.max(stats.hobbsThisYear, stats.hobbsPrevYear);
+        const maxTach = Math.max(stats.tachThisYear, stats.tachPrevYear);
+        const maxFlights = Math.max(stats.avgMonthlyFlightsThisYear, stats.avgMonthlyFlightsPrevYear);
+
+        const renderTrend = (value: number) => (
+          <div className={`flex items-center gap-0.5 sm:gap-1 text-[9px] sm:text-xs font-semibold ${value >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+            <span>{value >= 0 ? '↗' : '↘'}</span>
+            <span>{value >= 0 ? '+' : ''}{value.toFixed(0)}%</span>
           </div>
         );
-      };
-      
-      return (
-        <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[120px] sm:min-h-[200px] lg:min-h-[280px] flex flex-col`}>
-          <div className="flex items-center justify-between gap-2 sm:gap-3 mb-3 sm:mb-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                <svg className="w-3 h-3 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
+
+        const renderBar = (current: number, max: number, color: string, isPrevious = false) => {
+          const pct = max > 0 ? (current / max) * 100 : 0;
+          return (
+            <div className="w-full h-1.5 sm:h-2 rounded-full bg-slate-200 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${isPrevious ? 'bg-slate-400' : color}`}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+          );
+        };
+
+        return (
+          <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[120px] sm:min-h-[200px] lg:min-h-[280px] flex flex-col`}>
+            <div className="flex items-center justify-between gap-2 sm:gap-3 mb-3 sm:mb-4">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-3 h-3 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-slate-500 text-[9px] sm:text-xs font-semibold uppercase tracking-wide">Estadísticas Anuales</h3>
+                  <p className="text-[8px] sm:text-[10px] text-slate-400">Últimos 365 días</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-slate-500 text-[9px] sm:text-xs font-semibold uppercase tracking-wide">Estadísticas Anuales</h3>
-                <p className="text-[8px] sm:text-[10px] text-slate-400">Últimos 365 días</p>
+              <div className="text-right">
+                <div className="text-[8px] sm:text-[10px] text-slate-400">Ratio HOBBS/TACH</div>
+                <div className="text-sm sm:text-lg font-bold text-violet-600">{stats.hobbsTachRatio.toFixed(2)}</div>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-[8px] sm:text-[10px] text-slate-400">Ratio HOBBS/TACH</div>
-              <div className="text-sm sm:text-lg font-bold text-violet-600">{stats.hobbsTachRatio.toFixed(2)}</div>
+
+            <div className="grid grid-cols-3 gap-2 sm:gap-6 flex-1">
+              {/* HOBBS Hours */}
+              <div className="flex flex-col">
+                <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
+                  <span className="text-sm sm:text-lg">🕐</span>
+                  <span className="text-[8px] sm:text-sm font-semibold text-violet-700 uppercase tracking-wide">HOBBS</span>
+                </div>
+                <div className="text-sm sm:text-2xl font-bold text-slate-900">
+                  {stats.hobbsThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                </div>
+                <div className="text-[8px] sm:text-xs text-slate-500 mb-1 sm:mb-2">
+                  {stats.avgMonthlyHobbsThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} hrs/mes
+                </div>
+                <div className="space-y-1 sm:space-y-1.5 mt-auto">
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <span className="text-[7px] sm:text-[10px] text-slate-500 w-8 sm:w-14">Este año</span>
+                    {renderBar(stats.hobbsThisYear, maxHobbs, 'bg-violet-500')}
+                  </div>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <span className="text-[7px] sm:text-[10px] text-slate-400 w-8 sm:w-14">Anterior</span>
+                    {renderBar(stats.hobbsPrevYear, maxHobbs, 'bg-slate-400', true)}
+                  </div>
+                </div>
+                <div className="mt-1 sm:mt-2">{renderTrend(stats.hobbsTrend)}</div>
+              </div>
+
+              {/* TACH Hours */}
+              <div className="flex flex-col">
+                <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
+                  <span className="text-sm sm:text-lg">⏱️</span>
+                  <span className="text-[8px] sm:text-sm font-semibold text-emerald-700 uppercase tracking-wide">TACH</span>
+                </div>
+                <div className="text-sm sm:text-2xl font-bold text-slate-900">
+                  {stats.tachThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                </div>
+                <div className="text-[8px] sm:text-xs text-slate-500 mb-1 sm:mb-2">
+                  {stats.avgMonthlyTachThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} hrs/mes
+                </div>
+                <div className="space-y-1 sm:space-y-1.5 mt-auto">
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <span className="text-[7px] sm:text-[10px] text-slate-500 w-8 sm:w-14">Este año</span>
+                    {renderBar(stats.tachThisYear, maxTach, 'bg-emerald-500')}
+                  </div>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <span className="text-[7px] sm:text-[10px] text-slate-400 w-8 sm:w-14">Anterior</span>
+                    {renderBar(stats.tachPrevYear, maxTach, 'bg-slate-400', true)}
+                  </div>
+                </div>
+                <div className="mt-1 sm:mt-2">{renderTrend(stats.tachTrend)}</div>
+              </div>
+
+              {/* Monthly Flights */}
+              <div className="flex flex-col">
+                <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
+                  <span className="text-sm sm:text-lg">✈️</span>
+                  <span className="text-[8px] sm:text-sm font-semibold text-sky-700 uppercase tracking-wide">Vuelos</span>
+                </div>
+                <div className="text-sm sm:text-2xl font-bold text-slate-900">
+                  {stats.avgMonthlyFlightsThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-[8px] sm:text-sm text-slate-500">/mes</span>
+                </div>
+                <div className="text-[8px] sm:text-xs text-slate-500 mb-1 sm:mb-2">
+                  {(stats.avgMonthlyFlightsThisYear * 12).toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/año
+                </div>
+                <div className="space-y-1 sm:space-y-1.5 mt-auto">
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <span className="text-[7px] sm:text-[10px] text-slate-500 w-8 sm:w-14">Este año</span>
+                    {renderBar(stats.avgMonthlyFlightsThisYear, maxFlights, 'bg-sky-500')}
+                  </div>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <span className="text-[7px] sm:text-[10px] text-slate-400 w-8 sm:w-14">Anterior</span>
+                    {renderBar(stats.avgMonthlyFlightsPrevYear, maxFlights, 'bg-slate-400', true)}
+                  </div>
+                </div>
+                <div className="mt-1 sm:mt-2">{renderTrend(stats.flightsTrend)}</div>
+              </div>
             </div>
           </div>
-          
-          <div className="grid grid-cols-3 gap-2 sm:gap-6 flex-1">
-            {/* HOBBS Hours */}
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
-                <span className="text-sm sm:text-lg">🕐</span>
-                <span className="text-[8px] sm:text-sm font-semibold text-violet-700 uppercase tracking-wide">HOBBS</span>
-              </div>
-              <div className="text-sm sm:text-2xl font-bold text-slate-900">
-                {stats.hobbsThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-              </div>
-              <div className="text-[8px] sm:text-xs text-slate-500 mb-1 sm:mb-2">
-                {stats.avgMonthlyHobbsThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} hrs/mes
-              </div>
-              <div className="space-y-1 sm:space-y-1.5 mt-auto">
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <span className="text-[7px] sm:text-[10px] text-slate-500 w-8 sm:w-14">Este año</span>
-                  {renderBar(stats.hobbsThisYear, maxHobbs, 'bg-violet-500')}
-                </div>
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <span className="text-[7px] sm:text-[10px] text-slate-400 w-8 sm:w-14">Anterior</span>
-                  {renderBar(stats.hobbsPrevYear, maxHobbs, 'bg-slate-400', true)}
-                </div>
-              </div>
-              <div className="mt-1 sm:mt-2">{renderTrend(stats.hobbsTrend)}</div>
-            </div>
-            
-            {/* TACH Hours */}
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
-                <span className="text-sm sm:text-lg">⏱️</span>
-                <span className="text-[8px] sm:text-sm font-semibold text-emerald-700 uppercase tracking-wide">TACH</span>
-              </div>
-              <div className="text-sm sm:text-2xl font-bold text-slate-900">
-                {stats.tachThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-              </div>
-              <div className="text-[8px] sm:text-xs text-slate-500 mb-1 sm:mb-2">
-                {stats.avgMonthlyTachThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} hrs/mes
-              </div>
-              <div className="space-y-1 sm:space-y-1.5 mt-auto">
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <span className="text-[7px] sm:text-[10px] text-slate-500 w-8 sm:w-14">Este año</span>
-                  {renderBar(stats.tachThisYear, maxTach, 'bg-emerald-500')}
-                </div>
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <span className="text-[7px] sm:text-[10px] text-slate-400 w-8 sm:w-14">Anterior</span>
-                  {renderBar(stats.tachPrevYear, maxTach, 'bg-slate-400', true)}
-                </div>
-              </div>
-              <div className="mt-1 sm:mt-2">{renderTrend(stats.tachTrend)}</div>
-            </div>
-            
-            {/* Monthly Flights */}
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
-                <span className="text-sm sm:text-lg">✈️</span>
-                <span className="text-[8px] sm:text-sm font-semibold text-sky-700 uppercase tracking-wide">Vuelos</span>
-              </div>
-              <div className="text-sm sm:text-2xl font-bold text-slate-900">
-                {stats.avgMonthlyFlightsThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-[8px] sm:text-sm text-slate-500">/mes</span>
-              </div>
-              <div className="text-[8px] sm:text-xs text-slate-500 mb-1 sm:mb-2">
-                {(stats.avgMonthlyFlightsThisYear * 12).toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/año
-              </div>
-              <div className="space-y-1 sm:space-y-1.5 mt-auto">
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <span className="text-[7px] sm:text-[10px] text-slate-500 w-8 sm:w-14">Este año</span>
-                  {renderBar(stats.avgMonthlyFlightsThisYear, maxFlights, 'bg-sky-500')}
-                </div>
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <span className="text-[7px] sm:text-[10px] text-slate-400 w-8 sm:w-14">Anterior</span>
-                  {renderBar(stats.avgMonthlyFlightsPrevYear, maxFlights, 'bg-slate-400', true)}
-                </div>
-              </div>
-              <div className="mt-1 sm:mt-2">{renderTrend(stats.flightsTrend)}</div>
-            </div>
-          </div>
-        </div>
-      );
-    })()
+        );
+      })()
     } : {}),
   } : {};
 
@@ -864,17 +864,17 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
             <h3 className="text-2xl font-bold text-slate-900 mb-4">💾 Generar Backup Completo</h3>
-            
+
             {backupMessage && (
               <div className={`mb-4 p-3 rounded-lg ${backupMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                 {backupMessage.text}
               </div>
             )}
-            
+
             <p className="text-slate-600 mb-6">
               Este backup incluye <strong>toda la información histórica</strong> desde el primer vuelo hasta hoy:
             </p>
-            
+
             <ul className="text-sm text-slate-600 space-y-2 mb-6">
               <li>✈️ Todos los vuelos registrados</li>
               <li>💰 Depósitos completos (DB + CSV)</li>
@@ -883,7 +883,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               <li>🛩️ Aeronaves y mantenimiento</li>
               <li>📝 Transacciones y pendientes</li>
             </ul>
-            
+
             <div className="space-y-3">
               <button
                 onClick={() => handleGenerateBackup('download')}
@@ -907,7 +907,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                   </>
                 )}
               </button>
-              
+
               <button
                 onClick={() => handleGenerateBackup('email')}
                 disabled={backupLoading}
@@ -930,7 +930,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                   </>
                 )}
               </button>
-              
+
               <button
                 onClick={() => {
                   setShowBackupModal(false);
@@ -942,43 +942,42 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                 Cancelar
               </button>
             </div>
-            
+
             <p className="text-xs text-slate-500 mt-4 text-center">
-              El backup se genera con todos los datos históricos.<br/>
+              El backup se genera con todos los datos históricos.<br />
               Tamaño estimado: 2-5 MB
             </p>
           </div>
         </div>
       )}
-      
+
       {/* Navigation Tabs - Mobile Responsive */}
       <div className="mb-6 sm:mb-8 space-y-3">
         <nav className="flex gap-1 sm:gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-xl border border-slate-200 shadow-sm">
-        {[
-          { id: "overview", label: "Overview", icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
-          { id: "flights", label: "Flights", icon: "M12 19l9 2-9-18-9 18 9-2zm0 0v-8" },
-          { id: "pilots", label: "Pilots", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" },
-          { id: "fuel", label: "Fuel", icon: "M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" },
-          { id: "maintenance", label: "Mx", icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" },
-          { id: "finance", label: "Finance", icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
-        ].map(t => (
-          <button 
-            key={t.id} 
-            onClick={()=>setTab(t.id)}
-            className={`flex-1 min-w-0 px-2 sm:px-6 py-3 sm:py-4 rounded-lg font-bold uppercase tracking-wide text-xs sm:text-sm transition-all flex items-center justify-center gap-1 sm:gap-2 ${
-              tab===t.id 
-                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg' 
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <svg className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={t.icon} />
-            </svg>
-            <span className="hidden sm:inline">{t.label}</span>
-          </button>
-        ))}
-      </nav>
-    </div>
+          {[
+            { id: "overview", label: "Overview", icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
+            { id: "flights", label: "Flights", icon: "M12 19l9 2-9-18-9 18 9-2zm0 0v-8" },
+            { id: "pilots", label: "Pilots", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" },
+            { id: "fuel", label: "Fuel", icon: "M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" },
+            { id: "maintenance", label: "Mx", icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" },
+            { id: "finance", label: "Finance", icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
+          ].map(t => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`flex-1 min-w-0 px-2 sm:px-6 py-3 sm:py-4 rounded-lg font-bold uppercase tracking-wide text-xs sm:text-sm transition-all flex items-center justify-center gap-1 sm:gap-2 ${tab === t.id
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+            >
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={t.icon} />
+              </svg>
+              <span className="hidden sm:inline">{t.label}</span>
+            </button>
+          ))}
+        </nav>
+      </div>
 
       {tab === "overview" && overviewMetrics && cardOrder.length > 0 && (
         <div className="space-y-6">
@@ -993,26 +992,25 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           <div className="flex justify-end mb-3">
             <button
               onClick={() => setEditMode(!editMode)}
-              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 ${
-                editMode 
-                  ? 'bg-yellow-500 hover:bg-yellow-600 text-white shadow-lg' 
+              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 ${editMode
+                  ? 'bg-yellow-500 hover:bg-yellow-600 text-white shadow-lg'
                   : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
-              }`}
+                }`}
             >
               {editMode ? '✏️ Modo Edición ON' : '✏️ Editar Celdas'}
             </button>
           </div>
-          <FlightsTable 
-            flights={flights} 
+          <FlightsTable
+            flights={flights}
             allFlightsComplete={initialData.allFlightsComplete}
-            users={initialData.users} 
-            editMode={editMode} 
+            users={initialData.users}
+            editMode={editMode}
             clientOptions={(() => {
               // Combine CSV pilots and registered pilots
               const allCodes = new Set<string>();
               (allowedPilotCodes || []).forEach(c => allCodes.add(c.toUpperCase()));
               (registeredPilotCodes || []).forEach(c => allCodes.add(c.toUpperCase()));
-              
+
               return Array.from(allCodes).map(code => ({
                 code,
                 name: csvPilotNames?.[code] || initialData.users.find(u => u.codigo === code)?.nombre || code
@@ -1027,8 +1025,8 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 bg-slate-50 border-2 border-slate-200 rounded-b-2xl mt-2">
             <button
               className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-40 hover:bg-blue-700 transition-colors text-sm sm:text-base"
-              onClick={()=>{
-                const prev = Math.max(1, currentPage-1);
+              onClick={() => {
+                const prev = Math.max(1, currentPage - 1);
                 setCurrentPage(prev);
                 if (pagination) {
                   const params = new URLSearchParams(searchParams.toString());
@@ -1037,43 +1035,43 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                   router.push(`/admin/dashboard?${params.toString()}`);
                 }
               }}
-              disabled={currentPage===1}
+              disabled={currentPage === 1}
             >
               ← <span className="hidden sm:inline">Prev</span>
             </button>
-            
+
             {/* Mobile: show only current page / total */}
             <span className="sm:hidden text-sm font-semibold text-slate-600">
               {currentPage} / {pagination ? Math.ceil((pagination.total || 0) / pageSize) : Math.ceil(initialData.flights.length / pageSize)}
             </span>
-            
+
             {/* Desktop: show page buttons */}
             <div className="hidden sm:flex items-center gap-2">
               {(() => {
                 const totalPages = pagination ? Math.ceil((pagination.total || 0) / pageSize) : Math.ceil(initialData.flights.length / pageSize);
                 const pages: (number | string)[] = [];
-                
+
                 // Siempre mostrar primera página
                 pages.push(1);
-                
+
                 // Calcular rango alrededor de página actual
                 const rangeStart = Math.max(2, currentPage - 2);
                 const rangeEnd = Math.min(totalPages - 1, currentPage + 2);
-                
+
                 // Agregar ... si hay gap después de página 1
                 if (rangeStart > 2) pages.push('...');
-                
+
                 // Agregar páginas del rango
                 for (let i = rangeStart; i <= rangeEnd; i++) {
                   pages.push(i);
                 }
-                
+
                 // Agregar ... si hay gap antes de última página
                 if (rangeEnd < totalPages - 1) pages.push('...');
-                
+
                 // Siempre mostrar última página
                 if (totalPages > 1) pages.push(totalPages);
-                
+
                 return pages.map((p, idx) => {
                   if (p === '...') {
                     return <span key={`ellipsis-${idx}`} className="px-2 text-slate-400">...</span>;
@@ -1092,11 +1090,10 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                           router.push(`/admin/dashboard?${params.toString()}`);
                         }
                       }}
-                      className={`min-w-[40px] px-3 py-2 rounded-lg font-semibold transition-all ${
-                        isActive 
-                          ? 'bg-blue-600 text-white shadow-lg' 
+                      className={`min-w-[40px] px-3 py-2 rounded-lg font-semibold transition-all ${isActive
+                          ? 'bg-blue-600 text-white shadow-lg'
                           : 'bg-white text-slate-600 hover:bg-blue-50 border border-slate-300'
-                      }`}
+                        }`}
                     >
                       {pageNum}
                     </button>
@@ -1104,13 +1101,13 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                 });
               })()}
             </div>
-            
+
             <button
               className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-40 hover:bg-blue-700 transition-colors text-sm sm:text-base"
-              onClick={()=>{
-                const next = currentPage+1;
+              onClick={() => {
+                const next = currentPage + 1;
                 if (pagination) {
-                  const maxPages = Math.ceil((pagination.total||0) / pageSize);
+                  const maxPages = Math.ceil((pagination.total || 0) / pageSize);
                   if (next > maxPages) return;
                 }
                 setCurrentPage(next);
@@ -1121,7 +1118,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                   router.push(`/admin/dashboard?${params.toString()}`);
                 }
               }}
-              disabled={pagination ? currentPage >= Math.ceil((pagination.total||0)/pageSize) : flights.length < pageSize}
+              disabled={pagination ? currentPage >= Math.ceil((pagination.total || 0) / pageSize) : flights.length < pageSize}
             >
               <span className="hidden sm:inline">Next</span> →
             </button>
@@ -1133,31 +1130,28 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           <div className="mb-6 flex flex-wrap gap-2 sm:gap-3">
             <button
               onClick={() => setPilotSubTab("accounts")}
-              className={`flex-1 min-w-[100px] px-3 sm:px-6 py-2 sm:py-3 rounded-xl font-bold uppercase tracking-wide text-xs sm:text-sm transition-all ${
-                pilotSubTab === "accounts"
+              className={`flex-1 min-w-[100px] px-3 sm:px-6 py-2 sm:py-3 rounded-xl font-bold uppercase tracking-wide text-xs sm:text-sm transition-all ${pilotSubTab === "accounts"
                   ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl'
                   : 'bg-white/50 text-slate-600 hover:bg-white/80 border-2 border-slate-200'
-              }`}
+                }`}
             >
               <span className="hidden sm:inline">Pilot </span>Accounts
             </button>
             <button
               onClick={() => setPilotSubTab("directory")}
-              className={`flex-1 min-w-[100px] px-3 sm:px-6 py-2 sm:py-3 rounded-xl font-bold uppercase tracking-wide text-xs sm:text-sm transition-all ${
-                pilotSubTab === "directory"
+              className={`flex-1 min-w-[100px] px-3 sm:px-6 py-2 sm:py-3 rounded-xl font-bold uppercase tracking-wide text-xs sm:text-sm transition-all ${pilotSubTab === "directory"
                   ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl'
                   : 'bg-white/50 text-slate-600 hover:bg-white/80 border-2 border-slate-200'
-              }`}
+                }`}
             >
               <span className="hidden sm:inline">Pilot </span>Directory
             </button>
             <button
               onClick={() => setPilotSubTab("deposits")}
-              className={`flex-1 min-w-[100px] px-3 sm:px-6 py-2 sm:py-3 rounded-xl font-bold uppercase tracking-wide text-xs sm:text-sm transition-all ${
-                pilotSubTab === "deposits"
+              className={`flex-1 min-w-[100px] px-3 sm:px-6 py-2 sm:py-3 rounded-xl font-bold uppercase tracking-wide text-xs sm:text-sm transition-all ${pilotSubTab === "deposits"
                   ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl'
                   : 'bg-white/50 text-slate-600 hover:bg-white/80 border-2 border-slate-200'
-              }`}
+                }`}
             >
               Deposits
             </button>
@@ -1191,7 +1185,7 @@ function Overview({ data, flights, palette, allowedPilotCodes, activeDaysLimit, 
   const hoursByDay = useMemo(() => {
     const map: Record<string, number> = {};
     flights.slice().reverse().forEach(f => {
-      const day = new Date(f.fecha).toISOString().slice(0,10);
+      const day = new Date(f.fecha).toISOString().slice(0, 10);
       map[day] = (map[day] || 0) + Number(f.diff_hobbs);
     });
     const labels = Object.keys(map).sort();
@@ -1233,19 +1227,19 @@ function Overview({ data, flights, palette, allowedPilotCodes, activeDaysLimit, 
     });
   }, [data.users, data.flights, data.allFlights, allowedPilotCodes, activeDaysLimit]);
 
-  const totalHours = data.flights.reduce((a,b)=>a+Number(b.diff_hobbs),0);
-  const totalRevenue = data.flights.reduce((a,b)=>a+Number(b.costo||0),0);
+  const totalHours = data.flights.reduce((a, b) => a + Number(b.diff_hobbs), 0);
+  const totalRevenue = data.flights.reduce((a, b) => a + Number(b.costo || 0), 0);
   return (
     <div className="space-y-6">
       {/* Stats Grid - Estilo ForeFlight */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
         <StatCard title="Total Flights" value={data.flights.length} accent="#3b82f6" icon="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" palette={palette} />
         <StatCard title="Hobbs Hours" value={totalHours.toFixed(1)} accent="#10b981" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" palette={palette} />
-        <StatCard 
-          title="Active Pilots" 
-          value={activePilots.length} 
-          accent="#f59e0b" 
-          icon="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" 
+        <StatCard
+          title="Active Pilots"
+          value={activePilots.length}
+          accent="#f59e0b"
+          icon="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
           palette={palette}
           onClick={() => setShowActivePilots(!showActivePilots)}
         />
@@ -1262,7 +1256,7 @@ function Overview({ data, flights, palette, allowedPilotCodes, activeDaysLimit, 
               </svg>
               Active Pilots (last {activeDaysLimit} days)
             </h3>
-            <button 
+            <button
               onClick={() => setShowActivePilots(false)}
               className="text-white hover:text-red-400 transition-colors"
             >
@@ -1323,7 +1317,7 @@ function Overview({ data, flights, palette, allowedPilotCodes, activeDaysLimit, 
 
 function StatCard({ title, value, accent, icon, palette, onClick }: { title: string; value: string | number; accent: string; icon: string; palette: any; onClick?: () => void }) {
   return (
-    <div 
+    <div
       className={`${palette.card} rounded-2xl p-6 ${palette.shadow} relative overflow-hidden group hover:scale-105 transition-transform duration-300 ${onClick ? 'cursor-pointer' : ''}`}
       onClick={onClick}
     >
@@ -1364,11 +1358,11 @@ function LineChart({ labels, values, palette }: { labels: string[]; values: numb
   return <canvas ref={ref} height={120} />;
 }
 
-function FlightsTable({ flights, allFlightsComplete, users, editMode = false, clientOptions, depositsByCode, depositsDetailsByCode, fuelByCode, fuelDetailsByCode, csvPilotNames }: { 
-  flights: any[]; 
+function FlightsTable({ flights, allFlightsComplete, users, editMode = false, clientOptions, depositsByCode, depositsDetailsByCode, fuelByCode, fuelDetailsByCode, csvPilotNames }: {
+  flights: any[];
   allFlightsComplete?: any[];
-  users: any[]; 
-  editMode?: boolean; 
+  users: any[];
+  editMode?: boolean;
   clientOptions?: { code: string; name: string }[];
   depositsByCode?: Record<string, number>;
   depositsDetailsByCode?: Record<string, { id?: number; fecha: string; descripcion: string; monto: number; source?: 'CSV' | 'DB' }[]>;
@@ -1379,7 +1373,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
   const [drafts, setDrafts] = useState<Record<number, any>>({});
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  
+
   // Filtros locales para la tabla
   const [filterStartDate, setFilterStartDate] = useState("");
   const [filterEndDate, setFilterEndDate] = useState("");
@@ -1398,7 +1392,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
   const filteredFlights = useMemo(() => {
     // Si hay filtro de cliente, usar todos los vuelos completos para mostrar historial completo
     const sourceFlights = filterClient && allFlightsComplete ? allFlightsComplete : flights;
-    
+
     return sourceFlights.filter(f => {
       const fecha = new Date(f.fecha);
       const year = fecha.getFullYear();
@@ -1462,9 +1456,9 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
 
   const handleDeleteFlight = async (flightId: number, pilotName: string, fecha: string, costo: number) => {
     const confirmMsg = `¿Eliminar este vuelo?\n\nPiloto: ${pilotName}\nFecha: ${fecha}\nCosto: $${formatCurrency(costo)}\n\nEsto revertirá:\n• Saldo del piloto (+$${formatCurrency(costo)})\n• Contadores del avión\n• Horas de componentes`;
-    
+
     if (!confirm(confirmMsg)) return;
-    
+
     setDeletingId(flightId);
     try {
       const res = await fetch('/api/flights/delete', {
@@ -1502,7 +1496,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
 
     const code = filterClient.toUpperCase();
     const clientName = csvPilotNames?.[code] || code;
-    
+
     const totalHours = filteredFlights.reduce((sum, f) => sum + (Number(f.diff_hobbs) || 0), 0);
     const totalSpent = Math.round(filteredFlights.reduce((sum, f) => sum + (Number(f.costo) || 0), 0));
     const totalDeposits = Math.round(depositsByCode?.[code] || 0);
@@ -1553,7 +1547,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
       <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-sm font-semibold text-slate-600">Pilot ID:</span>
-          
+
           <select
             value={filterClient}
             onChange={e => setFilterClient(e.target.value)}
@@ -1573,12 +1567,12 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
               >
                 Clear
               </button>
-              
+
               <button
                 onClick={async () => {
                   const code = filterClient.toUpperCase();
                   const clientName = csvPilotNames?.[code] || code;
-                  
+
                   const totalHours = filteredFlights.reduce((sum, f) => sum + (Number(f.diff_hobbs) || 0), 0);
                   const totalSpent = Math.round(filteredFlights.reduce((sum, f) => sum + (Number(f.costo) || 0), 0));
                   const totalDeposits = Math.round(depositsByCode?.[code] || 0);
@@ -1786,60 +1780,60 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
               const año = fecha.getFullYear();
               const mesNombres = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
               const mes = mesNombres[fecha.getMonth()];
-              
+
               return (
                 <tr key={f.id} className="hover:bg-blue-50 transition-colors">
                   {/* Fecha */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-medium">
                     {editMode ? (
-                      <input type="date" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-full" value={fecha.toISOString().slice(0,10)} onChange={e=>handleChange(f.id,'fecha',e.target.value)} />
+                      <input type="date" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-full" value={fecha.toISOString().slice(0, 10)} onChange={e => handleChange(f.id, 'fecha', e.target.value)} />
                     ) : (
                       fecha.toLocaleDateString("es-CL")
                     )}
                   </td>
-                  
+
                   {/* Tac. 1 */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={Number(f.tach_inicio).toFixed(1)} onChange={e=>handleChange(f.id,'tach_inicio',e.target.value)} />
+                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={Number(f.tach_inicio).toFixed(1)} onChange={e => handleChange(f.id, 'tach_inicio', e.target.value)} />
                     ) : Number(f.tach_inicio).toFixed(1)}
                   </td>
-                  
+
                   {/* Tac. 2 */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={Number(f.tach_fin).toFixed(1)} onChange={e=>handleChange(f.id,'tach_fin',e.target.value)} />
+                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={Number(f.tach_fin).toFixed(1)} onChange={e => handleChange(f.id, 'tach_fin', e.target.value)} />
                     ) : Number(f.tach_fin).toFixed(1)}
                   </td>
-                  
+
                   {/* Dif. Taco */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs font-semibold text-blue-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.diff_tach ?? ''} onChange={e=>handleChange(f.id,'diff_tach',e.target.value)} />
+                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.diff_tach ?? ''} onChange={e => handleChange(f.id, 'diff_tach', e.target.value)} />
                     ) : (f.diff_tach != null ? Number(f.diff_tach).toFixed(1) : '-')}
                   </td>
-                  
+
                   {/* Hobbs I */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.hobbs_inicio ?? ''} onChange={e=>handleChange(f.id,'hobbs_inicio',e.target.value)} />
+                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.hobbs_inicio ?? ''} onChange={e => handleChange(f.id, 'hobbs_inicio', e.target.value)} />
                     ) : (f.hobbs_inicio != null ? Number(f.hobbs_inicio).toFixed(1) : '-')}
                   </td>
-                  
+
                   {/* Hobbs F */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.hobbs_fin ?? ''} onChange={e=>handleChange(f.id,'hobbs_fin',e.target.value)} />
+                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.hobbs_fin ?? ''} onChange={e => handleChange(f.id, 'hobbs_fin', e.target.value)} />
                     ) : (f.hobbs_fin != null ? Number(f.hobbs_fin).toFixed(1) : '-')}
                   </td>
-                  
+
                   {/* Dif. Hobbs (Horas) */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs font-semibold text-blue-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.diff_hobbs ?? ''} onChange={e=>handleChange(f.id,'diff_hobbs',e.target.value)} />
+                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.diff_hobbs ?? ''} onChange={e => handleChange(f.id, 'diff_hobbs', e.target.value)} />
                     ) : (f.diff_hobbs != null ? Number(f.diff_hobbs).toFixed(1) : '-')}
                   </td>
-                  
+
                   {/* Piloto */}
                   <td
                     className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-700 font-medium"
@@ -1850,108 +1844,108 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                         type="text"
                         className="px-1 py-1 border rounded text-[10px] sm:text-xs w-full"
                         defaultValue={pilotName}
-                        onChange={e=>handleChange(f.id,'piloto_raw',e.target.value)}
+                        onChange={e => handleChange(f.id, 'piloto_raw', e.target.value)}
                       />
                     ) : (
                       pilotName
                     )}
                   </td>
-                  
+
                   {/* Copiloto-instructor */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600">
                     {editMode ? (
-                      <input type="text" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-full" defaultValue={f.copiloto || ''} onChange={e=>handleChange(f.id,'copiloto',e.target.value)} />
+                      <input type="text" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-full" defaultValue={f.copiloto || ''} onChange={e => handleChange(f.id, 'copiloto', e.target.value)} />
                     ) : (f.copiloto || '-')}
                   </td>
-                  
+
                   {/* Pilot ID (Cliente) */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-700 font-semibold">
                     {editMode ? (
-                      <input type="text" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-12" defaultValue={f.cliente || ''} onChange={e=>handleChange(f.id,'cliente',e.target.value)} />
+                      <input type="text" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-12" defaultValue={f.cliente || ''} onChange={e => handleChange(f.id, 'cliente', e.target.value)} />
                     ) : (f.cliente || '-')}
                   </td>
-                  
+
                   {/* Airplane Rate (Tarifa) */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="1000" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-20" defaultValue={f.tarifa || ''} onChange={e=>handleChange(f.id,'tarifa',e.target.value)} />
+                      <input type="number" step="1000" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-20" defaultValue={f.tarifa || ''} onChange={e => handleChange(f.id, 'tarifa', e.target.value)} />
                     ) : (f.tarifa ? `$${formatCurrency(Number(f.tarifa))}` : '-')}
                   </td>
-                  
+
                   {/* Instructor/ Safety Pilot Rate */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="1000" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-20" defaultValue={f.instructor_rate || ''} onChange={e=>handleChange(f.id,'instructor_rate',e.target.value)} />
+                      <input type="number" step="1000" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-20" defaultValue={f.instructor_rate || ''} onChange={e => handleChange(f.id, 'instructor_rate', e.target.value)} />
                     ) : (f.instructor_rate ? `$${formatCurrency(Number(f.instructor_rate))}` : '-')}
                   </td>
-                  
+
                   {/* Total */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs font-bold text-green-700 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="1000" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-20" defaultValue={f.costo ?? ''} onChange={e=>handleChange(f.id,'costo',e.target.value)} />
+                      <input type="number" step="1000" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-20" defaultValue={f.costo ?? ''} onChange={e => handleChange(f.id, 'costo', e.target.value)} />
                     ) : (f.costo != null ? `$${formatCurrency(Number(f.costo))}` : '-')}
                   </td>
-                  
+
                   {/* AIRFRAME */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.airframe_hours != null ? Number(f.airframe_hours).toFixed(1) : ''} onChange={e=>handleChange(f.id,'airframe_hours',e.target.value)} />
+                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.airframe_hours != null ? Number(f.airframe_hours).toFixed(1) : ''} onChange={e => handleChange(f.id, 'airframe_hours', e.target.value)} />
                     ) : (f.airframe_hours != null ? Number(f.airframe_hours).toFixed(1) : '-')}
                   </td>
-                  
+
                   {/* ENGINE */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.engine_hours != null ? Number(f.engine_hours).toFixed(1) : ''} onChange={e=>handleChange(f.id,'engine_hours',e.target.value)} />
+                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.engine_hours != null ? Number(f.engine_hours).toFixed(1) : ''} onChange={e => handleChange(f.id, 'engine_hours', e.target.value)} />
                     ) : (f.engine_hours != null ? Number(f.engine_hours).toFixed(1) : '-')}
                   </td>
-                  
+
                   {/* PROPELLER */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
                     {editMode ? (
-                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.propeller_hours != null ? Number(f.propeller_hours).toFixed(1) : ''} onChange={e=>handleChange(f.id,'propeller_hours',e.target.value)} />
+                      <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.propeller_hours != null ? Number(f.propeller_hours).toFixed(1) : ''} onChange={e => handleChange(f.id, 'propeller_hours', e.target.value)} />
                     ) : (f.propeller_hours != null ? Number(f.propeller_hours).toFixed(1) : '-')}
                   </td>
-                  
+
                   {/* AD Salida */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600">
                     {editMode ? (
-                      <input type="text" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-16" defaultValue={f.aerodromoSalida || ''} onChange={e=>handleChange(f.id,'aerodromoSalida',e.target.value)} />
+                      <input type="text" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-16" defaultValue={f.aerodromoSalida || ''} onChange={e => handleChange(f.id, 'aerodromoSalida', e.target.value)} />
                     ) : (f.aerodromoSalida || '-')}
                   </td>
-                  
+
                   {/* AD Destino */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600">
                     {editMode ? (
-                      <input type="text" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-16" defaultValue={f.aerodromoDestino || ''} onChange={e=>handleChange(f.id,'aerodromoDestino',e.target.value)} />
+                      <input type="text" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-16" defaultValue={f.aerodromoDestino || ''} onChange={e => handleChange(f.id, 'aerodromoDestino', e.target.value)} />
                     ) : (f.aerodromoDestino || '-')}
                   </td>
-                  
+
                   {/* Detalle */}
                   <td className="px-2 py-2 text-[10px] sm:text-xs text-slate-600 whitespace-nowrap max-w-[300px] overflow-x-auto">
                     {editMode ? (
-                      <input type="text" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-full" defaultValue={f.detalle || ''} onChange={e=>handleChange(f.id,'detalle',e.target.value)} />
+                      <input type="text" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-full" defaultValue={f.detalle || ''} onChange={e => handleChange(f.id, 'detalle', e.target.value)} />
                     ) : (
                       <span>{f.detalle || '-'}</span>
                     )}
                   </td>
-                  
+
                   {/* Año */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 text-center font-medium">
                     {año}
                   </td>
-                  
+
                   {/* Mes */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 text-center">
                     {mes}
                   </td>
-                  
+
                   {/* Delete */}
                   <td className="px-2 py-2 whitespace-nowrap text-center">
                     <button
                       onClick={() => handleDeleteFlight(
-                        f.id, 
-                        pilotName, 
+                        f.id,
+                        pilotName,
                         fecha.toLocaleDateString('es-CL'),
                         Number(f.costo || 0)
                       )}
@@ -1977,7 +1971,7 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
     (registeredPilotCodes || []).forEach(c => base.add(String(c).toUpperCase()));
     return base;
   }, [allowedPilotCodes, registeredPilotCodes]);
-  
+
   const data = useMemo(() => {
     // Build aggregation per Code using flights where cliente == Code
     const byCode: Map<string, any> = new Map();
@@ -2012,10 +2006,10 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
       const fs = flightsByCode.get(code) || [];
       const csvStats = csvPilotStats?.[code];
       const flightsCount = csvStats?.flights ?? fs.length;
-      const hours = csvStats?.hours ?? fs.reduce((a,b)=> a + Number(b.diff_hobbs || 0), 0);
-      const totalSpent = csvStats?.spent ?? fs.reduce((a,b)=> a + Number(b.costo || 0), 0);
+      const hours = csvStats?.hours ?? fs.reduce((a, b) => a + Number(b.diff_hobbs || 0), 0);
+      const totalSpent = csvStats?.spent ?? fs.reduce((a, b) => a + Number(b.costo || 0), 0);
       const rateHr = hours > 0 ? totalSpent / hours : 0;
-      const deposits = depositsByCode?.[code] ?? (u ? transactions.filter(t => t.userId === u.id && t.tipo === 'ABONO').reduce((a,b)=>a+Number(b.monto),0) : 0);
+      const deposits = depositsByCode?.[code] ?? (u ? transactions.filter(t => t.userId === u.id && t.tipo === 'ABONO').reduce((a, b) => a + Number(b.monto), 0) : 0);
       const fuelCredit = (fuelByCode?.[code] || 0);
       const displayName = csvPilotNames?.[code] || u?.nombre || code;
       result.push({
@@ -2070,7 +2064,7 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">${Number(p.tarifa_hora).toLocaleString("es-CL")}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">${Number(p.saldo_cuenta).toLocaleString("es-CL")}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">${Number(-p.spent).toLocaleString("es-CL")}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-mono">${Number(p.fuel||0).toLocaleString("es-CL")}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-mono">${Number(p.fuel || 0).toLocaleString("es-CL")}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">${Number(p.deposits).toLocaleString("es-CL")}</td>
               </tr>
             ))}
@@ -2081,219 +2075,218 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
   );
 }
 
-  function FuelTable({ logs }: { logs: any[] }) {
-    const [filterPilot, setFilterPilot] = useState('');
-    const [filterSource, setFilterSource] = useState<'ALL' | 'CSV' | 'DB'>('ALL');
-    const [currentPage, setCurrentPage] = useState(1);
-    const [fuelImageModalUrl, setFuelImageModalUrl] = useState<string | null>(null);
-    const pageSize = 50;
-    
-    // Get unique pilots for filter dropdown
-    const pilots = useMemo(() => {
-      const unique = new Map<string, string>();
-      logs.forEach(l => {
-        if (l.pilotCode && !unique.has(l.pilotCode)) {
-          unique.set(l.pilotCode, l.pilotName || l.pilotCode);
-        }
-      });
-      return Array.from(unique.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-    }, [logs]);
-    
-    // Filter and paginate
-    const filteredLogs = useMemo(() => {
-      let result = logs;
-      if (filterPilot) {
-        result = result.filter(l => l.pilotCode === filterPilot);
+function FuelTable({ logs }: { logs: any[] }) {
+  const [filterPilot, setFilterPilot] = useState('');
+  const [filterSource, setFilterSource] = useState<'ALL' | 'CSV' | 'DB'>('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [fuelImageModalUrl, setFuelImageModalUrl] = useState<string | null>(null);
+  const pageSize = 50;
+
+  // Get unique pilots for filter dropdown
+  const pilots = useMemo(() => {
+    const unique = new Map<string, string>();
+    logs.forEach(l => {
+      if (l.pilotCode && !unique.has(l.pilotCode)) {
+        unique.set(l.pilotCode, l.pilotName || l.pilotCode);
       }
-      if (filterSource !== 'ALL') {
-        result = result.filter(l => l.source === filterSource);
-      }
-      return result;
-    }, [logs, filterPilot, filterSource]);
-    
-    const totalPages = Math.ceil(filteredLogs.length / pageSize);
-    const paginatedLogs = filteredLogs.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-    
-    // Stats
-    const totalMonto = filteredLogs.reduce((sum, l) => sum + (l.monto || 0), 0);
-    const totalLitros = filteredLogs.reduce((sum, l) => sum + (l.litros || 0), 0);
-    
-    return (
-      <div className="space-y-4">
-        {/* Filters */}
-        <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-lg p-4">
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-slate-600">Piloto:</label>
-              <select 
-                value={filterPilot} 
-                onChange={e => { setFilterPilot(e.target.value); setCurrentPage(1); }}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
-              >
-                <option value="">Todos</option>
-                {pilots.map(([code, name]) => (
-                  <option key={code} value={code}>{code} - {name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-slate-600">Fuente:</label>
-              <select 
-                value={filterSource} 
-                onChange={e => { setFilterSource(e.target.value as any); setCurrentPage(1); }}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
-              >
-                <option value="ALL">Todas</option>
-                <option value="CSV">Histórico (CSV)</option>
-                <option value="DB">App (DB)</option>
-              </select>
-            </div>
-            <div className="ml-auto flex gap-4 text-sm">
-              <span className="px-3 py-2 bg-blue-100 text-blue-800 rounded-lg font-semibold">
-                {filteredLogs.length} registros
-              </span>
-              <span className="px-3 py-2 bg-green-100 text-green-800 rounded-lg font-semibold">
-                ${totalMonto.toLocaleString('es-CL')} total
-              </span>
-              <span className="px-3 py-2 bg-amber-100 text-amber-800 rounded-lg font-semibold">
-                {totalLitros.toFixed(1)} L total
-              </span>
-            </div>
+    });
+    return Array.from(unique.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [logs]);
+
+  // Filter and paginate
+  const filteredLogs = useMemo(() => {
+    let result = logs;
+    if (filterPilot) {
+      result = result.filter(l => l.pilotCode === filterPilot);
+    }
+    if (filterSource !== 'ALL') {
+      result = result.filter(l => l.source === filterSource);
+    }
+    return result;
+  }, [logs, filterPilot, filterSource]);
+
+  const totalPages = Math.ceil(filteredLogs.length / pageSize);
+  const paginatedLogs = filteredLogs.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  // Stats
+  const totalMonto = filteredLogs.reduce((sum, l) => sum + (l.monto || 0), 0);
+  const totalLitros = filteredLogs.reduce((sum, l) => sum + (l.litros || 0), 0);
+
+  return (
+    <div className="space-y-4">
+      {/* Filters */}
+      <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-lg p-4">
+        <div className="flex flex-wrap gap-4 items-center">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-slate-600">Piloto:</label>
+            <select
+              value={filterPilot}
+              onChange={e => { setFilterPilot(e.target.value); setCurrentPage(1); }}
+              className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            >
+              <option value="">Todos</option>
+              {pilots.map(([code, name]) => (
+                <option key={code} value={code}>{code} - {name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-slate-600">Fuente:</label>
+            <select
+              value={filterSource}
+              onChange={e => { setFilterSource(e.target.value as any); setCurrentPage(1); }}
+              className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            >
+              <option value="ALL">Todas</option>
+              <option value="CSV">Histórico (CSV)</option>
+              <option value="DB">App (DB)</option>
+            </select>
+          </div>
+          <div className="ml-auto flex gap-4 text-sm">
+            <span className="px-3 py-2 bg-blue-100 text-blue-800 rounded-lg font-semibold">
+              {filteredLogs.length} registros
+            </span>
+            <span className="px-3 py-2 bg-green-100 text-green-800 rounded-lg font-semibold">
+              ${totalMonto.toLocaleString('es-CL')} total
+            </span>
+            <span className="px-3 py-2 bg-amber-100 text-amber-800 rounded-lg font-semibold">
+              {totalLitros.toFixed(1)} L total
+            </span>
           </div>
         </div>
-        
-        {/* Table */}
-        <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
-          <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
-            <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-              </svg>
-              Registros de Combustible (Histórico + App)
-            </h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Piloto</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Código</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Litros</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Monto</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">$/L</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fuente</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Detalle</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Boleta</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-slate-100">
-                {paginatedLogs.map((l) => (
-                  <tr key={l.id} className={`hover:bg-blue-50 transition-colors ${l.source === 'CSV' ? 'bg-slate-50/50' : ''}`}>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-700">
-                      {new Date(l.fecha).toLocaleDateString('es-CL')}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-slate-900">
-                      {l.pilotName}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-mono text-indigo-600">
-                      {l.pilotCode || '-'}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600 font-mono">
-                      {l.litros > 0 ? `${l.litros.toFixed(1)} L` : '-'}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-green-600">
-                      ${l.monto.toLocaleString('es-CL')}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-mono text-slate-700">
-                      {l.litros > 0 && l.monto > 0 ? `$${Math.round(l.monto / l.litros).toLocaleString('es-CL')}` : '-'}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        l.source === 'CSV' ? 'bg-slate-200 text-slate-700' : 'bg-blue-100 text-blue-700'
+      </div>
+
+      {/* Table */}
+      <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
+        <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
+          <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+            </svg>
+            Registros de Combustible (Histórico + App)
+          </h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-200">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Piloto</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Código</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Litros</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Monto</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">$/L</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fuente</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Detalle</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Boleta</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-slate-100">
+              {paginatedLogs.map((l) => (
+                <tr key={l.id} className={`hover:bg-blue-50 transition-colors ${l.source === 'CSV' ? 'bg-slate-50/50' : ''}`}>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-700">
+                    {new Date(l.fecha).toLocaleDateString('es-CL')}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-slate-900">
+                    {l.pilotName}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-mono text-indigo-600">
+                    {l.pilotCode || '-'}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600 font-mono">
+                    {l.litros > 0 ? `${l.litros.toFixed(1)} L` : '-'}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-green-600">
+                    ${l.monto.toLocaleString('es-CL')}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-mono text-slate-700">
+                    {l.litros > 0 && l.monto > 0 ? `$${Math.round(l.monto / l.litros).toLocaleString('es-CL')}` : '-'}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${l.source === 'CSV' ? 'bg-slate-200 text-slate-700' : 'bg-blue-100 text-blue-700'
                       }`}>
-                        {l.source === 'CSV' ? 'Histórico' : 'App'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-slate-600 max-w-[200px] truncate">
-                      {l.detalle || '-'}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm">
-                      {l.imageUrl ? (
-                        <button
-                          onClick={() => {
-                            const url = l.imageUrl.startsWith('/api/uploads/fuel-image') ? l.imageUrl :
-                              l.imageUrl.startsWith('http') ? l.imageUrl :
+                      {l.source === 'CSV' ? 'Histórico' : 'App'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-slate-600 max-w-[200px] truncate">
+                    {l.detalle || '-'}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                    {l.imageUrl ? (
+                      <button
+                        onClick={() => {
+                          const url = l.imageUrl.startsWith('/api/uploads/fuel-image') ? l.imageUrl :
+                            l.imageUrl.startsWith('http') ? l.imageUrl :
                               l.imageUrl.startsWith('/uploads/fuel/')
                                 ? `/api/uploads/fuel-image?key=${encodeURIComponent(`fuel/${l.imageUrl.split('/').pop()}`)}`
                                 : l.imageUrl;
-                            setFuelImageModalUrl(url);
-                          }}
-                          className="underline font-medium text-blue-600 hover:text-blue-800"
-                        >
-                          Ver
+                          setFuelImageModalUrl(url);
+                        }}
+                        className="underline font-medium text-blue-600 hover:text-blue-800"
+                      >
+                        Ver
+                      </button>
+                    ) : (
+                      <span className="text-slate-400">-</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                    {l.source === 'DB' && typeof l.id === 'number' ? (
+                      <form action={require('../../../actions/delete-fuel-log').deleteFuelLog} onSubmit={(e) => { if (!confirm(`¿Eliminar registro ${l.id}?`)) { e.preventDefault(); } }}>
+                        <input type="hidden" name="fuelLogId" value={l.id} />
+                        <button type="submit" className="px-2 py-1 rounded-lg bg-red-600 text-white hover:bg-red-700 text-xs">
+                          Eliminar
                         </button>
-                      ) : (
-                        <span className="text-slate-400">-</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm">
-                      {l.source === 'DB' && typeof l.id === 'number' ? (
-                        <form action={require('../../../actions/delete-fuel-log').deleteFuelLog} onSubmit={(e)=>{ if(!confirm(`¿Eliminar registro ${l.id}?`)) { e.preventDefault(); } }}>
-                          <input type="hidden" name="fuelLogId" value={l.id} />
-                          <button type="submit" className="px-2 py-1 rounded-lg bg-red-600 text-white hover:bg-red-700 text-xs">
-                            Eliminar
-                          </button>
-                        </form>
-                      ) : (
-                        <span className="text-slate-400 text-xs">-</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-              <div className="text-sm text-slate-600">
-                Mostrando {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, filteredLogs.length)} de {filteredLogs.length}
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 rounded border border-slate-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100"
-                >
-                  ← Anterior
-                </button>
-                <span className="px-3 py-1 text-sm">
-                  Página {currentPage} de {totalPages}
-                </span>
-                <button
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1 rounded border border-slate-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100"
-                >
-                  Siguiente →
-                </button>
-              </div>
-            </div>
-          )}
+                      </form>
+                    ) : (
+                      <span className="text-slate-400 text-xs">-</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        
-        {/* Image Preview Modal for FuelTable */}
-        <ImagePreviewModal
-          imageUrl={fuelImageModalUrl}
-          onClose={() => setFuelImageModalUrl(null)}
-          alt="Boleta de combustible"
-        />
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+            <div className="text-sm text-slate-600">
+              Mostrando {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, filteredLogs.length)} de {filteredLogs.length}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 rounded border border-slate-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100"
+              >
+                ← Anterior
+              </button>
+              <span className="px-3 py-1 text-sm">
+                Página {currentPage} de {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1 rounded border border-slate-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100"
+              >
+                Siguiente →
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-    );
-  }
+
+      {/* Image Preview Modal for FuelTable */}
+      <ImagePreviewModal
+        imageUrl={fuelImageModalUrl}
+        onClose={() => setFuelImageModalUrl(null)}
+        alt="Boleta de combustible"
+      />
+    </div>
+  );
+}
 
 function PilotDirectory({ directory }: { directory?: { initial: { id: number | null; code: string; name: string; email?: string | null; createdAt?: Date | null; fechaNacimiento?: Date | null; telefono?: string | null; numeroLicencia?: string | null; tipoDocumento?: string | null; documento?: string | null; source?: string }[]; registered: { id: number; code: string; name: string; email: string | null; createdAt: string | Date; fechaNacimiento?: string | Date | null; telefono?: string | null; numeroLicencia?: string | null; tipoDocumento?: string | null; documento?: string | null }[] } }) {
   const [editMode, setEditMode] = useState(false);
@@ -2304,26 +2297,26 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
   const [deletedIds, setDeletedIds] = useState<Set<number>>(new Set());
 
   const rows = useMemo(() => {
-    const init = (directory?.initial || []).map(p => ({ 
-      id: p.id, 
-      code: p.code, 
-      name: p.name, 
-      source: 'CSV', 
-      email: p.email || '-', 
-      createdAt: p.createdAt ? new Date(p.createdAt as any).toLocaleDateString('es-CL') : '-', 
-      fechaNacimiento: p.fechaNacimiento ? new Date(p.fechaNacimiento as any).toISOString().split('T')[0] : null, 
-      fechaNacimientoDisplay: p.fechaNacimiento ? new Date(p.fechaNacimiento as any).toLocaleDateString('es-CL') : '-',
-      telefono: p.telefono || '', 
-      numeroLicencia: p.numeroLicencia || '', 
-      tipoDocumento: p.tipoDocumento || '', 
-      documento: p.documento || '' 
-    }));
-    const reg = (directory?.registered || []).map(p => ({ 
+    const init = (directory?.initial || []).map(p => ({
       id: p.id,
-      code: p.code, 
-      name: p.name, 
-      source: 'Registered', 
-      email: p.email || '', 
+      code: p.code,
+      name: p.name,
+      source: 'CSV',
+      email: p.email || '-',
+      createdAt: p.createdAt ? new Date(p.createdAt as any).toLocaleDateString('es-CL') : '-',
+      fechaNacimiento: p.fechaNacimiento ? new Date(p.fechaNacimiento as any).toISOString().split('T')[0] : null,
+      fechaNacimientoDisplay: p.fechaNacimiento ? new Date(p.fechaNacimiento as any).toLocaleDateString('es-CL') : '-',
+      telefono: p.telefono || '',
+      numeroLicencia: p.numeroLicencia || '',
+      tipoDocumento: p.tipoDocumento || '',
+      documento: p.documento || ''
+    }));
+    const reg = (directory?.registered || []).map(p => ({
+      id: p.id,
+      code: p.code,
+      name: p.name,
+      source: 'Registered',
+      email: p.email || '',
       createdAt: p.createdAt ? new Date(p.createdAt as any).toLocaleDateString('es-CL') : '-',
       fechaNacimiento: p.fechaNacimiento ? new Date(p.fechaNacimiento as any).toISOString().split('T')[0] : null,
       fechaNacimientoDisplay: p.fechaNacimiento ? new Date(p.fechaNacimiento as any).toLocaleDateString('es-CL') : '-',
@@ -2389,10 +2382,10 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
     if (!confirm(`¿Estás seguro de eliminar al piloto "${name}"? Esta acción no se puede deshacer.`)) {
       return;
     }
-    
+
     setDeletingId(id);
     setMessage(null);
-    
+
     try {
       const res = await fetch('/api/pilots/delete', {
         method: 'POST',
@@ -2400,7 +2393,7 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
         body: JSON.stringify({ id })
       });
       const data = await res.json();
-      
+
       if (data.ok) {
         setMessage(`✓ Piloto "${name}" eliminado correctamente`);
         setDeletedIds(prev => new Set([...prev, id]));
@@ -2457,11 +2450,10 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
               setEditMode(!editMode);
               if (editMode) setEditedRows({});
             }}
-            className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors ${
-              editMode 
-                ? 'bg-red-500 hover:bg-red-600 text-white' 
+            className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors ${editMode
+                ? 'bg-red-500 hover:bg-red-600 text-white'
                 : 'bg-white/20 hover:bg-white/30 text-white'
-            }`}
+              }`}
           >
             {editMode ? '✕ Cancelar' : '✏️ Editar'}
           </button>
@@ -2604,31 +2596,31 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
   const stdDev = stats?.stdDev || 0;
   const trend = stats?.trend || 0;
   const rate30d = stats?.rate30d || 0;
-  
+
   // Overhaul modal state
   const [overhaulModal, setOverhaulModal] = useState<{ open: boolean; component: any | null }>({ open: false, component: null });
   const [overhaulForm, setOverhaulForm] = useState({ airframeHours: '', date: '', notes: '' });
   const [overhaulSubmitting, setOverhaulSubmitting] = useState(false);
   const [overhaulResult, setOverhaulResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
   const router = useRouter();
-  
+
   // Calculate predicted inspection with confidence interval
   const getPrediction = (hoursRemaining: number) => {
     if (weightedRate <= 0) return null;
-    
+
     const days = Math.round(hoursRemaining / weightedRate);
     const uncertainty = 1.96 * stdDev * Math.sqrt(days > 0 ? days : 1) / weightedRate;
     const minDays = Math.max(1, Math.round(days - uncertainty));
     const maxDays = Math.round(days + uncertainty);
-    
+
     const today = new Date();
     const date = new Date(today.getTime() + days * 24 * 60 * 60 * 1000);
     const minDate = new Date(today.getTime() + minDays * 24 * 60 * 60 * 1000);
     const maxDate = new Date(today.getTime() + maxDays * 24 * 60 * 60 * 1000);
-    
+
     return { days, minDays, maxDays, date, minDate, maxDate };
   };
-  
+
   // Build inspection items for Oil Change and 100-Hour
   const inspectionItems = [
     {
@@ -2649,7 +2641,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
 
   const formatDate = (d: Date) => d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' });
   const formatShortDate = (d: Date) => d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
-  
+
   // Format days remaining as human-readable: "X,Y años" / "X meses" / "X días"
   const formatTimeRemaining = (days: number): string => {
     if (days <= 0) return '0 días';
@@ -2661,7 +2653,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
     const years = days / 365;
     return `${years.toFixed(1)} años`;
   };
-  
+
   const getUrgencyClass = (days: number) => {
     if (days <= 7) return { row: 'bg-red-50 border-l-4 border-red-500', badge: 'bg-red-100 text-red-700', text: 'text-red-600' };
     if (days <= 15) return { row: 'bg-orange-50 border-l-4 border-orange-500', badge: 'bg-orange-100 text-orange-700', text: 'text-orange-600' };
@@ -2683,7 +2675,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
   const handleOverhaulSubmit = async () => {
     if (!overhaulModal.component) return;
     const c = overhaulModal.component;
-    
+
     if (!overhaulForm.airframeHours || !overhaulForm.date) {
       setOverhaulResult({ success: false, error: 'Horas de airframe y fecha son requeridas' });
       return;
@@ -2695,7 +2687,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
     try {
       // If no dbId, we need to create the component first
       let componentDbId = c.dbId;
-      
+
       if (!componentDbId) {
         // We'll handle this in the server action - create component on the fly
         setOverhaulResult({ success: false, error: 'Componente no encontrado en la base de datos. Ejecute el script de inicialización primero.' });
@@ -2810,12 +2802,12 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
           </div>
           <p className="text-amber-100 text-sm mt-1">Predicciones con intervalo de confianza del 95%</p>
         </div>
-        
+
         <div className="p-6 space-y-4">
           {inspectionItems.map(item => {
             const pred = getPrediction(item.remaining);
             const urgency = pred ? getUrgencyClass(pred.days) : getUrgencyClass(999);
-            
+
             return (
               <div key={item.id} className={`rounded-xl border-2 p-4 transition-all ${urgency.row}`}>
                 <div className="flex items-start justify-between mb-3">
@@ -2832,7 +2824,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
                     <div className="text-xs text-slate-500">horas restantes</div>
                   </div>
                 </div>
-                
+
                 {pred && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-200">
                     <div className="bg-slate-50 rounded-lg p-3">
@@ -2853,7 +2845,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
                     </div>
                   </div>
                 )}
-                
+
                 {!pred && (
                   <div className="text-sm text-slate-500 italic mt-2">Sin datos suficientes para predicción</div>
                 )}
@@ -2861,7 +2853,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
             );
           })}
         </div>
-        
+
         <div className="px-6 py-4 bg-slate-50 border-t border-slate-200">
           <p className="text-xs text-slate-500 flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -2899,11 +2891,11 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
             <tbody className="bg-white divide-y divide-slate-100">
               {components.map(c => {
                 const restante = Number(c.limite_tbo) - Number(c.horas_acumuladas);
-                const pct = (Number(c.horas_acumuladas)/Number(c.limite_tbo))*100;
+                const pct = (Number(c.horas_acumuladas) / Number(c.limite_tbo)) * 100;
                 const colorClass = pct > 80 ? 'text-red-600 font-bold' : pct > 60 ? 'text-orange-500 font-bold' : 'text-green-600 font-bold';
                 const tboPred = weightedRate > 0 ? getPrediction(restante) : null;
                 const hasOverhaul = c.overhaul_airframe != null;
-                
+
                 return (
                   <tr key={c.id} className="hover:bg-blue-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-600 font-mono">{c.aircraftId}</td>
@@ -2959,7 +2951,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
               </h3>
               <p className="text-indigo-200 text-sm mt-1">Aeronave: {overhaulModal.component.aircraftId}</p>
             </div>
-            
+
             <div className="p-6 space-y-5">
               {/* Explanation */}
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
@@ -3086,6 +3078,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
   const [editValue, setEditValue] = useState('');
   const [saving, setSaving] = useState(false);
   const [localEdits, setLocalEdits] = useState<Record<string, string>>({});
+  const [expandedDescs, setExpandedDescs] = useState<Set<number>>(new Set());
   const pageSize = 50;
 
   const TIPO_OPTIONS = [
@@ -3137,7 +3130,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
   const handleCartolaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
       alert('Solo se aceptan archivos Excel (.xlsx)');
       return;
@@ -3221,7 +3214,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
     const totalIngresos = filtered.reduce((s, m) => s + (m.ingreso || 0), 0);
     const totalEgresos = filtered.reduce((s, m) => s + (m.egreso || 0), 0);
     const lastSaldo = movements.length > 0 ? movements[movements.length - 1].saldo : 0;
-    
+
     // By tipo (use local edits)
     const byTipo: Record<string, { ingresos: number; egresos: number; count: number }> = {};
     filtered.forEach(m => {
@@ -3232,7 +3225,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
       byTipo[t].egresos += (m.egreso || 0);
       byTipo[t].count++;
     });
-    
+
     return { totalIngresos, totalEgresos, lastSaldo, byTipo };
   }, [filtered, movements, localEdits]);
 
@@ -3461,8 +3454,8 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
             className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Todos los meses</option>
-            {['01','02','03','04','05','06','07','08','09','10','11','12'].map((m, i) => (
-              <option key={m} value={m}>{['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][i]}</option>
+            {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map((m, i) => (
+              <option key={m} value={m}>{['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'][i]}</option>
             ))}
           </select>
         </div>
@@ -3488,7 +3481,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                   <td className="px-1 sm:px-3 py-1.5 sm:py-2.5 text-[9px] sm:text-xs text-slate-400 font-mono">{m.correlativo}</td>
                   <td className="px-1 sm:px-3 py-1.5 sm:py-2.5 text-[9px] sm:text-xs font-medium text-slate-700 whitespace-nowrap">{formatDate(m.fecha)}</td>
                   {/* Descripción - editable on double click */}
-                  <td className="px-1 sm:px-3 py-1.5 sm:py-2.5 text-[9px] sm:text-sm text-slate-800 font-medium max-w-[100px] sm:max-w-none">
+                  <td className={`px-1 sm:px-3 py-1.5 sm:py-2.5 text-[9px] sm:text-sm text-slate-800 font-medium ${expandedDescs.has(m.correlativo) ? '' : 'max-w-[100px] sm:max-w-[200px]'}`}>
                     {editingCell?.correlativo === m.correlativo && editingCell?.field === 'descripcion' ? (
                       <div className="flex items-center gap-1">
                         <input
@@ -3509,9 +3502,15 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                       </div>
                     ) : (
                       <span
-                        className="truncate block cursor-pointer hover:text-blue-600"
+                        className={`block cursor-pointer hover:text-blue-600 transition-all ${expandedDescs.has(m.correlativo) ? 'whitespace-normal' : 'truncate'}`}
+                        onClick={() => setExpandedDescs(prev => {
+                          const next = new Set(prev);
+                          if (next.has(m.correlativo)) next.delete(m.correlativo);
+                          else next.add(m.correlativo);
+                          return next;
+                        })}
                         onDoubleClick={() => startEditing(m.correlativo, 'descripcion', getDisplayValue(m, 'descripcion'))}
-                        title="Doble clic para editar"
+                        title={expandedDescs.has(m.correlativo) ? 'Clic para colapsar · Doble clic para editar' : 'Clic para expandir · Doble clic para editar'}
                       >
                         {getDisplayValue(m, 'descripcion')}
                       </span>
@@ -3631,7 +3630,7 @@ function FinanceCharts({ flights, transactions, palette }: { flights: any[]; tra
   const monthly = useMemo(() => {
     const map: Record<string, { hours: number; revenue: number }> = {};
     flights.forEach(f => {
-      const k = new Date(f.fecha).toISOString().slice(0,7);
+      const k = new Date(f.fecha).toISOString().slice(0, 7);
       map[k] = map[k] || { hours: 0, revenue: 0 };
       map[k].hours += Number(f.diff_hobbs);
       map[k].revenue += Number(f.costo);
@@ -3662,37 +3661,37 @@ function FinanceCharts({ flights, transactions, palette }: { flights: any[]; tra
           { label: "Revenue", data: monthly.revenue, backgroundColor: g2, borderColor: palette.accent2, borderRadius: 8, borderWidth: 2, maxBarThickness: 24 },
         ],
       },
-      options: { 
-        responsive: true, 
-        plugins: { 
-          legend: { 
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
             position: "top",
             labels: {
               font: { size: 13, weight: 'bold' },
               padding: 15,
               usePointStyle: true
             }
-          }, 
-          tooltip: { 
-            backgroundColor: '#0f172a', 
-            titleColor: '#fff', 
+          },
+          tooltip: {
+            backgroundColor: '#0f172a',
+            titleColor: '#fff',
             bodyColor: '#e2e8f0',
             padding: 12,
             borderColor: palette.accent,
             borderWidth: 1,
             cornerRadius: 8
-          } 
-        }, 
-        scales: { 
-          x: { 
+          }
+        },
+        scales: {
+          x: {
             grid: { color: palette.grid },
             ticks: { font: { weight: 'bold' } }
-          }, 
-          y: { 
+          },
+          y: {
             grid: { color: palette.grid },
             ticks: { font: { weight: 'bold' } }
-          } 
-        } 
+          }
+        }
       },
     });
     return () => chart.destroy();
@@ -3805,13 +3804,13 @@ function DepositsTable({ depositsDetailsByCode, csvPilotNames }: { depositsDetai
         <table className="w-full text-sm">
           <thead className="bg-slate-100 border-b-2 border-slate-300">
             <tr>
-              <th 
+              <th
                 className="px-6 py-4 text-left font-bold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-slate-200 transition"
                 onClick={() => toggleSort("date")}
               >
                 Date {sortBy === "date" && (sortOrder === "desc" ? "↓" : "↑")}
               </th>
-              <th 
+              <th
                 className="px-6 py-4 text-left font-bold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-slate-200 transition"
                 onClick={() => toggleSort("pilot")}
               >
@@ -3820,7 +3819,7 @@ function DepositsTable({ depositsDetailsByCode, csvPilotNames }: { depositsDetai
               <th className="px-6 py-4 text-left font-bold text-slate-700 uppercase tracking-wider">
                 Description
               </th>
-              <th 
+              <th
                 className="px-6 py-4 text-right font-bold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-slate-200 transition"
                 onClick={() => toggleSort("amount")}
               >
