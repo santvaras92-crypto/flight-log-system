@@ -1,4 +1,4 @@
-// railway-rebuild 1771354074
+// railway-rebuild 1772855831
 // Railway rebuild fix - Jan 8, 2026
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';

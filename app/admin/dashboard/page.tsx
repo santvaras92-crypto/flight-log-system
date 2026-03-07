@@ -583,10 +583,10 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       const dataLines = lines.slice(1); // skip header
       dataLines.forEach(line => {
         const cols = parseCSVLine(line);
-        const code = (cols[10] || "").trim().toUpperCase();
+        const code = (cols[9] || "").trim().toUpperCase(); // Pilot ID column
         if (!code) return;
-        const hours = parseDecimal(cols[7]);
-        const total = parseCurrency(cols[13]);
+        const hours = parseDecimal(cols[6]); // Dif. Hobbs column
+        const total = parseCurrency(cols[12]); // Total column
         if (!csvPilotStats[code]) {
           csvPilotStats[code] = { flights: 0, hours: 0, spent: 0 };
         }
