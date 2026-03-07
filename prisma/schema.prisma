@@ -212,3 +212,17 @@ model DeviceToken {
   expiresAt  DateTime
   User       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+model BankMovement {
+  id           Int      @id @default(autoincrement())
+  correlativo  Int      @unique
+  fecha        DateTime
+  descripcion  String
+  egreso       Decimal?
+  ingreso      Decimal?
+  saldo        Decimal
+  tipo         String   @default("Sin clasificar")
+  cliente      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

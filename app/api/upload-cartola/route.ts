@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
-import * as fs from "fs";
-import * as path from "path";
 import { prisma } from "@/lib/prisma";
 
 // Known pilot name patterns from bank transfer descriptions → [friendly name, pilot code]
@@ -205,50 +203,26 @@ export async function POST(req: NextRequest) {
     // Reverse to chronological order (oldest first)
     cartolaEntries.reverse();
 
-    // Read existing Movimientos.xlsx
-    const movPath = path.join(process.cwd(), "Cuenta banco", "Movimientos.xlsx");
-    if (!fs.existsSync(movPath)) {
-      return NextResponse.json({ ok: false, error: "Movimientos.xlsx no encontrado" }, { status: 500 });
-    }
+    // ── Read existing data from DB ──
+    const existingMovements = await prisma.bankMovement.findMany({
+      select: { correlativo: true, fecha: true, egreso: true, ingreso: true, saldo: true },
+      orderBy: { correlativo: "desc" },
+    });
 
-    const existingBuffer = fs.readFileSync(movPath);
-    const movWb = XLSX.read(existingBuffer, { type: "buffer", cellDates: true });
-    const movWs = movWb.Sheets[movWb.SheetNames[0]];
-    const movData = XLSX.utils.sheet_to_json<any>(movWs, { header: 1, defval: null, range: "B1" });
-
-    // Find last row data
+    // Find last correlativo and saldo
     let lastCorrelativo = 0;
     let lastSaldo = 0;
-
-    // movData[0] is header, movData[1..] are data rows
-    for (let i = movData.length - 1; i >= 1; i--) {
-      const row = movData[i];
-      if (row && row[0] != null) {
-        lastCorrelativo = Number(row[0]) || 0;
-        lastSaldo = Number(row[5]) || 0;
-        break;
-      }
+    if (existingMovements.length > 0) {
+      lastCorrelativo = existingMovements[0].correlativo;
+      lastSaldo = Number(existingMovements[0].saldo) || 0;
     }
 
-    // Build a set of existing entries for deduplication
-    // Key: date_ISO + amount + direction
+    // Build dedup keys from existing DB data
     const existingKeys = new Set<string>();
-    for (let i = 1; i < movData.length; i++) {
-      const row = movData[i];
-      if (!row || row[0] == null) continue;
-      let fecha: Date;
-      if (row[1] instanceof Date) {
-        fecha = row[1];
-      } else if (typeof row[1] === "number") {
-        // Excel serial date
-        fecha = new Date((row[1] - 25569) * 86400 * 1000);
-      } else {
-        fecha = new Date(String(row[1]));
-      }
-      const dateKey = fecha.toISOString().slice(0, 10);
-      const egreso = Number(row[3]) || 0;
-      const ingreso = Number(row[4]) || 0;
-      // Use date + amount as dedup key
+    for (const m of existingMovements) {
+      const dateKey = m.fecha.toISOString().slice(0, 10);
+      const egreso = Number(m.egreso) || 0;
+      const ingreso = Number(m.ingreso) || 0;
       if (egreso > 0) existingKeys.add(`${dateKey}_E_${egreso}`);
       if (ingreso > 0) existingKeys.add(`${dateKey}_I_${ingreso}`);
     }
@@ -278,22 +252,14 @@ export async function POST(req: NextRequest) {
         ok: true,
         added: 0,
         skipped: skipped.length,
-        message: "No hay movimientos nuevos para agregar. Todos ya existen en Movimientos.xlsx.",
+        message: "No hay movimientos nuevos para agregar. Todos ya existen.",
         skippedDetails: skipped.slice(0, 10),
       });
     }
 
-    // Append new entries to the worksheet
-    // We need to use openpyxl-style approach with xlsx library
-    // Re-read with full fidelity
-    const ref = movWs["!ref"] || "B1:I1";
-    const range = XLSX.utils.decode_range(ref);
-    let nextRow = range.e.r + 1; // 0-indexed
-
     let currentCorrelativo = lastCorrelativo;
 
     // ── SMART MATCHING: Cross-reference with DB deposits ──
-    // Priority: EXACT MONTO match first, then closest date within ±7 days
     const dbDeposits = await prisma.deposit.findMany({
       where: { estado: "APROBADO" },
       select: {
@@ -311,85 +277,62 @@ export async function POST(req: NextRequest) {
       const code = dep.User.codigo || "";
       const name = dep.User.nombre || "";
       if (!code && !name) continue;
-
       if (!depositsByMonto.has(monto)) depositsByMonto.set(monto, []);
-      depositsByMonto.get(monto)!.push({
-        fecha: new Date(dep.fecha),
-        pilotName: name,
-        pilotCode: code,
-      });
+      depositsByMonto.get(monto)!.push({ fecha: new Date(dep.fecha), pilotName: name, pilotCode: code });
     }
 
-    // Track which DB deposits have already been matched to avoid double-matching
     const usedDepositKeys = new Set<string>();
 
-    /**
-     * Find the best DB deposit match for a bank ingreso:
-     * 1. Monto must be EXACT match
-     * 2. Among exact monto matches, pick the closest in date (within ±7 days)
-     * 3. Each DB deposit can only be matched once
-     */
-    const findDepositMatch = (
-      bankDate: Date,
-      bankAmount: number
-    ): { pilotName: string; pilotCode: string } | null => {
+    const findDepositMatch = (bankDate: Date, bankAmount: number): { pilotName: string; pilotCode: string } | null => {
       const candidates = depositsByMonto.get(bankAmount);
       if (!candidates || candidates.length === 0) return null;
-
       const MAX_DAYS_DIFF = 7;
       let bestMatch: (typeof candidates)[0] | null = null;
       let bestDaysDiff = Infinity;
-
       for (const candidate of candidates) {
         const depKey = `${candidate.pilotCode}_${candidate.fecha.toISOString()}_${bankAmount}`;
         if (usedDepositKeys.has(depKey)) continue;
-
-        const daysDiff = Math.abs(
-          (bankDate.getTime() - candidate.fecha.getTime()) / (1000 * 60 * 60 * 24)
-        );
-
+        const daysDiff = Math.abs((bankDate.getTime() - candidate.fecha.getTime()) / (1000 * 60 * 60 * 24));
         if (daysDiff <= MAX_DAYS_DIFF && daysDiff < bestDaysDiff) {
           bestDaysDiff = daysDiff;
           bestMatch = candidate;
         }
       }
-
       if (bestMatch) {
-        const depKey = `${bestMatch.pilotCode}_${bestMatch.fecha.toISOString()}_${bankAmount}`;
-        usedDepositKeys.add(depKey);
+        usedDepositKeys.add(`${bestMatch.pilotCode}_${bestMatch.fecha.toISOString()}_${bankAmount}`);
         return { pilotName: bestMatch.pilotName, pilotCode: bestMatch.pilotCode };
       }
-
       return null;
     };
 
+    // Build entries and write to DB
     const addedEntries: { correlativo: number; fecha: string; descripcion: string; egreso: number | null; ingreso: number | null; saldo: number; tipo: string; cliente: string | null; matchedFromDB?: boolean }[] = [];
 
     for (const entry of newEntries) {
       currentCorrelativo++;
       const isIngreso = entry.ingreso != null && entry.ingreso > 0;
 
-      // Try to match ingreso with a DB deposit by EXACT amount, closest date (±7 days)
       let depositMatch: { pilotName: string; pilotCode: string } | null = null;
       if (isIngreso && entry.ingreso) {
         depositMatch = findDepositMatch(entry.fecha, entry.ingreso);
       }
 
       const { descripcion, cliente, tipo } = parseCartolaDescription(entry.rawDesc, isIngreso, depositMatch);
-
-      // Use the bank's official saldo from the cartola
       const saldo = entry.saldo;
 
-      // Write cells (B=1, C=2, D=3, E=4, F=5, G=6, H=7, I=8 in 0-indexed from column B)
-      const r = nextRow;
-      movWs[XLSX.utils.encode_cell({ r, c: 1 })] = { t: "n", v: currentCorrelativo }; // B - correlativo
-      movWs[XLSX.utils.encode_cell({ r, c: 2 })] = { t: "d", v: entry.fecha }; // C - fecha
-      movWs[XLSX.utils.encode_cell({ r, c: 3 })] = { t: "s", v: descripcion }; // D - descripción
-      movWs[XLSX.utils.encode_cell({ r, c: 4 })] = entry.egreso ? { t: "n", v: entry.egreso } : { t: "z" }; // E - egreso
-      movWs[XLSX.utils.encode_cell({ r, c: 5 })] = entry.ingreso ? { t: "n", v: entry.ingreso } : { t: "z" }; // F - ingreso
-      movWs[XLSX.utils.encode_cell({ r, c: 6 })] = { t: "n", v: saldo }; // G - saldo
-      movWs[XLSX.utils.encode_cell({ r, c: 7 })] = { t: "s", v: tipo }; // H - tipo
-      movWs[XLSX.utils.encode_cell({ r, c: 8 })] = cliente ? { t: "s", v: cliente } : { t: "z" }; // I - cliente
+      // Write to PostgreSQL DB
+      await prisma.bankMovement.create({
+        data: {
+          correlativo: currentCorrelativo,
+          fecha: entry.fecha,
+          descripcion,
+          egreso: entry.egreso,
+          ingreso: entry.ingreso,
+          saldo,
+          tipo,
+          cliente,
+        },
+      });
 
       addedEntries.push({
         correlativo: currentCorrelativo,
@@ -402,19 +345,8 @@ export async function POST(req: NextRequest) {
         cliente,
         matchedFromDB: !!depositMatch,
       });
-
-      nextRow++;
     }
 
-    // Update range
-    range.e.r = nextRow - 1;
-    movWs["!ref"] = XLSX.utils.encode_range(range);
-
-    // Write back
-    const outBuffer = XLSX.write(movWb, { type: "buffer", bookType: "xlsx" });
-    fs.writeFileSync(movPath, outBuffer);
-
-    // Verify saldo matches cartola's most recent entry (first in original order = last after reversal)
     const lastAddedSaldo = addedEntries.length > 0 ? addedEntries[addedEntries.length - 1].saldo : lastSaldo;
 
     return NextResponse.json({
