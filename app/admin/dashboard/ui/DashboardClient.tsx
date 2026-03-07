@@ -34,6 +34,7 @@ type InitialData = {
     registered: { id: number; code: string; name: string; email: string | null; createdAt: string | Date; fechaNacimiento?: Date | null; telefono?: string | null; numeroLicencia?: string | null; tipoDocumento?: string | null; documento?: string | null }[];
   };
   aircraftYearlyStats?: { matricula: string; avgHoursPerYear: number; totalHours: number; yearsOfOperation: number }[];
+  bankMovements?: { correlativo: number; fecha: string; descripcion: string; egreso: number | null; ingreso: number | null; saldo: number; tipo: string; cliente: string | null }[];
 };
 type PaginationInfo = { page: number; pageSize: number; total: number };
 type OverviewMetrics = {
@@ -939,6 +940,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           { id: "pilots", label: "Pilots", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" },
           { id: "fuel", label: "Fuel", icon: "M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" },
           { id: "maintenance", label: "Mx", icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" },
+          { id: "finanzas", label: "Finanzas", icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
         ].map(t => (
           <button 
             key={t.id} 
@@ -1147,7 +1149,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       )}
       {tab === "fuel" && <FuelTable logs={initialData.fuelLogs || []} />}
       {tab === "maintenance" && <MaintenanceTable components={initialData.components} aircraft={initialData.aircraft} aircraftYearlyStats={initialData.aircraftYearlyStats || []} overviewMetrics={overviewMetrics} />}
-      {tab === "finance" && <FinanceCharts flights={initialData.flights} transactions={initialData.transactions} palette={palette} />}
+      {tab === "finanzas" && <FinanzasTable movements={initialData.bankMovements || []} palette={palette} />}
 
       {/* Backup Button - Final de la página */}
       <div className="mt-8 flex justify-center pb-8">
@@ -3045,6 +3047,289 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+type BankMovement = { correlativo: number; fecha: string; descripcion: string; egreso: number | null; ingreso: number | null; saldo: number; tipo: string; cliente: string | null };
+
+function FinanzasTable({ movements, palette }: { movements: BankMovement[]; palette: any }) {
+  const [filterTipo, setFilterTipo] = useState<string>('ALL');
+  const [filterMonth, setFilterMonth] = useState<string>('');
+  const [filterYear, setFilterYear] = useState<string>('');
+  const [searchText, setSearchText] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const pageSize = 50;
+
+  // Get unique types and years
+  const tipos = useMemo(() => {
+    const set = new Set<string>();
+    movements.forEach(m => { if (m.tipo) set.add(m.tipo); });
+    return Array.from(set).sort();
+  }, [movements]);
+
+  const years = useMemo(() => {
+    const set = new Set<string>();
+    movements.forEach(m => {
+      if (m.fecha) {
+        const y = m.fecha.slice(0, 4);
+        if (y) set.add(y);
+      }
+    });
+    return Array.from(set).sort((a, b) => Number(b) - Number(a));
+  }, [movements]);
+
+  // Filter and sort
+  const filtered = useMemo(() => {
+    let result = [...movements];
+    if (filterTipo !== 'ALL') result = result.filter(m => m.tipo === filterTipo);
+    if (filterYear) result = result.filter(m => m.fecha?.startsWith(filterYear));
+    if (filterMonth) result = result.filter(m => {
+      const month = m.fecha?.slice(5, 7);
+      return month === filterMonth;
+    });
+    if (searchText) {
+      const q = searchText.toLowerCase();
+      result = result.filter(m => 
+        (m.descripcion || '').toLowerCase().includes(q) || 
+        (m.cliente || '').toLowerCase().includes(q)
+      );
+    }
+    if (sortOrder === 'asc') result.reverse();
+    return result;
+  }, [movements, filterTipo, filterYear, filterMonth, searchText, sortOrder]);
+
+  // Pagination
+  const totalPages = Math.ceil(filtered.length / pageSize);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  // Summary stats
+  const stats = useMemo(() => {
+    const totalIngresos = filtered.reduce((s, m) => s + (m.ingreso || 0), 0);
+    const totalEgresos = filtered.reduce((s, m) => s + (m.egreso || 0), 0);
+    const lastSaldo = movements.length > 0 ? movements[movements.length - 1].saldo : 0;
+    
+    // By tipo
+    const byTipo: Record<string, { ingresos: number; egresos: number; count: number }> = {};
+    filtered.forEach(m => {
+      const t = m.tipo || 'Sin tipo';
+      if (!byTipo[t]) byTipo[t] = { ingresos: 0, egresos: 0, count: 0 };
+      byTipo[t].ingresos += (m.ingreso || 0);
+      byTipo[t].egresos += (m.egreso || 0);
+      byTipo[t].count++;
+    });
+    
+    return { totalIngresos, totalEgresos, lastSaldo, byTipo };
+  }, [filtered, movements]);
+
+  const tipoColors: Record<string, string> = {
+    'Pago piloto': 'bg-emerald-100 text-emerald-800',
+    'Combustible': 'bg-amber-100 text-amber-800',
+    'Fintual': 'bg-blue-100 text-blue-800',
+    'Banco': 'bg-slate-100 text-slate-800',
+    'Proveedor': 'bg-red-100 text-red-800',
+    'Mantención': 'bg-purple-100 text-purple-800',
+    'Operacional': 'bg-orange-100 text-orange-800',
+  };
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '-';
+    try {
+      const d = new Date(dateStr + 'T12:00:00');
+      return d.toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: '2-digit' });
+    } catch { return dateStr; }
+  };
+
+  const hasActiveFilters = filterTipo !== 'ALL' || filterYear || filterMonth || searchText;
+
+  return (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className={`${palette.card} rounded-xl p-4 sm:p-5 ${palette.shadow}`}>
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Saldo Actual</p>
+          <p className="text-xl sm:text-2xl font-black text-slate-900 mt-1">${formatCurrency(Math.round(stats.lastSaldo))}</p>
+        </div>
+        <div className={`${palette.card} rounded-xl p-4 sm:p-5 ${palette.shadow}`}>
+          <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Total Ingresos</p>
+          <p className="text-xl sm:text-2xl font-black text-emerald-700 mt-1">${formatCurrency(Math.round(stats.totalIngresos))}</p>
+          <p className="text-xs text-slate-500 mt-1">{filtered.filter(m => m.ingreso).length} transacciones</p>
+        </div>
+        <div className={`${palette.card} rounded-xl p-4 sm:p-5 ${palette.shadow}`}>
+          <p className="text-xs font-semibold text-red-600 uppercase tracking-wider">Total Egresos</p>
+          <p className="text-xl sm:text-2xl font-black text-red-700 mt-1">${formatCurrency(Math.round(stats.totalEgresos))}</p>
+          <p className="text-xs text-slate-500 mt-1">{filtered.filter(m => m.egreso).length} transacciones</p>
+        </div>
+        <div className={`${palette.card} rounded-xl p-4 sm:p-5 ${palette.shadow}`}>
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Movimientos</p>
+          <p className="text-xl sm:text-2xl font-black text-slate-900 mt-1">{filtered.length}</p>
+          <p className="text-xs text-slate-500 mt-1">de {movements.length} total</p>
+        </div>
+      </div>
+
+      {/* Breakdown by Tipo */}
+      <div className={`${palette.card} rounded-xl p-4 sm:p-5 ${palette.shadow}`}>
+        <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3">Desglose por Tipo</h4>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+          {Object.entries(stats.byTipo).sort((a, b) => (b[1].ingresos + b[1].egresos) - (a[1].ingresos + a[1].egresos)).map(([tipo, data]) => (
+            <button
+              key={tipo}
+              onClick={() => setFilterTipo(filterTipo === tipo ? 'ALL' : tipo)}
+              className={`text-left p-3 rounded-lg border transition-all ${filterTipo === tipo ? 'ring-2 ring-blue-500 border-blue-300' : 'border-slate-200 hover:border-slate-300'}`}
+            >
+              <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${tipoColors[tipo] || 'bg-gray-100 text-gray-800'}`}>
+                {tipo}
+              </span>
+              <div className="mt-1.5 text-xs text-slate-600">
+                {data.count} mov.
+                {data.ingresos > 0 && <span className="text-emerald-600 ml-1">+${formatCurrency(Math.round(data.ingresos))}</span>}
+                {data.egresos > 0 && <span className="text-red-600 ml-1">-${formatCurrency(Math.round(data.egresos))}</span>}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Filters + Table */}
+      <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-4 sm:px-6 py-4 sm:py-5">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <h3 className="text-lg font-bold text-white uppercase tracking-wide flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Movimientos Bancarios
+            </h3>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-white text-xs font-medium transition-all"
+              >
+                {sortOrder === 'desc' ? '↓ Recientes' : '↑ Antiguos'}
+              </button>
+              {hasActiveFilters && (
+                <button
+                  onClick={() => { setFilterTipo('ALL'); setFilterYear(''); setFilterMonth(''); setSearchText(''); setCurrentPage(1); }}
+                  className="px-3 py-1.5 bg-red-500/80 hover:bg-red-500 rounded-lg text-white text-xs font-medium transition-all"
+                >
+                  Limpiar filtros
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Filters Row */}
+        <div className="px-4 sm:px-6 py-3 bg-slate-50 border-b border-slate-200 flex flex-wrap gap-2 sm:gap-3 items-center">
+          <input
+            type="text"
+            placeholder="Buscar..."
+            value={searchText}
+            onChange={e => { setSearchText(e.target.value); setCurrentPage(1); }}
+            className="px-3 py-2 border border-slate-300 rounded-lg text-sm w-40 sm:w-48 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+          <select
+            value={filterTipo}
+            onChange={e => { setFilterTipo(e.target.value); setCurrentPage(1); }}
+            className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="ALL">Todos los tipos</option>
+            {tipos.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <select
+            value={filterYear}
+            onChange={e => { setFilterYear(e.target.value); setCurrentPage(1); }}
+            className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Todos los años</option>
+            {years.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+          <select
+            value={filterMonth}
+            onChange={e => { setFilterMonth(e.target.value); setCurrentPage(1); }}
+            className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Todos los meses</option>
+            {['01','02','03','04','05','06','07','08','09','10','11','12'].map((m, i) => (
+              <option key={m} value={m}>{['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][i]}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-100 border-b-2 border-slate-200">
+                <th className="px-3 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">#</th>
+                <th className="px-3 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</th>
+                <th className="px-3 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Descripción</th>
+                <th className="px-3 py-3 text-right text-xs font-bold text-red-600 uppercase tracking-wider">Egreso</th>
+                <th className="px-3 py-3 text-right text-xs font-bold text-emerald-600 uppercase tracking-wider">Ingreso</th>
+                <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Saldo</th>
+                <th className="px-3 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">Tipo</th>
+                <th className="px-3 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">Código</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {paginated.map((m, i) => (
+                <tr key={`${m.correlativo}-${i}`} className="hover:bg-blue-50/50 transition-colors">
+                  <td className="px-3 py-2.5 text-xs text-slate-400 font-mono">{m.correlativo}</td>
+                  <td className="px-3 py-2.5 text-xs font-medium text-slate-700 whitespace-nowrap">{formatDate(m.fecha)}</td>
+                  <td className="px-3 py-2.5 text-sm text-slate-800 font-medium max-w-[200px] sm:max-w-none truncate">{m.descripcion}</td>
+                  <td className="px-3 py-2.5 text-sm text-right font-mono whitespace-nowrap">
+                    {m.egreso ? <span className="text-red-600 font-semibold">-${formatCurrency(Math.round(m.egreso))}</span> : ''}
+                  </td>
+                  <td className="px-3 py-2.5 text-sm text-right font-mono whitespace-nowrap">
+                    {m.ingreso ? <span className="text-emerald-600 font-semibold">+${formatCurrency(Math.round(m.ingreso))}</span> : ''}
+                  </td>
+                  <td className="px-3 py-2.5 text-sm text-right font-mono font-semibold text-slate-700 whitespace-nowrap">
+                    ${formatCurrency(Math.round(m.saldo))}
+                  </td>
+                  <td className="px-3 py-2.5 text-center">
+                    {m.tipo && (
+                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${tipoColors[m.tipo] || 'bg-gray-100 text-gray-800'}`}>
+                        {m.tipo}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5 text-center text-xs font-bold text-slate-600">{m.cliente || ''}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="px-4 sm:px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
+            <span className="text-xs text-slate-500">
+              Mostrando {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, filtered.length)} de {filtered.length}
+            </span>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                ← Anterior
+              </button>
+              <span className="px-3 py-1.5 text-xs font-bold text-slate-700">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Siguiente →
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
