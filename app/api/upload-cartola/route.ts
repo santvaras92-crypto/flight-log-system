@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import * as fs from "fs";
 import * as path from "path";
+import { prisma } from "@/lib/prisma";
 
 // Known pilot name patterns from bank transfer descriptions → [friendly name, pilot code]
 const PILOT_NAME_MAP: [RegExp, string, string][] = [
@@ -9,7 +10,7 @@ const PILOT_NAME_MAP: [RegExp, string, string][] = [
   [/PABLO IGNACIO SILVA/i, "Pablo Silva", "PS"],
   [/DANIEL FERNANDO OSO/i, "Daniel Osorio", "DO"],
   [/MATIAS FELIPE GRIFFEROS/i, "Matías Grifferos", "MG"],
-  [/YALUZ YEMAYA CHACON/i, "Yaluz Chacón", ""],  // Stratus fuel
+  [/YALUZ YEMAYA CHACON/i, "Alfredo Saavedra (Yaluz Chacón)", "AS"],  // Esposa de Alfredo Saavedra
   [/DANIEL ANTONIO ROCO/i, "Daniel Roco Aravena", "DRCO"],
   [/CRISTIAN ERNESTO CORTES/i, "Cristian Cortés", "CC"],
   [/JOSE MATIAS ORTUZAR/i, "Matías Ortúzar", "MO"],
@@ -42,8 +43,40 @@ const KNOWN_TRANSFERS: [RegExp, string, string | null][] = [
   [/CLAUDIO MARCELO GUA/i, "Claudio Guajardo", null],
 ];
 
-function parseCartolaDescription(rawDesc: string, isIngreso: boolean): { descripcion: string; cliente: string | null; tipo: string } {
+function parseCartolaDescription(
+  rawDesc: string,
+  isIngreso: boolean,
+  depositMatch?: { pilotName: string; pilotCode: string } | null
+): { descripcion: string; cliente: string | null; tipo: string } {
   const desc = rawDesc.trim();
+
+  // ── 1. If we have a DB deposit match by amount+date, use that (highest priority) ──
+  if (depositMatch && isIngreso) {
+    // Check if the bank description matches a known name; if so, annotate it
+    let friendlyDesc = depositMatch.pilotName;
+    const cleanDesc = desc.replace(/^\d{10}\s+/, "");
+    // Check if transfer is from someone else (e.g. spouse)
+    let isThirdParty = true;
+    for (const [pattern, , code] of PILOT_NAME_MAP) {
+      if (pattern.test(cleanDesc) && code === depositMatch.pilotCode) {
+        isThirdParty = false;
+        break;
+      }
+    }
+    if (isThirdParty) {
+      // Extract the bank sender name for reference
+      let senderName = cleanDesc
+        .replace(/^TRANSF\s*(A|DE)\s*/i, "")
+        .replace(/^TRANSF\.\s*/i, "")
+        .replace(/\s+EN PESOS$/i, "")
+        .trim();
+      if (senderName.length > 30) senderName = senderName.substring(0, 30).trim();
+      if (senderName && senderName.toLowerCase() !== depositMatch.pilotName.toLowerCase()) {
+        friendlyDesc = `${depositMatch.pilotName} (vía ${senderName})`;
+      }
+    }
+    return { descripcion: friendlyDesc, cliente: depositMatch.pilotCode, tipo: "Pago piloto" };
+  }
 
   // Traspaso Internet
   if (/Traspaso Internet/i.test(desc)) {
@@ -259,12 +292,90 @@ export async function POST(req: NextRequest) {
 
     let currentCorrelativo = lastCorrelativo;
 
-    const addedEntries: { correlativo: number; fecha: string; descripcion: string; egreso: number | null; ingreso: number | null; saldo: number; tipo: string; cliente: string | null }[] = [];
+    // ── SMART MATCHING: Cross-reference with DB deposits ──
+    // Priority: EXACT MONTO match first, then closest date within ±7 days
+    const dbDeposits = await prisma.deposit.findMany({
+      where: { estado: "APROBADO" },
+      select: {
+        monto: true,
+        fecha: true,
+        User: { select: { nombre: true, codigo: true } },
+      },
+      orderBy: { fecha: "desc" },
+    });
+
+    // Group deposits by exact monto for fast lookup
+    const depositsByMonto = new Map<number, { fecha: Date; pilotName: string; pilotCode: string }[]>();
+    for (const dep of dbDeposits) {
+      const monto = Number(dep.monto);
+      const code = dep.User.codigo || "";
+      const name = dep.User.nombre || "";
+      if (!code && !name) continue;
+
+      if (!depositsByMonto.has(monto)) depositsByMonto.set(monto, []);
+      depositsByMonto.get(monto)!.push({
+        fecha: new Date(dep.fecha),
+        pilotName: name,
+        pilotCode: code,
+      });
+    }
+
+    // Track which DB deposits have already been matched to avoid double-matching
+    const usedDepositKeys = new Set<string>();
+
+    /**
+     * Find the best DB deposit match for a bank ingreso:
+     * 1. Monto must be EXACT match
+     * 2. Among exact monto matches, pick the closest in date (within ±7 days)
+     * 3. Each DB deposit can only be matched once
+     */
+    const findDepositMatch = (
+      bankDate: Date,
+      bankAmount: number
+    ): { pilotName: string; pilotCode: string } | null => {
+      const candidates = depositsByMonto.get(bankAmount);
+      if (!candidates || candidates.length === 0) return null;
+
+      const MAX_DAYS_DIFF = 7;
+      let bestMatch: (typeof candidates)[0] | null = null;
+      let bestDaysDiff = Infinity;
+
+      for (const candidate of candidates) {
+        const depKey = `${candidate.pilotCode}_${candidate.fecha.toISOString()}_${bankAmount}`;
+        if (usedDepositKeys.has(depKey)) continue;
+
+        const daysDiff = Math.abs(
+          (bankDate.getTime() - candidate.fecha.getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        if (daysDiff <= MAX_DAYS_DIFF && daysDiff < bestDaysDiff) {
+          bestDaysDiff = daysDiff;
+          bestMatch = candidate;
+        }
+      }
+
+      if (bestMatch) {
+        const depKey = `${bestMatch.pilotCode}_${bestMatch.fecha.toISOString()}_${bankAmount}`;
+        usedDepositKeys.add(depKey);
+        return { pilotName: bestMatch.pilotName, pilotCode: bestMatch.pilotCode };
+      }
+
+      return null;
+    };
+
+    const addedEntries: { correlativo: number; fecha: string; descripcion: string; egreso: number | null; ingreso: number | null; saldo: number; tipo: string; cliente: string | null; matchedFromDB?: boolean }[] = [];
 
     for (const entry of newEntries) {
       currentCorrelativo++;
       const isIngreso = entry.ingreso != null && entry.ingreso > 0;
-      const { descripcion, cliente, tipo } = parseCartolaDescription(entry.rawDesc, isIngreso);
+
+      // Try to match ingreso with a DB deposit by EXACT amount, closest date (±7 days)
+      let depositMatch: { pilotName: string; pilotCode: string } | null = null;
+      if (isIngreso && entry.ingreso) {
+        depositMatch = findDepositMatch(entry.fecha, entry.ingreso);
+      }
+
+      const { descripcion, cliente, tipo } = parseCartolaDescription(entry.rawDesc, isIngreso, depositMatch);
 
       // Use the bank's official saldo from the cartola
       const saldo = entry.saldo;
@@ -289,6 +400,7 @@ export async function POST(req: NextRequest) {
         saldo: Math.round(saldo),
         tipo,
         cliente,
+        matchedFromDB: !!depositMatch,
       });
 
       nextRow++;

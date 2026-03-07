@@ -306,7 +306,7 @@ def classify_row(desc: str, egreso, ingreso, tipo_existing: str, cliente: str) -
         r'^c\.\s*pomes', r'^d\.\s*gutierrez$', r'^j\.\s*varas$',
         r'^r\.\s*fuentes$', r'^n\.\s*espinoza$', r'^v\.\s*ortiz$',
         r'^c\.\s*piraino$',
-        r'^pablo\s*jimenez', r'^alfredo\s*saavedra', r'^daniel\s*osorio',
+        r'^pablo\s*jimenez', r'^alfredo\s*saavedra', r'^yaluz.*chac', r'^daniel\s*osorio',
         r'^daniel\s*roco', r'^r\.\s*mejia$', r'^s\.\s*varas$',
     ]
     for pat in old_pilot_names:
