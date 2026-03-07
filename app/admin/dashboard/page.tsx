@@ -1044,31 +1044,31 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         const rows: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
         // Skip header row, columns: B=correlativo, C=Fecha, D=Descripción, E=egreso, F=ingreso, G=Saldo, H=Tipo, I=Cliente
         const movements: { correlativo: number; fecha: string; descripcion: string; egreso: number | null; ingreso: number | null; saldo: number; tipo: string; cliente: string | null }[] = [];
-        for (let i = 1; i < rows.length; i++) {
-          const row = rows[i];
-          if (!row || !row[1]) continue; // Skip empty rows (correlativo in col B = index 1)
-          const correlativo = Number(row[1]) || i;
-          // Parse fecha - could be Excel serial number or Date object
-          let fecha = '';
-          const rawFecha = row[2];
-          if (rawFecha instanceof Date) {
-            fecha = rawFecha.toISOString().slice(0, 10);
-          } else if (typeof rawFecha === 'number') {
-            // Excel serial date
-            const excelEpoch = new Date(1899, 11, 30);
-            const d = new Date(excelEpoch.getTime() + rawFecha * 86400000);
-            fecha = d.toISOString().slice(0, 10);
-          } else if (typeof rawFecha === 'string') {
-            fecha = rawFecha;
+          for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row || !row[0]) continue; // Skip empty rows (correlativo in col B = index 0)
+            const correlativo = Number(row[0]) || i;
+            // Parse fecha - could be Excel serial number or Date object
+            let fecha = '';
+            const rawFecha = row[1];
+            if (rawFecha instanceof Date) {
+              fecha = rawFecha.toISOString().slice(0, 10);
+            } else if (typeof rawFecha === 'number') {
+              // Excel serial date
+              const excelEpoch = new Date(1899, 11, 30);
+              const d = new Date(excelEpoch.getTime() + rawFecha * 86400000);
+              fecha = d.toISOString().slice(0, 10);
+            } else if (typeof rawFecha === 'string') {
+              fecha = rawFecha;
+            }
+            const descripcion = String(row[2] || '').trim();
+            const egreso = row[3] ? Number(row[3]) : null;
+            const ingreso = row[4] ? Number(row[4]) : null;
+            const saldo = Number(row[5]) || 0;
+            const tipo = String(row[6] || '').trim();
+            const cliente = row[7] ? String(row[7]).trim() : null;
+            movements.push({ correlativo, fecha, descripcion, egreso, ingreso, saldo, tipo, cliente });
           }
-          const descripcion = String(row[3] || '').trim();
-          const egreso = row[4] ? Number(row[4]) : null;
-          const ingreso = row[5] ? Number(row[5]) : null;
-          const saldo = Number(row[6]) || 0;
-          const tipo = String(row[7] || '').trim();
-          const cliente = row[8] ? String(row[8]).trim() : null;
-          movements.push({ correlativo, fecha, descripcion, egreso, ingreso, saldo, tipo, cliente });
-        }
         return movements;
       } catch (e) {
         console.error('Error reading Movimientos.xlsx:', e);
