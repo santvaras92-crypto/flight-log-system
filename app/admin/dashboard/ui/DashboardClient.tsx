@@ -614,6 +614,15 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         }
       });
       
+      // Pre-compute total spent per pilot code from ALL DB flights (same source as Flights tab)
+      const allFlights = initialData.allFlightsComplete || initialData.flights || [];
+      const spentByCode = new Map<string, number>();
+      allFlights.forEach(f => {
+        const c = ((f as any).cliente || '').toUpperCase().trim();
+        if (!c) return;
+        spentByCode.set(c, (spentByCode.get(c) || 0) + (Number(f.costo) || 0));
+      });
+
       // Build array with name and days since last flight
       const activePilotsData = Array.from(codeToLastFlight.entries())
         .map(([code, lastFlightDate]) => {
@@ -626,8 +635,8 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             name = user?.nombre || code;
           }
 
-          // Calculate pilot balance
-          const spent = Math.round(initialData.csvPilotStats?.[code]?.spent || 0);
+          // Calculate pilot balance (must match Flights tab & Pilot Accounts)
+          const spent = Math.round(spentByCode.get(code) || 0);
           const deposits = Math.round(initialData.depositsByCode?.[code] || 0);
           const fuel = Math.round(initialData.fuelByCode?.[code] || 0);
           const balance = deposits - spent + fuel;
