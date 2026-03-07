@@ -49,6 +49,9 @@ const CRITICAL_FILES = [
 const root = path.resolve(__dirname, '..');
 let missing = [];
 
+console.log(`\n📂 Working directory: ${process.cwd()}`);
+console.log(`📂 Script root: ${root}`);
+
 for (const file of CRITICAL_FILES) {
   const fullPath = path.join(root, file);
   if (!fs.existsSync(fullPath)) {
@@ -61,29 +64,49 @@ if (missing.length > 0) {
   missing.forEach(f => console.error(`   • ${f}`));
   console.error('\n👉 FIX: Clear the Railway build cache and redeploy.');
   console.error('   Railway Dashboard → Service → Settings → Build → Clear Build Cache\n');
-  
-  // List what IS in app/actions/ and lib/
-  console.error('--- Files present in app/actions/ ---');
-  try {
-    const actionsDir = path.join(root, 'app', 'actions');
-    if (fs.existsSync(actionsDir)) {
-      fs.readdirSync(actionsDir, { recursive: true }).forEach(f => console.error(`   ${f}`));
-    } else {
-      console.error('   (directory does not exist!)');
-    }
-  } catch (e) { console.error('   (error reading directory)'); }
-  
-  console.error('\n--- Files present in lib/ ---');
-  try {
-    const libDir = path.join(root, 'lib');
-    if (fs.existsSync(libDir)) {
-      fs.readdirSync(libDir).forEach(f => console.error(`   ${f}`));
-    } else {
-      console.error('   (directory does not exist!)');
-    }
-  } catch (e) { console.error('   (error reading directory)'); }
-  
   process.exit(1);
-} else {
-  console.log(`✅ All ${CRITICAL_FILES.length} critical source files verified.`);
 }
+
+// Extra diagnostics: verify files are REAL (not empty / not symlinks)
+console.log(`\n✅ All ${CRITICAL_FILES.length} critical source files exist.`);
+
+// Show key file sizes and first line to prove they're real
+const keyFiles = ['lib/prisma.ts', 'lib/r2-storage.ts', 'app/actions/delete-deposit.ts', 'app/actions/approve-flight.ts'];
+for (const file of keyFiles) {
+  const fullPath = path.join(root, file);
+  try {
+    const stat = fs.statSync(fullPath);
+    const content = fs.readFileSync(fullPath, 'utf-8');
+    const firstLine = content.split('\n')[0];
+    console.log(`   ${file}: ${stat.size}b, isSymlink=${fs.lstatSync(fullPath).isSymbolicLink()}, first="${firstLine}"`);
+  } catch (e) {
+    console.error(`   ${file}: ERROR reading - ${e.message}`);
+  }
+}
+
+// Verify tsconfig paths resolution would work
+const tsconfigPath = path.join(root, 'tsconfig.json');
+if (fs.existsSync(tsconfigPath)) {
+  const tsconfig = JSON.parse(fs.readFileSync(tsconfigPath, 'utf-8'));
+  console.log(`\n📋 tsconfig.json paths:`, JSON.stringify(tsconfig.compilerOptions?.paths));
+}
+
+// List ALL files in lib/ and app/actions/ with sizes
+console.log('\n📁 lib/ directory:');
+try {
+  fs.readdirSync(path.join(root, 'lib')).forEach(f => {
+    const stat = fs.statSync(path.join(root, 'lib', f));
+    console.log(`   ${f} (${stat.size}b)`);
+  });
+} catch (e) { console.error('   ERROR:', e.message); }
+
+console.log('\n📁 app/actions/ directory:');
+try {
+  fs.readdirSync(path.join(root, 'app', 'actions')).forEach(f => {
+    const fp = path.join(root, 'app', 'actions', f);
+    const stat = fs.statSync(fp);
+    console.log(`   ${f} ${stat.isDirectory() ? '(dir)' : `(${stat.size}b)`}`);
+  });
+} catch (e) { console.error('   ERROR:', e.message); }
+
+console.log('');
