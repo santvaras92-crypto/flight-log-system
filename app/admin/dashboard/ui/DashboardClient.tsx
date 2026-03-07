@@ -3469,26 +3469,26 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
 
         {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-[10px] sm:text-sm">
             <thead>
               <tr className="bg-slate-100 border-b-2 border-slate-200">
-                <th className="px-3 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">#</th>
-                <th className="px-3 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</th>
-                <th className="px-3 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Descripción</th>
-                <th className="px-3 py-3 text-right text-xs font-bold text-red-600 uppercase tracking-wider">Egreso</th>
-                <th className="px-3 py-3 text-right text-xs font-bold text-emerald-600 uppercase tracking-wider">Ingreso</th>
-                <th className="px-3 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Saldo</th>
-                <th className="px-3 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">Tipo</th>
-                <th className="px-3 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">Código</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-left text-[8px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">#</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-left text-[8px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-left text-[8px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Descripción</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-right text-[8px] sm:text-xs font-bold text-red-600 uppercase tracking-wider">Egreso</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-right text-[8px] sm:text-xs font-bold text-emerald-600 uppercase tracking-wider">Ingreso</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-right text-[8px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Saldo</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Tipo</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Código</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {paginated.map((m, i) => (
                 <tr key={`${m.correlativo}-${i}`} className="hover:bg-blue-50/50 transition-colors group">
-                  <td className="px-3 py-2.5 text-xs text-slate-400 font-mono">{m.correlativo}</td>
-                  <td className="px-3 py-2.5 text-xs font-medium text-slate-700 whitespace-nowrap">{formatDate(m.fecha)}</td>
+                  <td className="px-1 sm:px-3 py-1.5 sm:py-2.5 text-[9px] sm:text-xs text-slate-400 font-mono">{m.correlativo}</td>
+                  <td className="px-1 sm:px-3 py-1.5 sm:py-2.5 text-[9px] sm:text-xs font-medium text-slate-700 whitespace-nowrap">{formatDate(m.fecha)}</td>
                   {/* Descripción - editable on double click */}
-                  <td className="px-3 py-2.5 text-sm text-slate-800 font-medium max-w-[200px] sm:max-w-none">
+                  <td className="px-1 sm:px-3 py-1.5 sm:py-2.5 text-[9px] sm:text-sm text-slate-800 font-medium max-w-[100px] sm:max-w-none">
                     {editingCell?.correlativo === m.correlativo && editingCell?.field === 'descripcion' ? (
                       <div className="flex items-center gap-1">
                         <input
@@ -3517,17 +3517,17 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                       </span>
                     )}
                   </td>
-                  <td className="px-3 py-2.5 text-sm text-right font-mono whitespace-nowrap">
+                  <td className="px-1 sm:px-3 py-1.5 sm:py-2.5 text-[9px] sm:text-sm text-right font-mono whitespace-nowrap">
                     {m.egreso ? <span className="text-red-600 font-semibold">-${formatCurrency(Math.round(m.egreso))}</span> : ''}
                   </td>
-                  <td className="px-3 py-2.5 text-sm text-right font-mono whitespace-nowrap">
+                  <td className="px-1 sm:px-3 py-1.5 sm:py-2.5 text-[9px] sm:text-sm text-right font-mono whitespace-nowrap">
                     {m.ingreso ? <span className="text-emerald-600 font-semibold">+${formatCurrency(Math.round(m.ingreso))}</span> : ''}
                   </td>
-                  <td className="px-3 py-2.5 text-sm text-right font-mono font-semibold text-slate-700 whitespace-nowrap">
+                  <td className="px-1 sm:px-3 py-1.5 sm:py-2.5 text-[9px] sm:text-sm text-right font-mono font-semibold text-slate-700 whitespace-nowrap">
                     ${formatCurrency(Math.round(m.saldo))}
                   </td>
                   {/* Tipo - editable on click with dropdown */}
-                  <td className="px-3 py-2.5 text-center">
+                  <td className="px-1 sm:px-3 py-1.5 sm:py-2.5 text-center">
                     {editingCell?.correlativo === m.correlativo && editingCell?.field === 'tipo' ? (
                       <div className="flex items-center gap-1 justify-center">
                         <select
@@ -3551,7 +3551,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                     ) : (
                       <span
                         onClick={() => startEditing(m.correlativo, 'tipo', getDisplayValue(m, 'tipo'))}
-                        className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all ${tipoColors[getDisplayValue(m, 'tipo')] || 'bg-gray-100 text-gray-800'}`}
+                        className={`inline-block px-1 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-xs font-bold cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all ${tipoColors[getDisplayValue(m, 'tipo')] || 'bg-gray-100 text-gray-800'}`}
                         title="Clic para cambiar tipo"
                       >
                         {getDisplayValue(m, 'tipo') || '—'}
@@ -3559,7 +3559,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                     )}
                   </td>
                   {/* Código/Cliente - editable on click */}
-                  <td className="px-3 py-2.5 text-center">
+                  <td className="px-1 sm:px-3 py-1.5 sm:py-2.5 text-center">
                     {editingCell?.correlativo === m.correlativo && editingCell?.field === 'cliente' ? (
                       <div className="flex items-center gap-1 justify-center">
                         <input
@@ -3582,7 +3582,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                     ) : (
                       <span
                         onClick={() => startEditing(m.correlativo, 'cliente', getDisplayValue(m, 'cliente'))}
-                        className="text-xs font-bold text-slate-600 cursor-pointer hover:text-blue-600 hover:bg-blue-50 px-2 py-1 rounded transition-all"
+                        className="text-[9px] sm:text-xs font-bold text-slate-600 cursor-pointer hover:text-blue-600 hover:bg-blue-50 px-1 sm:px-2 py-1 rounded transition-all"
                         title="Clic para editar código"
                       >
                         {getDisplayValue(m, 'cliente') || <span className="text-slate-300">—</span>}
