@@ -3076,7 +3076,7 @@ type BankMovement = { correlativo: number; fecha: string; descripcion: string; e
 function FinanzasTable({ movements, palette }: { movements: BankMovement[]; palette: any }) {
   const [filterTipo, setFilterTipo] = useState<string>('ALL');
   const [filterMonth, setFilterMonth] = useState<string>('');
-  const [filterYear, setFilterYear] = useState<string>('');
+  const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
   const [searchText, setSearchText] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('asc');
