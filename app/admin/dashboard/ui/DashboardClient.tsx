@@ -3080,7 +3080,42 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
   const [searchText, setSearchText] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [uploading, setUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState<any>(null);
   const pageSize = 50;
+
+  const handleCartolaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+      alert('Solo se aceptan archivos Excel (.xlsx)');
+      return;
+    }
+
+    if (!confirm(`¿Subir cartola "${file.name}" y agregar nuevos movimientos a Movimientos.xlsx?`)) {
+      e.target.value = '';
+      return;
+    }
+
+    setUploading(true);
+    setUploadResult(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/upload-cartola', { method: 'POST', body: formData });
+      const data = await res.json();
+      setUploadResult(data);
+      if (data.ok && data.added > 0) {
+        setTimeout(() => location.reload(), 3000);
+      }
+    } catch (err: any) {
+      setUploadResult({ ok: false, error: err.message || 'Error de red' });
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
 
   // Get unique types and years
   const tipos = useMemo(() => {
@@ -3170,6 +3205,97 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
 
   return (
     <div className="space-y-6">
+      {/* Upload Cartola Section */}
+      <div className={`${palette.card} rounded-xl p-4 sm:p-5 ${palette.shadow}`}>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div>
+            <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Subir Cartola Bancaria</h4>
+            <p className="text-xs text-slate-500 mt-1">Sube el archivo Excel de &quot;últimos movimientos&quot; del banco para agregar automáticamente los nuevos movimientos</p>
+          </div>
+          <label className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm cursor-pointer transition-all ${uploading ? 'bg-slate-200 text-slate-500 cursor-wait' : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl'}`}>
+            {uploading ? (
+              <>
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                Procesando...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                Subir Cartola (.xlsx)
+              </>
+            )}
+            <input type="file" accept=".xlsx,.xls" onChange={handleCartolaUpload} className="hidden" disabled={uploading} />
+          </label>
+        </div>
+
+        {/* Upload Result */}
+        {uploadResult && (
+          <div className={`mt-4 p-4 rounded-xl border-2 ${uploadResult.ok ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+            <div className="flex items-start gap-3">
+              {uploadResult.ok ? (
+                <svg className="w-6 h-6 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              ) : (
+                <svg className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              )}
+              <div className="flex-1">
+                <p className={`text-sm font-bold ${uploadResult.ok ? 'text-emerald-800' : 'text-red-800'}`}>
+                  {uploadResult.message || uploadResult.error}
+                </p>
+                {uploadResult.ok && uploadResult.added > 0 && (
+                  <div className="mt-2 space-y-1">
+                    <p className="text-xs text-emerald-700">
+                      ✅ {uploadResult.added} nuevos movimientos agregados • {uploadResult.skipped} omitidos (duplicados)
+                    </p>
+                    <p className="text-xs text-emerald-700">
+                      Último correlativo: #{uploadResult.lastCorrelativo} • Saldo final: ${formatCurrency(uploadResult.lastSaldo)}
+                    </p>
+                    {uploadResult.entries && uploadResult.entries.length > 0 && (
+                      <details className="mt-2">
+                        <summary className="text-xs text-emerald-600 cursor-pointer font-medium hover:text-emerald-800">
+                          Ver {uploadResult.entries.length} movimientos agregados
+                        </summary>
+                        <div className="mt-2 max-h-60 overflow-y-auto rounded-lg border border-emerald-200 bg-white">
+                          <table className="w-full text-xs">
+                            <thead className="bg-emerald-50 sticky top-0">
+                              <tr>
+                                <th className="px-2 py-1.5 text-left font-bold text-emerald-700">#</th>
+                                <th className="px-2 py-1.5 text-left font-bold text-emerald-700">Fecha</th>
+                                <th className="px-2 py-1.5 text-left font-bold text-emerald-700">Descripción</th>
+                                <th className="px-2 py-1.5 text-right font-bold text-red-600">Egreso</th>
+                                <th className="px-2 py-1.5 text-right font-bold text-emerald-600">Ingreso</th>
+                                <th className="px-2 py-1.5 text-left font-bold text-emerald-700">Tipo</th>
+                                <th className="px-2 py-1.5 text-left font-bold text-emerald-700">Código</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-emerald-100">
+                              {uploadResult.entries.map((e: any, i: number) => (
+                                <tr key={i} className="hover:bg-emerald-50/50">
+                                  <td className="px-2 py-1 text-slate-500 font-mono">{e.correlativo}</td>
+                                  <td className="px-2 py-1 text-slate-700 whitespace-nowrap">{e.fecha}</td>
+                                  <td className="px-2 py-1 text-slate-800 font-medium">{e.descripcion}</td>
+                                  <td className="px-2 py-1 text-right font-mono">{e.egreso ? <span className="text-red-600">-${formatCurrency(e.egreso)}</span> : ''}</td>
+                                  <td className="px-2 py-1 text-right font-mono">{e.ingreso ? <span className="text-emerald-600">+${formatCurrency(e.ingreso)}</span> : ''}</td>
+                                  <td className="px-2 py-1"><span className={`inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold ${tipoColors[e.tipo] || 'bg-gray-100 text-gray-800'}`}>{e.tipo}</span></td>
+                                  <td className="px-2 py-1 font-bold text-slate-600">{e.cliente || ''}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </details>
+                    )}
+                    <p className="text-xs text-emerald-600 mt-2 italic">Recargando página en 3 segundos...</p>
+                  </div>
+                )}
+              </div>
+              <button onClick={() => setUploadResult(null)} className="text-slate-400 hover:text-slate-600">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className={`${palette.card} rounded-xl p-4 sm:p-5 ${palette.shadow}`}>
