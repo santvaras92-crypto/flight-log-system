@@ -3126,11 +3126,16 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
   const tipoColors: Record<string, string> = {
     'Pago piloto': 'bg-emerald-100 text-emerald-800',
     'Combustible': 'bg-amber-100 text-amber-800',
-    'Fintual': 'bg-blue-100 text-blue-800',
+    'Mantenimiento': 'bg-purple-100 text-purple-800',
+    'Repuestos': 'bg-pink-100 text-pink-800',
+    'Hangar': 'bg-cyan-100 text-cyan-800',
+    'Seguro': 'bg-sky-100 text-sky-800',
+    'Overhaul': 'bg-red-100 text-red-800',
+    'Inversión': 'bg-blue-100 text-blue-800',
+    'Impuesto': 'bg-rose-100 text-rose-800',
     'Banco': 'bg-slate-100 text-slate-800',
-    'Proveedor': 'bg-red-100 text-red-800',
-    'Mantención': 'bg-purple-100 text-purple-800',
     'Operacional': 'bg-orange-100 text-orange-800',
+    'Sin clasificar': 'bg-gray-100 text-gray-800',
   };
 
   const formatDate = (dateStr: string) => {
