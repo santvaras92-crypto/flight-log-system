@@ -625,10 +625,18 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             const user = initialData.users.find(u => u.codigo?.toUpperCase() === code);
             name = user?.nombre || code;
           }
+
+          // Calculate pilot balance
+          const spent = Math.round(initialData.csvPilotStats?.[code]?.spent || 0);
+          const deposits = Math.round(initialData.depositsByCode?.[code] || 0);
+          const fuel = Math.round(initialData.fuelByCode?.[code] || 0);
+          const balance = deposits - spent + fuel;
           
           return {
             name,
-            daysSince
+            code,
+            daysSince,
+            balance
           };
         })
         .sort((a, b) => a.daysSince - b.daysSince); // Sort by most recent first
@@ -648,8 +656,11 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           <div className="max-h-24 sm:max-h-32 overflow-y-auto space-y-0.5">
             {activePilotsData.map((pilot, i) => (
               <div key={i} className="flex items-center justify-between text-[10px] sm:text-xs">
-                <span className="text-slate-700 truncate flex-1">{pilot.name}</span>
-                <span className={`ml-1 font-mono ${pilot.daysSince === 0 ? 'text-green-600 font-bold' : pilot.daysSince <= 7 ? 'text-emerald-500' : pilot.daysSince <= 30 ? 'text-slate-500' : 'text-orange-500'}`}>
+                <span className="text-slate-700 truncate flex-1 min-w-0">{pilot.name}</span>
+                <span className={`ml-1 text-right font-mono tabular-nums text-[9px] sm:text-[11px] ${pilot.balance >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                  {pilot.balance >= 0 ? '+' : '-'}${formatCurrency(Math.abs(pilot.balance))}
+                </span>
+                <span className={`ml-1.5 w-7 text-right font-mono text-[10px] sm:text-xs ${pilot.daysSince === 0 ? 'text-green-600 font-bold' : pilot.daysSince <= 7 ? 'text-emerald-500' : pilot.daysSince <= 30 ? 'text-slate-500' : 'text-orange-500'}`}>
                   {pilot.daysSince === 0 ? 'hoy' : `${pilot.daysSince}d`}
                 </span>
               </div>
