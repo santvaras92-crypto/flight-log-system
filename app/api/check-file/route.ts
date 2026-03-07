@@ -12,7 +12,8 @@ export async function GET() {
       return NextResponse.json({ error: "File not found", filePath });
     }
 
-    const workbook = XLSX.readFile(filePath);
+    const fileBuffer = fs.readFileSync(filePath);
+    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
     const ref = sheet['!ref'];

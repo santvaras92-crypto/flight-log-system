@@ -1039,7 +1039,8 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       try {
         const xlsxPath = path.join(process.cwd(), 'Cuenta banco', 'Movimientos.xlsx');
         if (!fs.existsSync(xlsxPath)) return [];
-        const workbook = XLSX.readFile(xlsxPath);
+        const fileBuffer = fs.readFileSync(xlsxPath);
+        const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
         // Skip header row, columns: B=correlativo, C=Fecha, D=Descripción, E=egreso, F=ingreso, G=Saldo, H=Tipo, I=Cliente
