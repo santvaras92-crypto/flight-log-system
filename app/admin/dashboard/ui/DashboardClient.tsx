@@ -3082,7 +3082,57 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('asc');
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState<any>(null);
+  const [editingCell, setEditingCell] = useState<{ correlativo: number; field: string } | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [localEdits, setLocalEdits] = useState<Record<string, string>>({});
   const pageSize = 50;
+
+  const TIPO_OPTIONS = [
+    'Pago piloto', 'Combustible', 'Mantenimiento', 'Repuestos', 'Hangar',
+    'Seguro', 'Overhaul', 'Inversión', 'Impuesto', 'Banco', 'Operacional', 'Sin clasificar',
+  ];
+
+  const startEditing = (correlativo: number, field: string, currentValue: string) => {
+    setEditingCell({ correlativo, field });
+    setEditValue(currentValue || '');
+  };
+
+  const cancelEditing = () => {
+    setEditingCell(null);
+    setEditValue('');
+  };
+
+  const saveEdit = async () => {
+    if (!editingCell) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/update-movimiento', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ correlativo: editingCell.correlativo, field: editingCell.field, value: editValue }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        // Update local state to reflect the change immediately
+        const key = `${editingCell.correlativo}_${editingCell.field}`;
+        setLocalEdits(prev => ({ ...prev, [key]: editValue }));
+        setEditingCell(null);
+        setEditValue('');
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    } catch (err: any) {
+      alert(`Error de red: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getDisplayValue = (m: BankMovement, field: 'tipo' | 'cliente' | 'descripcion') => {
+    const key = `${m.correlativo}_${field}`;
+    return key in localEdits ? localEdits[key] : (m[field] || '');
+  };
 
   const handleCartolaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -3138,7 +3188,11 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
   // Filter and sort
   const filtered = useMemo(() => {
     let result = [...movements];
-    if (filterTipo !== 'ALL') result = result.filter(m => m.tipo === filterTipo);
+    if (filterTipo !== 'ALL') result = result.filter(m => {
+      const key = `${m.correlativo}_tipo`;
+      const displayTipo = key in localEdits ? localEdits[key] : m.tipo;
+      return displayTipo === filterTipo;
+    });
     if (filterYear) result = result.filter(m => m.fecha?.startsWith(filterYear));
     if (filterMonth) result = result.filter(m => {
       const month = m.fecha?.slice(5, 7);
@@ -3146,14 +3200,17 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
     });
     if (searchText) {
       const q = searchText.toLowerCase();
-      result = result.filter(m => 
-        (m.descripcion || '').toLowerCase().includes(q) || 
-        (m.cliente || '').toLowerCase().includes(q)
-      );
+      result = result.filter(m => {
+        const descKey = `${m.correlativo}_descripcion`;
+        const clienteKey = `${m.correlativo}_cliente`;
+        const desc = descKey in localEdits ? localEdits[descKey] : (m.descripcion || '');
+        const cliente = clienteKey in localEdits ? localEdits[clienteKey] : (m.cliente || '');
+        return desc.toLowerCase().includes(q) || cliente.toLowerCase().includes(q);
+      });
     }
     if (sortOrder === 'asc') result.reverse();
     return result;
-  }, [movements, filterTipo, filterYear, filterMonth, searchText, sortOrder]);
+  }, [movements, filterTipo, filterYear, filterMonth, searchText, sortOrder, localEdits]);
 
   // Pagination
   const totalPages = Math.ceil(filtered.length / pageSize);
@@ -3165,10 +3222,11 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
     const totalEgresos = filtered.reduce((s, m) => s + (m.egreso || 0), 0);
     const lastSaldo = movements.length > 0 ? movements[movements.length - 1].saldo : 0;
     
-    // By tipo
+    // By tipo (use local edits)
     const byTipo: Record<string, { ingresos: number; egresos: number; count: number }> = {};
     filtered.forEach(m => {
-      const t = m.tipo || 'Sin tipo';
+      const tipoKey = `${m.correlativo}_tipo`;
+      const t = (tipoKey in localEdits ? localEdits[tipoKey] : m.tipo) || 'Sin tipo';
       if (!byTipo[t]) byTipo[t] = { ingresos: 0, egresos: 0, count: 0 };
       byTipo[t].ingresos += (m.ingreso || 0);
       byTipo[t].egresos += (m.egreso || 0);
@@ -3176,7 +3234,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
     });
     
     return { totalIngresos, totalEgresos, lastSaldo, byTipo };
-  }, [filtered, movements]);
+  }, [filtered, movements, localEdits]);
 
   const tipoColors: Record<string, string> = {
     'Pago piloto': 'bg-emerald-100 text-emerald-800',
@@ -3426,10 +3484,39 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
             </thead>
             <tbody className="divide-y divide-slate-100">
               {paginated.map((m, i) => (
-                <tr key={`${m.correlativo}-${i}`} className="hover:bg-blue-50/50 transition-colors">
+                <tr key={`${m.correlativo}-${i}`} className="hover:bg-blue-50/50 transition-colors group">
                   <td className="px-3 py-2.5 text-xs text-slate-400 font-mono">{m.correlativo}</td>
                   <td className="px-3 py-2.5 text-xs font-medium text-slate-700 whitespace-nowrap">{formatDate(m.fecha)}</td>
-                  <td className="px-3 py-2.5 text-sm text-slate-800 font-medium max-w-[200px] sm:max-w-none truncate">{m.descripcion}</td>
+                  {/* Descripción - editable on double click */}
+                  <td className="px-3 py-2.5 text-sm text-slate-800 font-medium max-w-[200px] sm:max-w-none">
+                    {editingCell?.correlativo === m.correlativo && editingCell?.field === 'descripcion' ? (
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="text"
+                          value={editValue}
+                          onChange={e => setEditValue(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEditing(); }}
+                          className="w-full px-2 py-1 text-sm border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-blue-50"
+                          autoFocus
+                          disabled={saving}
+                        />
+                        <button onClick={saveEdit} disabled={saving} className="p-1 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100 rounded">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        </button>
+                        <button onClick={cancelEditing} className="p-1 text-red-500 hover:text-red-700 hover:bg-red-100 rounded">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      </div>
+                    ) : (
+                      <span
+                        className="truncate block cursor-pointer hover:text-blue-600"
+                        onDoubleClick={() => startEditing(m.correlativo, 'descripcion', getDisplayValue(m, 'descripcion'))}
+                        title="Doble clic para editar"
+                      >
+                        {getDisplayValue(m, 'descripcion')}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-3 py-2.5 text-sm text-right font-mono whitespace-nowrap">
                     {m.egreso ? <span className="text-red-600 font-semibold">-${formatCurrency(Math.round(m.egreso))}</span> : ''}
                   </td>
@@ -3439,14 +3526,69 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                   <td className="px-3 py-2.5 text-sm text-right font-mono font-semibold text-slate-700 whitespace-nowrap">
                     ${formatCurrency(Math.round(m.saldo))}
                   </td>
+                  {/* Tipo - editable on click with dropdown */}
                   <td className="px-3 py-2.5 text-center">
-                    {m.tipo && (
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${tipoColors[m.tipo] || 'bg-gray-100 text-gray-800'}`}>
-                        {m.tipo}
+                    {editingCell?.correlativo === m.correlativo && editingCell?.field === 'tipo' ? (
+                      <div className="flex items-center gap-1 justify-center">
+                        <select
+                          value={editValue}
+                          onChange={e => setEditValue(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEditing(); }}
+                          className="px-2 py-1 text-xs border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-blue-50 font-bold"
+                          autoFocus
+                          disabled={saving}
+                        >
+                          <option value="">— Sin tipo —</option>
+                          {TIPO_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                        <button onClick={saveEdit} disabled={saving} className="p-1 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100 rounded">
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        </button>
+                        <button onClick={cancelEditing} className="p-1 text-red-500 hover:text-red-700 hover:bg-red-100 rounded">
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      </div>
+                    ) : (
+                      <span
+                        onClick={() => startEditing(m.correlativo, 'tipo', getDisplayValue(m, 'tipo'))}
+                        className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all ${tipoColors[getDisplayValue(m, 'tipo')] || 'bg-gray-100 text-gray-800'}`}
+                        title="Clic para cambiar tipo"
+                      >
+                        {getDisplayValue(m, 'tipo') || '—'}
                       </span>
                     )}
                   </td>
-                  <td className="px-3 py-2.5 text-center text-xs font-bold text-slate-600">{m.cliente || ''}</td>
+                  {/* Código/Cliente - editable on click */}
+                  <td className="px-3 py-2.5 text-center">
+                    {editingCell?.correlativo === m.correlativo && editingCell?.field === 'cliente' ? (
+                      <div className="flex items-center gap-1 justify-center">
+                        <input
+                          type="text"
+                          value={editValue}
+                          onChange={e => setEditValue(e.target.value.toUpperCase())}
+                          onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEditing(); }}
+                          className="w-20 px-2 py-1 text-xs border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-blue-50 font-bold text-center uppercase"
+                          autoFocus
+                          disabled={saving}
+                          placeholder="Código"
+                        />
+                        <button onClick={saveEdit} disabled={saving} className="p-1 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100 rounded">
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        </button>
+                        <button onClick={cancelEditing} className="p-1 text-red-500 hover:text-red-700 hover:bg-red-100 rounded">
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      </div>
+                    ) : (
+                      <span
+                        onClick={() => startEditing(m.correlativo, 'cliente', getDisplayValue(m, 'cliente'))}
+                        className="text-xs font-bold text-slate-600 cursor-pointer hover:text-blue-600 hover:bg-blue-50 px-2 py-1 rounded transition-all"
+                        title="Clic para editar código"
+                      >
+                        {getDisplayValue(m, 'cliente') || <span className="text-slate-300">—</span>}
+                      </span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
