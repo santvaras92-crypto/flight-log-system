@@ -1,4 +1,4 @@
-// rebuild-1772855962
+'use client';
 
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { flushSync } from 'react-dom';

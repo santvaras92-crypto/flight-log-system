@@ -1,4 +1,4 @@
-// rebuild-1772855962
+'use client';
 
 import React from 'react'
 import { generateAccountStatementPDF } from '@/lib/generate-account-pdf'

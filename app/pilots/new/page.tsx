@@ -1,4 +1,4 @@
-// rebuild-1772855962
+"use client";
 import { useState, useEffect, useRef } from "react";
 import { searchExistingPilots, createOrUpdatePilot } from "@/app/actions/pilot-actions";
 
