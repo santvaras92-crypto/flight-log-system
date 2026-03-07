@@ -214,15 +214,16 @@ model DeviceToken {
 }
 
 model BankMovement {
-  id           Int      @id @default(autoincrement())
-  correlativo  Int      @unique
-  fecha        DateTime
-  descripcion  String
-  egreso       Decimal?
-  ingreso      Decimal?
-  saldo        Decimal
-  tipo         String   @default("Sin clasificar")
-  cliente      String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             Int      @id @default(autoincrement())
+  correlativo    Int      @unique
+  fecha          DateTime
+  descripcion    String
+  egreso         Decimal?
+  ingreso        Decimal?
+  saldo          Decimal
+  tipo           String   @default("Sin clasificar")
+  cliente        String?
+  attachmentUrl  String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }

@@ -34,7 +34,7 @@ type InitialData = {
     registered: { id: number; code: string; name: string; email: string | null; createdAt: string | Date; fechaNacimiento?: Date | null; telefono?: string | null; numeroLicencia?: string | null; tipoDocumento?: string | null; documento?: string | null }[];
   };
   aircraftYearlyStats?: { matricula: string; avgHoursPerYear: number; totalHours: number; yearsOfOperation: number }[];
-  bankMovements?: { correlativo: number; fecha: string; descripcion: string; egreso: number | null; ingreso: number | null; saldo: number; tipo: string; cliente: string | null }[];
+  bankMovements?: { correlativo: number; fecha: string; descripcion: string; egreso: number | null; ingreso: number | null; saldo: number; tipo: string; cliente: string | null; attachmentUrl?: string | null }[];
 };
 type PaginationInfo = { page: number; pageSize: number; total: number };
 type OverviewMetrics = {
@@ -966,8 +966,8 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               key={t.id}
               onClick={() => setTab(t.id)}
               className={`flex-1 min-w-0 px-2 sm:px-6 py-3 sm:py-4 rounded-lg font-bold uppercase tracking-wide text-xs sm:text-sm transition-all flex items-center justify-center gap-1 sm:gap-2 ${tab === t.id
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
             >
               <svg className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -993,8 +993,8 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             <button
               onClick={() => setEditMode(!editMode)}
               className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 ${editMode
-                  ? 'bg-yellow-500 hover:bg-yellow-600 text-white shadow-lg'
-                  : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                ? 'bg-yellow-500 hover:bg-yellow-600 text-white shadow-lg'
+                : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
                 }`}
             >
               {editMode ? '✏️ Modo Edición ON' : '✏️ Editar Celdas'}
@@ -1091,8 +1091,8 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                         }
                       }}
                       className={`min-w-[40px] px-3 py-2 rounded-lg font-semibold transition-all ${isActive
-                          ? 'bg-blue-600 text-white shadow-lg'
-                          : 'bg-white text-slate-600 hover:bg-blue-50 border border-slate-300'
+                        ? 'bg-blue-600 text-white shadow-lg'
+                        : 'bg-white text-slate-600 hover:bg-blue-50 border border-slate-300'
                         }`}
                     >
                       {pageNum}
@@ -1131,8 +1131,8 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             <button
               onClick={() => setPilotSubTab("accounts")}
               className={`flex-1 min-w-[100px] px-3 sm:px-6 py-2 sm:py-3 rounded-xl font-bold uppercase tracking-wide text-xs sm:text-sm transition-all ${pilotSubTab === "accounts"
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl'
-                  : 'bg-white/50 text-slate-600 hover:bg-white/80 border-2 border-slate-200'
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl'
+                : 'bg-white/50 text-slate-600 hover:bg-white/80 border-2 border-slate-200'
                 }`}
             >
               <span className="hidden sm:inline">Pilot </span>Accounts
@@ -1140,8 +1140,8 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             <button
               onClick={() => setPilotSubTab("directory")}
               className={`flex-1 min-w-[100px] px-3 sm:px-6 py-2 sm:py-3 rounded-xl font-bold uppercase tracking-wide text-xs sm:text-sm transition-all ${pilotSubTab === "directory"
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl'
-                  : 'bg-white/50 text-slate-600 hover:bg-white/80 border-2 border-slate-200'
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl'
+                : 'bg-white/50 text-slate-600 hover:bg-white/80 border-2 border-slate-200'
                 }`}
             >
               <span className="hidden sm:inline">Pilot </span>Directory
@@ -1149,8 +1149,8 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             <button
               onClick={() => setPilotSubTab("deposits")}
               className={`flex-1 min-w-[100px] px-3 sm:px-6 py-2 sm:py-3 rounded-xl font-bold uppercase tracking-wide text-xs sm:text-sm transition-all ${pilotSubTab === "deposits"
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl'
-                  : 'bg-white/50 text-slate-600 hover:bg-white/80 border-2 border-slate-200'
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl'
+                : 'bg-white/50 text-slate-600 hover:bg-white/80 border-2 border-slate-200'
                 }`}
             >
               Deposits
@@ -2451,8 +2451,8 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
               if (editMode) setEditedRows({});
             }}
             className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors ${editMode
-                ? 'bg-red-500 hover:bg-red-600 text-white'
-                : 'bg-white/20 hover:bg-white/30 text-white'
+              ? 'bg-red-500 hover:bg-red-600 text-white'
+              : 'bg-white/20 hover:bg-white/30 text-white'
               }`}
           >
             {editMode ? '✕ Cancelar' : '✏️ Editar'}
@@ -3063,7 +3063,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
   );
 }
 
-type BankMovement = { correlativo: number; fecha: string; descripcion: string; egreso: number | null; ingreso: number | null; saldo: number; tipo: string; cliente: string | null };
+type BankMovement = { correlativo: number; fecha: string; descripcion: string; egreso: number | null; ingreso: number | null; saldo: number; tipo: string; cliente: string | null; attachmentUrl?: string | null };
 
 function FinanzasTable({ movements, palette }: { movements: BankMovement[]; palette: any }) {
   const [filterTipo, setFilterTipo] = useState<string>('ALL');
@@ -3157,6 +3157,64 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
     } finally {
       setUploading(false);
       e.target.value = '';
+    }
+  };
+
+  const handleAttachFile = async (correlativo: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert('El archivo no puede superar los 10MB');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('correlativo', correlativo.toString());
+
+      const res = await fetch('/api/upload-movimiento-attachment', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (data.ok) {
+        // Find and update the movement in local state if pagination allows, but location.reload is safer
+        setTimeout(() => location.reload(), 500);
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    } catch (err: any) {
+      alert(`Error de red: ${err.message}`);
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleDeleteAttachment = async (correlativo: number) => {
+    if (!confirm('¿Seguro que deseas eliminar este archivo adjunto?')) return;
+
+    setUploading(true);
+    try {
+      const res = await fetch('/api/upload-movimiento-attachment', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ correlativo })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setTimeout(() => location.reload(), 500);
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    } catch (err: any) {
+      alert(`Error de red: ${err.message}`);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -3473,6 +3531,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                 <th className="px-1 sm:px-3 py-2 sm:py-3 text-right text-[8px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Saldo</th>
                 <th className="px-1 sm:px-3 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Tipo</th>
                 <th className="px-1 sm:px-3 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Código</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Doc</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -3557,7 +3616,6 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                       </span>
                     )}
                   </td>
-                  {/* Código/Cliente - editable on click */}
                   <td className="px-1 sm:px-3 py-1.5 sm:py-2.5 text-center">
                     {editingCell?.correlativo === m.correlativo && editingCell?.field === 'cliente' ? (
                       <div className="flex items-center gap-1 justify-center">
@@ -3586,6 +3644,35 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                       >
                         {getDisplayValue(m, 'cliente') || <span className="text-slate-300">—</span>}
                       </span>
+                    )}
+                  </td>
+                  {/* Attachment Column */}
+                  <td className="px-1 sm:px-3 py-1.5 sm:py-2.5 text-center align-middle whitespace-nowrap">
+                    {m.attachmentUrl ? (
+                      <div className="flex items-center justify-center gap-1">
+                        <a
+                          href={m.attachmentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-900 rounded-lg transition-colors border border-blue-200 flex-shrink-0"
+                          title="Ver documento adjunto"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        </a>
+                        <button
+                          onClick={() => handleDeleteAttachment(m.correlativo)}
+                          disabled={uploading}
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                          title="Eliminar documento"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                      </div>
+                    ) : (
+                      <label className={`cursor-pointer inline-flex items-center justify-center p-1.5 border border-dashed border-slate-300 rounded-lg text-slate-400 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`} title="Subir documento (PDF o Imagen)">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                        <input type="file" accept="image/*,.pdf" className="hidden" disabled={uploading} onChange={(e) => handleAttachFile(m.correlativo, e)} />
+                      </label>
                     )}
                   </td>
                 </tr>

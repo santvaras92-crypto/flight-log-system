@@ -44,12 +44,12 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       }
     }),
     // All flights with complete data for client filtering in FlightsTable
-    prisma.flight.findMany({ 
-      orderBy: [{ fecha: "desc" }, { createdAt: "desc" }], 
-      select: { 
-        id: true, 
+    prisma.flight.findMany({
+      orderBy: [{ fecha: "desc" }, { createdAt: "desc" }],
+      select: {
+        id: true,
         fecha: true,
-        createdAt: true, 
+        createdAt: true,
         hobbs_inicio: true,
         hobbs_fin: true,
         tach_inicio: true,
@@ -60,7 +60,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         tarifa: true,
         instructor_rate: true,
         copiloto: true,
-        cliente: true, 
+        cliente: true,
         instructor: true,
         detalle: true,
         aircraftId: true,
@@ -71,7 +71,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         propeller_hours: true,
         aerodromoSalida: true,
         aerodromoDestino: true,
-      } 
+      }
     }),
     prisma.flight.findMany({ orderBy: { fecha: "desc" }, select: { id: true, fecha: true, cliente: true, diff_hobbs: true, costo: true } }), // Lightweight for Active Pilots calculation
     prisma.flightSubmission.findMany({
@@ -87,7 +87,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     prisma.component.findMany(),
     prisma.transaction.findMany({ orderBy: { createdAt: "desc" }, take: 500 }),
     prisma.flight.count(),
-    prisma.deposit.findMany({ 
+    prisma.deposit.findMany({
       include: { User: { select: { codigo: true } } },
       orderBy: { fecha: "desc" }
     }),
@@ -139,22 +139,22 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
             if (fs.existsSync(fuelPath)) {
               const content = fs.readFileSync(fuelPath, 'utf-8');
               const lines = content.split('\n').filter(l => l.trim());
-              
+
               for (let i = 1; i < lines.length; i++) {
                 const parts = lines[i].split(';');
                 const dateStr = (parts[0] || '').trim();
                 if (!dateStr) continue;
-                
+
                 const dateParts = dateStr.split('-');
                 if (dateParts.length !== 3) continue;
-                
+
                 const day = parseInt(dateParts[0]);
                 const month = parseInt(dateParts[1]);
                 let year = parseInt(dateParts[2]);
                 if (year < 100) year = year < 50 ? 2000 + year : 1900 + year;
-                
+
                 const fuelDate = new Date(year, month - 1, day);
-                
+
                 if (fuelDate >= sep9_2020) {
                   const litrosStr = (parts[2] || '').trim().replace(',', '.');
                   const litros = parseFloat(litrosStr);
@@ -167,21 +167,21 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
                 }
               }
             }
-          } catch {}
-          
+          } catch { }
+
           // Get new DB fuel entries after CSV cutoff date
           let newDbFuel = 0;
           try {
             const cutoffDate = csvLatestDate || new Date('2024-01-01'); // Safe fallback
             const fuelData = await prisma.fuelLog.aggregate({
-              where: { 
+              where: {
                 fecha: { gt: cutoffDate } // Only entries AFTER CSV
               },
               _sum: { litros: true }
             });
             newDbFuel = Number(fuelData._sum.litros || 0);
-          } catch {}
-          
+          } catch { }
+
           // Return CSV baseline + new DB entries
           return csvFuel + newDbFuel;
         })(),
@@ -201,7 +201,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
             if (fs.existsSync(paymentsPath)) {
               const raw = fs.readFileSync(paymentsPath, 'utf-8');
               const lines = raw.split('\n').filter(l => l.trim());
-              
+
               const parseCurrency = (value?: string) => {
                 if (!value) return 0;
                 const cleaned = value.replace(/[^0-9,-]/g, '').replace(/\./g, '').replace(',', '.');
@@ -209,7 +209,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
                 const num = Number(cleaned);
                 return Number.isFinite(num) ? num : 0;
               };
-              
+
               // Skip header, sum column 3 (ingreso)
               lines.slice(1).forEach(line => {
                 const cols = line.split(';');
@@ -217,12 +217,12 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
                 csvPayments += amount;
               });
             }
-          } catch {}
+          } catch { }
           return csvPayments;
         })(),
         // Fuel charges from DB transactions (tipo FUEL, excluding Stratus user ID 95)
         prisma.transaction.aggregate({
-          where: { 
+          where: {
             tipo: 'FUEL',
             userId: { not: 95 }
           },
@@ -266,16 +266,16 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       const totalHoursAllTime = computeHours(flightsForHoursAllTime);
       const totalHoursSinceSep2020 = computeHours(flightsForHoursSinceSep);
       const totalFuelSinceSep2020 = Number(fuelSinceSep2020);
-      
+
       // Apply 10% idle adjustment: divide by 90% of hours
       const effectiveHours = totalHoursSinceSep2020 > 0 ? totalHoursSinceSep2020 * 0.9 : 0;
       const litersPerHour = effectiveHours > 0 ? Number((totalFuelSinceSep2020 / effectiveHours).toFixed(2)) : 0;
       const gallonsPerHour = litersPerHour > 0 ? Number((litersPerHour / 3.78541).toFixed(2)) : 0;
-      
+
       // Compute Next Inspections (Oil Change and 100-hour)
       const OIL_INTERVAL = 50;
       const INSPECT_100_INTERVAL = 100;
-      
+
       const getCurrentTach = async (): Promise<number | null> => {
         const latest = await prisma.flight.findFirst({
           orderBy: [{ fecha: 'desc' }, { id: 'desc' }],
@@ -289,7 +289,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         if (ini != null && diff != null) return ini + diff;
         return ini;
       };
-      
+
       const getLastTachForDetalle = async (keyword: string): Promise<number | null> => {
         const flight = await prisma.flight.findFirst({
           where: { detalle: { contains: keyword, mode: 'insensitive' } },
@@ -324,17 +324,17 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         const diff = toNumber(flight.diff_tach);
         return ini != null ? ini : (fin != null && diff != null ? fin - diff : null);
       };
-      
+
       const currentTach = await getCurrentTach();
       const oilTachBase = await getLastOilChangeTach();
       const inspectTachBase = await getLastTachForDetalle('REVISION 100 HRS');
-      
+
       const oilUsed = oilTachBase != null && currentTach != null ? (currentTach - oilTachBase) : (currentTach != null ? (currentTach % OIL_INTERVAL) : 0);
       const inspectUsed = inspectTachBase != null && currentTach != null ? (currentTach - inspectTachBase) : (currentTach != null ? (currentTach % INSPECT_100_INTERVAL) : 0);
-      
+
       const oilChangeRemaining = Math.max(0, OIL_INTERVAL - (oilUsed < 0 ? 0 : oilUsed));
       const hundredHourRemaining = Math.max(0, INSPECT_100_INTERVAL - (inspectUsed < 0 ? 0 : inspectUsed));
-      
+
       // === PREDICTIVE STATISTICS ===
       const now = new Date();
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -342,11 +342,11 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
       const prevThirtyStart = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
       const prevThirtyEnd = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      
+
       // === ANNUAL STATISTICS (Rolling 365 days) ===
       const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
       const twoYearsAgo = new Date(now.getTime() - 730 * 24 * 60 * 60 * 1000);
-      
+
       // Get flights for each period
       const [flights30d, flights60d, flights90d, flightsPrev30d, flightsThisYear, flightsPrevYear] = await Promise.all([
         prisma.flight.findMany({ where: { fecha: { gte: thirtyDaysAgo } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true, fecha: true } }),
@@ -356,7 +356,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         prisma.flight.findMany({ where: { fecha: { gte: oneYearAgo } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true, diff_hobbs: true } }),
         prisma.flight.findMany({ where: { fecha: { gte: twoYearsAgo, lt: oneYearAgo } }, select: { diff_tach: true, tach_inicio: true, tach_fin: true, diff_hobbs: true } }),
       ]);
-      
+
       // Calculate TACH hours for each period
       const computeTachHours = (flights: { diff_tach: any; tach_inicio: any; tach_fin: any }[]) => {
         let sum = 0;
@@ -369,20 +369,20 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         }
         return sum;
       };
-      
+
       const hours30d = computeTachHours(flights30d);
       const hours60d = computeTachHours(flights60d);
       const hours90d = computeTachHours(flights90d);
       const hoursPrev30d = computeTachHours(flightsPrev30d);
-      
+
       const rate30d = hours30d / 30;  // hrs/day
       const rate60d = hours60d / 60;
       const rate90d = hours90d / 90;
       const ratePrev30d = hoursPrev30d / 30;
-      
+
       // Trend: compare last 30d vs previous 30d
       const trend = ratePrev30d > 0 ? ((rate30d - ratePrev30d) / ratePrev30d) * 100 : 0;
-      
+
       // Standard deviation of daily usage (from last 30 days)
       const dailyHours: number[] = [];
       const flightsByDay = new Map<string, number>();
@@ -403,7 +403,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       const mean = dailyHours.reduce((a, b) => a + b, 0) / dailyHours.length;
       const variance = dailyHours.reduce((sum, h) => sum + Math.pow(h - mean, 2), 0) / dailyHours.length;
       const stdDev = Math.sqrt(variance);
-      
+
       // === ANNUAL STATISTICS CALCULATIONS ===
       // Compute HOBBS hours
       const computeHobbsHours = (flights: { diff_hobbs?: any }[]) => {
@@ -414,48 +414,48 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         }
         return sum;
       };
-      
+
       const tachThisYear = computeTachHours(flightsThisYear);
       const tachPrevYear = computeTachHours(flightsPrevYear);
       const hobbsThisYear = computeHobbsHours(flightsThisYear);
       const hobbsPrevYear = computeHobbsHours(flightsPrevYear);
-      
+
       // Annual rate from rolling 365 days
       const rateAnnual = tachThisYear / 365;  // hrs/day
-      
+
       // Hybrid rate: 2/3 annual (stability) + 1/3 last 90d (recent trend)
       const weightedRate = rateAnnual > 0 ? (rateAnnual * 2 + rate90d) / 3 : (rate30d * 3 + rate60d * 2 + rate90d) / 6;
       const flightsCountThisYear = flightsThisYear.length;
       const flightsCountPrevYear = flightsPrevYear.length;
-      
+
       // Calculate real HOBBS/TACH ratio
       const hobbsTachRatio = tachThisYear > 0 ? hobbsThisYear / tachThisYear : 1.25;
-      
+
       // Monthly averages
       const avgMonthlyTachThisYear = tachThisYear / 12;
       const avgMonthlyTachPrevYear = tachPrevYear / 12;
       const avgMonthlyHobbsThisYear = hobbsThisYear / 12;
       const avgMonthlyHobbsPrevYear = hobbsPrevYear / 12;
-      
+
       // Monthly flight counts
       const avgMonthlyFlightsThisYear = flightsCountThisYear / 12;
       const avgMonthlyFlightsPrevYear = flightsCountPrevYear / 12;
-      
+
       // Trend percentages (based on HOBBS)
       const hobbsTrend = hobbsPrevYear > 0 ? ((hobbsThisYear - hobbsPrevYear) / hobbsPrevYear) * 100 : 0;
       const tachTrend = tachPrevYear > 0 ? ((tachThisYear - tachPrevYear) / tachPrevYear) * 100 : 0;
       const avgHoursTrend = avgMonthlyHobbsPrevYear > 0 ? ((avgMonthlyHobbsThisYear - avgMonthlyHobbsPrevYear) / avgMonthlyHobbsPrevYear) * 100 : 0;
       const flightsTrend = avgMonthlyFlightsPrevYear > 0 ? ((avgMonthlyFlightsThisYear - avgMonthlyFlightsPrevYear) / avgMonthlyFlightsPrevYear) * 100 : 0;
-      
+
       // Calculate total payments (CSV + DB deposits)
       const totalPayments = paymentsFromCSV + Number(depositsFromDB._sum.monto || 0);
-      
+
       // Fuel charges (non-Stratus users)
       const fuelCharges = Number(fuelChargesNonStratus._sum.monto || 0);
-      
+
       // Fixed adjustment for pending balance (historical correction)
       const FIXED_ADJUSTMENT = 20659549;
-      
+
       return {
         totalHours: totalHoursAllTime,
         totalFlights: totalFlights,
@@ -594,7 +594,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         csvPilotStats[code].spent += total;
       });
     }
-  } catch {}
+  } catch { }
 
   const registeredPilotCodes = users
     .filter(u => u.rol === 'PILOTO' && u.email && !u.email.endsWith('@piloto.local'))
@@ -610,20 +610,20 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         orderBy: { fecha: 'asc' },
         select: { fecha: true, diff_hobbs: true }
       });
-      
+
       if (allAircraftFlights.length === 0) {
         return { matricula: a.matricula, avgHoursPerYear: 0, yearsOfOperation: 0, totalHours: 0 };
       }
-      
+
       // Calculate total hours and time span
       const totalHours = allAircraftFlights.reduce((sum, f) => sum + Number(f.diff_hobbs || 0), 0);
       const firstFlight = new Date(allAircraftFlights[0].fecha);
       const lastFlight = new Date(allAircraftFlights[allAircraftFlights.length - 1].fecha);
       const yearsDiff = Math.max((lastFlight.getTime() - firstFlight.getTime()) / (1000 * 60 * 60 * 24 * 365), 0.5);
       const avgHoursPerYear = totalHours / yearsDiff;
-      
-      return { 
-        matricula: a.matricula, 
+
+      return {
+        matricula: a.matricula,
         avgHoursPerYear: Math.round(avgHoursPerYear * 10) / 10,
         yearsOfOperation: Math.round(yearsDiff * 10) / 10,
         totalHours: Math.round(totalHours * 10) / 10
@@ -728,7 +728,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
             if (!isNaN(val)) map[code] = (map[code] || 0) + val;
           }
         }
-      } catch {}
+      } catch { }
       // 2. Add DB Transaction tipo FUEL, mapped by user codigo
       transactions.forEach(t => {
         if (t.tipo === 'FUEL' && t.userId) {
@@ -745,10 +745,10 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     fuelDetailsByCode: (() => {
       const map: Record<string, { fecha: string; litros: number; monto: number }[]> = {};
       const seen: Record<string, Set<string>> = {}; // Track duplicates by code -> "fecha|monto"
-      
+
       // Helper to create a unique key for deduplication
       const makeKey = (fecha: string, monto: number) => `${fecha}|${Math.round(monto)}`;
-      
+
       // 1. Read CSV historical fuel
       try {
         const fuelPath = path.join(process.cwd(), 'Combustible', 'Planilla control combustible.csv');
@@ -775,13 +775,13 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
             }
           }
         }
-      } catch {}
+      } catch { }
       // 2. Add DB FuelLog entries (only if not already in CSV)
       fuelLogs.forEach((log: any) => {
         const code = log.User?.codigo?.toUpperCase();
         if (!code) return;
-        const fecha = log.fecha instanceof Date 
-          ? `${String(log.fecha.getDate()).padStart(2,'0')}-${String(log.fecha.getMonth()+1).padStart(2,'0')}-${String(log.fecha.getFullYear()).slice(-2)}`
+        const fecha = log.fecha instanceof Date
+          ? `${String(log.fecha.getDate()).padStart(2, '0')}-${String(log.fecha.getMonth() + 1).padStart(2, '0')}-${String(log.fecha.getFullYear()).slice(-2)}`
           : String(log.fecha).split('T')[0];
         const litros = typeof log.litros === 'number' ? log.litros : parseFloat(log.litros?.toString() || '0');
         const monto = typeof log.monto === 'number' ? log.monto : parseFloat(log.monto?.toString() || '0');
@@ -835,7 +835,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
             if (!isNaN(val)) map[code] = (map[code] || 0) + val;
           }
         }
-      } catch {}
+      } catch { }
       // 2. Add from database
       depositsFromDB.forEach(dep => {
         const code = dep.User?.codigo?.toUpperCase();
@@ -868,17 +868,17 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
             map[code].push({ fecha, descripcion, monto, source: 'CSV' });
           }
         }
-      } catch {}
+      } catch { }
       // 2. Add from database
       depositsFromDB.forEach(dep => {
         const code = dep.User?.codigo?.toUpperCase();
         if (code) {
           if (!map[code]) map[code] = [];
           const monto = typeof dep.monto === 'number' ? dep.monto : parseFloat(dep.monto.toString());
-          map[code].push({ 
+          map[code].push({
             id: dep.id,
-            fecha: dep.fecha.toISOString().split('T')[0], 
-            descripcion: dep.detalle || 'Depósito (BD)', 
+            fecha: dep.fecha.toISOString().split('T')[0],
+            descripcion: dep.detalle || 'Depósito (BD)',
             monto,
             source: 'DB'
           });
@@ -891,10 +891,10 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       const fsMod = await import('fs');
       const allRecords: { id: number | string; fecha: Date; pilotCode: string; pilotName: string; litros: number; monto: number; detalle: string; imageUrl: string | null; source: 'CSV' | 'DB'; exists: boolean }[] = [];
       const seen = new Set<string>(); // Track duplicates by "fecha|code|monto"
-      
+
       // Helper to create a unique key for deduplication
       const makeKey = (fecha: string, code: string, monto: number) => `${fecha}|${code}|${Math.round(monto)}`;
-      
+
       // Helper to parse DD-MM-YY to Date (use noon to avoid timezone issues)
       const parseDate = (d: string): Date => {
         const parts = d.split('-');
@@ -905,7 +905,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         if (year < 100) year = year < 50 ? 2000 + year : 1900 + year;
         return new Date(year, month - 1, day, 12, 0, 0); // Use noon to avoid timezone offset issues
       };
-      
+
       // 1. Read CSV historical fuel
       try {
         const fuelPath = pathMod.join(process.cwd(), 'Combustible', 'Planilla control combustible.csv');
@@ -923,15 +923,15 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
             const cleaned = montoStr.replace(/\$/g, '').replace(/\./g, '').replace(',', '.');
             const monto = parseFloat(cleaned) || 0;
             if (monto <= 0) continue;
-            
+
             const key = makeKey(fechaStr, code, monto);
             if (seen.has(key)) continue;
             seen.add(key);
-            
+
             // Find pilot name from users
             const user = users.find(u => (u.codigo || '').toUpperCase() === code);
             const pilotName = user?.nombre || code;
-            
+
             allRecords.push({
               id: `csv-${i}`,
               fecha: parseDate(fechaStr),
@@ -946,20 +946,20 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
             });
           }
         }
-      } catch {}
-      
+      } catch { }
+
       // 2. Add DB FuelLog entries
       for (const l of fuelLogs) {
         const code = (l.User?.codigo || '').toUpperCase();
         const fecha = l.fecha instanceof Date ? l.fecha : new Date(l.fecha);
-        const fechaStr = `${String(fecha.getDate()).padStart(2,'0')}-${String(fecha.getMonth()+1).padStart(2,'0')}-${String(fecha.getFullYear()).slice(-2)}`;
+        const fechaStr = `${String(fecha.getDate()).padStart(2, '0')}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getFullYear()).slice(-2)}`;
         const monto = Number(l.monto) || 0;
-        
+
         const key = makeKey(fechaStr, code, monto);
         // Skip if already in CSV (duplicate)
         if (seen.has(key)) continue;
         seen.add(key);
-        
+
         allRecords.push({
           id: l.id,
           fecha: fecha,
@@ -973,10 +973,10 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           exists: true, // API endpoint handles availability
         });
       }
-      
+
       // Sort by date descending
       allRecords.sort((a, b) => b.fecha.getTime() - a.fecha.getTime());
-      
+
       return allRecords;
     })(),
     pilotDirectory: {
@@ -1021,11 +1021,11 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           // Only include pilots NOT in CSV AND have real email (not @piloto.local)
           return code && !allowedPilotCodes.includes(code) && u.email && !u.email.endsWith('@piloto.local');
         })
-        .map(u => ({ 
-          id: u.id, 
-          code: (u.codigo || '').toUpperCase(), 
-          name: u.nombre, 
-          email: u.email, 
+        .map(u => ({
+          id: u.id,
+          code: (u.codigo || '').toUpperCase(),
+          name: u.nombre,
+          email: u.email,
           createdAt: u.createdAt,
           fechaNacimiento: u.fechaNacimiento || null,
           telefono: u.telefono || null,
@@ -1048,6 +1048,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           saldo: Number(m.saldo) || 0,
           tipo: m.tipo || '',
           cliente: m.cliente || null,
+          attachmentUrl: m.attachmentUrl || null,
         }));
       } catch (e) {
         console.error('Error reading BankMovements from DB:', e);
