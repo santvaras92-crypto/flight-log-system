@@ -1,4 +1,3 @@
-// rebuild trigger 1765397735
 import OpenAI from "openai";
 
 const openai = new OpenAI({

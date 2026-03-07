@@ -1,4 +1,4 @@
-# Force clean install and build - Mar 7 2026 v7
+# Force clean install and build - Mar 7 2026 v8
 [phases.setup]
 nixPkgs = ["nodejs_18", "npm-9_x", "openssl"]
 
@@ -6,7 +6,7 @@ nixPkgs = ["nodejs_18", "npm-9_x", "openssl"]
 cmds = ["rm -rf node_modules/.cache", "npm ci --force"]
 
 [phases.build]
-cmds = ["echo 'Verifying source files...' && ls -la app/actions/*.ts app/actions/_utils/*.ts lib/generate-account-pdf.ts app/pdf-demo/page.tsx app/pilots/new/page.tsx app/register/ui/RegisterClient.tsx 'Cuenta banco/Movimientos.xlsx' && npm run build"]
+cmds = ["npm run build"]
 
 [start]
 cmd = "npm start"

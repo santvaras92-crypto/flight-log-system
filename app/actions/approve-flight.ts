@@ -1,8 +1,8 @@
-// rebuild-1772855962
 "use server";
 
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
 
 /**
  * Aprueba un FlightSubmission pendiente y actualiza el vuelo existente.

@@ -1,5 +1,3 @@
-// rebuild-1772855962
-// Railway rebuild fix - Dec 7, 2025
 'use server';
 
 import { prisma } from '@/lib/prisma';
@@ -93,4 +91,3 @@ export async function deleteFuelLog(formData: FormData) {
 
   await prisma.fuelLog.delete({ where: { id } });
 }
-// Railway rebuild Wed Dec 10 16:59:50 -03 2025

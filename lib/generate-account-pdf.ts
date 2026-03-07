@@ -1,5 +1,3 @@
-// rebuild-1772855962
-// Railway rebuild fix - Jan 8, 2026
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -575,4 +573,3 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   const fileName = `Estado_Cuenta_${data.clientCode}_${new Date().toISOString().split('T')[0]}.pdf`;
   doc.save(fileName);
 }
-// Force rebuild Wed Dec 10 16:53:17 -03 2025
