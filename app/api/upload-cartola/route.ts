@@ -259,7 +259,7 @@ export async function POST(req: NextRequest) {
 
     let currentCorrelativo = lastCorrelativo;
 
-    // ── SMART MATCHING: Cross-reference with DB deposits ──
+    // ── SMART MATCHING: Cross-reference with DB deposits (ingresos) ──
     const dbDeposits = await prisma.deposit.findMany({
       where: { estado: "APROBADO" },
       select: {
@@ -270,7 +270,6 @@ export async function POST(req: NextRequest) {
       orderBy: { fecha: "desc" },
     });
 
-    // Group deposits by exact monto for fast lookup
     const depositsByMonto = new Map<number, { fecha: Date; pilotName: string; pilotCode: string }[]>();
     for (const dep of dbDeposits) {
       const monto = Number(dep.monto);
@@ -305,19 +304,86 @@ export async function POST(req: NextRequest) {
       return null;
     };
 
+    // ── SMART MATCHING: Cross-reference with FuelLog (egresos → combustible) ──
+    const dbFuelLogs = await prisma.fuelLog.findMany({
+      select: { monto: true, fecha: true, litros: true, detalle: true },
+      orderBy: { fecha: "desc" },
+    });
+
+    // Group fuel logs by exact monto
+    const fuelByMonto = new Map<number, { fecha: Date; litros: number; detalle: string | null }[]>();
+    for (const fl of dbFuelLogs) {
+      const monto = Number(fl.monto);
+      if (!fuelByMonto.has(monto)) fuelByMonto.set(monto, []);
+      fuelByMonto.get(monto)!.push({
+        fecha: new Date(fl.fecha),
+        litros: Number(fl.litros),
+        detalle: fl.detalle,
+      });
+    }
+
+    const usedFuelKeys = new Set<string>();
+
+    const findFuelMatch = (bankDate: Date, bankAmount: number): { litros: number; detalle: string | null } | null => {
+      const candidates = fuelByMonto.get(bankAmount);
+      if (!candidates || candidates.length === 0) return null;
+      // Fuel payments can be processed days/weeks later — allow up to 30 days
+      const MAX_DAYS_DIFF = 30;
+      let bestMatch: (typeof candidates)[0] | null = null;
+      let bestDaysDiff = Infinity;
+      for (const candidate of candidates) {
+        const fKey = `${candidate.fecha.toISOString()}_${bankAmount}`;
+        if (usedFuelKeys.has(fKey)) continue;
+        const daysDiff = Math.abs((bankDate.getTime() - candidate.fecha.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysDiff <= MAX_DAYS_DIFF && daysDiff < bestDaysDiff) {
+          bestDaysDiff = daysDiff;
+          bestMatch = candidate;
+        }
+      }
+      if (bestMatch) {
+        usedFuelKeys.add(`${bestMatch.fecha.toISOString()}_${bankAmount}`);
+        return { litros: bestMatch.litros, detalle: bestMatch.detalle };
+      }
+      return null;
+    };
+
     // Build entries and write to DB
     const addedEntries: { correlativo: number; fecha: string; descripcion: string; egreso: number | null; ingreso: number | null; saldo: number; tipo: string; cliente: string | null; matchedFromDB?: boolean }[] = [];
 
     for (const entry of newEntries) {
       currentCorrelativo++;
       const isIngreso = entry.ingreso != null && entry.ingreso > 0;
+      const isEgreso = entry.egreso != null && entry.egreso > 0;
 
+      // Match ingresos with pilot deposits
       let depositMatch: { pilotName: string; pilotCode: string } | null = null;
       if (isIngreso && entry.ingreso) {
         depositMatch = findDepositMatch(entry.fecha, entry.ingreso);
       }
 
-      const { descripcion, cliente, tipo } = parseCartolaDescription(entry.rawDesc, isIngreso, depositMatch);
+      // Match egresos with fuel logs
+      let fuelMatch: { litros: number; detalle: string | null } | null = null;
+      if (isEgreso && entry.egreso) {
+        fuelMatch = findFuelMatch(entry.fecha, entry.egreso);
+      }
+
+      let descripcion: string;
+      let cliente: string | null;
+      let tipo: string;
+
+      if (fuelMatch) {
+        // Fuel match takes priority for egresos
+        const litrosStr = Math.round(fuelMatch.litros);
+        descripcion = `${litrosStr} litros avgas Stratus`;
+        cliente = null;
+        tipo = "Combustible";
+      } else {
+        const result = parseCartolaDescription(entry.rawDesc, isIngreso, depositMatch);
+        descripcion = result.descripcion;
+        cliente = result.cliente;
+        tipo = result.tipo;
+      }
+
       const saldo = entry.saldo;
 
       // Write to PostgreSQL DB
@@ -343,7 +409,7 @@ export async function POST(req: NextRequest) {
         saldo: Math.round(saldo),
         tipo,
         cliente,
-        matchedFromDB: !!depositMatch,
+        matchedFromDB: !!(depositMatch || fuelMatch),
       });
     }
 
