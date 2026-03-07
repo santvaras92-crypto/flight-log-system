@@ -3079,7 +3079,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
   const [filterYear, setFilterYear] = useState<string>('');
   const [searchText, setSearchText] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('asc');
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState<any>(null);
   const pageSize = 50;
