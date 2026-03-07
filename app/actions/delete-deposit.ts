@@ -1,4 +1,4 @@
-'use server';
+// rebuild-1772855962
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
