@@ -1176,30 +1176,30 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       )}
       {tab === "pilots" && (
         <>
-          <div className="mb-6 flex flex-wrap gap-2 sm:gap-3">
+          <div className="mb-4 flex gap-1 p-1 bg-slate-100 rounded-lg">
             <button
               onClick={() => setPilotSubTab("accounts")}
-              className={`flex-1 min-w-[100px] px-3 sm:px-6 py-2 sm:py-3 rounded-xl font-bold uppercase tracking-wide text-xs sm:text-sm transition-all ${pilotSubTab === "accounts"
-                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl'
-                : 'bg-white/50 text-slate-600 hover:bg-white/80 border-2 border-slate-200'
+              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${pilotSubTab === "accounts"
+                ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                 }`}
             >
               <span className="hidden sm:inline">Pilot </span>Accounts
             </button>
             <button
               onClick={() => setPilotSubTab("directory")}
-              className={`flex-1 min-w-[100px] px-3 sm:px-6 py-2 sm:py-3 rounded-xl font-bold uppercase tracking-wide text-xs sm:text-sm transition-all ${pilotSubTab === "directory"
-                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl'
-                : 'bg-white/50 text-slate-600 hover:bg-white/80 border-2 border-slate-200'
+              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${pilotSubTab === "directory"
+                ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                 }`}
             >
               <span className="hidden sm:inline">Pilot </span>Directory
             </button>
             <button
               onClick={() => setPilotSubTab("deposits")}
-              className={`flex-1 min-w-[100px] px-3 sm:px-6 py-2 sm:py-3 rounded-xl font-bold uppercase tracking-wide text-xs sm:text-sm transition-all ${pilotSubTab === "deposits"
-                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl'
-                : 'bg-white/50 text-slate-600 hover:bg-white/80 border-2 border-slate-200'
+              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${pilotSubTab === "deposits"
+                ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                 }`}
             >
               Deposits
@@ -2085,42 +2085,45 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
     return result.sort((a, b) => (a.codigo || '').localeCompare(b.codigo || ''));
   }, [users, flights, transactions, fuelByCode, depositsByCode, csvPilotStats, allowedPilotCodes, registeredPilotCodes, csvPilotNames]); // Sort by codigo
   return (
-    <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
-      <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
-        <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-          </svg>
-          Pilot Accounts
-        </h3>
+    <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+            <svg className="w-4.5 h-4.5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </div>
+          <h3 className="text-sm font-semibold text-slate-800">Pilot Accounts</h3>
+          <span className="ml-auto px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md text-xs font-medium">{data.length} pilots</span>
+        </div>
       </div>
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-slate-200">
+        <table className="min-w-full">
           <thead className="bg-slate-50">
             <tr>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Code</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Pilot</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Flights</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Hours</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Rate/Hr</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Balance</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Total Spent</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fuel</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Deposits</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Code</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Pilot</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Flights</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Hours</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Rate/Hr</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Balance</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Spent</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Fuel</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Deposits</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100">
             {data.map(p => (
-              <tr key={p.id} className="hover:bg-blue-50 transition-colors">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-blue-600 font-mono">{p.codigo || '-'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">{p.nombre}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{p.flights}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{p.hours.toFixed(1)} hrs</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">${Number(p.tarifa_hora).toLocaleString("es-CL")}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">${Number(p.saldo_cuenta).toLocaleString("es-CL")}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">${Number(-p.spent).toLocaleString("es-CL")}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-mono">${Number(p.fuel || 0).toLocaleString("es-CL")}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">${Number(p.deposits).toLocaleString("es-CL")}</td>
+              <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-semibold text-slate-700 font-mono">{p.codigo || '-'}</td>
+                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-medium text-slate-800">{p.nombre}</td>
+                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 font-mono">{p.flights}</td>
+                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 font-mono">{p.hours.toFixed(1)}</td>
+                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 font-mono">${Number(p.tarifa_hora).toLocaleString("es-CL")}</td>
+                <td className={`px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-semibold font-mono ${Number(p.saldo_cuenta) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>${Number(p.saldo_cuenta).toLocaleString("es-CL")}</td>
+                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 font-mono">${Number(-p.spent).toLocaleString("es-CL")}</td>
+                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 font-mono">${Number(p.fuel || 0).toLocaleString("es-CL")}</td>
+                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 font-mono">${Number(p.deposits).toLocaleString("es-CL")}</td>
               </tr>
             ))}
           </tbody>
@@ -2170,104 +2173,106 @@ function FuelTable({ logs }: { logs: any[] }) {
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-lg p-4">
-        <div className="flex flex-wrap gap-4 items-center">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4">
+        <div className="flex flex-wrap gap-3 items-center">
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-slate-600">Piloto:</label>
+            <label className="text-xs font-medium text-slate-500">Pilot:</label>
             <select
               value={filterPilot}
               onChange={e => { setFilterPilot(e.target.value); setCurrentPage(1); }}
-              className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[200px]"
+              className="px-3 py-1.5 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-1 focus:ring-slate-300 focus:border-slate-400 min-w-[180px]"
             >
-              <option value="">Todos</option>
+              <option value="">All</option>
               {pilots.map(([code, name]) => (
                 <option key={code} value={code}>{code} - {name}</option>
               ))}
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-slate-600">Fuente:</label>
+            <label className="text-xs font-medium text-slate-500">Source:</label>
             <select
               value={filterSource}
               onChange={e => { setFilterSource(e.target.value as any); setCurrentPage(1); }}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-1.5 border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-1 focus:ring-slate-300 focus:border-slate-400"
             >
-              <option value="ALL">Todas</option>
-              <option value="CSV">Histórico (CSV)</option>
+              <option value="ALL">All</option>
+              <option value="CSV">Historic (CSV)</option>
               <option value="DB">App (DB)</option>
             </select>
           </div>
-          <div className="ml-auto flex gap-4 text-sm">
-            <span className="px-3 py-2 bg-blue-100 text-blue-800 rounded-lg font-semibold">
-              {filteredLogs.length} registros
+          <div className="ml-auto flex gap-2 text-xs">
+            <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md font-medium border border-slate-200">
+              {filteredLogs.length} records
             </span>
-            <span className="px-3 py-2 bg-green-100 text-green-800 rounded-lg font-semibold">
-              ${totalMonto.toLocaleString('es-CL')} total
+            <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md font-medium border border-emerald-200">
+              ${totalMonto.toLocaleString('es-CL')}
             </span>
-            <span className="px-3 py-2 bg-amber-100 text-amber-800 rounded-lg font-semibold">
-              {totalLitros.toFixed(1)} L total
+            <span className="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-md font-medium border border-amber-200">
+              {totalLitros.toFixed(1)} L
             </span>
           </div>
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
-        <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
-          <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-            Registros de Combustible (Histórico + App)
-          </h3>
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+              <svg className="w-4.5 h-4.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <h3 className="text-sm font-semibold text-slate-800">Fuel Records (Historic + App)</h3>
+          </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200">
+          <table className="min-w-full">
             <thead className="bg-slate-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Piloto</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Código</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Litros</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Monto</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">$/L</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fuente</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Detalle</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Boleta</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Acciones</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Pilot</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Code</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Liters</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Amount</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">$/L</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Source</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Detail</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Receipt</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100">
               {paginatedLogs.map((l) => (
-                <tr key={l.id} className={`hover:bg-blue-50/50 transition-colors ${l.source === 'CSV' ? 'bg-slate-50/50' : ''}`}>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-700">
+                <tr key={l.id} className={`hover:bg-slate-50 transition-colors ${l.source === 'CSV' ? 'bg-slate-50/30' : ''}`}>
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600">
                     {new Date(l.fecha).toLocaleDateString('es-CL')}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-slate-900">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-medium text-slate-800">
                     {l.pilotName}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-mono text-indigo-600">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-mono text-slate-600">
                     {l.pilotCode || '-'}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600 font-mono">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 font-mono">
                     {l.litros > 0 ? `${l.litros.toFixed(1)} L` : '-'}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-green-600">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-semibold text-emerald-600 font-mono">
                     ${l.monto.toLocaleString('es-CL')}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-mono text-slate-700">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-mono text-slate-600">
                     {l.litros > 0 && l.monto > 0 ? `$${Math.round(l.monto / l.litros).toLocaleString('es-CL')}` : '-'}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm">
-                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${l.source === 'CSV' ? 'bg-slate-200 text-slate-700' : 'bg-blue-100 text-blue-700'
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm">
+                    <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-medium border ${l.source === 'CSV' ? 'bg-slate-50 text-slate-600 border-slate-200' : 'bg-blue-50 text-blue-700 border-blue-200'
                       }`}>
-                      {l.source === 'CSV' ? 'Histórico' : 'App'}
+                      {l.source === 'CSV' ? 'Historic' : 'App'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-slate-600 max-w-[200px] truncate">
+                  <td className="px-3 sm:px-4 py-2.5 text-xs sm:text-sm text-slate-600 max-w-[180px] truncate">
                     {l.detalle || '-'}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm">
                     {l.imageUrl ? (
                       <button
                         onClick={() => {
@@ -2278,20 +2283,20 @@ function FuelTable({ logs }: { logs: any[] }) {
                                 : l.imageUrl;
                           setFuelImageModalUrl(url);
                         }}
-                        className="underline font-medium text-blue-600 hover:text-blue-800"
+                        className="text-xs font-medium text-slate-600 hover:text-slate-800 underline"
                       >
-                        Ver
+                        View
                       </button>
                     ) : (
                       <span className="text-slate-400">-</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm">
                     {l.source === 'DB' && typeof l.id === 'number' ? (
-                      <form action={require('../../../actions/delete-fuel-log').deleteFuelLog} onSubmit={(e) => { if (!confirm(`¿Eliminar registro ${l.id}?`)) { e.preventDefault(); } }}>
+                      <form action={require('../../../actions/delete-fuel-log').deleteFuelLog} onSubmit={(e) => { if (!confirm(`Delete record ${l.id}?`)) { e.preventDefault(); } }}>
                         <input type="hidden" name="fuelLogId" value={l.id} />
-                        <button type="submit" className="px-2 py-1 rounded-lg bg-red-600 text-white hover:bg-red-700 text-xs">
-                          Eliminar
+                        <button type="submit" className="px-2 py-1 rounded-md bg-red-50 text-red-600 hover:bg-red-100 text-[10px] sm:text-xs font-medium border border-red-200 transition-colors">
+                          Delete
                         </button>
                       </form>
                     ) : (
@@ -2306,27 +2311,27 @@ function FuelTable({ logs }: { logs: any[] }) {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-            <div className="text-sm text-slate-600">
-              Mostrando {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, filteredLogs.length)} de {filteredLogs.length}
+          <div className="px-4 sm:px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+            <div className="text-xs text-slate-500">
+              {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredLogs.length)} of {filteredLogs.length}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="px-3 py-1 rounded border border-slate-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100"
+                className="px-2.5 py-1 rounded-md border border-slate-200 text-xs disabled:opacity-40 hover:bg-slate-100 transition-colors"
               >
-                ← Anterior
+                ← Prev
               </button>
-              <span className="px-3 py-1 text-sm">
-                Página {currentPage} de {totalPages}
+              <span className="text-xs text-slate-500">
+                {currentPage}/{totalPages}
               </span>
               <button
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="px-3 py-1 rounded border border-slate-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100"
+                className="px-2.5 py-1 rounded-md border border-slate-200 text-xs disabled:opacity-40 hover:bg-slate-100 transition-colors"
               >
-                Siguiente →
+                Next →
               </button>
             </div>
           </div>
@@ -2471,150 +2476,154 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
   };
 
   return (
-    <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
-      <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6 flex justify-between items-center gap-4">
-        <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M3 12h18M3 17h18" />
-          </svg>
-          Pilot Directory
-        </h3>
-        <div className="flex items-center gap-3">
-          {message && (
-            <span className={`text-sm px-3 py-1 rounded ${message.startsWith('✓') ? 'bg-green-500/20 text-green-200' : 'bg-yellow-500/20 text-yellow-200'}`}>
-              {message}
-            </span>
-          )}
-          {editMode && Object.keys(editedRows).length > 0 && (
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-bold text-sm disabled:opacity-50"
+    <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+              <svg className="w-4.5 h-4.5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M3 12h18M3 17h18" />
+              </svg>
+            </div>
+            <h3 className="text-sm font-semibold text-slate-800">Pilot Directory</h3>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {message && (
+              <span className={`text-xs px-2.5 py-1 rounded-md ${message.startsWith('✓') ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+                {message}
+              </span>
+            )}
+            {editMode && Object.keys(editedRows).length > 0 && (
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-medium disabled:opacity-50 transition-colors"
+              >
+                {saving ? 'Saving...' : 'Save Changes'}
+              </button>
+            )}
+            <a
+              href="/pilots/new"
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-md text-xs font-medium transition-colors"
             >
-              {saving ? 'Guardando...' : '💾 Guardar Cambios'}
+              + New Pilot
+            </a>
+            <button
+              onClick={() => {
+                setEditMode(!editMode);
+                if (editMode) setEditedRows({});
+              }}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${editMode
+                ? 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'
+                : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'
+                }`}
+            >
+              {editMode ? 'Cancel' : 'Edit'}
             </button>
-          )}
-          <a
-            href="/pilots/new"
-            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-bold text-sm transition-colors"
-          >
-            ➕ Nuevo Piloto
-          </a>
-          <button
-            onClick={() => {
-              setEditMode(!editMode);
-              if (editMode) setEditedRows({});
-            }}
-            className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors ${editMode
-              ? 'bg-red-500 hover:bg-red-600 text-white'
-              : 'bg-white/20 hover:bg-white/30 text-white'
-              }`}
-          >
-            {editMode ? '✕ Cancelar' : '✏️ Editar'}
-          </button>
+          </div>
         </div>
       </div>
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-slate-200">
+        <table className="min-w-full">
           <thead className="bg-slate-50">
             <tr>
-              {editMode && <th className="px-4 py-4 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">Acciones</th>}
-              <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Code</th>
-              <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Nombre</th>
-              <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">F. Nacimiento</th>
-              <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Correo</th>
-              <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Teléfono</th>
-              <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">N° Licencia</th>
-              <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Tipo Doc.</th>
-              <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Documento</th>
+              {editMode && <th className="px-3 sm:px-4 py-3 text-center text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>}
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Code</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">DOB</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Email</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Phone</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">License #</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Doc Type</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Document</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100">
             {rows.filter(r => !deletedIds.has(r.id || 0)).map((r, idx) => {
               const canEdit = editMode && r.id !== null;
               return (
-                <tr key={`${r.code}-${idx}`} className={`transition-colors ${canEdit ? 'bg-blue-50/50' : 'hover:bg-blue-50'}`}>
+                <tr key={`${r.code}-${idx}`} className={`transition-colors ${canEdit ? 'bg-amber-50/30' : 'hover:bg-slate-50'}`}>
                   {editMode && (
-                    <td className="px-4 py-3 whitespace-nowrap text-center">
+                    <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-center">
                       {r.id !== null ? (
                         <button
                           onClick={() => handleDelete(r.id!, r.name)}
                           disabled={deletingId === r.id}
-                          className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-bold disabled:opacity-50"
-                          title="Eliminar piloto"
+                          className="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded-md text-[10px] sm:text-xs font-medium disabled:opacity-50 border border-red-200 transition-colors"
+                          title="Delete pilot"
                         >
-                          {deletingId === r.id ? '...' : '🗑️'}
+                          {deletingId === r.id ? '...' : 'Del'}
                         </button>
                       ) : (
-                        <span className="text-slate-400 text-xs">CSV</span>
+                        <span className="text-slate-400 text-[10px]">CSV</span>
                       )}
                     </td>
                   )}
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-blue-600 font-mono">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-semibold text-slate-700 font-mono">
                     {canEdit ? (
                       <input
                         type="text"
-                        className="w-20 px-2 py-1 border rounded text-sm font-mono"
+                        className="w-20 px-2 py-1 border border-slate-300 rounded-md text-xs sm:text-sm font-mono focus:border-slate-500 focus:ring-1 focus:ring-slate-200"
                         defaultValue={r.code}
                         onChange={e => handleChange(r.id!, 'codigo', e.target.value)}
                       />
                     ) : r.code}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-slate-900">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-medium text-slate-800">
                     {canEdit ? (
                       <input
                         type="text"
-                        className="w-full px-2 py-1 border rounded text-sm"
+                        className="w-full px-2 py-1 border border-slate-300 rounded-md text-xs sm:text-sm focus:border-slate-500 focus:ring-1 focus:ring-slate-200"
                         defaultValue={r.name}
                         onChange={e => handleChange(r.id!, 'nombre', e.target.value)}
                       />
                     ) : r.name}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600">
                     {canEdit ? (
                       <input
                         type="date"
-                        className="w-36 px-2 py-1 border rounded text-sm"
+                        className="w-32 px-2 py-1 border border-slate-300 rounded-md text-xs sm:text-sm focus:border-slate-500 focus:ring-1 focus:ring-slate-200"
                         defaultValue={r.fechaNacimiento || ''}
                         onChange={e => handleChange(r.id!, 'fechaNacimiento', e.target.value)}
                       />
                     ) : r.fechaNacimientoDisplay}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600">
                     {canEdit ? (
                       <input
                         type="email"
-                        className="w-48 px-2 py-1 border rounded text-sm"
+                        className="w-44 px-2 py-1 border border-slate-300 rounded-md text-xs sm:text-sm focus:border-slate-500 focus:ring-1 focus:ring-slate-200"
                         defaultValue={r.email !== '-' ? r.email : ''}
                         onChange={e => handleChange(r.id!, 'email', e.target.value)}
-                        placeholder="Email (opcional)"
+                        placeholder="Email"
                       />
                     ) : r.email}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600">
                     {canEdit ? (
                       <input
                         type="tel"
-                        className="w-32 px-2 py-1 border rounded text-sm"
+                        className="w-28 px-2 py-1 border border-slate-300 rounded-md text-xs sm:text-sm focus:border-slate-500 focus:ring-1 focus:ring-slate-200"
                         defaultValue={r.telefono}
                         onChange={e => handleChange(r.id!, 'telefono', e.target.value)}
                       />
                     ) : (r.telefono || '-')}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600">
                     {canEdit ? (
                       <input
                         type="text"
-                        className="w-28 px-2 py-1 border rounded text-sm"
+                        className="w-24 px-2 py-1 border border-slate-300 rounded-md text-xs sm:text-sm focus:border-slate-500 focus:ring-1 focus:ring-slate-200"
                         defaultValue={r.numeroLicencia}
                         onChange={e => handleChange(r.id!, 'licencia', e.target.value)}
                       />
                     ) : (r.numeroLicencia || '-')}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600">
                     {canEdit ? (
                       <select
-                        className="w-24 px-2 py-1 border rounded text-sm"
+                        className="w-24 px-2 py-1 border border-slate-300 rounded-md text-xs sm:text-sm focus:border-slate-500 focus:ring-1 focus:ring-slate-200"
                         defaultValue={r.tipoDocumento}
                         onChange={e => handleChange(r.id!, 'tipoDocumento', e.target.value)}
                       >
@@ -2624,11 +2633,11 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
                       </select>
                     ) : (r.tipoDocumento || '-')}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600">
                     {canEdit ? (
                       <input
                         type="text"
-                        className="w-32 px-2 py-1 border rounded text-sm"
+                        className="w-28 px-2 py-1 border border-slate-300 rounded-md text-xs sm:text-sm focus:border-slate-500 focus:ring-1 focus:ring-slate-200"
                         defaultValue={r.documento}
                         onChange={e => handleChange(r.id!, 'documento', e.target.value)}
                       />
@@ -3505,29 +3514,31 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
       </div>
 
       {/* Filters + Table */}
-      <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-4 sm:px-6 py-4 sm:py-5">
+        <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <h3 className="text-lg font-bold text-white uppercase tracking-wide flex items-center gap-2">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Movimientos Bancarios
-            </h3>
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+                <svg className="w-4.5 h-4.5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-sm font-semibold text-slate-800">Bank Movements</h3>
+            </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
-                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-white text-xs font-medium transition-all"
+                className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-md text-xs font-medium transition-colors border border-slate-200"
               >
-                {sortOrder === 'desc' ? '↓ Recientes' : '↑ Antiguos'}
+                {sortOrder === 'desc' ? '↓ Recent' : '↑ Oldest'}
               </button>
               {hasActiveFilters && (
                 <button
                   onClick={() => { setFilterTipo('ALL'); setFilterYear(''); setFilterMonth(''); setSearchText(''); setCurrentPage(1); }}
-                  className="px-3 py-1.5 bg-red-500/80 hover:bg-red-500 rounded-lg text-white text-xs font-medium transition-all"
+                  className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md text-xs font-medium transition-colors border border-red-200"
                 >
-                  Limpiar filtros
+                  Clear filters
                 </button>
               )}
             </div>
@@ -3911,16 +3922,18 @@ function FinanceCharts({ flights, transactions, palette }: { flights: any[]; tra
   }, [monthly]);
 
   return (
-    <div className={`${palette.card} rounded-2xl ${palette.shadow} overflow-hidden`}>
-      <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
-        <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2v-1" />
-          </svg>
-          Financial Performance
-        </h3>
+    <div className={`${palette.card} rounded-xl shadow-sm border border-slate-200 overflow-hidden`}>
+      <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+            <svg className="w-4.5 h-4.5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2v-1" />
+            </svg>
+          </div>
+          <h3 className="text-sm font-semibold text-slate-800">Financial Performance</h3>
+        </div>
       </div>
-      <div className="p-8">
+      <div className="p-6">
         <canvas ref={barRef} height={160} />
       </div>
     </div>
@@ -3992,74 +4005,78 @@ function DepositsTable({ depositsDetailsByCode, csvPilotNames }: { depositsDetai
   };
 
   return (
-    <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-2xl shadow-lg overflow-hidden">
-      <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6 flex items-center justify-between">
-        <div>
-          <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2v-1" />
-            </svg>
-            All Deposits — {allDeposits.length} records
-          </h3>
-          <p className="text-blue-200 text-sm mt-2">Total: ${totalAmount.toLocaleString('es-CL')}</p>
+    <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+              <svg className="w-4.5 h-4.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2v-1" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-slate-800">All Deposits</h3>
+              <p className="text-xs text-slate-500">{allDeposits.length} records · Total: ${totalAmount.toLocaleString('es-CL')}</p>
+            </div>
+          </div>
+          <a
+            href="/admin/deposits"
+            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-md text-xs font-medium transition-colors"
+          >
+            Fix Deposit
+          </a>
         </div>
-        <a
-          href="/admin/deposits"
-          className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-yellow-900 font-bold rounded-lg transition-colors"
-        >
-          Corregir Depósito
-        </a>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-100 border-b-2 border-slate-300">
+        <table className="w-full">
+          <thead className="bg-slate-50">
             <tr>
               <th
-                className="px-6 py-4 text-left font-bold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-slate-200 transition"
+                className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition"
                 onClick={() => toggleSort("date")}
               >
                 Date {sortBy === "date" && (sortOrder === "desc" ? "↓" : "↑")}
               </th>
               <th
-                className="px-6 py-4 text-left font-bold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-slate-200 transition"
+                className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition"
                 onClick={() => toggleSort("pilot")}
               >
                 Pilot {sortBy === "pilot" && (sortOrder === "desc" ? "↓" : "↑")}
               </th>
-              <th className="px-6 py-4 text-left font-bold text-slate-700 uppercase tracking-wider">
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Description
               </th>
               <th
-                className="px-6 py-4 text-right font-bold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-slate-200 transition"
+                className="px-3 sm:px-4 py-3 text-right text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition"
                 onClick={() => toggleSort("amount")}
               >
                 Amount {sortBy === "amount" && (sortOrder === "desc" ? "↓" : "↑")}
               </th>
-              <th className="px-6 py-4 text-center font-bold text-slate-700 uppercase tracking-wider">
-                Acciones
+              <th className="px-3 sm:px-4 py-3 text-center text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200">
+          <tbody className="divide-y divide-slate-100">
             {allDeposits.map((d, idx) => (
-              <tr key={d.id || idx} className="hover:bg-blue-50 transition">
-                <td className="px-6 py-4 text-slate-700 font-medium">{d.fecha}</td>
-                <td className="px-6 py-4 text-slate-900 font-semibold">
+              <tr key={d.id || idx} className="hover:bg-slate-50 transition">
+                <td className="px-3 sm:px-4 py-2.5 text-xs sm:text-sm text-slate-600">{d.fecha}</td>
+                <td className="px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-800">
                   {d.pilotName}
-                  <span className="ml-2 text-xs text-slate-500 font-normal">({d.code})</span>
+                  <span className="ml-1.5 text-[10px] text-slate-400 font-normal">({d.code})</span>
                 </td>
-                <td className="px-6 py-4 text-slate-600">{d.descripcion}</td>
-                <td className="px-6 py-4 text-right text-green-700 font-bold">
+                <td className="px-3 sm:px-4 py-2.5 text-xs sm:text-sm text-slate-600">{d.descripcion}</td>
+                <td className="px-3 sm:px-4 py-2.5 text-right text-xs sm:text-sm text-emerald-600 font-semibold font-mono">
                   ${d.monto.toLocaleString('es-CL')}
                 </td>
-                <td className="px-6 py-4 text-center">
+                <td className="px-3 sm:px-4 py-2.5 text-center">
                   {d.source === 'DB' && d.id ? (
                     <button
                       onClick={() => handleDelete(d.id!, d.pilotName, d.monto)}
                       disabled={deletingId === d.id}
-                      className="px-2 py-1 rounded-lg bg-red-600 text-white hover:bg-red-700 text-xs font-semibold disabled:opacity-50 transition-colors"
+                      className="px-2 py-1 rounded-md bg-red-50 text-red-600 hover:bg-red-100 text-[10px] sm:text-xs font-medium disabled:opacity-50 border border-red-200 transition-colors"
                     >
-                      {deletingId === d.id ? '...' : 'Eliminar'}
+                      {deletingId === d.id ? '...' : 'Delete'}
                     </button>
                   ) : (
                     <span className="text-slate-400 text-xs">—</span>
