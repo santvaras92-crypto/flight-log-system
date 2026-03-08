@@ -1236,7 +1236,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             </button>
           </div>
           {financeSubTab === "movements" && <FinanzasTable movements={initialData.bankMovements || []} palette={palette} />}
-          {financeSubTab === "costs" && <CostAnalysis flights={initialData.allFlights || initialData.flights} overviewMetrics={overviewMetrics} components={initialData.components} />}
+          {financeSubTab === "costs" && <CostAnalysis flights={initialData.allFlights || initialData.flights} overviewMetrics={overviewMetrics} components={initialData.components} fuelLogs={initialData.fuelLogs || []} />}
         </>
       )}
 
@@ -3967,7 +3967,7 @@ function FinanceCharts({ flights, transactions, palette }: { flights: any[]; tra
 }
 
 // ==================== COST ANALYSIS COMPONENT ====================
-function CostAnalysis({ flights, overviewMetrics, components }: { flights: any[]; overviewMetrics?: OverviewMetrics; components?: any[] }) {
+function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flights: any[]; overviewMetrics?: OverviewMetrics; components?: any[]; fuelLogs?: any[] }) {
   // --- Editable Parameters (from Excel "Analisis de costos") ---
   const [usdRate, setUsdRate] = useState(975);
   const [ufRate, setUfRate] = useState(39700);
@@ -3996,10 +3996,80 @@ function CostAnalysis({ flights, overviewMetrics, components }: { flights: any[]
   // Financial projections
   const [interestRate, setInterestRate] = useState(4); // % annual compound interest on accumulated funds
   const [inflationRate, setInflationRate] = useState(3.5); // % annual inflation on overhaul cost
+  const [fuelTrendRate, setFuelTrendRate] = useState(10); // % annual AVGAS price increase (geopolitical + CAGR)
   // Live indicators state
-  const [liveIndicators, setLiveIndicators] = useState<{ uf: boolean; usd: boolean }>({ uf: false, usd: false });
+  const [liveIndicators, setLiveIndicators] = useState<{ uf: boolean; usd: boolean; fuel: boolean }>({ uf: false, usd: false, fuel: false });
 
-  // Fetch live UF/USD on mount
+  // Fuel price analysis from real records
+  const fuelPriceAnalysis = useMemo(() => {
+    if (!fuelLogs || fuelLogs.length === 0) return null;
+    const withPrice = fuelLogs
+      .map((r: any) => {
+        const litros = Number(r.litros) || 0;
+        const monto = Number(r.monto) || 0;
+        const fecha = new Date(r.fecha);
+        return { litros, monto, fecha, ppl: litros > 0 ? monto / litros : 0 };
+      })
+      .filter(r => r.litros > 0 && r.monto > 0 && r.ppl > 500 && r.ppl < 5000) // sane range
+      .sort((a, b) => a.fecha.getTime() - b.fecha.getTime());
+    if (withPrice.length === 0) return null;
+
+    // Monthly aggregation
+    const monthly: Record<string, { litros: number; monto: number; count: number }> = {};
+    withPrice.forEach(r => {
+      const key = `${r.fecha.getFullYear()}-${String(r.fecha.getMonth() + 1).padStart(2, '0')}`;
+      if (!monthly[key]) monthly[key] = { litros: 0, monto: 0, count: 0 };
+      monthly[key].litros += r.litros;
+      monthly[key].monto += r.monto;
+      monthly[key].count++;
+    });
+    const monthlyArr = Object.entries(monthly)
+      .map(([m, d]) => ({ month: m, ppl: Math.round(d.monto / d.litros), litros: d.litros, count: d.count }))
+      .sort((a, b) => a.month.localeCompare(b.month));
+
+    // Weighted averages
+    const now = new Date();
+    const ago3 = new Date(now); ago3.setMonth(ago3.getMonth() - 3);
+    const ago6 = new Date(now); ago6.setMonth(ago6.getMonth() - 6);
+    const ago12 = new Date(now); ago12.setMonth(ago12.getMonth() - 12);
+    const calc = (since: Date) => {
+      const subset = withPrice.filter(r => r.fecha >= since);
+      const tL = subset.reduce((s, r) => s + r.litros, 0);
+      const tM = subset.reduce((s, r) => s + r.monto, 0);
+      return tL > 0 ? Math.round(tM / tL) : 0;
+    };
+    const avg3m = calc(ago3);
+    const avg6m = calc(ago6);
+    const avg12m = calc(ago12);
+
+    // Yearly aggregation for trend
+    const yearly: Record<number, { litros: number; monto: number }> = {};
+    withPrice.forEach(r => {
+      const yr = r.fecha.getFullYear();
+      if (!yearly[yr]) yearly[yr] = { litros: 0, monto: 0 };
+      yearly[yr].litros += r.litros;
+      yearly[yr].monto += r.monto;
+    });
+    const yearlyArr = Object.entries(yearly)
+      .map(([y, d]) => ({ year: Number(y), ppl: Math.round(d.monto / d.litros) }))
+      .sort((a, b) => a.year - b.year);
+
+    // Compute CAGR from first full year to last full year
+    const fullYears = yearlyArr.filter(y => y.year < now.getFullYear());
+    let cagr = 0;
+    if (fullYears.length >= 2) {
+      const first = fullYears[0];
+      const last = fullYears[fullYears.length - 1];
+      const years = last.year - first.year;
+      if (years > 0 && first.ppl > 0) {
+        cagr = (Math.pow(last.ppl / first.ppl, 1 / years) - 1) * 100;
+      }
+    }
+
+    return { monthlyArr, avg3m, avg6m, avg12m, yearlyArr, cagr, totalRecords: withPrice.length };
+  }, [fuelLogs]);
+
+  // Fetch live UF/USD on mount + auto-populate AVGAS from fuel records
   useEffect(() => {
     fetch('/api/economic-indicators')
       .then(res => res.ok ? res.json() : null)
@@ -4016,6 +4086,18 @@ function CostAnalysis({ flights, overviewMetrics, components }: { flights: any[]
       })
       .catch(() => {}); // Silent fail, keeps defaults
   }, []);
+
+  // Auto-populate AVGAS price from fuel records (3-month weighted avg) + trend rate from CAGR
+  useEffect(() => {
+    if (fuelPriceAnalysis && fuelPriceAnalysis.avg3m > 0) {
+      setAvgasLiterCLP(fuelPriceAnalysis.avg3m);
+      // Use CAGR as baseline trend, minimum 5% given upward global pressure
+      if (fuelPriceAnalysis.cagr > 0) {
+        setFuelTrendRate(Math.round(Math.max(fuelPriceAnalysis.cagr, 5) * 10) / 10);
+      }
+      setLiveIndicators(prev => ({ ...prev, fuel: true }));
+    }
+  }, [fuelPriceAnalysis]);
 
   // Consumption rates
   const fuelGPH = 7;
@@ -4071,6 +4153,25 @@ function CostAnalysis({ flights, overviewMetrics, components }: { flights: any[]
     const projectedGap = inflatedOverhaulCost - projectedFunds;
     const projectedMonthlyTarget = projectedGap > 0 ? projectedGap / Math.max(yearsToOverhaul * 12, 1) : 0;
 
+    // ===== FUEL COST PROJECTIONS =====
+    const fuelTrend = fuelTrendRate / 100;
+    // Projected AVGAS price at time of overhaul
+    const projectedAvgasPrice = avgasLiterCLP * Math.pow(1 + fuelTrend, yearsToOverhaul);
+    // Average price over the period (integral of exponential / period)
+    const avgProjectedAvgasPrice = fuelTrend > 0
+      ? avgasLiterCLP * (Math.pow(1 + fuelTrend, yearsToOverhaul) - 1) / (fuelTrend * yearsToOverhaul)
+      : avgasLiterCLP;
+    // Projected variable cost per hour (fuel portion adjusted)
+    const projectedCombustibleHr = fuelLPH * avgProjectedAvgasPrice;
+    const projectedTotalVariableHr = projectedCombustibleHr + aceiteHr + manttoHr;
+    const projectedTotalCostoHr = totalFijoHr + projectedTotalVariableHr;
+    const projectedGananciaHr = valorHora - projectedTotalCostoHr;
+    const projectedMargen = valorHora > 0 ? (projectedGananciaHr / valorHora) * 100 : 0;
+    // Total fuel cost increase over the period
+    const annualFuelLitros = fuelLPH * horasAnuales;
+    const currentAnnualFuelCost = annualFuelLitros * avgasLiterCLP;
+    const projectedAnnualFuelCostAtOverhaul = annualFuelLitros * projectedAvgasPrice;
+
     // Breakdowns for charts
     const fixedBreakdown = [
       { name: 'Insurance', value: seguroAnual, color: '#3b82f6' },
@@ -4102,8 +4203,12 @@ function CostAnalysis({ flights, overviewMetrics, components }: { flights: any[]
       // Financial projections
       yearsToOverhaul, currentFunds, projectedFunds, interestEarned,
       inflatedOverhaulCost, inflationIncrease, projectedGap, projectedMonthlyTarget,
+      // Fuel projections
+      projectedAvgasPrice, avgProjectedAvgasPrice, projectedCombustibleHr,
+      projectedTotalVariableHr, projectedTotalCostoHr, projectedGananciaHr, projectedMargen,
+      currentAnnualFuelCost, projectedAnnualFuelCostAtOverhaul,
     };
-  }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD, cambioAceiteCLP, revision100CLP, overhaulCLP, horasAnuales, overhaulCycleHrs, seguroAnual, hangarAnual, toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual, cashOverhaul, creditoOverhaul, recaudado, valorHora, interestRate, inflationRate]);
+  }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD, cambioAceiteCLP, revision100CLP, overhaulCLP, horasAnuales, overhaulCycleHrs, seguroAnual, hangarAnual, toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual, cashOverhaul, creditoOverhaul, recaudado, valorHora, interestRate, inflationRate, fuelTrendRate]);
 
   // Actual data from flights (yearly hours)
   const yearlyHours = useMemo(() => {
@@ -4261,9 +4366,9 @@ function CostAnalysis({ flights, overviewMetrics, components }: { flights: any[]
                 <h3 className="text-sm font-semibold text-slate-800">Cost Analysis — C-172 CC-AQI</h3>
                 <p className="text-xs text-slate-500 flex items-center gap-1.5 flex-wrap">
                   <span>Operating cost model · {horasAnuales} hrs/yr estimate</span>
-                  {(liveIndicators.uf || liveIndicators.usd) && (
+                  {(liveIndicators.uf || liveIndicators.usd || liveIndicators.fuel) && (
                     <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">
-                      LIVE {liveIndicators.uf && 'UF'}{liveIndicators.uf && liveIndicators.usd && '+'}{liveIndicators.usd && 'USD'}
+                      LIVE {[liveIndicators.uf && 'UF', liveIndicators.usd && 'USD', liveIndicators.fuel && 'AVGAS'].filter(Boolean).join('+')}
                     </span>
                   )}
                 </p>
@@ -4352,7 +4457,13 @@ function CostAnalysis({ flights, overviewMetrics, components }: { flights: any[]
                       <input type="number" value={ufRate} onChange={e => setUfRate(Number(e.target.value) || 0)} className="w-24 sm:w-28 text-right text-xs font-mono bg-slate-50 border border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none" />
                     </div>
                   </div>
-                  <ParamInput label="AVGAS / liter" value={avgasLiterCLP} onChange={setAvgasLiterCLP} unit="CLP" />
+                  <div className="flex items-center justify-between gap-2 py-1.5">
+                    <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">AVGAS / liter{liveIndicators.fuel && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">LIVE 3mo avg</span>}</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-slate-400">CLP</span>
+                      <input type="number" value={avgasLiterCLP} onChange={e => setAvgasLiterCLP(Number(e.target.value) || 0)} className="w-24 sm:w-28 text-right text-xs font-mono bg-slate-50 border border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none" />
+                    </div>
+                  </div>
                   <ParamInput label="Oil / liter" value={aceiteLiterCLP} onChange={setAceiteLiterCLP} unit="CLP" />
                   <ParamInput label="Revenue / hour" value={valorHora} onChange={setValorHora} unit="CLP" />
                 </div>
@@ -4389,9 +4500,16 @@ function CostAnalysis({ flights, overviewMetrics, components }: { flights: any[]
                 <ParamInput label="Credit / financed" value={creditoOverhaul} onChange={setCreditoOverhaul} />
                 <ParamInput label="Collected so far" value={recaudado} onChange={setRecaudado} />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-2">
                 <ParamInput label="Annual interest on funds" value={interestRate} onChange={setInterestRate} unit="%" />
                 <ParamInput label="Annual inflation on cost" value={inflationRate} onChange={setInflationRate} unit="%" />
+                <div className="flex items-center justify-between gap-2 py-1.5">
+                  <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">AVGAS trend/yr{liveIndicators.fuel && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-amber-100 text-amber-700 rounded-full">CAGR</span>}</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-slate-400">%</span>
+                    <input type="number" value={fuelTrendRate} onChange={e => setFuelTrendRate(Number(e.target.value) || 0)} className="w-24 sm:w-28 text-right text-xs font-mono bg-slate-50 border border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none" />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -4762,6 +4880,160 @@ function CostAnalysis({ flights, overviewMetrics, components }: { flights: any[]
           </div>
         </div>
       </div>
+
+      {/* ===== FUEL PRICE TREND ANALYSIS ===== */}
+      {fuelPriceAnalysis && (
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="px-4 sm:px-6 py-3 border-b border-slate-200">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold text-slate-700">AVGAS Price Trend Analysis</h4>
+                  <p className="text-[10px] text-slate-400">From {fuelPriceAnalysis.totalRecords} fuel records · CAGR {fuelPriceAnalysis.cagr.toFixed(1)}%/yr</p>
+                </div>
+              </div>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">
+                LIVE DATA
+              </span>
+            </div>
+          </div>
+          <div className="p-4 sm:p-6">
+            {/* Weighted Averages */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+              <div className="text-center p-3 bg-amber-50 rounded-lg">
+                <p className="text-lg font-bold text-amber-700 font-mono">${formatCurrency(fuelPriceAnalysis.avg3m)}</p>
+                <p className="text-[10px] text-slate-500">3-month avg $/L</p>
+                <p className="text-[9px] text-emerald-600 font-bold">← Used in model</p>
+              </div>
+              <div className="text-center p-3 bg-slate-50 rounded-lg">
+                <p className="text-lg font-bold text-slate-700 font-mono">${formatCurrency(fuelPriceAnalysis.avg6m)}</p>
+                <p className="text-[10px] text-slate-500">6-month avg $/L</p>
+              </div>
+              <div className="text-center p-3 bg-slate-50 rounded-lg">
+                <p className="text-lg font-bold text-slate-700 font-mono">${formatCurrency(fuelPriceAnalysis.avg12m)}</p>
+                <p className="text-[10px] text-slate-500">12-month avg $/L</p>
+              </div>
+              <div className="text-center p-3 rounded-lg" style={{ backgroundColor: fuelPriceAnalysis.cagr > 0 ? '#fef2f2' : '#f0fdf4' }}>
+                <p className={`text-lg font-bold font-mono ${fuelPriceAnalysis.cagr > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
+                  {fuelPriceAnalysis.cagr > 0 ? '+' : ''}{fuelPriceAnalysis.cagr.toFixed(1)}%
+                </p>
+                <p className="text-[10px] text-slate-500">Annual CAGR</p>
+                <p className="text-[9px] text-slate-400">Compound growth rate</p>
+              </div>
+            </div>
+
+            {/* Yearly Avg Price */}
+            <div className="mb-5">
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Annual Average Price per Liter</p>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {fuelPriceAnalysis.yearlyArr.map((y, i) => {
+                  const prev = i > 0 ? fuelPriceAnalysis.yearlyArr[i - 1].ppl : y.ppl;
+                  const change = prev > 0 ? ((y.ppl - prev) / prev) * 100 : 0;
+                  return (
+                    <div key={y.year} className="flex-1 min-w-[65px] text-center p-2 bg-slate-50 rounded-lg">
+                      <p className="text-xs font-bold text-slate-800">{y.year}</p>
+                      <p className="text-sm font-bold text-amber-700 font-mono">${formatCurrency(y.ppl)}</p>
+                      <p className="text-[9px] text-slate-400">/L</p>
+                      {i > 0 && (
+                        <p className={`text-[9px] font-bold ${change > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                          {change > 0 ? '▲' : '▼'} {Math.abs(change).toFixed(1)}%
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Monthly Recent Prices */}
+            {fuelPriceAnalysis.monthlyArr.length > 0 && (
+              <div className="mb-5">
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Monthly Price (Last 12 months)</p>
+                <div className="flex gap-1.5 overflow-x-auto pb-1">
+                  {fuelPriceAnalysis.monthlyArr.slice(-12).map((m, i, arr) => {
+                    const prev = i > 0 ? arr[i - 1].ppl : m.ppl;
+                    const change = prev > 0 ? ((m.ppl - prev) / prev) * 100 : 0;
+                    const maxP = Math.max(...arr.map(x => x.ppl));
+                    const minP = Math.min(...arr.map(x => x.ppl));
+                    const range = maxP - minP || 1;
+                    const barH = 20 + ((m.ppl - minP) / range) * 40; // 20-60px
+                    return (
+                      <div key={m.month} className="flex-1 min-w-[48px] text-center">
+                        <div className="flex flex-col items-center justify-end" style={{ height: 70 }}>
+                          <p className="text-[9px] font-mono font-bold text-slate-700">${formatCurrency(m.ppl)}</p>
+                          <div
+                            className={`w-full rounded-t ${m.ppl >= (arr[arr.length - 1]?.ppl || 0) ? 'bg-amber-400' : 'bg-amber-200'}`}
+                            style={{ height: barH }}
+                          />
+                        </div>
+                        <p className="text-[8px] text-slate-400 mt-1">{m.month.slice(2)}</p>
+                        <p className="text-[8px] text-slate-400">{m.count}×</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Projected Fuel Cost */}
+            <div className="mb-5">
+              <p className="text-[10px] font-semibold text-red-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                Fuel Cost Projection ({fuelTrendRate}%/yr · {computed.yearsToOverhaul.toFixed(1)} yrs to overhaul)
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="text-center p-3 bg-amber-50 rounded-lg border border-amber-100">
+                  <p className="text-lg font-bold text-amber-700 font-mono">${formatCurrency(avgasLiterCLP)}</p>
+                  <p className="text-[10px] text-slate-500">Current $/L</p>
+                  <p className="text-[9px] text-slate-400">3-mo weighted avg</p>
+                </div>
+                <div className="text-center p-3 bg-red-50 rounded-lg border border-red-100">
+                  <p className="text-lg font-bold text-red-700 font-mono">${formatCurrency(Math.round(computed.projectedAvgasPrice))}</p>
+                  <p className="text-[10px] text-slate-500">Projected $/L at overhaul</p>
+                  <p className="text-[9px] text-red-500 font-mono">+{((computed.projectedAvgasPrice / avgasLiterCLP - 1) * 100).toFixed(0)}% in {computed.yearsToOverhaul.toFixed(1)} yrs</p>
+                </div>
+                <div className="text-center p-3 bg-red-50 rounded-lg border border-red-100">
+                  <p className="text-lg font-bold text-red-700 font-mono">${formatCurrency(Math.round(computed.projectedTotalCostoHr))}</p>
+                  <p className="text-[10px] text-slate-500">Projected Total Cost/hr</p>
+                  <p className="text-[9px] text-red-500 font-mono">vs ${formatCurrency(Math.round(computed.totalCostoHr))} today</p>
+                </div>
+                <div className={`text-center p-3 rounded-lg border ${computed.projectedGananciaHr >= 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'}`}>
+                  <p className={`text-lg font-bold font-mono ${computed.projectedGananciaHr >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>${formatCurrency(Math.round(computed.projectedGananciaHr))}</p>
+                  <p className="text-[10px] text-slate-500">Projected Margin/hr</p>
+                  <p className="text-[9px] text-slate-400 font-mono">{computed.projectedMargen.toFixed(1)}% margin</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Context note */}
+            <div className="bg-red-50 rounded-lg p-3">
+              <div className="flex items-start gap-2">
+                <svg className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+                <div className="text-[11px] text-red-800">
+                  <p className="font-semibold mb-1">⚠️ Fuel Price Outlook — Upward Pressure</p>
+                  <p>AVGAS historical CAGR: <span className="font-mono font-bold">{fuelPriceAnalysis.cagr.toFixed(1)}%</span>/yr ({fuelPriceAnalysis.yearlyArr[0]?.year}–{fuelPriceAnalysis.yearlyArr[fuelPriceAnalysis.yearlyArr.length - 1]?.year}).
+                  Current model price: <span className="font-bold">${formatCurrency(avgasLiterCLP)}/L</span> (3-mo avg from actual records).
+                  At <span className="font-mono font-bold">{fuelTrendRate}%</span>/yr growth, the price reaches <span className="font-mono font-bold text-red-700">${formatCurrency(Math.round(computed.projectedAvgasPrice))}/L</span> by TBO.
+                  This increases your total cost/hr from <span className="font-mono font-bold">${formatCurrency(Math.round(computed.totalCostoHr))}</span> to <span className="font-mono font-bold text-red-700">${formatCurrency(Math.round(computed.projectedTotalCostoHr))}</span>,
+                  {computed.projectedGananciaHr < 0
+                    ? <> making the operation <span className="font-bold">unprofitable</span> at the current tariff of ${formatCurrency(valorHora)}/hr. Consider adjusting rates.</>
+                    : <> reducing your margin from <span className="font-bold">{computed.margen.toFixed(1)}%</span> to <span className="font-bold text-red-700">{computed.projectedMargen.toFixed(1)}%</span>.</>
+                  }
+                  </p>
+                  <p className="mt-1 text-red-700">🛢️ Global factors: US-Iran tensions, OPEC+ production cuts, and refinery capacity constraints are driving crude oil and AVGAS prices upward. Adjust the trend rate in parameters to model different scenarios.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Yearly Hours from actual flights */}
       {yearlyHours.length > 0 && (
