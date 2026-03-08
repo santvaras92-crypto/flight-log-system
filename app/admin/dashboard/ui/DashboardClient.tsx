@@ -3993,10 +3993,8 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   const [contingenciasAnual, setContingenciasAnual] = useState(2000000);
   const [impuestoContadorAnual, setImpuestoContadorAnual] = useState(3211728);
   const [limpiezaAnual, setLimpiezaAnual] = useState(180000);
-  // Overhaul funding
-  const [cashOverhaul, setCashOverhaul] = useState(28710756);
-  const [creditoOverhaul, setCreditoOverhaul] = useState(50090932);
-  const [recaudado, setRecaudado] = useState(15031349);
+  // Overhaul funding (total collected for overhaul)
+  const [recaudado, setRecaudado] = useState(15000000);
   // Revenue
   const [valorHora, setValorHora] = useState(168052);
   // Financial projections
@@ -4163,7 +4161,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const margen = valorHora > 0 ? (gananciaHr / valorHora) * 100 : 0;
 
     // Overhaul funding
-    const faltaOverhaul = creditoOverhaul - recaudado;
+    const faltaOverhaul = overhaulCLP - recaudado;
     const anosRemanentes = overhaulCycleHrs / horasAnuales;
     const metaAnualOverhaul = faltaOverhaul / Math.max(anosRemanentes, 0.1);
     const metaMensualOverhaul = metaAnualOverhaul / 12;
@@ -4195,7 +4193,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       : 0;
 
     // Projected accumulated funds with compound interest
-    const currentFunds = cashOverhaul + recaudado;
+    const currentFunds = recaudado;
     const projectedFunds = currentFunds * Math.pow(1 + r, yearsToOverhaul);
     const interestEarned = projectedFunds - currentFunds;
 
@@ -4268,7 +4266,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       // H/T ratio used
       htRatio, maintInterval,
     };
-  }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD, cambioAceiteCLP, revision100CLP, overhaulCLP, horasAnuales, overhaulCycleHrs, seguroAnual, hangarAnual, toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual, cashOverhaul, creditoOverhaul, recaudado, valorHora, interestRate, clForwardInflation, fuelTrendRate, overviewMetrics, overhaulMotorCLP, overhaulLaborCLP, clInflationPct, engineMarketPriceUSD, engineCorePriceUSD]);
+  }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD, cambioAceiteCLP, revision100CLP, overhaulCLP, horasAnuales, overhaulCycleHrs, seguroAnual, hangarAnual, toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual, recaudado, valorHora, interestRate, clForwardInflation, fuelTrendRate, overviewMetrics, overhaulMotorCLP, overhaulLaborCLP, clInflationPct, engineMarketPriceUSD, engineCorePriceUSD]);
 
   // Actual data from flights (yearly hours)
   const yearlyHours = useMemo(() => {
@@ -4580,9 +4578,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
             <div className="mt-4 pt-4 border-t border-slate-100">
               <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Overhaul Funding</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <ParamInput label="Cash available" value={cashOverhaul} onChange={setCashOverhaul} />
-                <ParamInput label="Credit / financed" value={creditoOverhaul} onChange={setCreditoOverhaul} />
-                <ParamInput label="Collected so far" value={recaudado} onChange={setRecaudado} />
+                <ParamInput label="Recaudado (total)" value={recaudado} onChange={setRecaudado} />
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-2">
                 <ParamInput label="Interest on funds" value={interestRate} onChange={setInterestRate} unit="%/yr" />
@@ -4952,7 +4948,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               </div>
               <div className="text-center p-3 bg-emerald-50 rounded-lg">
                 <p className="text-lg font-bold text-emerald-700 font-mono">${formatCurrency(computed.currentFunds)}</p>
-                <p className="text-[10px] text-slate-500">Funded (Cash + Collected)</p>
+                <p className="text-[10px] text-slate-500">Recaudado</p>
               </div>
               <div className="text-center p-3 bg-red-50 rounded-lg">
                 <p className="text-lg font-bold text-red-700 font-mono">${formatCurrency(Math.round(computed.faltaOverhaul))}</p>
@@ -4997,13 +4993,13 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
           {/* Progress bar */}
           <div className="mt-2">
             <div className="flex justify-between text-[10px] text-slate-500 mb-1">
-              <span>Funded (nominal)</span>
-              <span>{(((cashOverhaul + recaudado) / (cashOverhaul + creditoOverhaul)) * 100).toFixed(1)}%</span>
+              <span>Recaudado vs costo actual</span>
+              <span>{((recaudado / overhaulCLP) * 100).toFixed(1)}%</span>
             </div>
             <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all"
-                style={{ width: `${Math.min(100, ((cashOverhaul + recaudado) / (cashOverhaul + creditoOverhaul)) * 100)}%` }}
+                style={{ width: `${Math.min(100, (recaudado / overhaulCLP) * 100)}%` }}
               />
             </div>
             <div className="flex justify-between text-[10px] text-slate-500 mb-1 mt-2">
@@ -5029,7 +5025,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 <p>Based on real invoices (Ago 2022): Eagle Copters INV22-00211 <span className="font-mono font-bold">${formatCurrency(overhaulMotorCLP)}</span> CLP (motor O-320-D2J + flete + importación + IVA) + <span className="font-mono font-bold">${formatCurrency(overhaulLaborCLP)}</span> CLP (mano de obra) = <span className="font-mono font-bold">${formatCurrency(overhaulMotorCLP + overhaulLaborCLP)}</span> CLP original. Ajustado por IPC Chile acumulado (+{clInflationPct}%) = <span className="font-mono font-bold">${formatCurrency(overhaulCLP)}</span> CLP hoy.</p>
                 <p className="mt-1">A <span className="font-mono font-bold">{horasAnuales}</span> hrs/año, TBO en <span className="font-mono font-bold">{computed.yearsToOverhaul.toFixed(1)}</span> años.
                 Costo total (<span className="font-mono">${formatCurrency(overhaulCLP)}</span>) proyectado con <span className="font-bold">{clForwardInflation}%/yr IPC Chile</span> → <span className="font-mono text-red-600">${formatCurrency(Math.round(computed.inflatedOverhaulCost))}</span>.
-                Fondos de <span className="font-mono font-bold">${formatCurrency(computed.currentFunds)}</span> crecen a <span className="font-mono font-bold text-emerald-600">${formatCurrency(Math.round(computed.projectedFunds))}</span> al {interestRate}%/yr.
+                Recaudado: <span className="font-mono font-bold">${formatCurrency(recaudado)}</span> crecen a <span className="font-mono font-bold text-emerald-600">${formatCurrency(Math.round(computed.projectedFunds))}</span> al {interestRate}%/yr.
                 {computed.projectedGap > 0
                   ? ` Necesitas ahorrar $${formatCurrency(Math.round(computed.projectedMonthlyTarget))}/mes adicionales para cubrir la brecha proyectada.`
                   : ` Los fondos proyectados cubren el costo inflado con un superávit de $${formatCurrency(Math.abs(Math.round(computed.projectedGap)))}.`
