@@ -4106,11 +4106,15 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
 
   // --- Computed values ---
   const computed = useMemo(() => {
-    // Variable costs per hour
+    // H/T Ratio: maintenance intervals are in tach hrs, costs expressed per hobbs hr
+    const htRatio = overviewMetrics?.annualStats?.hobbsTachRatio || 1.25;
+    const maintInterval = 100 * htRatio; // 100 tach hrs = ~125 hobbs hrs
+
+    // Variable costs per hour (hobbs)
     const combustibleHr = fuelLPH * avgasLiterCLP;
     const aceiteHr = oilLPH * aceiteLiterCLP;
-    const mantto100hr = revision100CLP / 100;
-    const manttoOil = cambioAceiteCLP / 100;
+    const mantto100hr = revision100CLP / maintInterval;
+    const manttoOil = cambioAceiteCLP / maintInterval;
     const manttoOverhaul = overhaulCLP / overhaulCycleHrs;
     const manttoHr = mantto100hr + manttoOil + manttoOverhaul;
     const totalVariableHr = combustibleHr + aceiteHr + manttoHr;
@@ -4207,8 +4211,10 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       projectedAvgasPrice, avgProjectedAvgasPrice, projectedCombustibleHr,
       projectedTotalVariableHr, projectedTotalCostoHr, projectedGananciaHr, projectedMargen,
       currentAnnualFuelCost, projectedAnnualFuelCostAtOverhaul,
+      // H/T ratio used
+      htRatio, maintInterval,
     };
-  }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD, cambioAceiteCLP, revision100CLP, overhaulCLP, horasAnuales, overhaulCycleHrs, seguroAnual, hangarAnual, toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual, cashOverhaul, creditoOverhaul, recaudado, valorHora, interestRate, inflationRate, fuelTrendRate]);
+  }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD, cambioAceiteCLP, revision100CLP, overhaulCLP, horasAnuales, overhaulCycleHrs, seguroAnual, hangarAnual, toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual, cashOverhaul, creditoOverhaul, recaudado, valorHora, interestRate, inflationRate, fuelTrendRate, overviewMetrics]);
 
   // Actual data from flights (yearly hours)
   const yearlyHours = useMemo(() => {
