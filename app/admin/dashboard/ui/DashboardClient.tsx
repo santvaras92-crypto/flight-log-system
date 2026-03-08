@@ -356,13 +356,39 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
     };
 
     // --- Touch handlers ---
-    const handleTouchStartScrollLock = (e: React.TouchEvent, cardId: string) => {
-      lockScroll();
-      handleTouchStart(e, cardId);
+    // --- Long press drag handlers ---
+    let longPressTimeout: NodeJS.Timeout | null = null;
+    let dragActivated = false;
+
+    const handleTouchStartLongPress = (e: React.TouchEvent, cardId: string) => {
+      dragActivated = false;
+      longPressTimeout = setTimeout(() => {
+        dragActivated = true;
+        lockScroll();
+        handleDragStart(cardId);
+      }, 400);
     };
-    const handleTouchEndScrollUnlock = (e: React.TouchEvent, cardId: string) => {
-      unlockScroll();
-      handleTouchEnd(e, cardId);
+    const handleTouchMoveLongPress = (e: React.TouchEvent) => {
+      if (!dragActivated && longPressTimeout) {
+        clearTimeout(longPressTimeout);
+        longPressTimeout = null;
+      }
+      if (dragActivated) {
+        handleTouchMove(e);
+      }
+    };
+    const handleTouchEndLongPress = (e: React.TouchEvent, cardId: string) => {
+      if (longPressTimeout) {
+        clearTimeout(longPressTimeout);
+        longPressTimeout = null;
+      }
+      if (dragActivated) {
+        unlockScroll();
+        handleDragEnd();
+      } else {
+        handleTouchEnd(e, cardId);
+      }
+      dragActivated = false;
     };
 
     return (
@@ -374,14 +400,14 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         onDragOver={handleDragOver}
         onDrop={() => { unlockScroll(); handleDrop(cardId); }}
         onDragEnd={() => { unlockScroll(); handleDragEnd(); }}
-        onTouchStart={(e) => handleTouchStartScrollLock(e, cardId)}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={(e) => handleTouchEndScrollUnlock(e, cardId)}
-        className={`${isDragging ? 'opacity-50 scale-95' : 'opacity-100'} ${isComplexCard ? 'col-span-2 lg:col-span-1' : ''} transition-all duration-150 cursor-move select-none`}
+        onTouchStart={(e) => handleTouchStartLongPress(e, cardId)}
+        onTouchMove={handleTouchMoveLongPress}
+        onTouchEnd={(e) => handleTouchEndLongPress(e, cardId)}
+        className={`${isDragging ? 'opacity-50 scale-105 shadow-lg' : 'opacity-100'} ${isComplexCard ? 'col-span-2 lg:col-span-1' : ''} transition-all duration-150 cursor-move select-none`}
         style={{
           WebkitUserSelect: 'none',
           WebkitTouchCallout: 'none',
-          touchAction: isBeingDragged ? 'none' : 'auto'
+          touchAction: isDragging ? 'none' : 'auto'
         }}
       >
         {content}
