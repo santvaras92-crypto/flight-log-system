@@ -1,9 +1,7 @@
 "use client";
-import { useMemo, useState } from "react";
-import { useRef } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Chart, LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler } from "chart.js";
-import { useEffect, useRef } from "react";
 import { generateAccountStatementPDF } from "../../../../lib/generate-account-pdf";
 import ImagePreviewModal from "../../../components/ImagePreviewModal";
 import { registerOverhaul } from "../../../actions/register-overhaul";
@@ -436,12 +434,12 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         <div className="space-y-0.5 sm:space-y-1">
           <div className="text-lg sm:text-3xl font-bold text-slate-900">
             {typeof overviewMetrics?.fuelRateLph === 'number'
-              ? overviewMetrics.fuelRateLph.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              ? overviewMetrics.fuelRateLph.toLocaleString('es-CL', { maximumFractionDigits: 2 })
               : '0,00'} <span className="text-sm sm:text-xl text-slate-600">L/H</span>
           </div>
           <div className="text-base sm:text-xl font-semibold text-amber-600">
             {typeof overviewMetrics?.fuelRateGph === 'number'
-              ? overviewMetrics.fuelRateGph.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              ? overviewMetrics.fuelRateGph.toLocaleString('es-CL', { maximumFractionDigits: 2 })
               : '0,00'} <span className="text-xs sm:text-base text-slate-600">GAL/H</span>
           </div>
         </div>
@@ -729,8 +727,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             )}
           </div>
         </div>
-      );
-    })(),
+      })(),
     pendingBalance: (
       <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] lg:overflow-y-auto flex flex-col`}>
         <div className="flex items-start justify-between mb-2 sm:mb-4">
@@ -798,7 +795,6 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                 <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-violet-100 flex items-center justify-center">
                   <svg className="w-4 h-4 sm:w-6 sm:h-6 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
                 </div>
                 <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-violet-50 text-violet-700 text-[8px] sm:text-[10px] font-bold rounded-full border border-violet-100">
                   H/T: {stats.hobbsTachRatio.toFixed(2)}
@@ -1452,7 +1448,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
         if (fecha < start) return false;
       }
       if (filterEndDate) {
-        const end = new Date(filterEndDate);
+        const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
         if (fecha > end) return false;
       }
@@ -1573,7 +1569,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
       <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
         <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M3 12h18M3 17h18" />
           </svg>
           Flight Log Entries
           <span className="ml-2 text-sm font-normal text-blue-200">
@@ -1583,7 +1579,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
             <button
               onClick={applySave}
               disabled={saving}
-              className="ml-auto px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-bold disabled:opacity-40"
+              className="ml-auto px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-bold disabled:opacity-50"
             >
               {saving ? 'Guardando...' : 'Guardar cambios'}
             </button>
@@ -1668,7 +1664,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                 className="px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-semibold transition-colors flex items-center gap-2 shadow-md"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 Generate Account Statement PDF
               </button>
@@ -1689,15 +1685,21 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
             <div className="bg-white rounded-lg p-3 border border-blue-200 shadow-sm">
               <div className="text-xs text-slate-500 font-medium mb-1">Total Flights</div>
-              <div className="text-2xl font-bold text-blue-600">{pilotBalanceSummary.totalFlights}</div>
+              <div className="text-2xl font-bold text-slate-900 leading-none">
+                {pilotBalanceSummary.totalFlights}
+              </div>
             </div>
             <div className="bg-white rounded-lg p-3 border border-emerald-200 shadow-sm">
               <div className="text-xs text-slate-500 font-medium mb-1">Total Hours</div>
-              <div className="text-2xl font-bold text-emerald-600">{pilotBalanceSummary.totalHours.toFixed(1)}</div>
+              <div className="text-2xl font-bold text-emerald-700 leading-none">
+                {pilotBalanceSummary.totalHours.toFixed(1)}
+              </div>
             </div>
             <div className="bg-white rounded-lg p-3 border border-amber-200 shadow-sm">
               <div className="text-xs text-slate-500 font-medium mb-1">Total Spent</div>
-              <div className="text-xl font-bold text-amber-700">${formatCurrency(pilotBalanceSummary.totalSpent)}</div>
+              <div className="text-xl font-bold text-amber-700">
+                ${formatCurrency(pilotBalanceSummary.totalSpent)}
+              </div>
             </div>
             <div className={`bg-white rounded-lg p-3 border-2 shadow-md ${pilotBalanceSummary.balance >= 0 ? 'border-emerald-400' : 'border-red-400'}`}>
               <div className="text-xs text-slate-500 font-medium mb-1">Balance</div>
@@ -1917,7 +1919,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
                     {editMode ? (
                       <input type="number" step="1000" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-20" defaultValue={f.tarifa || ''} onChange={e => handleChange(f.id, 'tarifa', e.target.value)} />
-                    ) : (f.tarifa ? `$${formatCurrency(Number(f.tarifa))}` : '-')}
+                    : (f.tarifa ? `$${formatCurrency(Number(f.tarifa))}` : '-')}
                   </td>
 
                   {/* Instructor/ Safety Pilot Rate */}
@@ -2170,7 +2172,7 @@ function FuelTable({ logs }: { logs: any[] }) {
             <select
               value={filterPilot}
               onChange={e => { setFilterPilot(e.target.value); setCurrentPage(1); }}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[200px]"
             >
               <option value="">Todos</option>
               {pilots.map(([code, name]) => (
@@ -2183,7 +2185,7 @@ function FuelTable({ logs }: { logs: any[] }) {
             <select
               value={filterSource}
               onChange={e => { setFilterSource(e.target.value as any); setCurrentPage(1); }}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
             >
               <option value="ALL">Todas</option>
               <option value="CSV">Histórico (CSV)</option>
@@ -2209,7 +2211,7 @@ function FuelTable({ logs }: { logs: any[] }) {
         <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
           <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10V3L4 14h7v7l9-11h-7z" />
             </svg>
             Registros de Combustible (Histórico + App)
           </h3>
@@ -2252,7 +2254,7 @@ function FuelTable({ logs }: { logs: any[] }) {
                     {l.litros > 0 && l.monto > 0 ? `$${Math.round(l.monto / l.litros).toLocaleString('es-CL')}` : '-'}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm">
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${l.source === 'CSV' ? 'bg-slate-200 text-slate-700' : 'bg-blue-100 text-blue-700'
+                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${l.source === 'CSV' ? 'bg-slate-200 text-slate-700' : 'bg-blue-100 text-blue-700'
                       }`}>
                       {l.source === 'CSV' ? 'Histórico' : 'App'}
                     </span>
@@ -2465,7 +2467,7 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
 
   return (
     <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
-      <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6 flex justify-between items-center">
+      <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6 flex justify-between items-center gap-4">
         <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M3 12h18M3 17h18" />
@@ -3111,8 +3113,6 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
   );
 }
 
-type BankMovement = { correlativo: number; fecha: string; descripcion: string; egreso: number | null; ingreso: number | null; saldo: number; tipo: string; cliente: string | null; attachmentUrl?: string | null };
-
 function FinanzasTable({ movements, palette }: { movements: BankMovement[]; palette: any }) {
   const [filterTipo, setFilterTipo] = useState<string>('ALL');
   const [filterMonth, setFilterMonth] = useState<string>('');
@@ -3171,11 +3171,6 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
     }
   };
 
-  const getDisplayValue = (m: BankMovement, field: 'tipo' | 'cliente' | 'descripcion') => {
-    const key = `${m.correlativo}_${field}`;
-    return key in localEdits ? localEdits[key] : (m[field] || '');
-  };
-
   const handleCartolaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -3231,7 +3226,6 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
 
       const data = await res.json();
       if (data.ok) {
-        // Find and update the movement in local state if pagination allows, but location.reload is safer
         setTimeout(() => location.reload(), 500);
       } else {
         alert(`Error: ${data.error}`);
@@ -3388,15 +3382,15 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
 
         {/* Upload Result */}
         {uploadResult && (
-          <div className={`mt-4 p-4 rounded-xl border-2 ${uploadResult.ok ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+          <div className={`mt-4 p-4 rounded-xl border-2 ${uploadResult.ok ? 'bg-green-500/10 border-green-300' : 'bg-red-500/10 border-red-300'}`}>
             <div className="flex items-start gap-3">
               {uploadResult.ok ? (
-                <svg className="w-6 h-6 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <svg className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               ) : (
                 <svg className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               )}
               <div className="flex-1">
-                <p className={`text-sm font-bold ${uploadResult.ok ? 'text-emerald-800' : 'text-red-800'}`}>
+                <p className={`text-sm font-bold ${uploadResult.ok ? 'text-green-800' : 'text-red-800'}`}>
                   {uploadResult.message || uploadResult.error}
                 </p>
                 {uploadResult.ok && uploadResult.added > 0 && (
@@ -3419,8 +3413,8 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                                 <th className="px-2 py-1.5 text-left font-bold text-emerald-700">#</th>
                                 <th className="px-2 py-1.5 text-left font-bold text-emerald-700">Fecha</th>
                                 <th className="px-2 py-1.5 text-left font-bold text-emerald-700">Descripción</th>
-                                <th className="px-2 py-1.5 text-right font-bold text-red-600">Egreso</th>
-                                <th className="px-2 py-1.5 text-right font-bold text-emerald-600">Ingreso</th>
+                                <th className="px-2 py-1.5 text-right font-bold text-red-600 uppercase tracking-wider">Egreso</th>
+                                <th className="px-2 py-1.5 text-right font-bold text-emerald-600 uppercase tracking-wider">Ingreso</th>
                                 <th className="px-2 py-1.5 text-left font-bold text-emerald-700">Tipo</th>
                                 <th className="px-2 py-1.5 text-left font-bold text-emerald-700">Código</th>
                               </tr>
@@ -3583,7 +3577,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                 <th className="px-1 sm:px-3 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Doc</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-200">
               {paginated.map((m, i) => (
                 <tr key={`${m.correlativo}-${i}`} className="hover:bg-blue-50/50 transition-colors group">
                   <td className="px-1 sm:px-3 py-1.5 sm:py-2.5 text-[9px] sm:text-xs text-slate-400 font-mono">{m.correlativo}</td>
@@ -3658,7 +3652,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                     ) : (
                       <span
                         onClick={() => startEditing(m.correlativo, 'tipo', getDisplayValue(m, 'tipo'))}
-                        className={`inline-block px-1 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-xs font-bold cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all ${tipoColors[getDisplayValue(m, 'tipo')] || 'bg-gray-100 text-gray-800'}`}
+                        className={`inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all ${tipoColors[getDisplayValue(m, 'tipo')] || 'bg-gray-100 text-gray-800'}`}
                         title="Clic para cambiar tipo"
                       >
                         {getDisplayValue(m, 'tipo') || '—'}
@@ -3704,7 +3698,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                           className="p-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-900 rounded-lg transition-colors border border-blue-200 flex-shrink-0"
                           title="Ver documento adjunto"
                         >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2h-2a2 2 0 01-2-2v-1" /></svg>
                         </button>
                         <button
                           onClick={() => handleDeleteAttachment(m.correlativo)}
@@ -3712,7 +3706,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                           className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
                           title="Eliminar documento"
                         >
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                       </div>
                     ) : (
@@ -3767,9 +3761,8 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
               <div className="flex items-center gap-3">
                 <div className="p-2 sm:p-2.5 bg-blue-100/50 text-blue-600 rounded-lg sm:rounded-xl ring-1 ring-blue-100/50">
                   <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </div>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2h-2a2 2 0 01-2-2v-1" />
+                </svg>
                 <div>
                   <h3 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">Documento Adjunto</h3>
                   <p className="text-xs sm:text-sm text-slate-500 font-medium">Movimiento #{viewingAttachment.correlativo}</p>
@@ -3782,7 +3775,9 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                   className="hidden sm:flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-sm rounded-lg transition-colors"
                   title="Descargar"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
                   Descargar
                 </a>
                 <button
@@ -3790,7 +3785,9 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                   className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
                   aria-label="Cerrar modal"
                 >
-                  <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
             </div>
@@ -3812,7 +3809,9 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                 download
                 className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-700 font-medium text-sm rounded-xl"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
                 Descargar
               </a>
               <button
@@ -3905,7 +3904,7 @@ function FinanceCharts({ flights, transactions, palette }: { flights: any[]; tra
       <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
         <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
           </svg>
           Financial Performance
         </h3>
@@ -3987,7 +3986,7 @@ function DepositsTable({ depositsDetailsByCode, csvPilotNames }: { depositsDetai
         <div>
           <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
             All Deposits — {allDeposits.length} records
           </h3>
@@ -3995,11 +3994,8 @@ function DepositsTable({ depositsDetailsByCode, csvPilotNames }: { depositsDetai
         </div>
         <a
           href="/admin/deposits"
-          className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-yellow-900 font-bold rounded-lg transition-all flex items-center gap-2 shadow-lg"
+          className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-yellow-900 font-bold rounded-lg transition-colors"
         >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
           Corregir Depósito
         </a>
       </div>
