@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Chart, LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler } from "chart.js";
 import { useEffect, useRef } from "react";
@@ -344,51 +345,55 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
   const renderCard = (cardId: string, content: JSX.Element) => {
     const isDragging = draggedCard === cardId;
     const isBeingDragged = isDragEnabled && draggedCard === cardId;
-    // Complex cards span 2 columns on mobile
     const isComplexCard = cardId === 'nextInspections' || cardId === 'activePilots';
+
+    // --- Robust drag state ---
+    const dragActivatedRef = useRef(false);
+    const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // --- Scroll lock helpers ---
     const lockScroll = () => {
       document.body.style.overflow = 'hidden';
+      const grid = document.getElementById('overview-grid');
+      if (grid) grid.style.touchAction = 'none';
     };
     const unlockScroll = () => {
       document.body.style.overflow = '';
+      const grid = document.getElementById('overview-grid');
+      if (grid) grid.style.touchAction = '';
     };
 
-    // --- Touch handlers ---
     // --- Long press drag handlers ---
-    let longPressTimeout: NodeJS.Timeout | null = null;
-    let dragActivated = false;
-
     const handleTouchStartLongPress = (e: React.TouchEvent, cardId: string) => {
-      dragActivated = false;
-      longPressTimeout = setTimeout(() => {
-        dragActivated = true;
+      dragActivatedRef.current = false;
+      longPressTimeoutRef.current = setTimeout(() => {
+        dragActivatedRef.current = true;
         lockScroll();
         handleDragStart(cardId);
       }, 400);
     };
     const handleTouchMoveLongPress = (e: React.TouchEvent) => {
-      if (!dragActivated && longPressTimeout) {
-        clearTimeout(longPressTimeout);
-        longPressTimeout = null;
+      if (!dragActivatedRef.current && longPressTimeoutRef.current) {
+        clearTimeout(longPressTimeoutRef.current);
+        longPressTimeoutRef.current = null;
       }
-      if (dragActivated) {
+      if (dragActivatedRef.current) {
+        e.preventDefault(); // Bloquea scroll nativo
         handleTouchMove(e);
       }
     };
     const handleTouchEndLongPress = (e: React.TouchEvent, cardId: string) => {
-      if (longPressTimeout) {
-        clearTimeout(longPressTimeout);
-        longPressTimeout = null;
+      if (longPressTimeoutRef.current) {
+        clearTimeout(longPressTimeoutRef.current);
+        longPressTimeoutRef.current = null;
       }
-      if (dragActivated) {
+      if (dragActivatedRef.current) {
         unlockScroll();
         handleDragEnd();
       } else {
         handleTouchEnd(e, cardId);
       }
-      dragActivated = false;
+      dragActivatedRef.current = false;
     };
 
     return (
