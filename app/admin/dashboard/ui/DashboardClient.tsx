@@ -4003,7 +4003,6 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   const [fuelTrendRate, setFuelTrendRate] = useState(10); // % annual AVGAS price increase (geopolitical + CAGR)
   // Live engine market price (from airpowerinc.com scraping)
   const [engineMarketPriceUSD, setEngineMarketPriceUSD] = useState(47415); // fallback: last known RENPL-RT8164
-  const [engineCorePriceUSD, setEngineCorePriceUSD] = useState(29500); // refundable core charge
   // Live indicators state
   const [liveIndicators, setLiveIndicators] = useState<{ uf: boolean; usd: boolean; fuel: boolean; engine: boolean }>({ uf: false, usd: false, fuel: false, engine: false });
 
@@ -4120,7 +4119,6 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         if (!data) return;
         if (data.price > 0) {
           setEngineMarketPriceUSD(data.price);
-          if (data.core > 0) setEngineCorePriceUSD(data.core);
           setLiveIndicators(prev => ({ ...prev, engine: true }));
         }
       })
@@ -4177,14 +4175,22 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const laborTodayCLP = Math.round(overhaulLaborCLP * (1 + clInflationPct / 100));
 
     // ===== MARKET REPLACEMENT COST (live from airpowerinc.com) =====
-    // Motor market price in CLP = USD price × live exchange rate
-    const motorMarketCLP = Math.round(engineMarketPriceUSD * usdRate);
-    const coreMarketCLP = Math.round(engineCorePriceUSD * usdRate);
-    // Total market replacement: motor + labor (labor inflated by IPC since we pay locally)
-    const marketReplacementCLP = motorMarketCLP + laborTodayCLP;
-    // Market-implied annual inflation on motor (from Jul 2022 original FOB USD $30,895.92)
+    // Motor FOB price in CLP
+    const motorFobCLP = Math.round(engineMarketPriceUSD * usdRate);
+    // Internación ratio: Eagle Copters 2022 charged CLP $47,926,129 for a motor FOB USD $30,895.92
+    // at ~$920/USD = CLP $28,424,246 → ratio 47,926,129 / 28,424,246 = 1.686
+    // This 68.6% markup covers: freight, import duties, customs, IVA (19%), broker fees, Eagle margin
     const originalMotorUSD = 30895.92;
-    const yearsSinceOverhaul = 2.75; // Jul 2022 → ~Apr 2025
+    const originalUsdRate = 920; // approximate USD/CLP in Jul 2022
+    const originalFobCLP = Math.round(originalMotorUSD * originalUsdRate); // ~28,424,246
+    const internacionRatio = overhaulMotorCLP / originalFobCLP; // ~1.686 (68.6%)
+    // Apply internación ratio to current FOB price → "puesto en Chile"
+    const motorInternacionCLP = Math.round(motorFobCLP * internacionRatio);
+    const internacionCostCLP = motorInternacionCLP - motorFobCLP; // shipping + import + IVA
+    // Total market replacement: motor internado + labor (IPC-adjusted)
+    const marketReplacementCLP = motorInternacionCLP + laborTodayCLP;
+    // Market-implied annual inflation on motor FOB (from Jul 2022 original)
+    const yearsSinceOverhaul = 3.67; // Jul 2022 → Mar 2026
     const motorPriceInflationPct = engineMarketPriceUSD > 0
       ? ((engineMarketPriceUSD / originalMotorUSD) - 1) * 100
       : 0;
@@ -4256,8 +4262,8 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       yearsToOverhaul, currentFunds, projectedFunds, interestEarned,
       inflatedOverhaulCost, inflationIncrease, projectedGap, projectedMonthlyTarget,
       motorTodayCLP, laborTodayCLP,
-      // Market replacement (live engine price)
-      motorMarketCLP, coreMarketCLP, marketReplacementCLP,
+      // Market replacement (live engine price + internación)
+      motorFobCLP, internacionRatio, motorInternacionCLP, internacionCostCLP, marketReplacementCLP,
       motorPriceInflationPct, motorAnnualInflation,
       // Fuel projections
       projectedAvgasPrice, avgProjectedAvgasPrice, projectedCombustibleHr,
@@ -4266,7 +4272,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       // H/T ratio used
       htRatio, maintInterval,
     };
-  }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD, cambioAceiteCLP, revision100CLP, overhaulCLP, horasAnuales, overhaulCycleHrs, seguroAnual, hangarAnual, toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual, recaudado, valorHora, interestRate, clForwardInflation, fuelTrendRate, overviewMetrics, overhaulMotorCLP, overhaulLaborCLP, clInflationPct, engineMarketPriceUSD, engineCorePriceUSD]);
+  }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD, cambioAceiteCLP, revision100CLP, overhaulCLP, horasAnuales, overhaulCycleHrs, seguroAnual, hangarAnual, toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual, recaudado, valorHora, interestRate, clForwardInflation, fuelTrendRate, overviewMetrics, overhaulMotorCLP, overhaulLaborCLP, clInflationPct, engineMarketPriceUSD]);
 
   // Actual data from flights (yearly hours)
   const yearlyHours = useMemo(() => {
@@ -4556,7 +4562,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                     <span className="text-[11px] text-slate-600 flex items-center gap-1">Motor market{liveIndicators.engine && <span className="px-1 py-0.5 text-[8px] font-bold bg-emerald-100 text-emerald-700 rounded-full">LIVE</span>}</span>
                     <div className="flex items-center gap-1">
                       <span className="text-[11px] font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">USD ${formatCurrency(engineMarketPriceUSD)}</span>
-                      <span className="text-[9px] text-slate-400">= ${formatCurrency(computed.motorMarketCLP)} CLP</span>
+                      <span className="text-[9px] text-slate-400">→ ${formatCurrency(computed.motorInternacionCLP)} int.</span>
                     </div>
                   </div>
                 </div>
@@ -4897,26 +4903,25 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full animate-pulse">LIVE</span>
               )}
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
               <div>
-                <p className="text-slate-500">Motor RENPL-RT8164</p>
+                <p className="text-slate-500">Motor FOB (airpowerinc)</p>
                 <p className="font-mono font-bold text-blue-800">USD ${formatCurrency(engineMarketPriceUSD)}</p>
-                <p className="font-mono text-[10px] text-slate-500">= ${formatCurrency(computed.motorMarketCLP)} CLP</p>
+                <p className="font-mono text-[10px] text-slate-500">= ${formatCurrency(computed.motorFobCLP)} CLP</p>
+                <p className="text-[9px] text-red-500 font-bold">+{computed.motorPriceInflationPct.toFixed(1)}% vs 2022 ({computed.motorAnnualInflation.toFixed(1)}%/yr)</p>
               </div>
               <div>
-                <p className="text-slate-500">Core charge (refundable)</p>
-                <p className="font-mono font-bold text-slate-600">USD ${formatCurrency(engineCorePriceUSD)}</p>
-                <p className="font-mono text-[10px] text-slate-400">= ${formatCurrency(computed.coreMarketCLP)} CLP</p>
+                <p className="text-slate-500">Internación ({(computed.internacionRatio * 100 - 100).toFixed(0)}% s/FOB)</p>
+                <p className="font-mono font-bold text-slate-700">${formatCurrency(computed.internacionCostCLP)} CLP</p>
+                <p className="font-mono text-[10px] text-slate-400">Flete + import + IVA + Eagle</p>
+                <p className="text-[9px] text-slate-400">Ratio real factura 2022: ×{computed.internacionRatio.toFixed(3)}</p>
               </div>
-              <div>
-                <p className="text-slate-500">+ Labor (IPC-adjusted)</p>
-                <p className="font-mono font-bold text-slate-800">${formatCurrency(computed.laborTodayCLP)} CLP</p>
-                <p className="font-mono text-[10px] text-slate-400">Mano de obra local</p>
-              </div>
-              <div>
-                <p className="text-slate-500">Total Market Replacement</p>
+              <div className="col-span-2 sm:col-span-1">
+                <p className="text-slate-500">Motor puesto en Chile</p>
+                <p className="font-mono font-bold text-blue-800">${formatCurrency(computed.motorInternacionCLP)} CLP</p>
+                <p className="font-mono text-[10px] text-slate-400">+ Mano de obra: ${formatCurrency(computed.laborTodayCLP)}</p>
+                <p className="text-slate-500 font-bold mt-1">Total Reemplazo</p>
                 <p className="font-mono font-bold text-blue-800 text-base">${formatCurrency(computed.marketReplacementCLP)} CLP</p>
-                <p className="text-[9px] text-red-500 font-bold">Motor: +{computed.motorPriceInflationPct.toFixed(1)}% vs 2022 ({computed.motorAnnualInflation.toFixed(1)}%/yr)</p>
               </div>
             </div>
             {/* Comparison bar: IPC vs Market */}
@@ -5030,7 +5035,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                   ? ` Necesitas ahorrar $${formatCurrency(Math.round(computed.projectedMonthlyTarget))}/mes adicionales para cubrir la brecha proyectada.`
                   : ` Los fondos proyectados cubren el costo inflado con un superávit de $${formatCurrency(Math.abs(Math.round(computed.projectedGap)))}.`
                 }</p>
-                <p className="mt-1 text-blue-700"><span className="font-bold">⚡ Precio mercado motor (airpowerinc.com):</span> RENPL-RT8164 USD ${formatCurrency(engineMarketPriceUSD)} × ${formatCurrency(usdRate)} CLP/USD = <span className="font-mono font-bold">${formatCurrency(computed.motorMarketCLP)}</span> CLP. Inflación aviación <span className="font-bold text-red-600">+{computed.motorPriceInflationPct.toFixed(1)}%</span> desde Jul 2022 ({computed.motorAnnualInflation.toFixed(1)}%/yr) supera ampliamente el IPC general ({clInflationPct}%). Costo real de reemplazo con mano de obra: <span className="font-mono font-bold">${formatCurrency(computed.marketReplacementCLP)}</span> CLP.</p>
+                <p className="mt-1 text-blue-700"><span className="font-bold">⚡ Precio mercado motor (airpowerinc.com):</span> RENPL-RT8164 FOB USD ${formatCurrency(engineMarketPriceUSD)} × ${formatCurrency(usdRate)} CLP/USD = <span className="font-mono font-bold">${formatCurrency(computed.motorFobCLP)}</span> CLP FOB. Internación (flete + import + IVA) ratio ×{computed.internacionRatio.toFixed(3)} de factura Eagle 2022 → <span className="font-mono font-bold">${formatCurrency(computed.motorInternacionCLP)}</span> CLP puesto en Chile. Inflación aviación <span className="font-bold text-red-600">+{computed.motorPriceInflationPct.toFixed(1)}%</span> desde Jul 2022 ({computed.motorAnnualInflation.toFixed(1)}%/yr) supera el IPC general ({clInflationPct}%). Costo total reemplazo (motor internado + mano de obra): <span className="font-mono font-bold">${formatCurrency(computed.marketReplacementCLP)}</span> CLP.</p>
               </div>
             </div>
           </div>
