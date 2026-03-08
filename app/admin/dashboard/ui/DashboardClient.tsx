@@ -731,125 +731,84 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       annualStats: (() => {
         const stats = overviewMetrics.annualStats;
 
-        // Calculate max values for bar scaling
-        const maxHobbs = Math.max(stats.hobbsThisYear, stats.hobbsPrevYear);
-        const maxTach = Math.max(stats.tachThisYear, stats.tachPrevYear);
-        const maxFlights = Math.max(stats.avgMonthlyFlightsThisYear, stats.avgMonthlyFlightsPrevYear);
-
-        const renderTrend = (value: number) => (
-          <div className={`flex items-center gap-0.5 sm:gap-1 text-[9px] sm:text-xs font-semibold ${value >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-            <span>{value >= 0 ? '↗' : '↘'}</span>
-            <span>{value >= 0 ? '+' : ''}{value.toFixed(0)}%</span>
-          </div>
-        );
-
-        const renderBar = (current: number, max: number, color: string, isPrevious = false) => {
-          const pct = max > 0 ? (current / max) * 100 : 0;
+        const renderTrend = (value: number) => {
+          const isPositive = value >= 0;
           return (
-            <div className="w-full h-1.5 sm:h-2 rounded-full bg-slate-200 overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all ${isPrevious ? 'bg-slate-400' : color}`}
-                style={{ width: `${pct}%` }}
-              />
-            </div>
+            <span className={`text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded-md ${isPositive ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
+              }`}>
+              {isPositive ? '↗' : '↘'} {Math.abs(value).toFixed(0)}%
+            </span>
           );
         };
 
         return (
-          <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[120px] sm:min-h-[200px] lg:min-h-[280px] flex flex-col`}>
-            <div className="flex items-center justify-between gap-2 sm:gap-3 mb-3 sm:mb-4">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-3 h-3 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-slate-500 text-[9px] sm:text-xs font-semibold uppercase tracking-wide">Estadísticas Anuales</h3>
-                  <p className="text-[8px] sm:text-[10px] text-slate-400">Últimos 365 días</p>
-                </div>
+          <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] flex flex-col justify-between`}>
+
+            {/* Header (Coincide con las otras tarjetas) */}
+            <div className="flex items-start justify-between mb-2">
+              <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-violet-100 flex items-center justify-center">
+                <svg className="w-4 h-4 sm:w-6 sm:h-6 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
               </div>
-              <div className="text-right">
-                <div className="text-[8px] sm:text-[10px] text-slate-400">Ratio HOBBS/TACH</div>
-                <div className="text-sm sm:text-lg font-bold text-violet-600">{stats.hobbsTachRatio.toFixed(2)}</div>
-              </div>
+              <span className="px-2 py-1 bg-violet-50 text-violet-700 text-[9px] sm:text-xs font-bold rounded-full border border-violet-100">
+                Ratio H/T: {stats.hobbsTachRatio.toFixed(2)}
+              </span>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 sm:gap-6 flex-1">
-              {/* HOBBS Hours */}
-              <div className="flex flex-col">
-                <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
-                  <span className="text-sm sm:text-lg">🕐</span>
-                  <span className="text-[8px] sm:text-sm font-semibold text-violet-700 uppercase tracking-wide">HOBBS</span>
-                </div>
-                <div className="text-sm sm:text-2xl font-bold text-slate-900">
-                  {stats.hobbsThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-                </div>
-                <div className="text-[8px] sm:text-xs text-slate-500 mb-1 sm:mb-2">
-                  {stats.avgMonthlyHobbsThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} hrs/mes
-                </div>
-                <div className="space-y-1 sm:space-y-1.5 mt-auto">
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <span className="text-[7px] sm:text-[10px] text-slate-500 w-8 sm:w-14">Este año</span>
-                    {renderBar(stats.hobbsThisYear, maxHobbs, 'bg-violet-500')}
+            <div>
+              <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide">Estadísticas Anuales</h3>
+              <p className="text-[9px] sm:text-xs text-slate-400 mb-2 sm:mb-4">Últimos 365 días</p>
+            </div>
+
+            {/* Clean List Data */}
+            <div className="flex flex-col gap-2 sm:gap-3 flex-1 mt-auto">
+
+              {/* HOBBS Row */}
+              <div className="flex items-end justify-between border-b border-slate-100/60 pb-2">
+                <div>
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="text-xs sm:text-sm">🕐</span>
+                    <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 tracking-wider">HOBBS</span>
                   </div>
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <span className="text-[7px] sm:text-[10px] text-slate-400 w-8 sm:w-14">Anterior</span>
-                    {renderBar(stats.hobbsPrevYear, maxHobbs, 'bg-slate-400', true)}
+                  <div className="text-lg sm:text-2xl font-bold text-slate-900 leading-none">
+                    {stats.hobbsThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                   </div>
                 </div>
-                <div className="mt-1 sm:mt-2">{renderTrend(stats.hobbsTrend)}</div>
+                <div className="text-right flex flex-col items-end gap-1">
+                  {renderTrend(stats.hobbsTrend)}
+                  <div className="text-[9px] sm:text-[10px] text-slate-400 font-medium">{stats.avgMonthlyHobbsThisYear.toFixed(1)}/mes</div>
+                </div>
               </div>
 
-              {/* TACH Hours */}
-              <div className="flex flex-col">
-                <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
-                  <span className="text-sm sm:text-lg">⏱️</span>
-                  <span className="text-[8px] sm:text-sm font-semibold text-emerald-700 uppercase tracking-wide">TACH</span>
-                </div>
-                <div className="text-sm sm:text-2xl font-bold text-slate-900">
-                  {stats.tachThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-                </div>
-                <div className="text-[8px] sm:text-xs text-slate-500 mb-1 sm:mb-2">
-                  {stats.avgMonthlyTachThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} hrs/mes
-                </div>
-                <div className="space-y-1 sm:space-y-1.5 mt-auto">
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <span className="text-[7px] sm:text-[10px] text-slate-500 w-8 sm:w-14">Este año</span>
-                    {renderBar(stats.tachThisYear, maxTach, 'bg-emerald-500')}
+              {/* TACH Row */}
+              <div className="flex items-end justify-between border-b border-slate-100/60 pb-2">
+                <div>
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="text-xs sm:text-sm">⏱️</span>
+                    <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 tracking-wider">TACH</span>
                   </div>
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <span className="text-[7px] sm:text-[10px] text-slate-400 w-8 sm:w-14">Anterior</span>
-                    {renderBar(stats.tachPrevYear, maxTach, 'bg-slate-400', true)}
+                  <div className="text-base sm:text-xl font-bold text-slate-800 leading-none">
+                    {stats.tachThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                   </div>
                 </div>
-                <div className="mt-1 sm:mt-2">{renderTrend(stats.tachTrend)}</div>
+                <div className="text-right flex flex-col items-end gap-1">
+                  {renderTrend(stats.tachTrend)}
+                  <div className="text-[9px] sm:text-[10px] text-slate-400 font-medium">{stats.avgMonthlyTachThisYear.toFixed(1)}/mes</div>
+                </div>
               </div>
 
-              {/* Monthly Flights */}
-              <div className="flex flex-col">
-                <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
-                  <span className="text-sm sm:text-lg">✈️</span>
-                  <span className="text-[8px] sm:text-sm font-semibold text-sky-700 uppercase tracking-wide">Vuelos</span>
+              {/* VUELOS Row */}
+              <div className="flex items-center justify-between pt-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs sm:text-sm">✈️</span>
+                  <span className="text-[10px] sm:text-xs text-slate-600">
+                    <span className="font-bold text-slate-900 text-sm sm:text-base">{(stats.avgMonthlyFlightsThisYear * 12).toFixed(0)}</span> vuelos
+                  </span>
                 </div>
-                <div className="text-sm sm:text-2xl font-bold text-slate-900">
-                  {stats.avgMonthlyFlightsThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-[8px] sm:text-sm text-slate-500">/mes</span>
-                </div>
-                <div className="text-[8px] sm:text-xs text-slate-500 mb-1 sm:mb-2">
-                  {(stats.avgMonthlyFlightsThisYear * 12).toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/año
-                </div>
-                <div className="space-y-1 sm:space-y-1.5 mt-auto">
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <span className="text-[7px] sm:text-[10px] text-slate-500 w-8 sm:w-14">Este año</span>
-                    {renderBar(stats.avgMonthlyFlightsThisYear, maxFlights, 'bg-sky-500')}
-                  </div>
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <span className="text-[7px] sm:text-[10px] text-slate-400 w-8 sm:w-14">Anterior</span>
-                    {renderBar(stats.avgMonthlyFlightsPrevYear, maxFlights, 'bg-slate-400', true)}
-                  </div>
-                </div>
-                <div className="mt-1 sm:mt-2">{renderTrend(stats.flightsTrend)}</div>
+                {renderTrend(stats.flightsTrend)}
               </div>
+
             </div>
           </div>
         );
