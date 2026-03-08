@@ -3977,13 +3977,13 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   const [seguroUSD, setSeguroUSD] = useState(4710.02);
   const [cambioAceiteCLP, setCambioAceiteCLP] = useState(281090);
   const [revision100CLP, setRevision100CLP] = useState(3577930);
-  // Overhaul cost model: real June 2022 costs, inflation-adjusted to present
-  // Motor imported from USA: USD 46,124.63 — inflated by US CPI (Jun 2022→Jan 2026: 9.8%)
-  // Labor in Chile: CLP 8,000,000 — inflated by Chilean IPC (Jun 2022→Dec 2024: 16.1%)
-  const [overhaulMotorUSD, setOverhaulMotorUSD] = useState(46124.63);
+  // Overhaul cost model: real Aug 2022 invoices, all paid in CLP
+  // Eagle Copters INV22-00211 (04-Ago-2022): CLP $47,926,129 (motor O-320-D2J + freight + import + IVA)
+  // Labor (installation): CLP $8,000,000
+  // Total: CLP $55,926,129 — single-currency, only Chilean IPC inflation applies
+  const [overhaulMotorCLP, setOverhaulMotorCLP] = useState(47926129); // Eagle Copters invoice total
   const [overhaulLaborCLP, setOverhaulLaborCLP] = useState(8000000);
-  const [usInflationPct, setUsInflationPct] = useState(9.8); // US CPI cumulative Jun 2022→Jan 2026
-  const [clInflationPct, setClInflationPct] = useState(16.1); // Chilean IPC cumulative Jun 2022→Dec 2024
+  const [clInflationPct, setClInflationPct] = useState(16.35); // Chilean IPC cumulative Sep 2022→Dec 2025 (mindicador.cl)
   const [horasAnuales, setHorasAnuales] = useState(220);
   const [overhaulCycleHrs, setOverhaulCycleHrs] = useState(1379.1);
   // Fixed costs (annual CLP)
@@ -4001,19 +4001,19 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   const [valorHora, setValorHora] = useState(168052);
   // Financial projections
   const [interestRate, setInterestRate] = useState(4); // % annual compound interest on accumulated funds
-  const [usForwardInflation, setUsForwardInflation] = useState(2.5); // % annual US CPI forward estimate (Fed target ~2%, actual ~2.5-3%)
   const [clForwardInflation, setClForwardInflation] = useState(3.5); // % annual Chilean IPC forward estimate (BCCh target 3%, actual ~3.5-4.5%)
   const [fuelTrendRate, setFuelTrendRate] = useState(10); // % annual AVGAS price increase (geopolitical + CAGR)
+  // Live engine market price (from airpowerinc.com scraping)
+  const [engineMarketPriceUSD, setEngineMarketPriceUSD] = useState(47415); // fallback: last known RENPL-RT8164
+  const [engineCorePriceUSD, setEngineCorePriceUSD] = useState(29500); // refundable core charge
   // Live indicators state
-  const [liveIndicators, setLiveIndicators] = useState<{ uf: boolean; usd: boolean; fuel: boolean }>({ uf: false, usd: false, fuel: false });
+  const [liveIndicators, setLiveIndicators] = useState<{ uf: boolean; usd: boolean; fuel: boolean; engine: boolean }>({ uf: false, usd: false, fuel: false, engine: false });
 
-  // Computed overhaul cost: inflate each component from June 2022, then sum
+  // Computed overhaul cost: inflate total CLP cost from Aug 2022 by Chilean IPC
   const overhaulCLP = useMemo(() => {
-    const motorInflated = overhaulMotorUSD * (1 + usInflationPct / 100); // USD inflated by US CPI
-    const motorCLP = motorInflated * usdRate; // Convert to CLP at current rate
-    const laborInflated = overhaulLaborCLP * (1 + clInflationPct / 100); // CLP inflated by Chilean IPC
-    return Math.round(motorCLP + laborInflated);
-  }, [overhaulMotorUSD, overhaulLaborCLP, usInflationPct, clInflationPct, usdRate]);
+    const totalOriginal = overhaulMotorCLP + overhaulLaborCLP;
+    return Math.round(totalOriginal * (1 + clInflationPct / 100));
+  }, [overhaulMotorCLP, overhaulLaborCLP, clInflationPct]);
 
   // Fuel price analysis from real records
   const fuelPriceAnalysis = useMemo(() => {
@@ -4114,6 +4114,21 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     }
   }, [fuelPriceAnalysis]);
 
+  // Auto-populate engine market price from airpowerinc.com (RENPL-RT8164 O-320-D2J)
+  useEffect(() => {
+    fetch('/api/engine-price')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (!data) return;
+        if (data.price > 0) {
+          setEngineMarketPriceUSD(data.price);
+          if (data.core > 0) setEngineCorePriceUSD(data.core);
+          setLiveIndicators(prev => ({ ...prev, engine: true }));
+        }
+      })
+      .catch(() => {}); // Silent fail, keeps defaults
+  }, []);
+
   // Consumption rates
   const fuelGPH = 7;
   const fuelLPH = fuelGPH * 3.785;
@@ -4154,34 +4169,39 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const metaMensualOverhaul = metaAnualOverhaul / 12;
 
     // ===== FINANCIAL PROJECTIONS =====
-    // Dual-inflation model: motor (USD) inflated by US CPI fwd, labor (CLP) by Chilean IPC fwd
+    // Single-currency CLP model: entire overhaul cost inflated by Chilean IPC forward
     const r = interestRate / 100;
-    const usInf = usForwardInflation / 100;
     const clInf = clForwardInflation / 100;
     const yearsToOverhaul = Math.max(anosRemanentes, 0.01);
 
-    // Current inflated components (from June 2022 to today)
-    const motorTodayUSD = overhaulMotorUSD * (1 + usInflationPct / 100);
-    const motorTodayCLP = motorTodayUSD * usdRate;
-    const laborTodayCLP = overhaulLaborCLP * (1 + clInflationPct / 100);
+    // Current inflated components (from Aug 2022 to today, Chilean IPC)
+    const motorTodayCLP = Math.round(overhaulMotorCLP * (1 + clInflationPct / 100));
+    const laborTodayCLP = Math.round(overhaulLaborCLP * (1 + clInflationPct / 100));
+
+    // ===== MARKET REPLACEMENT COST (live from airpowerinc.com) =====
+    // Motor market price in CLP = USD price × live exchange rate
+    const motorMarketCLP = Math.round(engineMarketPriceUSD * usdRate);
+    const coreMarketCLP = Math.round(engineCorePriceUSD * usdRate);
+    // Total market replacement: motor + labor (labor inflated by IPC since we pay locally)
+    const marketReplacementCLP = motorMarketCLP + laborTodayCLP;
+    // Market-implied annual inflation on motor (from Jul 2022 original FOB USD $30,895.92)
+    const originalMotorUSD = 30895.92;
+    const yearsSinceOverhaul = 2.75; // Jul 2022 → ~Apr 2025
+    const motorPriceInflationPct = engineMarketPriceUSD > 0
+      ? ((engineMarketPriceUSD / originalMotorUSD) - 1) * 100
+      : 0;
+    const motorAnnualInflation = engineMarketPriceUSD > 0
+      ? (Math.pow(engineMarketPriceUSD / originalMotorUSD, 1 / yearsSinceOverhaul) - 1) * 100
+      : 0;
 
     // Projected accumulated funds with compound interest
     const currentFunds = cashOverhaul + recaudado;
     const projectedFunds = currentFunds * Math.pow(1 + r, yearsToOverhaul);
     const interestEarned = projectedFunds - currentFunds;
 
-    // Project each component forward to TBO date with respective inflation
-    // Motor: USD portion grows at US CPI rate, then converted to CLP (assumes USD/CLP stays ~constant)
-    const projectedMotorCLP = motorTodayCLP * Math.pow(1 + usInf, yearsToOverhaul);
-    // Labor: CLP portion grows at Chilean IPC rate
-    const projectedLaborCLP = laborTodayCLP * Math.pow(1 + clInf, yearsToOverhaul);
-    // Total projected overhaul cost at TBO
-    const inflatedOverhaulCost = projectedMotorCLP + projectedLaborCLP;
+    // Project entire overhaul cost forward to TBO date with Chilean IPC
+    const inflatedOverhaulCost = overhaulCLP * Math.pow(1 + clInf, yearsToOverhaul);
     const inflationIncrease = inflatedOverhaulCost - overhaulCLP;
-    // Weighted blended rate for display
-    const blendedInflationRate = overhaulCLP > 0
-      ? (Math.pow(inflatedOverhaulCost / overhaulCLP, 1 / yearsToOverhaul) - 1) * 100
-      : 0;
 
     // Projected gap (future)
     const projectedGap = inflatedOverhaulCost - projectedFunds;
@@ -4234,22 +4254,21 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       totalCostoHr, gananciaHr, margen, faltaOverhaul, anosRemanentes,
       metaAnualOverhaul, metaMensualOverhaul,
       fixedBreakdown, variableBreakdown, costPerHourBreakdown,
-      // Financial projections (dual-inflation model)
+      // Financial projections (CLP single-currency model)
       yearsToOverhaul, currentFunds, projectedFunds, interestEarned,
       inflatedOverhaulCost, inflationIncrease, projectedGap, projectedMonthlyTarget,
-      projectedMotorCLP, projectedLaborCLP, blendedInflationRate,
       motorTodayCLP, laborTodayCLP,
+      // Market replacement (live engine price)
+      motorMarketCLP, coreMarketCLP, marketReplacementCLP,
+      motorPriceInflationPct, motorAnnualInflation,
       // Fuel projections
       projectedAvgasPrice, avgProjectedAvgasPrice, projectedCombustibleHr,
       projectedTotalVariableHr, projectedTotalCostoHr, projectedGananciaHr, projectedMargen,
       currentAnnualFuelCost, projectedAnnualFuelCostAtOverhaul,
       // H/T ratio used
       htRatio, maintInterval,
-      // Overhaul cost breakdown (for display)
-      overhaulMotorInflatedCLP: Math.round(overhaulMotorUSD * (1 + usInflationPct / 100) * usdRate),
-      overhaulLaborInflatedCLP: Math.round(overhaulLaborCLP * (1 + clInflationPct / 100)),
     };
-  }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD, cambioAceiteCLP, revision100CLP, overhaulCLP, horasAnuales, overhaulCycleHrs, seguroAnual, hangarAnual, toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual, cashOverhaul, creditoOverhaul, recaudado, valorHora, interestRate, usForwardInflation, clForwardInflation, fuelTrendRate, overviewMetrics, overhaulMotorUSD, overhaulLaborCLP, usInflationPct, clInflationPct]);
+  }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD, cambioAceiteCLP, revision100CLP, overhaulCLP, horasAnuales, overhaulCycleHrs, seguroAnual, hangarAnual, toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual, cashOverhaul, creditoOverhaul, recaudado, valorHora, interestRate, clForwardInflation, fuelTrendRate, overviewMetrics, overhaulMotorCLP, overhaulLaborCLP, clInflationPct, engineMarketPriceUSD, engineCorePriceUSD]);
 
   // Actual data from flights (yearly hours)
   const yearlyHours = useMemo(() => {
@@ -4407,9 +4426,9 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 <h3 className="text-sm font-semibold text-slate-800">Cost Analysis — C-172 CC-AQI</h3>
                 <p className="text-xs text-slate-500 flex items-center gap-1.5 flex-wrap">
                   <span>Operating cost model · {horasAnuales} hrs/yr estimate</span>
-                  {(liveIndicators.uf || liveIndicators.usd || liveIndicators.fuel) && (
+                  {(liveIndicators.uf || liveIndicators.usd || liveIndicators.fuel || liveIndicators.engine) && (
                     <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">
-                      LIVE {[liveIndicators.uf && 'UF', liveIndicators.usd && 'USD', liveIndicators.fuel && 'AVGAS'].filter(Boolean).join('+')}
+                      LIVE {[liveIndicators.uf && 'UF', liveIndicators.usd && 'USD', liveIndicators.fuel && 'AVGAS', liveIndicators.engine && 'ENGINE'].filter(Boolean).join('+')}
                     </span>
                   )}
                 </p>
@@ -4521,18 +4540,25 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               </div>
               {/* Overhaul cost model */}
               <div>
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Overhaul Cost (Jun 2022 + Inflation)</p>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Overhaul Cost (Ago 2022 + IPC Chile)</p>
                 <div className="space-y-0.5 divide-y divide-slate-100">
-                  <ParamInput label="Motor (USA)" value={overhaulMotorUSD} onChange={setOverhaulMotorUSD} unit="USD" />
-                  <ParamInput label="Labor (Chile)" value={overhaulLaborCLP} onChange={setOverhaulLaborCLP} unit="CLP" />
-                  <ParamInput label="US CPI cumul." value={usInflationPct} onChange={setUsInflationPct} unit="%" />
-                  <ParamInput label="CL IPC cumul." value={clInflationPct} onChange={setClInflationPct} unit="%" />
+                  <ParamInput label="Eagle Copters (motor)" value={overhaulMotorCLP} onChange={setOverhaulMotorCLP} unit="CLP" />
+                  <ParamInput label="Labor (installation)" value={overhaulLaborCLP} onChange={setOverhaulLaborCLP} unit="CLP" />
+                  <ParamInput label="IPC Chile cumul." value={clInflationPct} onChange={setClInflationPct} unit="%" />
                   {/* Computed total — read-only */}
                   <div className="flex items-center justify-between py-1.5">
                     <span className="text-[11px] text-slate-600">Overhaul total</span>
                     <div className="flex items-center gap-1">
                       <span className="text-[11px] font-mono font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded">${formatCurrency(overhaulCLP)}</span>
                       <span className="text-[9px] text-slate-400">CLP</span>
+                    </div>
+                  </div>
+                  {/* Market motor price — read-only */}
+                  <div className="flex items-center justify-between py-1.5">
+                    <span className="text-[11px] text-slate-600 flex items-center gap-1">Motor market{liveIndicators.engine && <span className="px-1 py-0.5 text-[8px] font-bold bg-emerald-100 text-emerald-700 rounded-full">LIVE</span>}</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[11px] font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">USD ${formatCurrency(engineMarketPriceUSD)}</span>
+                      <span className="text-[9px] text-slate-400">= ${formatCurrency(computed.motorMarketCLP)} CLP</span>
                     </div>
                   </div>
                 </div>
@@ -4558,10 +4584,9 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 <ParamInput label="Credit / financed" value={creditoOverhaul} onChange={setCreditoOverhaul} />
                 <ParamInput label="Collected so far" value={recaudado} onChange={setRecaudado} />
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-2">
                 <ParamInput label="Interest on funds" value={interestRate} onChange={setInterestRate} unit="%/yr" />
-                <ParamInput label="US CPI fwd" value={usForwardInflation} onChange={setUsForwardInflation} unit="%/yr" />
-                <ParamInput label="CL IPC fwd" value={clForwardInflation} onChange={setClForwardInflation} unit="%/yr" />
+                <ParamInput label="IPC Chile fwd" value={clForwardInflation} onChange={setClForwardInflation} unit="%/yr" />
                 <div className="flex items-center justify-between gap-2 py-1.5">
                   <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">AVGAS trend/yr{liveIndicators.fuel && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-amber-100 text-amber-700 rounded-full">CAGR</span>}</span>
                   <div className="flex items-center gap-1">
@@ -4845,23 +4870,75 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         <div className="p-4 sm:p-6">
           {/* Overhaul cost breakdown */}
           <div className="mb-4 bg-amber-50/60 rounded-lg p-3 border border-amber-100">
-            <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider mb-2">Overhaul Cost Breakdown (Jun 2022 → Present)</p>
+            <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider mb-2">Overhaul Cost Breakdown (Ago 2022 → Present · IPC Chile +{clInflationPct}%)</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
               <div>
-                <p className="text-slate-500">Motor (USA)</p>
-                <p className="font-mono font-bold text-slate-800">USD ${formatCurrency(overhaulMotorUSD)} <span className="text-[9px] font-normal text-blue-600">+{usInflationPct}% US CPI</span></p>
-                <p className="font-mono text-[10px] text-slate-500">= ${formatCurrency(computed.overhaulMotorInflatedCLP)} CLP</p>
+                <p className="text-slate-500">Eagle Copters (motor)</p>
+                <p className="font-mono font-bold text-slate-800">${formatCurrency(overhaulMotorCLP)} <span className="text-[9px] font-normal text-blue-600">+{clInflationPct}% IPC</span></p>
+                <p className="font-mono text-[10px] text-slate-500">= ${formatCurrency(computed.motorTodayCLP)} CLP</p>
               </div>
               <div>
-                <p className="text-slate-500">Labor (Chile)</p>
-                <p className="font-mono font-bold text-slate-800">${formatCurrency(overhaulLaborCLP)} <span className="text-[9px] font-normal text-blue-600">+{clInflationPct}% IPC CL</span></p>
-                <p className="font-mono text-[10px] text-slate-500">= ${formatCurrency(computed.overhaulLaborInflatedCLP)} CLP</p>
+                <p className="text-slate-500">Labor (installation)</p>
+                <p className="font-mono font-bold text-slate-800">${formatCurrency(overhaulLaborCLP)} <span className="text-[9px] font-normal text-blue-600">+{clInflationPct}% IPC</span></p>
+                <p className="font-mono text-[10px] text-slate-500">= ${formatCurrency(computed.laborTodayCLP)} CLP</p>
               </div>
               <div className="col-span-2 sm:col-span-1">
-                <p className="text-slate-500">Total Inflation-Adjusted</p>
+                <p className="text-slate-500">Total IPC-Adjusted</p>
                 <p className="font-mono font-bold text-amber-800 text-base">${formatCurrency(overhaulCLP)} CLP</p>
-                <p className="text-[9px] text-slate-400">@ USD ${formatCurrency(usdRate)}{liveIndicators.usd ? ' 🔴' : ''}</p>
+                <p className="text-[9px] text-slate-400">IPC Chile acum. {clInflationPct}%</p>
               </div>
+            </div>
+          </div>
+
+          {/* Market Replacement Price (live) */}
+          <div className="mb-4 bg-blue-50/60 rounded-lg p-3 border border-blue-100">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-semibold text-blue-700 uppercase tracking-wider flex items-center gap-1.5">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                Market Replacement Price (airpowerinc.com)
+              </p>
+              {liveIndicators.engine && (
+                <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full animate-pulse">LIVE</span>
+              )}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+              <div>
+                <p className="text-slate-500">Motor RENPL-RT8164</p>
+                <p className="font-mono font-bold text-blue-800">USD ${formatCurrency(engineMarketPriceUSD)}</p>
+                <p className="font-mono text-[10px] text-slate-500">= ${formatCurrency(computed.motorMarketCLP)} CLP</p>
+              </div>
+              <div>
+                <p className="text-slate-500">Core charge (refundable)</p>
+                <p className="font-mono font-bold text-slate-600">USD ${formatCurrency(engineCorePriceUSD)}</p>
+                <p className="font-mono text-[10px] text-slate-400">= ${formatCurrency(computed.coreMarketCLP)} CLP</p>
+              </div>
+              <div>
+                <p className="text-slate-500">+ Labor (IPC-adjusted)</p>
+                <p className="font-mono font-bold text-slate-800">${formatCurrency(computed.laborTodayCLP)} CLP</p>
+                <p className="font-mono text-[10px] text-slate-400">Mano de obra local</p>
+              </div>
+              <div>
+                <p className="text-slate-500">Total Market Replacement</p>
+                <p className="font-mono font-bold text-blue-800 text-base">${formatCurrency(computed.marketReplacementCLP)} CLP</p>
+                <p className="text-[9px] text-red-500 font-bold">Motor: +{computed.motorPriceInflationPct.toFixed(1)}% vs 2022 ({computed.motorAnnualInflation.toFixed(1)}%/yr)</p>
+              </div>
+            </div>
+            {/* Comparison bar: IPC vs Market */}
+            <div className="mt-3 pt-2 border-t border-blue-100">
+              <div className="flex items-center justify-between text-[10px] mb-1">
+                <span className="text-amber-700 font-semibold">IPC Model: ${formatCurrency(overhaulCLP)}</span>
+                <span className="text-blue-700 font-semibold">Market: ${formatCurrency(computed.marketReplacementCLP)}</span>
+              </div>
+              <div className="flex h-2.5 rounded-full overflow-hidden bg-slate-100">
+                <div className="bg-amber-400 rounded-l-full" style={{ width: `${Math.min(50, (overhaulCLP / (overhaulCLP + computed.marketReplacementCLP)) * 100)}%` }} />
+                <div className="bg-blue-400 rounded-r-full" style={{ width: `${Math.min(50, (computed.marketReplacementCLP / (overhaulCLP + computed.marketReplacementCLP)) * 100)}%` }} />
+              </div>
+              <p className="text-[9px] text-slate-500 mt-1">
+                {computed.marketReplacementCLP > overhaulCLP
+                  ? `Mercado ${formatCurrency(computed.marketReplacementCLP - overhaulCLP)} CLP (+${(((computed.marketReplacementCLP / overhaulCLP) - 1) * 100).toFixed(1)}%) más caro que modelo IPC — la inflación aeronáutica supera el IPC general.`
+                  : `Modelo IPC ${formatCurrency(overhaulCLP - computed.marketReplacementCLP)} CLP más caro que mercado actual.`
+                }
+              </p>
             </div>
           </div>
 
@@ -4892,13 +4969,13 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
           <div className="mb-4">
             <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-              Projected at Overhaul ({computed.yearsToOverhaul.toFixed(1)} yrs · {interestRate}% int. · US {usForwardInflation}% + CL {clForwardInflation}% infl.)
+              Projected at Overhaul ({computed.yearsToOverhaul.toFixed(1)} yrs · {interestRate}% int. · {clForwardInflation}% IPC Chile/yr)
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="text-center p-3 bg-red-50 rounded-lg border border-red-100">
                 <p className="text-lg font-bold text-red-700 font-mono">${formatCurrency(Math.round(computed.inflatedOverhaulCost))}</p>
                 <p className="text-[10px] text-slate-500">Overhaul Cost w/ Inflation</p>
-                <p className="text-[9px] text-red-500 font-mono mt-0.5">+${formatCurrency(Math.round(computed.inflationIncrease))} (~{computed.blendedInflationRate.toFixed(1)}%/yr blend)</p>
+                <p className="text-[9px] text-red-500 font-mono mt-0.5">+${formatCurrency(Math.round(computed.inflationIncrease))} ({clForwardInflation}%/yr IPC)</p>
               </div>
               <div className="text-center p-3 bg-emerald-50 rounded-lg border border-emerald-100">
                 <p className="text-lg font-bold text-emerald-700 font-mono">${formatCurrency(Math.round(computed.projectedFunds))}</p>
@@ -4948,17 +5025,16 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <div className="text-[11px] text-slate-600">
-                <p className="font-semibold mb-1">Dual-Inflation Projection Model</p>
-                <p>Overhaul cost based on real June 2022 invoice: <span className="font-mono font-bold">USD ${formatCurrency(overhaulMotorUSD)}</span> (motor, +{usInflationPct}% US CPI hist.) + <span className="font-mono font-bold">${formatCurrency(overhaulLaborCLP)}</span> CLP (labor, +{clInflationPct}% IPC CL hist.) = <span className="font-mono font-bold">${formatCurrency(overhaulCLP)}</span> CLP today.</p>
-                <p className="mt-1">At <span className="font-mono font-bold">{horasAnuales}</span> hrs/yr, TBO in <span className="font-mono font-bold">{computed.yearsToOverhaul.toFixed(1)}</span> years.
-                Motor portion (<span className="font-mono">${formatCurrency(Math.round(computed.motorTodayCLP))}</span>) inflated at <span className="font-bold">{usForwardInflation}%/yr US CPI</span> → <span className="font-mono text-red-600">${formatCurrency(Math.round(computed.projectedMotorCLP))}</span>.
-                Labor portion (<span className="font-mono">${formatCurrency(Math.round(computed.laborTodayCLP))}</span>) inflated at <span className="font-bold">{clForwardInflation}%/yr IPC Chile</span> → <span className="font-mono text-red-600">${formatCurrency(Math.round(computed.projectedLaborCLP))}</span>.
-                Blended rate: ~{computed.blendedInflationRate.toFixed(1)}%/yr.
-                Funds of <span className="font-mono font-bold">${formatCurrency(computed.currentFunds)}</span> grow to <span className="font-mono font-bold text-emerald-600">${formatCurrency(Math.round(computed.projectedFunds))}</span> at {interestRate}%/yr.
+                <p className="font-semibold mb-1">CLP Single-Currency Projection Model</p>
+                <p>Based on real invoices (Ago 2022): Eagle Copters INV22-00211 <span className="font-mono font-bold">${formatCurrency(overhaulMotorCLP)}</span> CLP (motor O-320-D2J + flete + importación + IVA) + <span className="font-mono font-bold">${formatCurrency(overhaulLaborCLP)}</span> CLP (mano de obra) = <span className="font-mono font-bold">${formatCurrency(overhaulMotorCLP + overhaulLaborCLP)}</span> CLP original. Ajustado por IPC Chile acumulado (+{clInflationPct}%) = <span className="font-mono font-bold">${formatCurrency(overhaulCLP)}</span> CLP hoy.</p>
+                <p className="mt-1">A <span className="font-mono font-bold">{horasAnuales}</span> hrs/año, TBO en <span className="font-mono font-bold">{computed.yearsToOverhaul.toFixed(1)}</span> años.
+                Costo total (<span className="font-mono">${formatCurrency(overhaulCLP)}</span>) proyectado con <span className="font-bold">{clForwardInflation}%/yr IPC Chile</span> → <span className="font-mono text-red-600">${formatCurrency(Math.round(computed.inflatedOverhaulCost))}</span>.
+                Fondos de <span className="font-mono font-bold">${formatCurrency(computed.currentFunds)}</span> crecen a <span className="font-mono font-bold text-emerald-600">${formatCurrency(Math.round(computed.projectedFunds))}</span> al {interestRate}%/yr.
                 {computed.projectedGap > 0
-                  ? ` You need to save an additional $${formatCurrency(Math.round(computed.projectedMonthlyTarget))}/mo to cover the projected gap.`
-                  : ` Your projected funds cover the inflated cost with a surplus of $${formatCurrency(Math.abs(Math.round(computed.projectedGap)))}.`
+                  ? ` Necesitas ahorrar $${formatCurrency(Math.round(computed.projectedMonthlyTarget))}/mes adicionales para cubrir la brecha proyectada.`
+                  : ` Los fondos proyectados cubren el costo inflado con un superávit de $${formatCurrency(Math.abs(Math.round(computed.projectedGap)))}.`
                 }</p>
+                <p className="mt-1 text-blue-700"><span className="font-bold">⚡ Precio mercado motor (airpowerinc.com):</span> RENPL-RT8164 USD ${formatCurrency(engineMarketPriceUSD)} × ${formatCurrency(usdRate)} CLP/USD = <span className="font-mono font-bold">${formatCurrency(computed.motorMarketCLP)}</span> CLP. Inflación aviación <span className="font-bold text-red-600">+{computed.motorPriceInflationPct.toFixed(1)}%</span> desde Jul 2022 ({computed.motorAnnualInflation.toFixed(1)}%/yr) supera ampliamente el IPC general ({clInflationPct}%). Costo real de reemplazo con mano de obra: <span className="font-mono font-bold">${formatCurrency(computed.marketReplacementCLP)}</span> CLP.</p>
               </div>
             </div>
           </div>
