@@ -862,7 +862,10 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                       <span className="font-bold text-slate-900 text-base">{(stats.avgMonthlyFlightsThisYear * 12).toFixed(0)}</span> vuelos
                     </span>
                   </div>
-                  {renderTrend(stats.flightsTrend)}
+                  <div className="text-right flex flex-col items-end gap-1">
+                    {renderTrend(stats.flightsTrend)}
+                    <div className="text-[10px] text-slate-400 font-medium">{stats.avgMonthlyFlightsThisYear.toFixed(1)}/mes</div>
+                  </div>
                 </div>
               </div>
             </div>
