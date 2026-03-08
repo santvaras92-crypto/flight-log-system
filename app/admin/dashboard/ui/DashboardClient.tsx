@@ -787,65 +787,65 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         );
 
         return (
-          <div className={`${palette.card} rounded-xl p-3 sm:p-5 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] flex flex-col`}>
-            {/* Header */}
-            <div className="flex items-start justify-between mb-2 sm:mb-1.5">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-violet-100 flex items-center justify-center">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
+          <div className={`${palette.card} rounded-xl p-2.5 sm:p-5 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] flex flex-col`}>
+            {/* Header — mobile: compact single row / desktop: standard */}
+            <div className="flex items-center justify-between mb-1 sm:mb-1.5">
+              <div className="flex items-center gap-1.5 sm:gap-0">
+                <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-full bg-violet-100 flex items-center justify-center">
+                  <svg className="w-3 h-3 sm:w-5 sm:h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <div className="sm:hidden">
+                  <h3 className="text-slate-500 text-[8px] font-semibold uppercase tracking-wide leading-none">Annual Stats</h3>
+                  <p className="text-[6px] text-slate-400 leading-none mt-px">Last 365 days</p>
+                </div>
               </div>
-              <span className="px-1.5 sm:px-2 py-0.5 bg-violet-50 text-violet-700 text-[8px] sm:text-[10px] font-bold rounded-full border border-violet-100">
+              <span className="px-1 sm:px-2 py-px sm:py-0.5 bg-violet-50 text-violet-700 text-[7px] sm:text-[10px] font-bold rounded-full border border-violet-100">
                 H/T: {stats.hobbsTachRatio.toFixed(2)}
               </span>
             </div>
-            <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-0.5">Annual Stats</h3>
-            <p className="text-[7px] sm:text-[9px] text-slate-400 mb-1">Last 365 days</p>
+            {/* Desktop-only title */}
+            <h3 className="hidden sm:block text-slate-500 text-xs font-semibold uppercase tracking-wide mb-0.5">Annual Stats</h3>
+            <p className="hidden sm:block text-[9px] text-slate-400 mb-1">Last 365 days</p>
 
-            {/* MOBILE: Compact layout */}
-            <div className="flex sm:hidden flex-col gap-0.5 flex-1 justify-end">
-              <div className="grid grid-cols-2 gap-2 border-b border-dashed border-slate-200/50 pb-1">
+            {/* MOBILE: Ultra-compact layout */}
+            <div className="flex sm:hidden flex-col flex-1 justify-end">
+              <div className="grid grid-cols-2 gap-x-2 gap-y-0">
                 {/* HOBBS */}
                 <div>
-                  <div className="flex items-center gap-1 mb-px">
-                    {clockIcon('w-3 h-3 text-violet-500')}
-                    <span className="text-[7px] font-bold text-slate-400 tracking-wider">HOBBS</span>
-                  </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-[15px] font-bold text-slate-900 leading-none">
-                      {stats.hobbsThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-                    </span>
+                  <div className="flex items-center gap-0.5">
+                    {clockIcon('w-2.5 h-2.5 text-violet-500')}
+                    <span className="text-[6px] font-bold text-slate-400 tracking-wider">HOBBS</span>
                     {renderTrend(stats.hobbsTrend)}
                   </div>
-                  <div className="text-[7px] text-slate-400 font-medium mt-px">{stats.avgMonthlyHobbsThisYear.toFixed(1)}/mo</div>
+                  <div className="text-[14px] font-bold text-slate-900 leading-tight">
+                    {stats.hobbsThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                  </div>
+                  <div className="text-[6px] text-slate-400 font-medium">{stats.avgMonthlyHobbsThisYear.toFixed(1)}/mo</div>
                 </div>
                 {/* TACH */}
                 <div>
-                  <div className="flex items-center gap-1 mb-px">
-                    {gaugeIcon('w-3 h-3 text-violet-500')}
-                    <span className="text-[7px] font-bold text-slate-400 tracking-wider">TACH</span>
-                  </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-[15px] font-bold text-slate-800 leading-none">
-                      {stats.tachThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-                    </span>
+                  <div className="flex items-center gap-0.5">
+                    {gaugeIcon('w-2.5 h-2.5 text-violet-500')}
+                    <span className="text-[6px] font-bold text-slate-400 tracking-wider">TACH</span>
                     {renderTrend(stats.tachTrend)}
                   </div>
-                  <div className="text-[7px] text-slate-400 font-medium mt-px">{stats.avgMonthlyTachThisYear.toFixed(1)}/mo</div>
+                  <div className="text-[14px] font-bold text-slate-800 leading-tight">
+                    {stats.tachThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                  </div>
+                  <div className="text-[6px] text-slate-400 font-medium">{stats.avgMonthlyTachThisYear.toFixed(1)}/mo</div>
                 </div>
               </div>
-              {/* FLIGHTS */}
-              <div className="flex items-center justify-between pt-0.5">
-                <div className="flex items-center gap-1">
-                  {planeIcon('w-3 h-3 text-violet-500')}
-                  <span className="text-[9px] text-slate-600">
-                    <span className="font-bold text-slate-900 text-xs">{(stats.avgMonthlyFlightsThisYear * 12).toFixed(0)}</span> flights
-                  </span>
+              {/* FLIGHTS — inline compact */}
+              <div className="flex items-center justify-between mt-0.5 pt-0.5 border-t border-dashed border-slate-200/50">
+                <div className="flex items-center gap-0.5">
+                  {planeIcon('w-2.5 h-2.5 text-violet-500')}
+                  <span className="text-[8px] font-bold text-slate-900">{(stats.avgMonthlyFlightsThisYear * 12).toFixed(0)}</span>
+                  <span className="text-[7px] text-slate-500">flights</span>
+                  <span className="text-[6px] text-slate-400">{stats.avgMonthlyFlightsThisYear.toFixed(1)}/mo</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  {renderTrend(stats.flightsTrend)}
-                  <span className="text-[7px] text-slate-400 font-medium">{stats.avgMonthlyFlightsThisYear.toFixed(1)}/mo</span>
-                </div>
+                {renderTrend(stats.flightsTrend)}
               </div>
             </div>
 
@@ -2788,114 +2788,115 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
 
   return (
     <div className="space-y-6">
-      {/* Smart Predictions Header */}
+      {/* Usage Rate Overview */}
       {stats && (
-        <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 rounded-2xl p-6 shadow-xl text-white">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">🔮</span>
+        <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-sm">
+          <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center">
+                <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+              </div>
               <div>
-                <h3 className="text-xl font-bold">Sistema Predictivo SMART</h3>
-                <p className="text-indigo-200 text-sm">Tasa híbrida: ⅔ anual + ⅓ últimos 90 días</p>
+                <h3 className="text-sm font-semibold text-slate-800">Predictive System</h3>
+                <p className="text-xs text-slate-500">Weighted rate: ⅔ annual + ⅓ last 90 days</p>
               </div>
             </div>
-            <div className="flex gap-6">
+            <div className="flex items-center gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold">{(weightedRate * 7).toFixed(1)}</div>
-                <div className="text-xs text-indigo-200">TACH/semana</div>
-                <div className="text-xs text-indigo-300/70">≈{(weightedRate * 7 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS</div>
+                <div className="text-lg font-bold text-slate-800 font-mono">{(weightedRate * 7).toFixed(1)}</div>
+                <div className="text-[10px] text-slate-500">TACH/wk</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold">{(weightedRate * 30).toFixed(1)}</div>
-                <div className="text-xs text-indigo-200">TACH/mes</div>
-                <div className="text-xs text-indigo-300/70">≈{(weightedRate * 30 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS</div>
+                <div className="text-lg font-bold text-slate-800 font-mono">{(weightedRate * 30).toFixed(1)}</div>
+                <div className="text-[10px] text-slate-500">TACH/mo</div>
               </div>
               <div className="text-center">
-                <div className={`text-2xl font-bold flex items-center gap-1 ${trend > 0 ? 'text-orange-300' : trend < 0 ? 'text-green-300' : ''}`}>
-                  {trend > 0 ? '↗️' : trend < 0 ? '↘️' : '→'} {Math.abs(trend).toFixed(0)}%
+                <div className={`text-lg font-bold font-mono ${trend > 0 ? 'text-amber-600' : trend < 0 ? 'text-emerald-600' : 'text-slate-600'}`}>
+                  {trend > 0 ? '↗' : trend < 0 ? '↘' : '→'} {Math.abs(trend).toFixed(0)}%
                 </div>
-                <div className="text-xs text-indigo-200">tendencia</div>
+                <div className="text-[10px] text-slate-500">trend</div>
               </div>
             </div>
           </div>
-          <div className="mt-4 grid grid-cols-4 gap-4 text-sm">
-            <div className="bg-white/10 rounded-lg p-3">
-              <div className="text-indigo-200 text-xs">Tasa 30 días</div>
-              <div className="font-mono font-bold">{(rate30d * 30).toFixed(1)} TACH/mes</div>
-              <div className="text-indigo-300/70 text-xs">≈{(rate30d * 30 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS</div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
+              <div className="text-[10px] text-slate-500 font-medium">30-day rate</div>
+              <div className="font-mono font-semibold text-sm text-slate-800">{(rate30d * 30).toFixed(1)} <span className="text-slate-400 text-xs">T/mo</span></div>
+              <div className="text-[10px] text-slate-400">≈{(rate30d * 30 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} H/mo</div>
             </div>
-            <div className="bg-white/10 rounded-lg p-3">
-              <div className="text-indigo-200 text-xs">Tasa 60 días</div>
-              <div className="font-mono font-bold">{((stats.rate60d || 0) * 30).toFixed(1)} TACH/mes</div>
-              <div className="text-indigo-300/70 text-xs">≈{((stats.rate60d || 0) * 30 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS</div>
+            <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
+              <div className="text-[10px] text-slate-500 font-medium">60-day rate</div>
+              <div className="font-mono font-semibold text-sm text-slate-800">{((stats.rate60d || 0) * 30).toFixed(1)} <span className="text-slate-400 text-xs">T/mo</span></div>
+              <div className="text-[10px] text-slate-400">≈{((stats.rate60d || 0) * 30 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} H/mo</div>
             </div>
-            <div className="bg-white/10 rounded-lg p-3">
-              <div className="text-indigo-200 text-xs">Tasa 90 días</div>
-              <div className="font-mono font-bold">{((stats.rate90d || 0) * 30).toFixed(1)} TACH/mes</div>
-              <div className="text-indigo-300/70 text-xs">≈{((stats.rate90d || 0) * 30 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS</div>
+            <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
+              <div className="text-[10px] text-slate-500 font-medium">90-day rate</div>
+              <div className="font-mono font-semibold text-sm text-slate-800">{((stats.rate90d || 0) * 30).toFixed(1)} <span className="text-slate-400 text-xs">T/mo</span></div>
+              <div className="text-[10px] text-slate-400">≈{((stats.rate90d || 0) * 30 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} H/mo</div>
             </div>
-            <div className="bg-white/15 rounded-lg p-3 border border-white/20">
-              <div className="text-indigo-200 text-xs">📊 Tasa Anual</div>
-              <div className="font-mono font-bold">{((stats.rateAnnual || 0) * 30).toFixed(1)} TACH/mes</div>
-              <div className="text-indigo-300/70 text-xs">≈{((stats.rateAnnual || 0) * 30 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS</div>
+            <div className="bg-slate-50 rounded-lg p-3 border-2 border-slate-200">
+              <div className="text-[10px] text-slate-500 font-medium">Annual rate</div>
+              <div className="font-mono font-semibold text-sm text-slate-800">{((stats.rateAnnual || 0) * 30).toFixed(1)} <span className="text-slate-400 text-xs">T/mo</span></div>
+              <div className="text-[10px] text-slate-400">≈{((stats.rateAnnual || 0) * 30 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} H/mo</div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Next Inspections - Enhanced with Smart Predictions */}
-      <div className="bg-white/95 backdrop-blur-lg border-2 border-amber-200 rounded-2xl shadow-2xl overflow-hidden">
-        <div className="bg-gradient-to-r from-amber-600 to-orange-600 px-8 py-6">
+      {/* Next Inspections */}
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
           <div className="flex items-center justify-between">
-            <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2h-2a2 2 0 01-2-2v-1" />
-              </svg>
-              Próximas Inspecciones
-            </h3>
-            <span className="px-3 py-1 bg-white/20 rounded-full text-sm font-bold">🔮 SMART</span>
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                <svg className="w-4.5 h-4.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-slate-800">Next Inspections</h3>
+                <p className="text-xs text-slate-500">95% confidence interval predictions</p>
+              </div>
+            </div>
+            <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md text-xs font-medium">SMART</span>
           </div>
-          <p className="text-amber-100 text-sm mt-1">Predicciones con intervalo de confianza del 95%</p>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-4 sm:p-6 space-y-3">
           {inspectionItems.map(item => {
             const pred = getPrediction(item.remaining);
             const urgency = pred ? getUrgencyClass(pred.days) : getUrgencyClass(999);
 
             return (
-              <div key={item.id} className={`rounded-xl border-2 p-4 transition-all ${urgency.row}`}>
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{item.icon}</span>
+              <div key={item.id} className={`rounded-lg border p-3 sm:p-4 transition-all ${urgency.row}`}>
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{item.icon}</span>
                     <div>
-                      <h4 className="font-bold text-slate-900">{item.name}</h4>
-                      <p className="text-xs text-slate-500">Intervalo: {item.interval} hrs</p>
+                      <h4 className="text-sm font-semibold text-slate-800">{item.name}</h4>
+                      <p className="text-[10px] text-slate-500">Interval: {item.interval} hrs</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className={`text-2xl font-bold font-mono ${urgency.text}`}>{item.remaining.toFixed(1)} <span className="text-base">TACH</span></div>
-                    <div className="text-sm text-slate-600 font-mono">(≈{(item.remaining * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS)</div>
-                    <div className="text-xs text-slate-500">horas restantes</div>
+                    <div className={`text-lg sm:text-xl font-bold font-mono ${urgency.text}`}>{item.remaining.toFixed(1)} <span className="text-xs sm:text-sm font-medium">TACH</span></div>
+                    <div className="text-xs text-slate-500 font-mono">≈{(item.remaining * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS</div>
                   </div>
                 </div>
 
                 {pred && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-200">
-                    <div className="bg-slate-50 rounded-lg p-3">
-                      <div className="text-xs text-slate-500 mb-1">⏱️ Tiempo Restante</div>
-                      <div className={`font-bold text-lg ${urgency.text}`}>{formatTimeRemaining(pred.days)}</div>
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-2 pt-2 border-t border-slate-200/60">
+                    <div className="bg-slate-50 rounded-md p-2 sm:p-3">
+                      <div className="text-[10px] text-slate-500 mb-0.5">Time Left</div>
+                      <div className={`font-semibold text-sm ${urgency.text}`}>{formatTimeRemaining(pred.days)}</div>
                     </div>
-                    <div className="bg-slate-50 rounded-lg p-3">
-                      <div className="text-xs text-slate-500 mb-1">📅 Fecha Estimada</div>
-                      <div className="font-bold text-slate-900">{formatDate(pred.date)}</div>
+                    <div className="bg-slate-50 rounded-md p-2 sm:p-3">
+                      <div className="text-[10px] text-slate-500 mb-0.5">Est. Date</div>
+                      <div className="font-semibold text-sm text-slate-800 truncate">{formatShortDate(pred.date)}</div>
                     </div>
-                    <div className="bg-slate-50 rounded-lg p-3">
-                      <div className="text-xs text-slate-500 mb-1">📈 Rango (95%)</div>
-                      <div className="flex items-center gap-2">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ${urgency.badge}`}>
-                          {formatTimeRemaining(pred.minDays)} - {formatTimeRemaining(pred.maxDays)}
-                        </span>
+                    <div className="bg-slate-50 rounded-md p-2 sm:p-3">
+                      <div className="text-[10px] text-slate-500 mb-0.5">Range (95%)</div>
+                      <div className={`text-xs font-semibold ${urgency.text} truncate`}>
+                        {formatTimeRemaining(pred.minDays)}–{formatTimeRemaining(pred.maxDays)}
                       </div>
                     </div>
                   </div>
@@ -2909,38 +2910,37 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
           })}
         </div>
 
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200">
-          <p className="text-xs text-slate-500 flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Predicciones basadas en media ponderada: 30d (×3) + 60d (×2) + 90d (×1). Desviación estándar: {stdDev.toFixed(3)} hrs/día.
+        <div className="px-4 sm:px-6 py-3 bg-slate-50 border-t border-slate-100">
+          <p className="text-[10px] sm:text-xs text-slate-400">
+            Weighted avg: 30d (×3) + 60d (×2) + 90d (×1) · σ = {stdDev.toFixed(3)} hrs/day
           </p>
         </div>
       </div>
 
       {/* Component Status Table */}
-      <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
-        <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
-          <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            Estado de Componentes (TBO)
-          </h3>
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+              <svg className="w-4.5 h-4.5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <h3 className="text-sm font-semibold text-slate-800">Component Status (TBO)</h3>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200">
             <thead className="bg-slate-50">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Aeronave</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Componente</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Horas</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">TBO</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Restante</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Vida %</th>
-                {weightedRate > 0 && <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Est. TBO</th>}
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Overhaul</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Aircraft</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Component</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Hours</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">TBO</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Remaining</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Life %</th>
+                {weightedRate > 0 && <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Est. TBO</th>}
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Overhaul</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-slate-100">
@@ -2952,39 +2952,39 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
                 const hasOverhaul = c.overhaul_airframe != null;
 
                 return (
-                  <tr key={c.id} className="hover:bg-blue-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-600 font-mono">{c.aircraftId}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">
+                  <tr key={c.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-semibold text-slate-700 font-mono">{c.aircraftId}</td>
+                    <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-medium text-slate-800">
                       {c.tipo}
                       {hasOverhaul && (
-                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800" title={`Overhaul @ AF ${c.overhaul_airframe}${c.overhaul_date ? ' - ' + new Date(c.overhaul_date).toLocaleDateString('es-CL') : ''}`}>
-                          ✅ OH
+                        <span className="ml-1.5 inline-flex items-center px-1.5 py-px rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200" title={`Overhaul @ AF ${c.overhaul_airframe}${c.overhaul_date ? ' - ' + new Date(c.overhaul_date).toLocaleDateString('es-CL') : ''}`}>
+                          OH
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{Number(c.horas_acumuladas).toFixed(1)} hrs</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{Number(c.limite_tbo).toFixed(0)} hrs</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{restante.toFixed(1)} hrs</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${colorClass}`}>
+                    <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 font-mono">{Number(c.horas_acumuladas).toFixed(1)}</td>
+                    <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 font-mono">{Number(c.limite_tbo).toFixed(0)}</td>
+                    <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 font-mono">{restante.toFixed(1)}</td>
+                    <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] sm:text-xs font-semibold ${colorClass}`}>
                         {pct.toFixed(1)}%
                       </span>
                     </td>
                     {weightedRate > 0 && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                      <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600">
                         {tboPred ? (
-                          <span className="font-mono font-semibold">{formatTimeRemaining(tboPred.days)}</span>
+                          <span className="font-mono font-medium">{formatTimeRemaining(tboPred.days)}</span>
                         ) : '-'}
                       </td>
                     )}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm">
                       {c.tipo !== 'AIRFRAME' && (
                         <button
                           onClick={() => openOverhaulModal(c)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-semibold transition-colors border border-indigo-200"
-                          title={hasOverhaul ? 'Editar overhaul' : 'Registrar overhaul'}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-md text-[10px] sm:text-xs font-medium transition-colors border border-slate-200"
+                          title={hasOverhaul ? 'Edit overhaul' : 'Register overhaul'}
                         >
-                          🔧 {hasOverhaul ? 'Editar' : 'Registrar'}
+                          {hasOverhaul ? 'Edit' : 'Register'}
                         </button>
                       )}
                     </td>
@@ -2999,89 +2999,94 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
       {/* Overhaul Registration Modal */}
       {overhaulModal.open && overhaulModal.component && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setOverhaulModal({ open: false, component: null })}>
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="bg-gradient-to-r from-indigo-600 to-blue-700 px-6 py-5 rounded-t-2xl">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                🔧 Overhaul - {overhaulModal.component.tipo}
-              </h3>
-              <p className="text-indigo-200 text-sm mt-1">Aeronave: {overhaulModal.component.aircraftId}</p>
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-semibold text-slate-800">Overhaul — {overhaulModal.component.tipo}</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Aircraft: {overhaulModal.component.aircraftId}</p>
+                </div>
+                <button onClick={() => setOverhaulModal({ open: false, component: null })} className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
+                  <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
             </div>
 
-            <div className="p-6 space-y-5">
+            <div className="p-5 space-y-4">
               {/* Explanation */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
-                <p className="font-semibold mb-1">💡 ¿Cómo funciona?</p>
-                <p>Se usa AIRFRAME como referencia estable (no se reinicia con overhauls de motor). Las horas desde el overhaul se calculan como:</p>
-                <p className="font-mono mt-1 text-center font-bold">Horas = AIRFRAME actual − AIRFRAME al overhaul</p>
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-600">
+                <p className="font-semibold text-slate-700 mb-0.5">How it works</p>
+                <p>AIRFRAME is used as stable reference (not reset by engine overhauls). Hours since overhaul:</p>
+                <p className="font-mono mt-1 text-center font-semibold text-slate-800">Hours = Current AF − AF at overhaul</p>
               </div>
 
               {/* Form */}
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">
-                    Horas AIRFRAME al momento del overhaul *
+                  <label className="block text-xs font-medium text-slate-600 mb-1">
+                    AIRFRAME hours at overhaul *
                   </label>
                   <input
                     type="number"
                     step="0.1"
                     value={overhaulForm.airframeHours}
                     onChange={(e) => setOverhaulForm(f => ({ ...f, airframeHours: e.target.value }))}
-                    className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all font-mono text-lg"
-                    placeholder="ej: 2745.5"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-slate-500 focus:ring-1 focus:ring-slate-200 transition-all font-mono text-sm"
+                    placeholder="e.g. 2745.5"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">
-                    Fecha del overhaul *
+                  <label className="block text-xs font-medium text-slate-600 mb-1">
+                    Overhaul date *
                   </label>
                   <input
                     type="date"
                     value={overhaulForm.date}
                     onChange={(e) => setOverhaulForm(f => ({ ...f, date: e.target.value }))}
-                    className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-slate-500 focus:ring-1 focus:ring-slate-200 transition-all text-sm"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">
-                    Notas (opcional)
+                  <label className="block text-xs font-medium text-slate-600 mb-1">
+                    Notes (optional)
                   </label>
                   <textarea
                     value={overhaulForm.notes}
                     onChange={(e) => setOverhaulForm(f => ({ ...f, notes: e.target.value }))}
-                    className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-slate-500 focus:ring-1 focus:ring-slate-200 transition-all text-sm"
                     rows={2}
-                    placeholder="ej: Overhaul completo en taller XYZ"
+                    placeholder="e.g. Full overhaul at shop XYZ"
                   />
                 </div>
               </div>
 
               {/* Preview */}
               {overhaulPreview && (
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-4">
-                  <h4 className="font-bold text-green-800 mb-3 flex items-center gap-2">📊 Vista Previa</h4>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div className="bg-white rounded-lg p-3 text-center">
-                      <div className="text-slate-500 text-xs">AIRFRAME actual</div>
-                      <div className="font-mono font-bold text-lg">{overhaulPreview.currentAirframe.toFixed(1)}</div>
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                  <h4 className="text-xs font-semibold text-slate-700 mb-2">Preview</h4>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-white rounded-md p-2 text-center border border-slate-100">
+                      <div className="text-slate-500 text-[10px]">Current AF</div>
+                      <div className="font-mono font-semibold text-sm">{overhaulPreview.currentAirframe.toFixed(1)}</div>
                     </div>
-                    <div className="bg-white rounded-lg p-3 text-center">
-                      <div className="text-slate-500 text-xs">Overhaul @</div>
-                      <div className="font-mono font-bold text-lg">{parseFloat(overhaulForm.airframeHours).toFixed(1)}</div>
+                    <div className="bg-white rounded-md p-2 text-center border border-slate-100">
+                      <div className="text-slate-500 text-[10px]">Overhaul @</div>
+                      <div className="font-mono font-semibold text-sm">{parseFloat(overhaulForm.airframeHours).toFixed(1)}</div>
                     </div>
-                    <div className="bg-white rounded-lg p-3 text-center">
-                      <div className="text-slate-500 text-xs">Horas desde OH</div>
-                      <div className="font-mono font-bold text-lg text-indigo-600">{overhaulPreview.hoursSinceOverhaul}</div>
+                    <div className="bg-white rounded-md p-2 text-center border border-slate-100">
+                      <div className="text-slate-500 text-[10px]">Since OH</div>
+                      <div className="font-mono font-semibold text-sm text-slate-700">{overhaulPreview.hoursSinceOverhaul}</div>
                     </div>
-                    <div className="bg-white rounded-lg p-3 text-center">
-                      <div className="text-slate-500 text-xs">Restante TBO</div>
-                      <div className="font-mono font-bold text-lg text-green-600">{overhaulPreview.remaining}</div>
+                    <div className="bg-white rounded-md p-2 text-center border border-slate-100">
+                      <div className="text-slate-500 text-[10px]">TBO Remaining</div>
+                      <div className="font-mono font-semibold text-sm text-emerald-600">{overhaulPreview.remaining}</div>
                     </div>
                   </div>
-                  <div className="mt-3 text-center">
-                    <span className={`inline-flex items-center px-4 py-1 rounded-full text-sm font-bold ${parseFloat(overhaulPreview.pct) > 80 ? 'bg-red-100 text-red-700' : parseFloat(overhaulPreview.pct) > 60 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
-                      {overhaulPreview.pct}% vida usada
+                  <div className="mt-2 text-center">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold ${parseFloat(overhaulPreview.pct) > 80 ? 'bg-red-50 text-red-700 border border-red-200' : parseFloat(overhaulPreview.pct) > 60 ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
+                      {overhaulPreview.pct}% life used
                     </span>
                   </div>
                 </div>
@@ -3089,25 +3094,25 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
 
               {/* Result message */}
               {overhaulResult && (
-                <div className={`rounded-lg p-4 text-sm font-semibold ${overhaulResult.success ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
-                  {overhaulResult.success ? `✅ ${overhaulResult.message}` : `❌ ${overhaulResult.error}`}
+                <div className={`rounded-lg p-3 text-xs font-medium ${overhaulResult.success ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+                  {overhaulResult.success ? overhaulResult.message : overhaulResult.error}
                 </div>
               )}
 
               {/* Buttons */}
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-2.5 pt-1">
                 <button
                   onClick={() => setOverhaulModal({ open: false, component: null })}
-                  className="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold transition-colors"
+                  className="flex-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-medium transition-colors"
                 >
-                  Cancelar
+                  Cancel
                 </button>
                 <button
                   onClick={handleOverhaulSubmit}
                   disabled={overhaulSubmitting || !overhaulForm.airframeHours || !overhaulForm.date}
-                  className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white rounded-lg font-semibold transition-colors"
+                  className="flex-1 px-3 py-2 bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 text-white rounded-lg text-sm font-medium transition-colors"
                 >
-                  {overhaulSubmitting ? '⏳ Guardando...' : '💾 Guardar Overhaul'}
+                  {overhaulSubmitting ? 'Saving...' : 'Save Overhaul'}
                 </button>
               </div>
             </div>
