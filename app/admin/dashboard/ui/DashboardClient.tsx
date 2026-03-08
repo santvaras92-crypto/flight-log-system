@@ -3877,7 +3877,7 @@ function DepositsTable({ depositsDetailsByCode, csvPilotNames }: { depositsDetai
     if (!confirm(`¿Eliminar este depósito?\n\nPiloto: ${pilotName}\nMonto: $${monto.toLocaleString('es-CL')}\n\nEsto también eliminará la transacción ABONO asociada y afectará el saldo del piloto.`)) return;
     setDeletingId(depositId);
     try {
-      const { deleteDeposit } = await import('@/app/actions/delete-deposit');
+      const { deleteDeposit } = await import('../../../actions/delete-deposit');
       const result = await deleteDeposit(depositId);
       if (result.ok) {
         alert('Depósito eliminado correctamente');

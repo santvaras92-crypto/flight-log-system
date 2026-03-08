@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react'
-import { generateAccountStatementPDF } from '@/lib/generate-account-pdf'
+import { generateAccountStatementPDF } from '../../lib/generate-account-pdf'
 
 export default function PdfDemoPage() {
   const handleGenerate = async () => {

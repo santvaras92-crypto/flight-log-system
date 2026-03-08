@@ -2,13 +2,13 @@
 
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { flushSync } from 'react-dom';
-import { createFlightSubmission } from '@/app/actions/create-flight-submission';
-import { createFuel } from '@/app/actions/create-fuel';
-import { createDeposit } from '@/app/actions/create-deposit';
-import { findOrCreatePilotByCode } from '@/app/actions/find-or-create-pilot';
+import { createFlightSubmission } from '../../actions/create-flight-submission';
+import { createFuel } from '../../actions/create-fuel';
+import { createDeposit } from '../../actions/create-deposit';
+import { findOrCreatePilotByCode } from '../../actions/find-or-create-pilot';
 import Link from 'next/link';
 import ImagePreviewModal from '@/app/components/ImagePreviewModal';
-import { generateFlightLogbookPDF, type FlightLogbookData } from '@/lib/generate-flight-logbook-pdf';
+import { generateFlightLogbookPDF, type FlightLogbookData } from '../../../lib/generate-flight-logbook-pdf';
 
 type PilotOpt = { id: string | number; value: string; label: string };
 
@@ -48,12 +48,12 @@ function parseChileanMoney(value: string): number {
   return isNaN(result) ? 0 : result;
 }
 
-export default function RegisterClient({ 
+export default function RegisterClient({
   pilots,
   lastCounters = { hobbs: null, tach: null },
   lastComponents = { airframe: null, engine: null, propeller: null },
   lastAerodromoDestino = 'SCCV'
-}: { 
+}: {
   pilots: PilotOpt[];
   lastCounters?: LastCounters;
   lastComponents?: LastComponents;
@@ -81,34 +81,34 @@ export default function RegisterClient({
           const role = session.user.role || session.role;
           const email = session.user.email;
           setUserRole(role);
-          
+
           // Si es piloto, buscar su código por email y pre-seleccionar
           if (email && (role === 'PILOTO' || role === 'PILOT')) {
             const pilotRes = await fetch(`/api/pilot-code?email=${encodeURIComponent(email)}`);
             const pilotData = await pilotRes.json();
-            
+
             if (pilotData.found && pilotData.codigo) {
               // Buscar por código primero (funciona para CSV y registrados)
-              let matchingPilot = pilots.find(p => 
+              let matchingPilot = pilots.find(p =>
                 String(p.value).toUpperCase() === pilotData.codigo.toUpperCase()
               );
-              
+
               // Si no encuentra por código, buscar por ID (fallback)
               if (!matchingPilot && pilotData.userId) {
-                matchingPilot = pilots.find(p => 
+                matchingPilot = pilots.find(p =>
                   String(p.value) === String(pilotData.userId)
                 );
               }
-              
+
               if (matchingPilot) {
                 setPilotValue(matchingPilot.value);
               }
             }
           }
-          
+
           // Si es admin, pre-seleccionar "Stratus" por defecto
           if (role === 'ADMIN') {
-            const stratusPilot = pilots.find(p => 
+            const stratusPilot = pilots.find(p =>
               String(p.value).toUpperCase() === 'STRATUS'
             );
             if (stratusPilot) {
@@ -124,7 +124,7 @@ export default function RegisterClient({
     }
     checkSession();
   }, [pilots]);
-  
+
   // Flight form fields
   const [fecha, setFecha] = useState<string>(new Date().toISOString().split('T')[0]);
   const [hobbsFin, setHobbsFin] = useState<string>('');
@@ -139,18 +139,18 @@ export default function RegisterClient({
   const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [flightData, setFlightData] = useState<FlightLogbookData | null>(null);
-  
+
   // Fuel form fields
   const [fuelLitros, setFuelLitros] = useState<string>('');
   const [fuelMonto, setFuelMonto] = useState<string>('');
-  
+
   // Image preview states
   const [fuelImagePreview, setFuelImagePreview] = useState<string | null>(null);
   const [depositImagePreview, setDepositImagePreview] = useState<string | null>(null);
   const [imageModalUrl, setImageModalUrl] = useState<string | null>(null);
   const fuelFileInputRef = useRef<HTMLInputElement>(null);
   const depositFileInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Calculate fuel price per liter
   const precioLitro = useMemo(() => {
     const litros = parseFloat(fuelLitros);
@@ -158,7 +158,7 @@ export default function RegisterClient({
     if (!litros || !monto || litros <= 0 || monto <= 0) return null;
     return Math.round(monto / litros);
   }, [fuelLitros, fuelMonto]);
-  
+
   const selectedPilot = useMemo(() => pilots.find(p => p.value === pilotValue), [pilotValue, pilots]);
 
   // Calcular deltas en tiempo real para modo flight
@@ -214,9 +214,9 @@ export default function RegisterClient({
   // Validar ratio con rangos específicos por bucket
   const ratioWarning = useMemo(() => {
     if (hobbsTachRatio === null || !expectedRatioData) return null;
-    
+
     const { expectedRatio, minRatio, maxRatio, bucket, sampleSize } = expectedRatioData;
-    
+
     if (hobbsTachRatio < minRatio || hobbsTachRatio > maxRatio) {
       return {
         ratio: hobbsTachRatio,
@@ -241,7 +241,7 @@ export default function RegisterClient({
         const predictedHobbsFin = currentCounters.hobbs + predictedHobbsDelta;
         setHobbsFin(predictedHobbsFin.toFixed(1));
         setHobbsAutoApplied(true);
-        
+
         // Ocultar el mensaje después de 3 segundos
         setTimeout(() => setHobbsAutoApplied(false), 3000);
       }
@@ -303,30 +303,30 @@ export default function RegisterClient({
     if (!pilotValue) return;
     setFormError(null);
     setFormSuccess(null);
-    
+
     if (mode === 'flight') {
       // Validar que los contadores cumplan con los mínimos
       const hobbsVal = Number(hobbsFin);
       const tachVal = Number(tachFin);
-      
+
       // HOBBS: puede ser igual o mayor al último registrado
       if (currentCounters.hobbs !== null && hobbsVal < currentCounters.hobbs) {
         setFormError(`HOBBS Final debe ser mayor o igual a ${currentCounters.hobbs.toFixed(1)} (último registrado)`);
         return;
       }
-      
+
       // TACH: debe ser estrictamente mayor al último registrado
       if (currentCounters.tach !== null && tachVal <= currentCounters.tach) {
         setFormError(`TACH Final debe ser mayor a ${currentCounters.tach.toFixed(1)} (último registrado)`);
         return;
       }
-      
+
       // Show confirmation modal for flights
       setPendingFormData(formData);
       setShowConfirmModal(true);
       return;
     }
-    
+
     // For fuel and deposit, submit directly
     flushSync(() => {
       setSubmitting(true);
@@ -356,11 +356,11 @@ export default function RegisterClient({
       } else {
         resolvedPilotId = Number(pilotValue);
       }
-      
+
       if (mode === 'flight') {
         const hobbsVal = Number(hobbsFin);
         const tachVal = Number(tachFin);
-        
+
         console.log('Creating flight submission:', { resolvedPilotId, fecha, hobbsFin, tachFin, aerodromoSalida, aerodromoDestino });
         const result = await createFlightSubmission({
           pilotoId: resolvedPilotId,
@@ -377,7 +377,7 @@ export default function RegisterClient({
           setFormError('Error creando vuelo');
           return;
         }
-        
+
         // Store flight data for success modal and PDF generation
         if (result.data) {
           setFlightData(result.data);
@@ -451,12 +451,12 @@ export default function RegisterClient({
           return;
         }
       }
-      
+
       // Only show old success message and reset for fuel/deposit (not flight)
       if (mode !== 'flight') {
         setFormSuccess('Registro enviado correctamente.');
       }
-      
+
       // Si fue un vuelo, refetch contadores actualizados (for next flight)
       if (mode === 'flight') {
         try {
@@ -506,7 +506,7 @@ export default function RegisterClient({
               <p className="text-sm mt-1 text-slate-600">Selecciona piloto y tipo de registro.</p>
             </div>
             {userRole && (
-              <Link 
+              <Link
                 href={userRole === 'ADMIN' ? '/admin/dashboard' : '/pilot/dashboard'}
                 className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 shrink-0"
               >
@@ -525,8 +525,8 @@ export default function RegisterClient({
               {userRole === 'PILOTO' || userRole === 'PILOT' ? (
                 // Si es piloto logueado, mostrar su nombre como texto fijo
                 <div className="rounded-xl border px-3 py-3 bg-slate-100 text-slate-700 font-medium">
-                  {!pilotNameLoaded 
-                    ? 'Cargando...' 
+                  {!pilotNameLoaded
+                    ? 'Cargando...'
                     : (pilots.find(p => p.value === pilotValue)?.label || 'Nombre no encontrado')
                   }
                 </div>
@@ -547,11 +547,11 @@ export default function RegisterClient({
               <span className="mb-1 font-medium">Tipo</span>
               <div className="grid grid-cols-3 gap-2">
                 <button type="button" onClick={() => setMode('flight')}
-                  className={`rounded-lg px-3 py-2 border ${mode==='flight'?'bg-blue-600 text-white':'bg-slate-50'}`}>Vuelo</button>
+                  className={`rounded-lg px-3 py-2 border ${mode === 'flight' ? 'bg-blue-600 text-white' : 'bg-slate-50'}`}>Vuelo</button>
                 <button type="button" onClick={() => setMode('fuel')}
-                  className={`rounded-lg px-3 py-2 border ${mode==='fuel'?'bg-amber-600 text-white':'bg-slate-50'}`}>Combustible</button>
+                  className={`rounded-lg px-3 py-2 border ${mode === 'fuel' ? 'bg-amber-600 text-white' : 'bg-slate-50'}`}>Combustible</button>
                 <button type="button" onClick={() => setMode('deposit')}
-                  className={`rounded-lg px-3 py-2 border ${mode==='deposit'?'bg-emerald-600 text-white':'bg-slate-50'}`}>Depósito</button>
+                  className={`rounded-lg px-3 py-2 border ${mode === 'deposit' ? 'bg-emerald-600 text-white' : 'bg-slate-50'}`}>Depósito</button>
               </div>
             </label>
           </div>
@@ -560,13 +560,13 @@ export default function RegisterClient({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <label className="flex flex-col text-sm">
                 <span className="mb-1 font-medium">Fecha</span>
-                <input 
+                <input
                   name="fecha"
                   value={fecha}
                   onChange={(e) => setFecha(e.target.value)}
-                  type="date" 
-                  required 
-                  className="rounded-xl border px-3 py-3 bg-slate-50" 
+                  type="date"
+                  required
+                  className="rounded-xl border px-3 py-3 bg-slate-50"
                 />
               </label>
               {mode === 'flight' && (
@@ -580,21 +580,21 @@ export default function RegisterClient({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="flex flex-col text-sm">
                     <span className="mb-1 font-medium">Aeródromo de Salida</span>
-                    <input 
+                    <input
                       value={aerodromoSalida}
                       onChange={(e) => setAerodromoSalida(e.target.value.toUpperCase())}
                       placeholder="SCCV"
-                      className="rounded-xl border px-3 py-3 bg-slate-50 font-mono uppercase" 
+                      className="rounded-xl border px-3 py-3 bg-slate-50 font-mono uppercase"
                     />
                     <span className="text-xs text-slate-500 mt-1">Destino del último vuelo: {lastAerodromoDestino}</span>
                   </label>
                   <label className="flex flex-col text-sm">
                     <span className="mb-1 font-medium">Aeródromo de Destino</span>
-                    <input 
+                    <input
                       value={aerodromoDestino}
                       onChange={(e) => setAerodromoDestino(e.target.value.toUpperCase())}
                       placeholder="SCCV"
-                      className="rounded-xl border px-3 py-3 bg-slate-50 font-mono uppercase" 
+                      className="rounded-xl border px-3 py-3 bg-slate-50 font-mono uppercase"
                     />
                   </label>
                 </div>
@@ -603,18 +603,18 @@ export default function RegisterClient({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="flex flex-col text-sm">
                     <span className="mb-1">Copiloto / Instructor (opcional)</span>
-                    <input 
+                    <input
                       value={copiloto}
                       onChange={(e) => setCopiloto(e.target.value)}
-                      className="rounded-xl border px-3 py-3 bg-slate-50" 
+                      className="rounded-xl border px-3 py-3 bg-slate-50"
                     />
                   </label>
                   <label className="flex flex-col text-sm">
                     <span className="mb-1">Detalle (opcional)</span>
-                    <input 
+                    <input
                       value={detalle}
                       onChange={(e) => setDetalle(e.target.value)}
-                      className="rounded-xl border px-3 py-3 bg-slate-50" 
+                      className="rounded-xl border px-3 py-3 bg-slate-50"
                     />
                   </label>
                 </div>
@@ -675,11 +675,10 @@ export default function RegisterClient({
                           onClick={applyAutoHobbs}
                           disabled={!deltaTach || deltaTach <= 0}
                           title={deltaTach && deltaTach > 0 ? "Calcular Hobbs automáticamente" : "Ingresa Tach Fin primero"}
-                          className={`p-3 rounded-xl border-2 transition-all ${
-                            deltaTach && deltaTach > 0
+                          className={`p-3 rounded-xl border-2 transition-all ${deltaTach && deltaTach > 0
                               ? 'bg-slate-50 border-slate-300 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 cursor-pointer'
                               : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-50'
-                          }`}
+                            }`}
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -736,7 +735,7 @@ export default function RegisterClient({
                         <div className="flex-1">
                           <h4 className="text-sm font-bold text-red-900 mb-1">⚠️ RATIO HOBBS/TACH FUERA DE RANGO</h4>
                           <p className="text-sm text-red-800 mb-2">
-                            El ratio calculado es <strong className="font-mono">{ratioWarning.ratio.toFixed(2)}x</strong> 
+                            El ratio calculado es <strong className="font-mono">{ratioWarning.ratio.toFixed(2)}x</strong>
                             {' '}(Δ HOBBS: {deltaHobbs?.toFixed(1)} hrs ÷ Δ TACH: {deltaTach?.toFixed(1)} hrs)
                           </p>
                           <p className="text-sm text-red-800">
@@ -766,14 +765,14 @@ export default function RegisterClient({
                           <tr className="bg-slate-700 text-white">
                             <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>DATE</th>
                             <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>HOBBS</th>
-                            <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>BLOCK<br/>TIME</th>
+                            <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>BLOCK<br />TIME</th>
                             <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>TAC</th>
-                            <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>TACH.<br/>TIME</th>
+                            <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>TACH.<br />TIME</th>
                             <th className="border border-slate-400 px-2 py-2 text-center font-bold" colSpan={3}>TOTAL TIME IN SERVICE</th>
                             <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>PILOT</th>
-                            <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>INSTRUCTOR/<br/>COPILOT</th>
+                            <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>INSTRUCTOR/<br />COPILOT</th>
                             <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>ROUTE</th>
-                            <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>REMARKS<br/>SIGNATURE</th>
+                            <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>REMARKS<br />SIGNATURE</th>
                           </tr>
                           <tr className="bg-slate-700 text-white">
                             <th className="border border-slate-400 px-2 py-1 text-center text-[10px]">AIRFRAME</th>
@@ -803,7 +802,7 @@ export default function RegisterClient({
                       * Los valores mostrados son una vista previa. Se confirmarán al aprobar el vuelo.
                     </p>
                     <p className="text-xs text-slate-500 mt-1">
-                      Base A/E/P: {lastComponents.airframe?.toFixed(1) || 'N/A'} / {lastComponents.engine?.toFixed(1) || 'N/A'} / {lastComponents.propeller?.toFixed(1) || 'N/A'} 
+                      Base A/E/P: {lastComponents.airframe?.toFixed(1) || 'N/A'} / {lastComponents.engine?.toFixed(1) || 'N/A'} / {lastComponents.propeller?.toFixed(1) || 'N/A'}
                       &nbsp;Δ Tach usado: {deltaTach.toFixed(1)} &nbsp;Δ Hobbs: {deltaHobbs.toFixed(1)}
                     </p>
                   </div>
@@ -818,42 +817,42 @@ export default function RegisterClient({
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <label className="flex flex-col text-sm">
                     <span className="mb-1">Litros</span>
-                    <input 
-                      name="litros" 
-                      type="number" 
-                      step="0.001" 
-                      required 
+                    <input
+                      name="litros"
+                      type="number"
+                      step="0.001"
+                      required
                       value={fuelLitros}
                       onChange={(e) => setFuelLitros(e.target.value)}
-                      className="rounded-xl border px-3 py-3 bg-slate-50" 
+                      className="rounded-xl border px-3 py-3 bg-slate-50"
                     />
                   </label>
                   <label className="flex flex-col text-sm">
                     <span className="mb-1">Monto</span>
-                    <input 
-                      name="monto" 
-                      type="number" 
-                      step="0.001" 
-                      required 
+                    <input
+                      name="monto"
+                      type="number"
+                      step="0.001"
+                      required
                       value={fuelMonto}
                       onChange={(e) => setFuelMonto(e.target.value)}
-                      className="rounded-xl border px-3 py-3 bg-slate-50" 
+                      className="rounded-xl border px-3 py-3 bg-slate-50"
                     />
                   </label>
                   <div className="flex flex-col text-sm">
                     <span className="mb-1">Foto boleta</span>
-                    <input 
+                    <input
                       ref={fuelFileInputRef}
-                      name="file" 
-                      type="file" 
-                      accept="image/*" 
-                      required 
-                      className="rounded-xl border px-3 py-2 bg-slate-50" 
+                      name="file"
+                      type="file"
+                      accept="image/*"
+                      required
+                      className="rounded-xl border px-3 py-2 bg-slate-50"
                       onChange={(e) => handleFileChange(e, 'fuel')}
                     />
                   </div>
                 </div>
-                
+
                 {/* Fuel Image Preview */}
                 {fuelImagePreview && (
                   <div className="relative rounded-xl border border-slate-200 bg-slate-50 p-2">
@@ -872,16 +871,16 @@ export default function RegisterClient({
                       onClick={() => setImageModalUrl(fuelImagePreview)}
                       className="w-full"
                     >
-                      <img 
-                        src={fuelImagePreview} 
-                        alt="Preview boleta" 
+                      <img
+                        src={fuelImagePreview}
+                        alt="Preview boleta"
                         className="max-h-32 mx-auto rounded-lg object-contain cursor-pointer hover:opacity-80 transition-opacity"
                       />
                       <span className="text-xs text-blue-600 mt-1 block">Tocar para ampliar</span>
                     </button>
                   </div>
                 )}
-                
+
                 {/* AVGAS Price per Liter display */}
                 {precioLitro !== null && (
                   <div className="rounded-lg p-3 bg-emerald-50 border border-emerald-200">
@@ -890,7 +889,7 @@ export default function RegisterClient({
                     </p>
                   </div>
                 )}
-                
+
                 <label className="flex flex-col text-sm">
                   <span className="mb-1">Detalle (opcional)</span>
                   <input name="detalle" className="rounded-xl border px-3 py-3 bg-slate-50" />
@@ -899,69 +898,69 @@ export default function RegisterClient({
             )}
 
             {mode === 'deposit' && (
-                          <>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                              <label className="flex flex-col text-sm">
-                                <span className="mb-1">Monto</span>
-                                <input 
-                                  name="monto" 
-                                  type="text" 
-                                  inputMode="numeric"
-                                  placeholder="Ej: 105.000"
-                                  required 
-                                  className="rounded-xl border px-3 py-3 bg-slate-50" 
-                                />
-                                <span className="mt-1 text-[11px] text-slate-500">Ingrese el monto (ej: 105.000 o 105000)</span>
-                              </label>
-                              <div className="flex flex-col text-sm">
-                                <span className="mb-1 font-medium">Comprobante (imagen) *</span>
-                                <input 
-                                  ref={depositFileInputRef}
-                                  name="file" 
-                                  type="file" 
-                                  accept="image/*" 
-                                  required 
-                                  className="rounded-xl border px-3 py-2 bg-slate-50" 
-                                  onChange={(e) => handleFileChange(e, 'deposit')}
-                                />
-                                <span className="mt-1 text-[11px] text-slate-500">La imagen del comprobante es obligatoria.</span>
-                              </div>
-                            </div>
-                            
-                            {/* Deposit Image Preview */}
-                            {depositImagePreview && (
-                              <div className="relative rounded-xl border border-slate-200 bg-slate-50 p-2">
-                                <div className="flex items-center justify-between mb-2">
-                                  <span className="text-xs text-slate-600 font-medium">Vista previa de comprobante</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => clearImagePreview('deposit')}
-                                    className="text-red-500 hover:text-red-700 text-xs font-medium"
-                                  >
-                                    Eliminar
-                                  </button>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => setImageModalUrl(depositImagePreview)}
-                                  className="w-full"
-                                >
-                                  <img 
-                                    src={depositImagePreview} 
-                                    alt="Preview comprobante" 
-                                    className="max-h-32 mx-auto rounded-lg object-contain cursor-pointer hover:opacity-80 transition-opacity"
-                                  />
-                                  <span className="text-xs text-blue-600 mt-1 block">Tocar para ampliar</span>
-                                </button>
-                              </div>
-                            )}
-                            
-                            <label className="flex flex-col text-sm">
-                              <span className="mb-1">Detalle (opcional)</span>
-                              <input name="detalle" className="rounded-xl border px-3 py-3 bg-slate-50" />
-                            </label>
-                          </>
-                        )}
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <label className="flex flex-col text-sm">
+                    <span className="mb-1">Monto</span>
+                    <input
+                      name="monto"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="Ej: 105.000"
+                      required
+                      className="rounded-xl border px-3 py-3 bg-slate-50"
+                    />
+                    <span className="mt-1 text-[11px] text-slate-500">Ingrese el monto (ej: 105.000 o 105000)</span>
+                  </label>
+                  <div className="flex flex-col text-sm">
+                    <span className="mb-1 font-medium">Comprobante (imagen) *</span>
+                    <input
+                      ref={depositFileInputRef}
+                      name="file"
+                      type="file"
+                      accept="image/*"
+                      required
+                      className="rounded-xl border px-3 py-2 bg-slate-50"
+                      onChange={(e) => handleFileChange(e, 'deposit')}
+                    />
+                    <span className="mt-1 text-[11px] text-slate-500">La imagen del comprobante es obligatoria.</span>
+                  </div>
+                </div>
+
+                {/* Deposit Image Preview */}
+                {depositImagePreview && (
+                  <div className="relative rounded-xl border border-slate-200 bg-slate-50 p-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-slate-600 font-medium">Vista previa de comprobante</span>
+                      <button
+                        type="button"
+                        onClick={() => clearImagePreview('deposit')}
+                        className="text-red-500 hover:text-red-700 text-xs font-medium"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setImageModalUrl(depositImagePreview)}
+                      className="w-full"
+                    >
+                      <img
+                        src={depositImagePreview}
+                        alt="Preview comprobante"
+                        className="max-h-32 mx-auto rounded-lg object-contain cursor-pointer hover:opacity-80 transition-opacity"
+                      />
+                      <span className="text-xs text-blue-600 mt-1 block">Tocar para ampliar</span>
+                    </button>
+                  </div>
+                )}
+
+                <label className="flex flex-col text-sm">
+                  <span className="mb-1">Detalle (opcional)</span>
+                  <input name="detalle" className="rounded-xl border px-3 py-3 bg-slate-50" />
+                </label>
+              </>
+            )}
 
             {/* Success/Error messages near the submit button */}
             {formError && (
@@ -976,14 +975,13 @@ export default function RegisterClient({
             )}
 
             <div className="pt-2">
-              <button 
-                type="submit" 
-                disabled={!pilotValue || submitting} 
-                className={`rounded-xl px-6 py-4 text-white w-full sm:w-auto disabled:cursor-not-allowed flex items-center justify-center gap-3 font-bold text-lg transition-all shadow-lg ${
-                  submitting 
-                    ? 'bg-slate-400 cursor-wait animate-pulse' 
+              <button
+                type="submit"
+                disabled={!pilotValue || submitting}
+                className={`rounded-xl px-6 py-4 text-white w-full sm:w-auto disabled:cursor-not-allowed flex items-center justify-center gap-3 font-bold text-lg transition-all shadow-lg ${submitting
+                    ? 'bg-slate-400 cursor-wait animate-pulse'
                     : 'bg-blue-600 hover:bg-blue-700 active:scale-95'
-                }`}
+                  }`}
               >
                 {submitting && (
                   <svg className="animate-spin h-6 w-6 sm:h-7 sm:w-7" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -1015,7 +1013,7 @@ export default function RegisterClient({
               </h2>
               <p className="text-sm text-slate-600 mt-1">Revisa los datos antes de enviar a validación.</p>
             </div>
-            
+
             <div className="p-6">
               <div className="rounded-xl border-2 border-blue-500 bg-blue-50 p-4 mb-6">
                 <h3 className="text-sm font-bold text-blue-900 mb-4 flex items-center gap-2">
@@ -1030,14 +1028,14 @@ export default function RegisterClient({
                       <tr className="bg-slate-700 text-white">
                         <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>DATE</th>
                         <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>HOBBS</th>
-                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>BLOCK<br/>TIME</th>
+                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>BLOCK<br />TIME</th>
                         <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>TAC</th>
-                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>TACH.<br/>TIME</th>
+                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>TACH.<br />TIME</th>
                         <th className="border border-slate-400 px-2 py-2 text-center font-bold" colSpan={3}>TOTAL TIME IN SERVICE</th>
                         <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>PILOT</th>
-                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>INSTRUCTOR/<br/>COPILOT</th>
+                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>INSTRUCTOR/<br />COPILOT</th>
                         <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>ROUTE</th>
-                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>REMARKS<br/>SIGNATURE</th>
+                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>REMARKS<br />SIGNATURE</th>
                       </tr>
                       <tr className="bg-slate-700 text-white">
                         <th className="border border-slate-400 px-2 py-1 text-center text-[10px]">AIRFRAME</th>
@@ -1064,7 +1062,7 @@ export default function RegisterClient({
                   </table>
                 </div>
                 <p className="text-xs text-blue-700 mt-3">
-                  Base A/E/P: {lastComponents.airframe?.toFixed(1) || 'N/A'} / {lastComponents.engine?.toFixed(1) || 'N/A'} / {lastComponents.propeller?.toFixed(1) || 'N/A'} 
+                  Base A/E/P: {lastComponents.airframe?.toFixed(1) || 'N/A'} / {lastComponents.engine?.toFixed(1) || 'N/A'} / {lastComponents.propeller?.toFixed(1) || 'N/A'}
                   &nbsp;| Δ Tach: {deltaTach.toFixed(1)} | Δ Hobbs: {deltaHobbs.toFixed(1)}
                 </p>
               </div>
@@ -1165,13 +1163,13 @@ export default function RegisterClient({
                   </svg>
                   Vista Previa - Bitácora CC-AQI
                 </h3>
-                
+
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse text-sm">
                     <tbody>
                       <tr className="border-b border-slate-200">
                         <td className="py-3 px-4 font-semibold text-slate-600 bg-slate-50 w-1/3">FECHA</td>
-                        <td className="py-3 px-4 text-slate-800">{(() => { const p = flightData.fecha.split('-').map(Number); return new Date(p[0], p[1]-1, p[2]).toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' }); })()}</td>
+                        <td className="py-3 px-4 text-slate-800">{(() => { const p = flightData.fecha.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' }); })()}</td>
                       </tr>
                       <tr className="border-b border-slate-200">
                         <td className="py-3 px-4 font-semibold text-slate-600 bg-slate-50">HOBBS</td>
