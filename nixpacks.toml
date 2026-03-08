@@ -1,4 +1,4 @@
-# Force clean install and build - Mar 8 2026 v11 - clear webpack cache
+# Force clean install and build - Mar 8 2026 v12 - nuke all .next artifacts
 [phases.setup]
 nixPkgs = ["nodejs_18", "npm-9_x", "openssl"]
 
