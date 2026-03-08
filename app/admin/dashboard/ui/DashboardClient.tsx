@@ -1236,7 +1236,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             </button>
           </div>
           {financeSubTab === "movements" && <FinanzasTable movements={initialData.bankMovements || []} palette={palette} />}
-          {financeSubTab === "costs" && <CostAnalysis flights={initialData.allFlights || initialData.flights} overviewMetrics={overviewMetrics} />}
+          {financeSubTab === "costs" && <CostAnalysis flights={initialData.allFlights || initialData.flights} overviewMetrics={overviewMetrics} components={initialData.components} />}
         </>
       )}
 
@@ -3967,7 +3967,7 @@ function FinanceCharts({ flights, transactions, palette }: { flights: any[]; tra
 }
 
 // ==================== COST ANALYSIS COMPONENT ====================
-function CostAnalysis({ flights, overviewMetrics }: { flights: any[]; overviewMetrics?: OverviewMetrics }) {
+function CostAnalysis({ flights, overviewMetrics, components }: { flights: any[]; overviewMetrics?: OverviewMetrics; components?: any[] }) {
   // --- Editable Parameters (from Excel "Analisis de costos") ---
   const [usdRate, setUsdRate] = useState(975);
   const [ufRate, setUfRate] = useState(39700);
@@ -4426,13 +4426,169 @@ function CostAnalysis({ flights, overviewMetrics }: { flights: any[]; overviewMe
         </div>
       </div>
 
+      {/* ===== ENGINE OVERHAUL TIMELINE (Live Data) ===== */}
+      {(() => {
+        const engineComp = components?.find((c: any) => c.tipo === 'ENGINE');
+        const smoh = engineComp ? Number(engineComp.horas_acumuladas) : 0;
+        const tbo = engineComp ? Number(engineComp.limite_tbo) : 2000;
+        const tachRemaining = Math.max(0, tbo - smoh);
+        const htRatio = overviewMetrics?.annualStats?.hobbsTachRatio || 1.25;
+        const hobbsRemaining = tachRemaining * htRatio;
+        const stats = overviewMetrics?.nextInspections?.usageStats;
+        const weightedRate = stats?.weightedRate || 0; // hobbs hrs/day
+        const rate30d = stats?.rate30d || 0;
+        const rate90d = stats?.rate90d || 0;
+        const rateAnnual = stats?.rateAnnual || 0;
+        const stdDev = stats?.stdDev || 0;
+        const trend = stats?.trend || 0;
+
+        // Time predictions
+        const daysRemaining = weightedRate > 0 ? Math.round(hobbsRemaining / weightedRate) : 0;
+        const uncertainty = weightedRate > 0 ? 1.96 * stdDev * Math.sqrt(Math.max(1, daysRemaining)) / weightedRate : 0;
+        const minDays = Math.max(0, Math.round(daysRemaining - uncertainty));
+        const maxDays = Math.round(daysRemaining + uncertainty);
+
+        const today = new Date();
+        const estDate = new Date(today.getTime() + daysRemaining * 86400000);
+        const minDate = new Date(today.getTime() + minDays * 86400000);
+        const maxDate = new Date(today.getTime() + maxDays * 86400000);
+
+        const fmtDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        const fmtDateFull = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const fmtTime = (days: number) => {
+          if (days <= 0) return '0d';
+          if (days < 30) return `${days}d`;
+          if (days < 365) return `${(days / 30).toFixed(1)}mo`;
+          return `${(days / 365).toFixed(1)}yr`;
+        };
+        const enginePct = tbo > 0 ? (smoh / tbo) * 100 : 0;
+        const hobbsPerMonth = weightedRate * 30.44;
+        const tachPerMonth = hobbsPerMonth / htRatio;
+        const monthsRemaining = daysRemaining / 30.44;
+
+        // Overhaul funding tied to timeline
+        const monthlyFundingNeeded = monthsRemaining > 0 ? computed.faltaOverhaul / monthsRemaining : 0;
+
+        return (
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+            <div className="px-4 sm:px-6 py-3 border-b border-slate-200">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-semibold text-slate-700">Engine Overhaul Timeline</h4>
+                    <p className="text-[10px] text-slate-400">Live data · TBO {tbo} hrs · SMOH {smoh.toFixed(1)} hrs · H/T Ratio {htRatio.toFixed(3)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${enginePct > 80 ? 'bg-red-100 text-red-700' : enginePct > 60 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                    {(100 - enginePct).toFixed(1)}% life remaining
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 sm:p-6">
+              {/* Engine life progress bar */}
+              <div className="mb-5">
+                <div className="flex justify-between text-[10px] text-slate-500 mb-1.5">
+                  <span>SMOH: <span className="font-mono font-bold text-slate-700">{smoh.toFixed(1)}</span> tach hrs</span>
+                  <span>TBO: <span className="font-mono font-bold text-slate-700">{tbo}</span> tach hrs</span>
+                </div>
+                <div className="h-4 bg-slate-100 rounded-full overflow-hidden relative">
+                  <div
+                    className={`h-full rounded-full transition-all ${enginePct > 80 ? 'bg-gradient-to-r from-red-500 to-red-400' : enginePct > 60 ? 'bg-gradient-to-r from-amber-500 to-amber-400' : 'bg-gradient-to-r from-green-500 to-green-400'}`}
+                    style={{ width: `${Math.min(100, enginePct)}%` }}
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-[10px] font-bold text-white drop-shadow-sm">{enginePct.toFixed(1)}%</span>
+                  </div>
+                </div>
+                <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                  <span>Remaining: <span className="font-mono font-bold text-slate-600">{tachRemaining.toFixed(1)}</span> tach hrs</span>
+                  <span>= <span className="font-mono font-bold text-blue-600">{hobbsRemaining.toFixed(1)}</span> hobbs hrs (×{htRatio.toFixed(3)})</span>
+                </div>
+              </div>
+
+              {/* Prediction KPIs */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+                <div className="text-center p-3 bg-slate-50 rounded-lg">
+                  <p className="text-lg font-bold text-slate-900 font-mono">{tachRemaining.toFixed(1)}</p>
+                  <p className="text-[10px] text-slate-500">Tach hrs left</p>
+                </div>
+                <div className="text-center p-3 bg-blue-50 rounded-lg">
+                  <p className="text-lg font-bold text-blue-700 font-mono">{hobbsRemaining.toFixed(1)}</p>
+                  <p className="text-[10px] text-slate-500">Hobbs hrs left</p>
+                </div>
+                <div className="text-center p-3 bg-amber-50 rounded-lg">
+                  <p className="text-lg font-bold text-amber-700 font-mono">{fmtTime(daysRemaining)}</p>
+                  <p className="text-[10px] text-slate-500">Time to overhaul</p>
+                  <p className="text-[9px] text-slate-400">{fmtTime(minDays)} – {fmtTime(maxDays)} range</p>
+                </div>
+                <div className="text-center p-3 bg-red-50 rounded-lg">
+                  <p className="text-lg font-bold text-red-700 font-mono">{fmtDate(estDate)}</p>
+                  <p className="text-[10px] text-slate-500">Estimated date</p>
+                  <p className="text-[9px] text-slate-400">{fmtDate(minDate)} – {fmtDate(maxDate)}</p>
+                </div>
+              </div>
+
+              {/* Flight rate details */}
+              <div className="bg-slate-50 rounded-lg p-3 mb-5">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Flight Rate Analysis</p>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  <div>
+                    <p className="text-[10px] text-slate-400">30-day rate</p>
+                    <p className="text-sm font-bold text-slate-700 font-mono">{(rate30d * 30.44).toFixed(1)} <span className="text-[10px] font-normal text-slate-400">hobbs/mo</span></p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-400">90-day rate</p>
+                    <p className="text-sm font-bold text-slate-700 font-mono">{(rate90d * 30.44).toFixed(1)} <span className="text-[10px] font-normal text-slate-400">hobbs/mo</span></p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-400">Annual rate</p>
+                    <p className="text-sm font-bold text-slate-700 font-mono">{(rateAnnual * 30.44).toFixed(1)} <span className="text-[10px] font-normal text-slate-400">hobbs/mo</span></p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-400">Weighted avg</p>
+                    <p className="text-sm font-bold text-blue-700 font-mono">{hobbsPerMonth.toFixed(1)} <span className="text-[10px] font-normal text-slate-400">hobbs/mo</span></p>
+                    <p className="text-[9px] text-slate-400">= {tachPerMonth.toFixed(1)} tach/mo</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-400">Trend</p>
+                    <p className={`text-sm font-bold font-mono ${trend > 0 ? 'text-emerald-600' : trend < 0 ? 'text-red-600' : 'text-slate-600'}`}>
+                      {trend > 0 ? '+' : ''}{trend.toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* H/T Ratio explanation */}
+              <div className="bg-indigo-50 rounded-lg p-3 mb-5">
+                <div className="flex items-start gap-2">
+                  <svg className="w-4 h-4 text-indigo-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="text-[11px] text-indigo-700">
+                    <p className="font-semibold mb-1">Hobbs/Tach Ratio: {htRatio.toFixed(3)}</p>
+                    <p className="text-indigo-600">For every 1 tach hour, you fly {htRatio.toFixed(3)} hobbs hours. This means {tachRemaining.toFixed(1)} remaining tach hrs = <span className="font-bold">{hobbsRemaining.toFixed(1)} actual hobbs hrs</span> of flying time. At the current weighted rate of {hobbsPerMonth.toFixed(1)} hobbs/mo, the engine reaches TBO around <span className="font-bold">{fmtDateFull(estDate)}</span>.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Overhaul Funding Status */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div className="px-4 sm:px-6 py-3 border-b border-slate-200">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
               <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <div>
