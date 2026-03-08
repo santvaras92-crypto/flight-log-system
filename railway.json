@@ -2,7 +2,7 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "rm -rf .next/server .next/static .next/BUILD_ID .next/build-manifest.json .next/prerender-manifest.json .next/routes-manifest.json .next/package.json .next/trace .next/cache/webpack 2>/dev/null; npm run build",
+    "buildCommand": "rm -rf .next && npm run build",
     "watchPatterns": ["**/*"]
   },
   "deploy": {
