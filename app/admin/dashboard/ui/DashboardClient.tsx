@@ -809,41 +809,41 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             <h3 className="hidden sm:block text-slate-500 text-xs font-semibold uppercase tracking-wide mb-0.5">Annual Stats</h3>
             <p className="hidden sm:block text-[9px] text-slate-400 mb-1">Last 365 days</p>
 
-            {/* MOBILE: Ultra-compact layout */}
-            <div className="flex sm:hidden flex-col flex-1 justify-end">
-              <div className="grid grid-cols-2 gap-x-2 gap-y-0">
+            {/* MOBILE: Evenly distributed layout — no white gap */}
+            <div className="flex sm:hidden flex-col flex-1 justify-center gap-2">
+              <div className="grid grid-cols-2 gap-x-3">
                 {/* HOBBS */}
                 <div>
-                  <div className="flex items-center gap-0.5">
-                    {clockIcon('w-2.5 h-2.5 text-violet-500')}
-                    <span className="text-[6px] font-bold text-slate-400 tracking-wider">HOBBS</span>
+                  <div className="flex items-center gap-1 mb-0.5">
+                    {clockIcon('w-3 h-3 text-violet-500')}
+                    <span className="text-[7px] font-bold text-slate-400 tracking-wider">HOBBS</span>
                     {renderTrend(stats.hobbsTrend)}
                   </div>
-                  <div className="text-[14px] font-bold text-slate-900 leading-tight">
+                  <div className="text-[18px] font-bold text-slate-900 leading-tight">
                     {stats.hobbsThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                   </div>
-                  <div className="text-[6px] text-slate-400 font-medium">{stats.avgMonthlyHobbsThisYear.toFixed(1)}/mo</div>
+                  <div className="text-[8px] text-slate-400 font-medium mt-0.5">{stats.avgMonthlyHobbsThisYear.toFixed(1)}/mo</div>
                 </div>
                 {/* TACH */}
                 <div>
-                  <div className="flex items-center gap-0.5">
-                    {gaugeIcon('w-2.5 h-2.5 text-violet-500')}
-                    <span className="text-[6px] font-bold text-slate-400 tracking-wider">TACH</span>
+                  <div className="flex items-center gap-1 mb-0.5">
+                    {gaugeIcon('w-3 h-3 text-violet-500')}
+                    <span className="text-[7px] font-bold text-slate-400 tracking-wider">TACH</span>
                     {renderTrend(stats.tachTrend)}
                   </div>
-                  <div className="text-[14px] font-bold text-slate-800 leading-tight">
+                  <div className="text-[18px] font-bold text-slate-800 leading-tight">
                     {stats.tachThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                   </div>
-                  <div className="text-[6px] text-slate-400 font-medium">{stats.avgMonthlyTachThisYear.toFixed(1)}/mo</div>
+                  <div className="text-[8px] text-slate-400 font-medium mt-0.5">{stats.avgMonthlyTachThisYear.toFixed(1)}/mo</div>
                 </div>
               </div>
-              {/* FLIGHTS — inline compact */}
-              <div className="flex items-center justify-between mt-0.5 pt-0.5 border-t border-dashed border-slate-200/50">
-                <div className="flex items-center gap-0.5">
-                  {planeIcon('w-2.5 h-2.5 text-violet-500')}
-                  <span className="text-[8px] font-bold text-slate-900">{(stats.avgMonthlyFlightsThisYear * 12).toFixed(0)}</span>
-                  <span className="text-[7px] text-slate-500">flights</span>
-                  <span className="text-[6px] text-slate-400">{stats.avgMonthlyFlightsThisYear.toFixed(1)}/mo</span>
+              {/* FLIGHTS */}
+              <div className="flex items-center justify-between pt-1.5 border-t border-dashed border-slate-200/60">
+                <div className="flex items-center gap-1">
+                  {planeIcon('w-3 h-3 text-violet-500')}
+                  <span className="text-[11px] font-bold text-slate-900">{(stats.avgMonthlyFlightsThisYear * 12).toFixed(0)}</span>
+                  <span className="text-[9px] text-slate-500">flights</span>
+                  <span className="text-[8px] text-slate-400">{stats.avgMonthlyFlightsThisYear.toFixed(1)}/mo</span>
                 </div>
                 {renderTrend(stats.flightsTrend)}
               </div>
