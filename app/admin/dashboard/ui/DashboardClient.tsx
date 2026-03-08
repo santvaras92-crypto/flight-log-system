@@ -1,12 +1,12 @@
 "use client";
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Chart, LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler } from "chart.js";
+import { Chart, LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler, DoughnutController, ArcElement } from "chart.js";
 import { generateAccountStatementPDF } from "../../../../lib/generate-account-pdf";
 import ImagePreviewModal from "../../../components/ImagePreviewModal";
 import { registerOverhaul } from "../../../actions/register-overhaul";
 
-Chart.register(LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler);
+Chart.register(LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler, DoughnutController, ArcElement);
 
 // Helper function to format currency with Chilean format (dot as thousands separator, no decimals)
 const formatCurrency = (value: number): string => {
@@ -107,6 +107,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
   const searchParams = useSearchParams();
   const [tab, setTab] = useState("overview");
   const [pilotSubTab, setPilotSubTab] = useState<"accounts" | "directory" | "deposits">("accounts");
+  const [financeSubTab, setFinanceSubTab] = useState<"movements" | "costs">("movements");
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [backupLoading, setBackupLoading] = useState(false);
   const [backupMessage, setBackupMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -1212,7 +1213,32 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       )}
       {tab === "fuel" && <FuelTable logs={initialData.fuelLogs || []} />}
       {tab === "maintenance" && <MaintenanceTable components={initialData.components} aircraft={initialData.aircraft} aircraftYearlyStats={initialData.aircraftYearlyStats || []} overviewMetrics={overviewMetrics} />}
-      {tab === "finance" && <FinanzasTable movements={initialData.bankMovements || []} palette={palette} />}
+      {tab === "finance" && (
+        <>
+          <div className="flex gap-1 bg-slate-100/80 p-1 rounded-lg mb-4 max-w-md">
+            <button
+              onClick={() => setFinanceSubTab("movements")}
+              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${financeSubTab === "movements"
+                ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                }`}
+            >
+              <span className="hidden sm:inline">Bank </span>Movements
+            </button>
+            <button
+              onClick={() => setFinanceSubTab("costs")}
+              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${financeSubTab === "costs"
+                ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                }`}
+            >
+              Cost Analysis
+            </button>
+          </div>
+          {financeSubTab === "movements" && <FinanzasTable movements={initialData.bankMovements || []} palette={palette} />}
+          {financeSubTab === "costs" && <CostAnalysis flights={initialData.allFlights || initialData.flights} overviewMetrics={overviewMetrics} />}
+        </>
+      )}
 
       {/* Backup Button - Final de la página */}
       <div className="mt-8 flex justify-center pb-8">
@@ -3936,6 +3962,540 @@ function FinanceCharts({ flights, transactions, palette }: { flights: any[]; tra
       <div className="p-6">
         <canvas ref={barRef} height={160} />
       </div>
+    </div>
+  );
+}
+
+// ==================== COST ANALYSIS COMPONENT ====================
+function CostAnalysis({ flights, overviewMetrics }: { flights: any[]; overviewMetrics?: OverviewMetrics }) {
+  // --- Editable Parameters (from Excel "Analisis de costos") ---
+  const [usdRate, setUsdRate] = useState(975);
+  const [ufRate, setUfRate] = useState(39700);
+  const [avgasLiterCLP, setAvgasLiterCLP] = useState(1750);
+  const [aceiteLiterCLP, setAceiteLiterCLP] = useState(14280);
+  const [toaCLP, setToaCLP] = useState(205000);
+  const [seguroUSD, setSeguroUSD] = useState(4710.02);
+  const [cambioAceiteCLP, setCambioAceiteCLP] = useState(281090);
+  const [revision100CLP, setRevision100CLP] = useState(3577930);
+  const [overhaulCLP, setOverhaulCLP] = useState(78801687);
+  const [horasAnuales, setHorasAnuales] = useState(220);
+  const [overhaulCycleHrs, setOverhaulCycleHrs] = useState(1379.1);
+  // Fixed costs (annual CLP)
+  const [seguroAnual, setSeguroAnual] = useState(4592270);
+  const [hangarAnual, setHangarAnual] = useState(4963032);
+  const [toaPatentesAnual, setToaPatentesAnual] = useState(405000);
+  const [contingenciasAnual, setContingenciasAnual] = useState(2000000);
+  const [impuestoContadorAnual, setImpuestoContadorAnual] = useState(3211728);
+  const [limpiezaAnual, setLimpiezaAnual] = useState(180000);
+  // Overhaul funding
+  const [cashOverhaul, setCashOverhaul] = useState(28710756);
+  const [creditoOverhaul, setCreditoOverhaul] = useState(50090932);
+  const [recaudado, setRecaudado] = useState(15031349);
+  // Revenue
+  const [valorHora, setValorHora] = useState(168052);
+
+  // Consumption rates
+  const fuelGPH = 7;
+  const fuelLPH = fuelGPH * 3.785;
+  const oilLPH = 0.0475;
+
+  // --- Computed values ---
+  const computed = useMemo(() => {
+    // Variable costs per hour
+    const combustibleHr = fuelLPH * avgasLiterCLP;
+    const aceiteHr = oilLPH * aceiteLiterCLP;
+    const mantto100hr = revision100CLP / 100;
+    const manttoOil = cambioAceiteCLP / 100;
+    const manttoOverhaul = overhaulCLP / overhaulCycleHrs;
+    const manttoHr = mantto100hr + manttoOil + manttoOverhaul;
+    const totalVariableHr = combustibleHr + aceiteHr + manttoHr;
+
+    // Fixed costs 
+    const overhaulProvisionAnual = overhaulCLP / (overhaulCycleHrs / horasAnuales);
+    const totalFijoAnual = seguroAnual + hangarAnual + toaPatentesAnual + contingenciasAnual + impuestoContadorAnual + limpiezaAnual + overhaulProvisionAnual;
+    const totalFijoMes = totalFijoAnual / 12;
+    const totalFijoHr = totalFijoAnual / horasAnuales;
+
+    // Total
+    const totalCostoHr = totalFijoHr + totalVariableHr;
+
+    // Profitability
+    const gananciaHr = valorHora - totalCostoHr;
+    const margen = valorHora > 0 ? (gananciaHr / valorHora) * 100 : 0;
+
+    // Overhaul funding
+    const faltaOverhaul = creditoOverhaul - recaudado;
+    const anosRemanentes = overhaulCycleHrs / horasAnuales;
+    const metaAnualOverhaul = faltaOverhaul / Math.max(anosRemanentes, 0.1);
+    const metaMensualOverhaul = metaAnualOverhaul / 12;
+
+    // Breakdowns for charts
+    const fixedBreakdown = [
+      { name: 'Insurance', value: seguroAnual, color: '#3b82f6' },
+      { name: 'Hangar', value: hangarAnual, color: '#8b5cf6' },
+      { name: 'TOA + Patents', value: toaPatentesAnual, color: '#06b6d4' },
+      { name: 'Contingencies', value: contingenciasAnual, color: '#f59e0b' },
+      { name: 'Tax + Accountant', value: impuestoContadorAnual, color: '#ef4444' },
+      { name: 'Cleaning', value: limpiezaAnual, color: '#10b981' },
+      { name: 'Overhaul Prov.', value: overhaulProvisionAnual, color: '#f97316' },
+    ];
+
+    const variableBreakdown = [
+      { name: 'Fuel', value: combustibleHr, color: '#f59e0b' },
+      { name: 'Oil', value: aceiteHr, color: '#8b5cf6' },
+      { name: 'Maintenance', value: manttoHr, color: '#3b82f6' },
+    ];
+
+    const costPerHourBreakdown = [
+      { name: 'Fixed', value: totalFijoHr, color: '#6366f1' },
+      { name: 'Variable', value: totalVariableHr, color: '#10b981' },
+    ];
+
+    return {
+      combustibleHr, aceiteHr, manttoHr, mantto100hr, manttoOil, manttoOverhaul,
+      totalVariableHr, overhaulProvisionAnual, totalFijoAnual, totalFijoMes, totalFijoHr,
+      totalCostoHr, gananciaHr, margen, faltaOverhaul, anosRemanentes,
+      metaAnualOverhaul, metaMensualOverhaul,
+      fixedBreakdown, variableBreakdown, costPerHourBreakdown,
+    };
+  }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD, cambioAceiteCLP, revision100CLP, overhaulCLP, horasAnuales, overhaulCycleHrs, seguroAnual, hangarAnual, toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual, cashOverhaul, creditoOverhaul, recaudado, valorHora]);
+
+  // Actual data from flights (yearly hours)
+  const yearlyHours = useMemo(() => {
+    const map: Record<number, number> = {};
+    flights.forEach(f => {
+      const year = new Date(f.fecha).getFullYear();
+      map[year] = (map[year] || 0) + (Number(f.diff_hobbs) || 0);
+    });
+    return Object.entries(map)
+      .map(([year, hours]) => ({ year: Number(year), hours: Math.round(hours * 10) / 10 }))
+      .sort((a, b) => a.year - b.year);
+  }, [flights]);
+
+  // Chart refs
+  const donutRef = useRef<HTMLCanvasElement>(null);
+  const barRef = useRef<HTMLCanvasElement>(null);
+
+  // Fixed costs donut chart
+  useEffect(() => {
+    if (!donutRef.current) return;
+    const ctx = donutRef.current.getContext('2d');
+    if (!ctx) return;
+    const chart = new Chart(ctx, {
+      type: 'doughnut' as any,
+      data: {
+        labels: computed.fixedBreakdown.map(b => b.name),
+        datasets: [{
+          data: computed.fixedBreakdown.map(b => b.value),
+          backgroundColor: computed.fixedBreakdown.map(b => b.color),
+          borderWidth: 2,
+          borderColor: '#fff',
+        }],
+      },
+      options: {
+        responsive: true,
+        cutout: '60%',
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12, usePointStyle: true } },
+          tooltip: {
+            backgroundColor: '#0f172a',
+            padding: 10,
+            cornerRadius: 8,
+            callbacks: {
+              label: (ctx: any) => ` ${ctx.label}: $${formatCurrency(ctx.raw)} CLP/yr`,
+            },
+          },
+        },
+      },
+    });
+    return () => chart.destroy();
+  }, [computed.fixedBreakdown]);
+
+  // Cost per hour bar chart
+  useEffect(() => {
+    if (!barRef.current) return;
+    const ctx = barRef.current.getContext('2d');
+    if (!ctx) return;
+    const items = [
+      { label: 'Fixed/hr', value: computed.totalFijoHr, color: '#6366f1' },
+      { label: 'Fuel/hr', value: computed.combustibleHr, color: '#f59e0b' },
+      { label: 'Oil/hr', value: computed.aceiteHr, color: '#8b5cf6' },
+      { label: 'Maint./hr', value: computed.manttoHr, color: '#3b82f6' },
+      { label: 'TOTAL/hr', value: computed.totalCostoHr, color: '#0f172a' },
+      { label: 'Revenue/hr', value: valorHora, color: '#10b981' },
+    ];
+    const chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: items.map(i => i.label),
+        datasets: [{
+          data: items.map(i => i.value),
+          backgroundColor: items.map(i => i.color),
+          borderRadius: 6,
+          maxBarThickness: 48,
+        }],
+      },
+      options: {
+        responsive: true,
+        indexAxis: 'y',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#0f172a',
+            padding: 10,
+            cornerRadius: 8,
+            callbacks: { label: (ctx: any) => ` $${formatCurrency(ctx.raw)} CLP/hr` },
+          },
+        },
+        scales: {
+          x: { grid: { color: '#e2e8f0' }, ticks: { callback: (v: any) => '$' + formatCurrency(v) } },
+          y: { grid: { display: false }, ticks: { font: { size: 12, weight: 'bold' } } },
+        },
+      },
+    });
+    return () => chart.destroy();
+  }, [computed, valorHora]);
+
+  // Helper for parameter inputs
+  const ParamInput = ({ label, value, onChange, unit = 'CLP', small = false }: { label: string; value: number; onChange: (v: number) => void; unit?: string; small?: boolean }) => (
+    <div className={`flex items-center justify-between gap-2 ${small ? 'py-1' : 'py-1.5'}`}>
+      <span className="text-xs text-slate-600 truncate">{label}</span>
+      <div className="flex items-center gap-1">
+        <span className="text-[10px] text-slate-400">{unit}</span>
+        <input
+          type="number"
+          value={value}
+          onChange={e => onChange(Number(e.target.value) || 0)}
+          className="w-24 sm:w-28 text-right text-xs font-mono bg-slate-50 border border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
+        />
+      </div>
+    </div>
+  );
+
+  // Stat card helper
+  const StatCard = ({ label, value, sub, color = 'slate', icon }: { label: string; value: string; sub?: string; color?: string; icon: string }) => {
+    const colors: Record<string, string> = {
+      slate: 'bg-slate-50 text-slate-700',
+      green: 'bg-emerald-50 text-emerald-700',
+      red: 'bg-red-50 text-red-700',
+      blue: 'bg-blue-50 text-blue-700',
+      amber: 'bg-amber-50 text-amber-700',
+      indigo: 'bg-indigo-50 text-indigo-700',
+    };
+    return (
+      <div className="bg-white border border-slate-200 rounded-lg p-3 sm:p-4">
+        <div className="flex items-start justify-between mb-2">
+          <div className={`w-8 h-8 rounded-lg ${colors[color]?.split(' ')[0] || 'bg-slate-50'} flex items-center justify-center`}>
+            <svg className={`w-4 h-4 ${colors[color]?.split(' ')[1] || 'text-slate-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={icon} />
+            </svg>
+          </div>
+        </div>
+        <p className="text-lg sm:text-xl font-bold text-slate-900 font-mono">{value}</p>
+        <p className="text-[11px] text-slate-500 mt-0.5">{label}</p>
+        {sub && <p className="text-[10px] text-slate-400 mt-0.5">{sub}</p>}
+      </div>
+    );
+  };
+
+  const [showParams, setShowParams] = useState(false);
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+                <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-slate-800">Cost Analysis — C-172 CC-AQI</h3>
+                <p className="text-xs text-slate-500">Operating cost model · {horasAnuales} hrs/yr estimate</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowParams(!showParams)}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${showParams ? 'bg-indigo-50 text-indigo-600 border-indigo-200' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+            >
+              {showParams ? 'Hide Parameters' : 'Edit Parameters'}
+            </button>
+          </div>
+        </div>
+
+        {/* KPI Cards Row */}
+        <div className="p-4 sm:p-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <StatCard
+              label="Total Cost/hr"
+              value={`$${formatCurrency(Math.round(computed.totalCostoHr))}`}
+              sub="Fixed + Variable"
+              color="slate"
+              icon="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+            <StatCard
+              label="Fixed/hr"
+              value={`$${formatCurrency(Math.round(computed.totalFijoHr))}`}
+              sub={`$${formatCurrency(Math.round(computed.totalFijoAnual))}/yr`}
+              color="indigo"
+              icon="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+            />
+            <StatCard
+              label="Variable/hr"
+              value={`$${formatCurrency(Math.round(computed.totalVariableHr))}`}
+              sub={`Fuel $${formatCurrency(Math.round(computed.combustibleHr))}`}
+              color="amber"
+              icon="M13 10V3L4 14h7v7l9-11h-7z"
+            />
+            <StatCard
+              label="Revenue/hr"
+              value={`$${formatCurrency(valorHora)}`}
+              color="green"
+              icon="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V7m0 1v8m0 1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+            <StatCard
+              label="Margin/hr"
+              value={`$${formatCurrency(Math.round(computed.gananciaHr))}`}
+              sub={`${computed.margen.toFixed(1)}% margin`}
+              color={computed.gananciaHr >= 0 ? 'green' : 'red'}
+              icon="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+            />
+            <StatCard
+              label="Overhaul Gap"
+              value={`$${formatCurrency(Math.round(computed.faltaOverhaul))}`}
+              sub={`${computed.anosRemanentes.toFixed(1)} yrs remaining`}
+              color="red"
+              icon="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Editable Parameters Panel (collapsible) */}
+      {showParams && (
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="px-4 sm:px-6 py-3 border-b border-slate-200 bg-slate-50">
+            <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Model Parameters</h4>
+          </div>
+          <div className="p-4 sm:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Economic rates */}
+              <div>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Economic Rates</p>
+                <div className="space-y-0.5 divide-y divide-slate-100">
+                  <ParamInput label="USD → CLP" value={usdRate} onChange={setUsdRate} unit="CLP" />
+                  <ParamInput label="UF → CLP" value={ufRate} onChange={setUfRate} unit="CLP" />
+                  <ParamInput label="AVGAS / liter" value={avgasLiterCLP} onChange={setAvgasLiterCLP} unit="CLP" />
+                  <ParamInput label="Oil / liter" value={aceiteLiterCLP} onChange={setAceiteLiterCLP} unit="CLP" />
+                  <ParamInput label="Revenue / hour" value={valorHora} onChange={setValorHora} unit="CLP" />
+                </div>
+              </div>
+              {/* Maintenance */}
+              <div>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Maintenance Costs</p>
+                <div className="space-y-0.5 divide-y divide-slate-100">
+                  <ParamInput label="Oil change" value={cambioAceiteCLP} onChange={setCambioAceiteCLP} unit="CLP" />
+                  <ParamInput label="100hr inspection" value={revision100CLP} onChange={setRevision100CLP} unit="CLP" />
+                  <ParamInput label="Overhaul total" value={overhaulCLP} onChange={setOverhaulCLP} unit="CLP" />
+                  <ParamInput label="Overhaul cycle" value={overhaulCycleHrs} onChange={setOverhaulCycleHrs} unit="hrs" />
+                  <ParamInput label="Hours / year" value={horasAnuales} onChange={setHorasAnuales} unit="hrs" />
+                </div>
+              </div>
+              {/* Fixed costs */}
+              <div>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Annual Fixed Costs</p>
+                <div className="space-y-0.5 divide-y divide-slate-100">
+                  <ParamInput label="Insurance" value={seguroAnual} onChange={setSeguroAnual} />
+                  <ParamInput label="Hangar" value={hangarAnual} onChange={setHangarAnual} />
+                  <ParamInput label="TOA + Patents" value={toaPatentesAnual} onChange={setToaPatentesAnual} />
+                  <ParamInput label="Contingencies" value={contingenciasAnual} onChange={setContingenciasAnual} />
+                  <ParamInput label="Tax + Accountant" value={impuestoContadorAnual} onChange={setImpuestoContadorAnual} />
+                  <ParamInput label="Cleaning" value={limpiezaAnual} onChange={setLimpiezaAnual} />
+                </div>
+              </div>
+            </div>
+            {/* Overhaul funding row */}
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Overhaul Funding</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <ParamInput label="Cash available" value={cashOverhaul} onChange={setCashOverhaul} />
+                <ParamInput label="Credit / financed" value={creditoOverhaul} onChange={setCreditoOverhaul} />
+                <ParamInput label="Collected so far" value={recaudado} onChange={setRecaudado} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Fixed costs donut */}
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="px-4 sm:px-6 py-3 border-b border-slate-200">
+            <h4 className="text-xs font-semibold text-slate-700">Fixed Cost Breakdown</h4>
+            <p className="text-[10px] text-slate-400">Annual: ${formatCurrency(Math.round(computed.totalFijoAnual))} CLP · Monthly: ${formatCurrency(Math.round(computed.totalFijoMes))} CLP</p>
+          </div>
+          <div className="p-4 flex justify-center">
+            <div className="w-full max-w-[280px]">
+              <canvas ref={donutRef} />
+            </div>
+          </div>
+        </div>
+
+        {/* Cost per hour horizontal bar */}
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="px-4 sm:px-6 py-3 border-b border-slate-200">
+            <h4 className="text-xs font-semibold text-slate-700">Cost vs Revenue per Hour</h4>
+            <p className="text-[10px] text-slate-400">All values in CLP per flight hour</p>
+          </div>
+          <div className="p-4">
+            <canvas ref={barRef} height={180} />
+          </div>
+        </div>
+      </div>
+
+      {/* Detailed Breakdown Table */}
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="px-4 sm:px-6 py-3 border-b border-slate-200">
+          <h4 className="text-xs font-semibold text-slate-700">Detailed Cost Breakdown</h4>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Category</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Item</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Per Hour</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Per Month</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Per Year</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-500 uppercase tracking-wider">% Total</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {/* Fixed section */}
+              {computed.fixedBreakdown.map((item, i) => (
+                <tr key={`f-${i}`} className="hover:bg-slate-50">
+                  {i === 0 && <td rowSpan={computed.fixedBreakdown.length} className="px-4 py-2 text-xs font-semibold text-indigo-600 align-top border-r border-slate-100">Fixed</td>}
+                  <td className="px-4 py-2 text-xs text-slate-700">{item.name}</td>
+                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-600">${formatCurrency(Math.round(item.value / horasAnuales))}</td>
+                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-600">${formatCurrency(Math.round(item.value / 12))}</td>
+                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-600">${formatCurrency(Math.round(item.value))}</td>
+                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-400">{((item.value / horasAnuales / computed.totalCostoHr) * 100).toFixed(1)}%</td>
+                </tr>
+              ))}
+              <tr className="bg-indigo-50/50 font-semibold">
+                <td className="px-4 py-2 text-xs text-indigo-700 border-r border-slate-100"></td>
+                <td className="px-4 py-2 text-xs text-indigo-700">Subtotal Fixed</td>
+                <td className="px-4 py-2 text-xs text-right font-mono text-indigo-700">${formatCurrency(Math.round(computed.totalFijoHr))}</td>
+                <td className="px-4 py-2 text-xs text-right font-mono text-indigo-700">${formatCurrency(Math.round(computed.totalFijoMes))}</td>
+                <td className="px-4 py-2 text-xs text-right font-mono text-indigo-700">${formatCurrency(Math.round(computed.totalFijoAnual))}</td>
+                <td className="px-4 py-2 text-xs text-right font-mono text-indigo-700">{((computed.totalFijoHr / computed.totalCostoHr) * 100).toFixed(1)}%</td>
+              </tr>
+              {/* Variable section */}
+              {computed.variableBreakdown.map((item, i) => (
+                <tr key={`v-${i}`} className="hover:bg-slate-50">
+                  {i === 0 && <td rowSpan={computed.variableBreakdown.length} className="px-4 py-2 text-xs font-semibold text-emerald-600 align-top border-r border-slate-100">Variable</td>}
+                  <td className="px-4 py-2 text-xs text-slate-700">{item.name}</td>
+                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-600">${formatCurrency(Math.round(item.value))}</td>
+                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-600">${formatCurrency(Math.round(item.value * horasAnuales / 12))}</td>
+                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-600">${formatCurrency(Math.round(item.value * horasAnuales))}</td>
+                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-400">{((item.value / computed.totalCostoHr) * 100).toFixed(1)}%</td>
+                </tr>
+              ))}
+              <tr className="bg-emerald-50/50 font-semibold">
+                <td className="px-4 py-2 text-xs text-emerald-700 border-r border-slate-100"></td>
+                <td className="px-4 py-2 text-xs text-emerald-700">Subtotal Variable</td>
+                <td className="px-4 py-2 text-xs text-right font-mono text-emerald-700">${formatCurrency(Math.round(computed.totalVariableHr))}</td>
+                <td className="px-4 py-2 text-xs text-right font-mono text-emerald-700">${formatCurrency(Math.round(computed.totalVariableHr * horasAnuales / 12))}</td>
+                <td className="px-4 py-2 text-xs text-right font-mono text-emerald-700">${formatCurrency(Math.round(computed.totalVariableHr * horasAnuales))}</td>
+                <td className="px-4 py-2 text-xs text-right font-mono text-emerald-700">{((computed.totalVariableHr / computed.totalCostoHr) * 100).toFixed(1)}%</td>
+              </tr>
+              {/* Grand total */}
+              <tr className="bg-slate-800 text-white font-bold">
+                <td className="px-4 py-3 text-xs" colSpan={2}>TOTAL COST</td>
+                <td className="px-4 py-3 text-xs text-right font-mono">${formatCurrency(Math.round(computed.totalCostoHr))}</td>
+                <td className="px-4 py-3 text-xs text-right font-mono">${formatCurrency(Math.round(computed.totalCostoHr * horasAnuales / 12))}</td>
+                <td className="px-4 py-3 text-xs text-right font-mono">${formatCurrency(Math.round(computed.totalCostoHr * horasAnuales))}</td>
+                <td className="px-4 py-3 text-xs text-right font-mono">100%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Overhaul Funding Status */}
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="px-4 sm:px-6 py-3 border-b border-slate-200">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
+              <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="text-xs font-semibold text-slate-700">Overhaul Funding Tracker</h4>
+              <p className="text-[10px] text-slate-400">Cycle: {formatCurrency(overhaulCycleHrs)} hrs · Est. {computed.anosRemanentes.toFixed(1)} years remaining</p>
+            </div>
+          </div>
+        </div>
+        <div className="p-4 sm:p-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div className="text-center p-3 bg-slate-50 rounded-lg">
+              <p className="text-lg font-bold text-slate-900 font-mono">${formatCurrency(overhaulCLP)}</p>
+              <p className="text-[10px] text-slate-500">Total Cost</p>
+            </div>
+            <div className="text-center p-3 bg-emerald-50 rounded-lg">
+              <p className="text-lg font-bold text-emerald-700 font-mono">${formatCurrency(cashOverhaul + recaudado)}</p>
+              <p className="text-[10px] text-slate-500">Funded (Cash + Collected)</p>
+            </div>
+            <div className="text-center p-3 bg-red-50 rounded-lg">
+              <p className="text-lg font-bold text-red-700 font-mono">${formatCurrency(Math.round(computed.faltaOverhaul))}</p>
+              <p className="text-[10px] text-slate-500">Remaining Gap</p>
+            </div>
+            <div className="text-center p-3 bg-blue-50 rounded-lg">
+              <p className="text-lg font-bold text-blue-700 font-mono">${formatCurrency(Math.round(computed.metaMensualOverhaul))}</p>
+              <p className="text-[10px] text-slate-500">Monthly Target</p>
+            </div>
+          </div>
+          {/* Progress bar */}
+          <div className="mt-2">
+            <div className="flex justify-between text-[10px] text-slate-500 mb-1">
+              <span>Funded</span>
+              <span>{(((cashOverhaul + recaudado) / (cashOverhaul + creditoOverhaul)) * 100).toFixed(1)}%</span>
+            </div>
+            <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all"
+                style={{ width: `${Math.min(100, ((cashOverhaul + recaudado) / (cashOverhaul + creditoOverhaul)) * 100)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Yearly Hours from actual flights */}
+      {yearlyHours.length > 0 && (
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="px-4 sm:px-6 py-3 border-b border-slate-200">
+            <h4 className="text-xs font-semibold text-slate-700">Actual Yearly Hours (from flight records)</h4>
+          </div>
+          <div className="p-4 overflow-x-auto">
+            <div className="flex gap-2 min-w-0">
+              {yearlyHours.map(yh => (
+                <div key={yh.year} className="flex-1 min-w-[60px] text-center p-2 bg-slate-50 rounded-lg">
+                  <p className="text-xs font-bold text-slate-800">{yh.year}</p>
+                  <p className="text-sm font-bold text-blue-700 font-mono">{yh.hours.toFixed(1)}</p>
+                  <p className="text-[9px] text-slate-400">hrs</p>
+                  <p className="text-[9px] text-slate-400 font-mono">{(yh.hours / 12).toFixed(1)}/mo</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
