@@ -3993,6 +3993,29 @@ function CostAnalysis({ flights, overviewMetrics, components }: { flights: any[]
   const [recaudado, setRecaudado] = useState(15031349);
   // Revenue
   const [valorHora, setValorHora] = useState(168052);
+  // Financial projections
+  const [interestRate, setInterestRate] = useState(4); // % annual compound interest on accumulated funds
+  const [inflationRate, setInflationRate] = useState(3.5); // % annual inflation on overhaul cost
+  // Live indicators state
+  const [liveIndicators, setLiveIndicators] = useState<{ uf: boolean; usd: boolean }>({ uf: false, usd: false });
+
+  // Fetch live UF/USD on mount
+  useEffect(() => {
+    fetch('/api/economic-indicators')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (!data) return;
+        if (data.uf?.valor) {
+          setUfRate(Math.round(data.uf.valor));
+          setLiveIndicators(prev => ({ ...prev, uf: true }));
+        }
+        if (data.dolar?.valor) {
+          setUsdRate(Math.round(data.dolar.valor));
+          setLiveIndicators(prev => ({ ...prev, usd: true }));
+        }
+      })
+      .catch(() => {}); // Silent fail, keeps defaults
+  }, []);
 
   // Consumption rates
   const fuelGPH = 7;
@@ -4029,6 +4052,25 @@ function CostAnalysis({ flights, overviewMetrics, components }: { flights: any[]
     const metaAnualOverhaul = faltaOverhaul / Math.max(anosRemanentes, 0.1);
     const metaMensualOverhaul = metaAnualOverhaul / 12;
 
+    // ===== FINANCIAL PROJECTIONS =====
+    // Use live engine data for years-to-overhaul if available, else fall back to horasAnuales
+    const r = interestRate / 100;
+    const inf = inflationRate / 100;
+    const yearsToOverhaul = Math.max(anosRemanentes, 0.01);
+
+    // Projected accumulated funds with compound interest
+    const currentFunds = cashOverhaul + recaudado;
+    const projectedFunds = currentFunds * Math.pow(1 + r, yearsToOverhaul);
+    const interestEarned = projectedFunds - currentFunds;
+
+    // Inflation-adjusted overhaul cost
+    const inflatedOverhaulCost = overhaulCLP * Math.pow(1 + inf, yearsToOverhaul);
+    const inflationIncrease = inflatedOverhaulCost - overhaulCLP;
+
+    // Projected gap (future)
+    const projectedGap = inflatedOverhaulCost - projectedFunds;
+    const projectedMonthlyTarget = projectedGap > 0 ? projectedGap / Math.max(yearsToOverhaul * 12, 1) : 0;
+
     // Breakdowns for charts
     const fixedBreakdown = [
       { name: 'Insurance', value: seguroAnual, color: '#3b82f6' },
@@ -4057,8 +4099,11 @@ function CostAnalysis({ flights, overviewMetrics, components }: { flights: any[]
       totalCostoHr, gananciaHr, margen, faltaOverhaul, anosRemanentes,
       metaAnualOverhaul, metaMensualOverhaul,
       fixedBreakdown, variableBreakdown, costPerHourBreakdown,
+      // Financial projections
+      yearsToOverhaul, currentFunds, projectedFunds, interestEarned,
+      inflatedOverhaulCost, inflationIncrease, projectedGap, projectedMonthlyTarget,
     };
-  }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD, cambioAceiteCLP, revision100CLP, overhaulCLP, horasAnuales, overhaulCycleHrs, seguroAnual, hangarAnual, toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual, cashOverhaul, creditoOverhaul, recaudado, valorHora]);
+  }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD, cambioAceiteCLP, revision100CLP, overhaulCLP, horasAnuales, overhaulCycleHrs, seguroAnual, hangarAnual, toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual, cashOverhaul, creditoOverhaul, recaudado, valorHora, interestRate, inflationRate]);
 
   // Actual data from flights (yearly hours)
   const yearlyHours = useMemo(() => {
@@ -4214,7 +4259,14 @@ function CostAnalysis({ flights, overviewMetrics, components }: { flights: any[]
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-slate-800">Cost Analysis — C-172 CC-AQI</h3>
-                <p className="text-xs text-slate-500">Operating cost model · {horasAnuales} hrs/yr estimate</p>
+                <p className="text-xs text-slate-500 flex items-center gap-1.5 flex-wrap">
+                  <span>Operating cost model · {horasAnuales} hrs/yr estimate</span>
+                  {(liveIndicators.uf || liveIndicators.usd) && (
+                    <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">
+                      LIVE {liveIndicators.uf && 'UF'}{liveIndicators.uf && liveIndicators.usd && '+'}{liveIndicators.usd && 'USD'}
+                    </span>
+                  )}
+                </p>
               </div>
             </div>
             <button
@@ -4286,8 +4338,20 @@ function CostAnalysis({ flights, overviewMetrics, components }: { flights: any[]
               <div>
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Economic Rates</p>
                 <div className="space-y-0.5 divide-y divide-slate-100">
-                  <ParamInput label="USD → CLP" value={usdRate} onChange={setUsdRate} unit="CLP" />
-                  <ParamInput label="UF → CLP" value={ufRate} onChange={setUfRate} unit="CLP" />
+                  <div className="flex items-center justify-between gap-2 py-1.5">
+                    <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">USD → CLP{liveIndicators.usd && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">LIVE</span>}</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-slate-400">CLP</span>
+                      <input type="number" value={usdRate} onChange={e => setUsdRate(Number(e.target.value) || 0)} className="w-24 sm:w-28 text-right text-xs font-mono bg-slate-50 border border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none" />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 py-1.5">
+                    <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">UF → CLP{liveIndicators.uf && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">LIVE</span>}</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-slate-400">CLP</span>
+                      <input type="number" value={ufRate} onChange={e => setUfRate(Number(e.target.value) || 0)} className="w-24 sm:w-28 text-right text-xs font-mono bg-slate-50 border border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none" />
+                    </div>
+                  </div>
                   <ParamInput label="AVGAS / liter" value={avgasLiterCLP} onChange={setAvgasLiterCLP} unit="CLP" />
                   <ParamInput label="Oil / liter" value={aceiteLiterCLP} onChange={setAceiteLiterCLP} unit="CLP" />
                   <ParamInput label="Revenue / hour" value={valorHora} onChange={setValorHora} unit="CLP" />
@@ -4324,6 +4388,10 @@ function CostAnalysis({ flights, overviewMetrics, components }: { flights: any[]
                 <ParamInput label="Cash available" value={cashOverhaul} onChange={setCashOverhaul} />
                 <ParamInput label="Credit / financed" value={creditoOverhaul} onChange={setCreditoOverhaul} />
                 <ParamInput label="Collected so far" value={recaudado} onChange={setRecaudado} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                <ParamInput label="Annual interest on funds" value={interestRate} onChange={setInterestRate} unit="%" />
+                <ParamInput label="Annual inflation on cost" value={inflationRate} onChange={setInflationRate} unit="%" />
               </div>
             </div>
           </div>
@@ -4593,33 +4661,67 @@ function CostAnalysis({ flights, overviewMetrics, components }: { flights: any[]
             </div>
             <div>
               <h4 className="text-xs font-semibold text-slate-700">Overhaul Funding Tracker</h4>
-              <p className="text-[10px] text-slate-400">Cycle: {formatCurrency(overhaulCycleHrs)} hrs · Est. {computed.anosRemanentes.toFixed(1)} years remaining</p>
+              <p className="text-[10px] text-slate-400">Cycle: {formatCurrency(overhaulCycleHrs)} hrs · Est. {computed.yearsToOverhaul.toFixed(1)} years to overhaul @ {horasAnuales} hrs/yr</p>
             </div>
           </div>
         </div>
         <div className="p-4 sm:p-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-            <div className="text-center p-3 bg-slate-50 rounded-lg">
-              <p className="text-lg font-bold text-slate-900 font-mono">${formatCurrency(overhaulCLP)}</p>
-              <p className="text-[10px] text-slate-500">Total Cost</p>
-            </div>
-            <div className="text-center p-3 bg-emerald-50 rounded-lg">
-              <p className="text-lg font-bold text-emerald-700 font-mono">${formatCurrency(cashOverhaul + recaudado)}</p>
-              <p className="text-[10px] text-slate-500">Funded (Cash + Collected)</p>
-            </div>
-            <div className="text-center p-3 bg-red-50 rounded-lg">
-              <p className="text-lg font-bold text-red-700 font-mono">${formatCurrency(Math.round(computed.faltaOverhaul))}</p>
-              <p className="text-[10px] text-slate-500">Remaining Gap</p>
-            </div>
-            <div className="text-center p-3 bg-blue-50 rounded-lg">
-              <p className="text-lg font-bold text-blue-700 font-mono">${formatCurrency(Math.round(computed.metaMensualOverhaul))}</p>
-              <p className="text-[10px] text-slate-500">Monthly Target</p>
+          {/* Today's Nominal Values */}
+          <div className="mb-4">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Current (Nominal)</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="text-center p-3 bg-slate-50 rounded-lg">
+                <p className="text-lg font-bold text-slate-900 font-mono">${formatCurrency(overhaulCLP)}</p>
+                <p className="text-[10px] text-slate-500">Total Cost Today</p>
+              </div>
+              <div className="text-center p-3 bg-emerald-50 rounded-lg">
+                <p className="text-lg font-bold text-emerald-700 font-mono">${formatCurrency(computed.currentFunds)}</p>
+                <p className="text-[10px] text-slate-500">Funded (Cash + Collected)</p>
+              </div>
+              <div className="text-center p-3 bg-red-50 rounded-lg">
+                <p className="text-lg font-bold text-red-700 font-mono">${formatCurrency(Math.round(computed.faltaOverhaul))}</p>
+                <p className="text-[10px] text-slate-500">Remaining Gap</p>
+              </div>
+              <div className="text-center p-3 bg-blue-50 rounded-lg">
+                <p className="text-lg font-bold text-blue-700 font-mono">${formatCurrency(Math.round(computed.metaMensualOverhaul))}</p>
+                <p className="text-[10px] text-slate-500">Monthly Target</p>
+              </div>
             </div>
           </div>
+
+          {/* Projected Values */}
+          <div className="mb-4">
+            <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+              Projected at Overhaul ({computed.yearsToOverhaul.toFixed(1)} yrs · {interestRate}% interest · {inflationRate}% inflation)
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="text-center p-3 bg-red-50 rounded-lg border border-red-100">
+                <p className="text-lg font-bold text-red-700 font-mono">${formatCurrency(Math.round(computed.inflatedOverhaulCost))}</p>
+                <p className="text-[10px] text-slate-500">Overhaul Cost w/ Inflation</p>
+                <p className="text-[9px] text-red-500 font-mono mt-0.5">+${formatCurrency(Math.round(computed.inflationIncrease))} ({inflationRate}%/yr)</p>
+              </div>
+              <div className="text-center p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+                <p className="text-lg font-bold text-emerald-700 font-mono">${formatCurrency(Math.round(computed.projectedFunds))}</p>
+                <p className="text-[10px] text-slate-500">Projected Funds w/ Interest</p>
+                <p className="text-[9px] text-emerald-600 font-mono mt-0.5">+${formatCurrency(Math.round(computed.interestEarned))} ({interestRate}%/yr)</p>
+              </div>
+              <div className="text-center p-3 rounded-lg border" style={{ backgroundColor: computed.projectedGap > 0 ? '#fef2f2' : '#f0fdf4', borderColor: computed.projectedGap > 0 ? '#fecaca' : '#bbf7d0' }}>
+                <p className={`text-lg font-bold font-mono ${computed.projectedGap > 0 ? 'text-red-700' : 'text-emerald-700'}`}>${formatCurrency(Math.abs(Math.round(computed.projectedGap)))}</p>
+                <p className="text-[10px] text-slate-500">{computed.projectedGap > 0 ? 'Projected Gap' : 'Projected Surplus'}</p>
+              </div>
+              <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-100">
+                <p className="text-lg font-bold text-blue-700 font-mono">${formatCurrency(Math.round(computed.projectedMonthlyTarget))}</p>
+                <p className="text-[10px] text-slate-500">Adj. Monthly Target</p>
+                <p className="text-[9px] text-slate-400 font-mono mt-0.5">vs ${formatCurrency(Math.round(computed.metaMensualOverhaul))} nominal</p>
+              </div>
+            </div>
+          </div>
+
           {/* Progress bar */}
           <div className="mt-2">
             <div className="flex justify-between text-[10px] text-slate-500 mb-1">
-              <span>Funded</span>
+              <span>Funded (nominal)</span>
               <span>{(((cashOverhaul + recaudado) / (cashOverhaul + creditoOverhaul)) * 100).toFixed(1)}%</span>
             </div>
             <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
@@ -4627,6 +4729,35 @@ function CostAnalysis({ flights, overviewMetrics, components }: { flights: any[]
                 className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all"
                 style={{ width: `${Math.min(100, ((cashOverhaul + recaudado) / (cashOverhaul + creditoOverhaul)) * 100)}%` }}
               />
+            </div>
+            <div className="flex justify-between text-[10px] text-slate-500 mb-1 mt-2">
+              <span>Projected funds vs inflated cost</span>
+              <span>{((computed.projectedFunds / computed.inflatedOverhaulCost) * 100).toFixed(1)}%</span>
+            </div>
+            <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${computed.projectedFunds >= computed.inflatedOverhaulCost ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-gradient-to-r from-amber-500 to-amber-400'}`}
+                style={{ width: `${Math.min(100, (computed.projectedFunds / computed.inflatedOverhaulCost) * 100)}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Projection formula explanation */}
+          <div className="mt-4 bg-slate-50 rounded-lg p-3">
+            <div className="flex items-start gap-2">
+              <svg className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="text-[11px] text-slate-600">
+                <p className="font-semibold mb-1">Projection Methodology</p>
+                <p>At <span className="font-mono font-bold">{horasAnuales}</span> hrs/yr, the engine reaches TBO in <span className="font-mono font-bold">{computed.yearsToOverhaul.toFixed(1)}</span> years.
+                Accumulated funds of <span className="font-mono font-bold">${formatCurrency(computed.currentFunds)}</span> grow to <span className="font-mono font-bold text-emerald-600">${formatCurrency(Math.round(computed.projectedFunds))}</span> at {interestRate}% annual compound interest.
+                The overhaul cost of <span className="font-mono font-bold">${formatCurrency(overhaulCLP)}</span> rises to <span className="font-mono font-bold text-red-600">${formatCurrency(Math.round(computed.inflatedOverhaulCost))}</span> at {inflationRate}% annual inflation.
+                {computed.projectedGap > 0
+                  ? ` You need to save an additional $${formatCurrency(Math.round(computed.projectedMonthlyTarget))}/mo to cover the projected gap.`
+                  : ` Your projected funds cover the inflated cost with a surplus of $${formatCurrency(Math.abs(Math.round(computed.projectedGap)))}.`
+                }</p>
+              </div>
             </div>
           </div>
         </div>
