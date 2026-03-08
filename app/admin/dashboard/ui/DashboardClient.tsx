@@ -787,20 +787,20 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         );
 
         return (
-          <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] lg:overflow-y-auto flex flex-col`}>
+          <div className={`${palette.card} rounded-xl p-3 sm:p-5 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] flex flex-col`}>
             {/* Header */}
-            <div className="flex items-start justify-between mb-2 sm:mb-4">
-              <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-violet-100 flex items-center justify-center">
-                <svg className="w-4 h-4 sm:w-6 sm:h-6 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-start justify-between mb-2 sm:mb-1.5">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-violet-100 flex items-center justify-center">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
               </div>
-              <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-violet-50 text-violet-700 text-[8px] sm:text-[10px] font-bold rounded-full border border-violet-100">
+              <span className="px-1.5 sm:px-2 py-0.5 bg-violet-50 text-violet-700 text-[8px] sm:text-[10px] font-bold rounded-full border border-violet-100">
                 H/T: {stats.hobbsTachRatio.toFixed(2)}
               </span>
             </div>
-            <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Annual Stats</h3>
-            <p className="text-[7px] sm:text-[10px] text-slate-400 mb-1 sm:mb-2">Last 365 days</p>
+            <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-0.5">Annual Stats</h3>
+            <p className="text-[7px] sm:text-[9px] text-slate-400 mb-1">Last 365 days</p>
 
             {/* MOBILE: Compact layout */}
             <div className="flex sm:hidden flex-col gap-0.5 flex-1 justify-end">
@@ -849,54 +849,54 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               </div>
             </div>
 
-            {/* DESKTOP: Vertical list layout */}
-            <div className="hidden sm:flex flex-col gap-2 flex-1 mt-auto">
+            {/* DESKTOP: Vertical list layout — tighter to fit lg:h-[280px] without scroll */}
+            <div className="hidden sm:flex flex-col gap-1.5 flex-1 justify-end">
               {/* HOBBS Row */}
-              <div className="flex items-end justify-between border-b border-dashed border-slate-200/50 pb-2">
+              <div className="flex items-center justify-between border-b border-dashed border-slate-200/50 pb-1.5">
                 <div>
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    {clockIcon('w-4 h-4 text-violet-500')}
-                    <span className="text-[10px] font-bold text-slate-500 tracking-wider">HOBBS</span>
+                  <div className="flex items-center gap-1 mb-px">
+                    {clockIcon('w-3.5 h-3.5 text-violet-500')}
+                    <span className="text-[9px] font-bold text-slate-500 tracking-wider">HOBBS</span>
                   </div>
-                  <div className="text-2xl font-bold text-slate-900 leading-none">
+                  <div className="text-xl font-bold text-slate-900 leading-none">
                     {stats.hobbsThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                   </div>
                 </div>
-                <div className="text-right flex flex-col items-end gap-1">
+                <div className="text-right flex flex-col items-end gap-0.5">
                   {renderTrend(stats.hobbsTrend)}
-                  <div className="text-[10px] text-slate-400 font-medium">{stats.avgMonthlyHobbsThisYear.toFixed(1)}/mo</div>
+                  <div className="text-[9px] text-slate-400 font-medium">{stats.avgMonthlyHobbsThisYear.toFixed(1)}/mo</div>
                 </div>
               </div>
               {/* TACH Row */}
-              <div className="flex items-end justify-between border-b border-dashed border-slate-200/50 pb-2">
+              <div className="flex items-center justify-between border-b border-dashed border-slate-200/50 pb-1.5">
                 <div>
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    {gaugeIcon('w-4 h-4 text-violet-500')}
-                    <span className="text-[10px] font-bold text-slate-500 tracking-wider">TACH</span>
+                  <div className="flex items-center gap-1 mb-px">
+                    {gaugeIcon('w-3.5 h-3.5 text-violet-500')}
+                    <span className="text-[9px] font-bold text-slate-500 tracking-wider">TACH</span>
                   </div>
-                  <div className="text-xl font-bold text-slate-800 leading-none">
+                  <div className="text-lg font-bold text-slate-800 leading-none">
                     {stats.tachThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                   </div>
                 </div>
-                <div className="text-right flex flex-col items-end gap-1">
+                <div className="text-right flex flex-col items-end gap-0.5">
                   {renderTrend(stats.tachTrend)}
-                  <div className="text-[10px] text-slate-400 font-medium">{stats.avgMonthlyTachThisYear.toFixed(1)}/mo</div>
+                  <div className="text-[9px] text-slate-400 font-medium">{stats.avgMonthlyTachThisYear.toFixed(1)}/mo</div>
                 </div>
               </div>
               {/* FLIGHTS Row */}
-              <div className="flex items-end justify-between pt-1">
+              <div className="flex items-center justify-between pt-0.5">
                 <div>
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    {planeIcon('w-4 h-4 text-violet-500')}
-                    <span className="text-[10px] font-bold text-slate-500 tracking-wider">FLIGHTS</span>
+                  <div className="flex items-center gap-1 mb-px">
+                    {planeIcon('w-3.5 h-3.5 text-violet-500')}
+                    <span className="text-[9px] font-bold text-slate-500 tracking-wider">FLIGHTS</span>
                   </div>
-                  <div className="text-xl font-bold text-slate-800 leading-none">
+                  <div className="text-lg font-bold text-slate-800 leading-none">
                     {(stats.avgMonthlyFlightsThisYear * 12).toFixed(0)}
                   </div>
                 </div>
-                <div className="text-right flex flex-col items-end gap-1">
+                <div className="text-right flex flex-col items-end gap-0.5">
                   {renderTrend(stats.flightsTrend)}
-                  <div className="text-[10px] text-slate-400 font-medium">{stats.avgMonthlyFlightsThisYear.toFixed(1)}/mo</div>
+                  <div className="text-[9px] text-slate-400 font-medium">{stats.avgMonthlyFlightsThisYear.toFixed(1)}/mo</div>
                 </div>
               </div>
             </div>
