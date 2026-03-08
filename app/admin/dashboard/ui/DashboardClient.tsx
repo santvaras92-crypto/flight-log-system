@@ -192,10 +192,9 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
     shadow: 'shadow-lg'
   };
 
-  // Drag and drop handlers for Overview cards (mouse and touch)
-  const [touchStartPos, setTouchStartPos] = useState<{ x: number; y: number } | null>(null);
-  const [touchHoldTimer, setTouchHoldTimer] = useState<NodeJS.Timeout | null>(null);
-  const [isDragEnabled, setIsDragEnabled] = useState(false);
+  // Drag and drop handlers for Overview cards
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [dragOverCard, setDragOverCard] = useState<string | null>(null);
 
   const handleDragStart = (cardId: string) => {
     setDraggedCard(cardId);
@@ -208,6 +207,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
   const handleDrop = (targetCardId: string) => {
     if (!draggedCard || draggedCard === targetCardId) {
       setDraggedCard(null);
+      setDragOverCard(null);
       return;
     }
 
@@ -217,6 +217,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
 
     if (draggedIndex === -1 || targetIndex === -1) {
       setDraggedCard(null);
+      setDragOverCard(null);
       return;
     }
 
@@ -226,84 +227,12 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
     setCardOrder(newOrder);
     localStorage.setItem('overview-card-order', JSON.stringify(newOrder));
     setDraggedCard(null);
+    setDragOverCard(null);
   };
 
   const handleDragEnd = () => {
     setDraggedCard(null);
-  };
-
-  // Touch handlers for mobile - require 300ms hold before drag activates
-  const handleTouchStart = (e: React.TouchEvent, cardId: string) => {
-    const touch = e.touches[0];
-    setTouchStartPos({ x: touch.clientX, y: touch.clientY });
-
-    // Start a timer - only enable drag after 300ms hold
-    const timer = setTimeout(() => {
-      setDraggedCard(cardId);
-      setIsDragEnabled(true);
-      // Haptic feedback on supported devices
-      if (navigator.vibrate) navigator.vibrate(50);
-    }, 300);
-
-    setTouchHoldTimer(timer);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!touchStartPos) return;
-
-    const touch = e.touches[0];
-    const deltaX = Math.abs(touch.clientX - touchStartPos.x);
-    const deltaY = Math.abs(touch.clientY - touchStartPos.y);
-
-    // If moved before hold timer completes, cancel drag and allow scroll
-    if (!isDragEnabled && (deltaX > 10 || deltaY > 10)) {
-      if (touchHoldTimer) {
-        clearTimeout(touchHoldTimer);
-        setTouchHoldTimer(null);
-      }
-      setTouchStartPos(null);
-      return;
-    }
-
-    // If drag is enabled, prevent scrolling
-    if (isDragEnabled && draggedCard) {
-      e.preventDefault();
-    }
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent, targetCardId: string) => {
-    // Clear the hold timer
-    if (touchHoldTimer) {
-      clearTimeout(touchHoldTimer);
-      setTouchHoldTimer(null);
-    }
-
-    if (!draggedCard || !isDragEnabled) {
-      setDraggedCard(null);
-      setIsDragEnabled(false);
-      setTouchStartPos(null);
-      return;
-    }
-
-    const touch = e.changedTouches[0];
-    const element = document.elementFromPoint(touch.clientX, touch.clientY);
-
-    // Find the card element
-    let cardElement = element;
-    while (cardElement && !cardElement.getAttribute('data-card-id')) {
-      cardElement = cardElement.parentElement;
-    }
-
-    const droppedOnCardId = cardElement?.getAttribute('data-card-id');
-
-    if (droppedOnCardId && droppedOnCardId !== draggedCard) {
-      handleDrop(droppedOnCardId);
-    } else {
-      setDraggedCard(null);
-    }
-
-    setIsDragEnabled(false);
-    setTouchStartPos(null);
+    setDragOverCard(null);
   };
 
   // Backup functions
@@ -355,58 +284,96 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
     }
   };
 
-  // --- Robust drag state (must be at component top level, NOT inside renderCard) ---
+  // --- Mobile long-press drag-and-drop system ---
   const dragActivatedRef = useRef(false);
   const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // --- Scroll lock helpers ---
+  // Find which card is under a touch point
+  const findCardUnderTouch = (clientX: number, clientY: number): string | null => {
+    const element = document.elementFromPoint(clientX, clientY);
+    let el = element as HTMLElement | null;
+    while (el && !el.getAttribute('data-card-id')) {
+      el = el.parentElement;
+    }
+    return el?.getAttribute('data-card-id') || null;
+  };
+
   const lockScroll = () => {
     document.body.style.overflow = 'hidden';
-    const grid = document.getElementById('overview-grid');
-    if (grid) grid.style.touchAction = 'none';
+    if (gridRef.current) gridRef.current.style.touchAction = 'none';
   };
   const unlockScroll = () => {
     document.body.style.overflow = '';
-    const grid = document.getElementById('overview-grid');
-    if (grid) grid.style.touchAction = '';
+    if (gridRef.current) gridRef.current.style.touchAction = '';
   };
 
-  // --- Long press drag handlers ---
+  // Non-passive touchmove listener — the ONLY way to block scroll on iOS Safari
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!dragActivatedRef.current) {
+        // If finger moves before long-press completes, cancel the timer
+        if (longPressTimeoutRef.current) {
+          clearTimeout(longPressTimeoutRef.current);
+          longPressTimeoutRef.current = null;
+        }
+        return; // Allow normal scroll
+      }
+      // Drag is active — block scroll
+      e.preventDefault();
+      // Track which card is under the finger for visual feedback
+      const touch = e.touches[0];
+      const cardId = findCardUnderTouch(touch.clientX, touch.clientY);
+      if (cardId && cardId !== draggedCard) {
+        setDragOverCard(cardId);
+      } else {
+        setDragOverCard(null);
+      }
+    };
+
+    grid.addEventListener('touchmove', onTouchMove, { passive: false });
+    return () => grid.removeEventListener('touchmove', onTouchMove);
+  }, [draggedCard]);
+
+  // Long press touch start
   const handleTouchStartLongPress = (e: React.TouchEvent, cardId: string) => {
     dragActivatedRef.current = false;
     longPressTimeoutRef.current = setTimeout(() => {
       dragActivatedRef.current = true;
       lockScroll();
       handleDragStart(cardId);
+      // Haptic feedback
+      if (navigator.vibrate) navigator.vibrate(50);
     }, 400);
   };
-  const handleTouchMoveLongPress = (e: React.TouchEvent) => {
-    if (!dragActivatedRef.current && longPressTimeoutRef.current) {
-      clearTimeout(longPressTimeoutRef.current);
-      longPressTimeoutRef.current = null;
-    }
-    if (dragActivatedRef.current) {
-      e.preventDefault(); // Bloquea scroll nativo
-      handleTouchMove(e);
-    }
-  };
+
+  // Long press touch end — find drop target and commit reorder
   const handleTouchEndLongPress = (e: React.TouchEvent, cardId: string) => {
     if (longPressTimeoutRef.current) {
       clearTimeout(longPressTimeoutRef.current);
       longPressTimeoutRef.current = null;
     }
     if (dragActivatedRef.current) {
+      // Find which card the finger landed on
+      const touch = e.changedTouches[0];
+      const targetCardId = findCardUnderTouch(touch.clientX, touch.clientY);
       unlockScroll();
-      handleDragEnd();
-    } else {
-      handleTouchEnd(e, cardId);
+      if (targetCardId && targetCardId !== draggedCard) {
+        handleDrop(targetCardId);
+      } else {
+        handleDragEnd();
+      }
     }
     dragActivatedRef.current = false;
+    setDragOverCard(null);
   };
 
   // Render individual metric card with drag-and-drop
   const renderCard = (cardId: string, content: JSX.Element) => {
     const isDragging = draggedCard === cardId;
+    const isDropTarget = dragOverCard === cardId && draggedCard !== cardId;
     const isComplexCard = cardId === 'nextInspections' || cardId === 'activePilots';
 
     return (
@@ -419,9 +386,8 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         onDrop={() => { unlockScroll(); handleDrop(cardId); }}
         onDragEnd={() => { unlockScroll(); handleDragEnd(); }}
         onTouchStart={(e) => handleTouchStartLongPress(e, cardId)}
-        onTouchMove={handleTouchMoveLongPress}
         onTouchEnd={(e) => handleTouchEndLongPress(e, cardId)}
-        className={`${isDragging ? 'opacity-50 scale-105 shadow-lg' : 'opacity-100'} ${isComplexCard ? 'col-span-2 lg:col-span-1' : ''} transition-all duration-150 cursor-move select-none`}
+        className={`${isDragging ? 'opacity-50 scale-105 shadow-lg' : 'opacity-100'} ${isDropTarget ? 'ring-2 ring-blue-400 ring-offset-2 scale-[1.02]' : ''} ${isComplexCard ? 'col-span-2 lg:col-span-1' : ''} transition-all duration-150 cursor-move select-none`}
         style={{
           WebkitUserSelect: 'none',
           WebkitTouchCallout: 'none',
@@ -566,7 +532,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               </div>
               <h3 className="text-slate-900 text-xs sm:text-sm font-bold uppercase tracking-wide">Inspecciones</h3>
             </div>
-            <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[8px] sm:text-[10px] font-bold rounded-full">🔮 SMART</span>
+            <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[9px] sm:text-xs font-bold rounded-full">🔮 SMART</span>
           </div>
 
           {/* Oil Change Section */}
@@ -721,10 +687,10 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             </div>
-            <span className="px-1.5 sm:px-2 py-0.5 bg-purple-100 text-purple-700 text-[9px] sm:text-xs font-bold rounded-full">{activePilotsData.length}</span>
+            <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-purple-100 text-purple-700 text-[9px] sm:text-xs font-bold rounded-full">{activePilotsData.length}</span>
           </div>
-          <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Active Pilots</h3>
-          <p className="text-[9px] sm:text-xs text-slate-500 mb-2">Last 60 days</p>
+          <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Pilotos Activos</h3>
+          <p className="text-[9px] sm:text-xs text-slate-500 mb-2">Últimos 60 días</p>
           <div className="max-h-24 sm:max-h-32 overflow-y-auto space-y-0.5">
             {activePilotsData.map((pilot, i) => (
               <div key={i} className="flex items-center justify-between text-[10px] sm:text-xs">
@@ -733,17 +699,17 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                   {pilot.balance >= 0 ? '+' : '-'}${formatCurrency(Math.abs(pilot.balance))}
                 </span>
                 <span className={`ml-1.5 w-7 text-right font-mono text-[10px] sm:text-xs ${pilot.daysSince === 0 ? 'text-green-600 font-bold' : pilot.daysSince <= 7 ? 'text-emerald-500' : pilot.daysSince <= 30 ? 'text-slate-500' : 'text-orange-500'}`}>
-                  {pilot.daysSince === 0 ? 'today' : `${pilot.daysSince}d`}
+                  {pilot.daysSince === 0 ? 'hoy' : `${pilot.daysSince}d`}
                 </span>
               </div>
             ))}
             {activePilotsData.length === 0 && (
-              <div className="text-[10px] sm:text-xs text-slate-400 italic">No recent flights</div>
+              <div className="text-[10px] sm:text-xs text-slate-400 italic">Sin vuelos recientes</div>
             )}
           </div>
         </div>
       );
-    })(),
+      })(),
     pendingBalance: (
       <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] lg:overflow-y-auto flex flex-col`}>
         <div className="flex items-start justify-between mb-2 sm:mb-4">
@@ -795,128 +761,125 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         const stats = overviewMetrics.annualStats;
 
         const renderTrend = (value: number) => {
-          const isPositive = value >= 0;
-          return (
-            <span className={`text-[7px] sm:text-xs font-bold px-1 sm:px-1.5 py-0.5 rounded-md ${isPositive ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}
-            >
-              {isPositive ? '↗' : '↘'} {Math.abs(value).toFixed(0)}%
-            </span>
-          );
+            const isPositive = value >= 0;
+            return (
+              <span className={`text-[7px] sm:text-xs font-bold px-1 sm:px-1.5 py-0.5 rounded-md ${isPositive ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}
+              >
+                {isPositive ? '↗' : '↘'} {Math.abs(value).toFixed(0)}%
+              </span>
+            );
         };
 
-        return (
-          <div className={`${palette.card} rounded-xl p-3 sm:p-4 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] flex flex-col justify-between`}>
-            {/* Header */}
-            <div className="flex items-start justify-between mb-0.5 sm:mb-2">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-violet-100 flex items-center justify-center">
-                <svg className="w-4 h-4 sm:w-6 sm:h-6 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
+          return (
+            <div className={`${palette.card} rounded-xl p-3 sm:p-4 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] flex flex-col justify-between`}>
+              {/* Header */}
+              <div className="flex items-start justify-between mb-0.5 sm:mb-2">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-violet-100 flex items-center justify-center">
+                  <svg className="w-4 h-4 sm:w-6 sm:h-6 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-violet-50 text-violet-700 text-[8px] sm:text-[10px] font-bold rounded-full border border-violet-100">
+                  H/T: {stats.hobbsTachRatio.toFixed(2)}
+                </span>
               </div>
-              <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-violet-50 text-violet-700 text-[8px] sm:text-[10px] font-bold rounded-full border border-violet-100">
-                H/T: {stats.hobbsTachRatio.toFixed(2)}
-              </span>
-            </div>
-            <div className="mb-0.5 sm:mb-1">
-              <h3 className="text-slate-500 text-[9px] sm:text-[11px] font-semibold uppercase tracking-wide leading-tight">Annual Stats</h3>
-              <p className="text-[7px] sm:text-[10px] text-slate-400">Last 365 Days</p>
-            </div>
-            {/* MOBILE: Horizontal compact layout */}
-            <div className="flex sm:hidden flex-col gap-0.5 flex-1 justify-end">
-              <div className="grid grid-cols-2 gap-2 border-b border-dashed border-slate-200/50 pb-1">
-                {/* HOBBS */}
-                <div>
-                  <div className="flex items-center gap-1 mb-px">
-                    <span className="text-[8px]">🕐</span>
-                    <span className="text-[7px] font-bold text-slate-400 tracking-wider">HOBBS</span>
+              <div className="mb-0.5 sm:mb-1">
+                <h3 className="text-slate-500 text-[9px] sm:text-[11px] font-semibold uppercase tracking-wide leading-tight">Estadísticas Anuales</h3>
+                <p className="text-[7px] sm:text-[10px] text-slate-400">Últimos 365 días</p>
+              </div>
+              {/* MOBILE: Horizontal compact layout */}
+              <div className="flex sm:hidden flex-col gap-0.5 flex-1 justify-end">
+                <div className="grid grid-cols-2 gap-2 border-b border-dashed border-slate-200/50 pb-1">
+                  {/* HOBBS */}
+                  <div>
+                    <div className="flex items-center gap-1 mb-px">
+                      <span className="text-[8px]">🕐</span>
+                      <span className="text-[7px] font-bold text-slate-400 tracking-wider">HOBBS</span>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-[15px] font-bold text-slate-900 leading-none">
+                        {stats.hobbsThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                      </span>
+                      {renderTrend(stats.hobbsTrend)}
+                    </div>
+                    <div className="text-[7px] text-slate-400 font-medium mt-px">{stats.avgMonthlyHobbsThisYear.toFixed(1)}/mes</div>
                   </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-[15px] font-bold text-slate-900 leading-none">
+                  {/* TACH */}
+                  <div>
+                    <div className="flex items-center gap-1 mb-px">
+                      <span className="text-[8px]">⏱️</span>
+                      <span className="text-[7px] font-bold text-slate-400 tracking-wider">TACH</span>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-[15px] font-bold text-slate-800 leading-none">
+                        {stats.tachThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                      </span>
+                      {renderTrend(stats.tachTrend)}
+                    </div>
+                    <div className="text-[7px] text-slate-400 font-medium mt-px">{stats.avgMonthlyTachThisYear.toFixed(1)}/mes</div>
+                  </div>
+                </div>
+                {/* VUELOS */}
+                <div className="flex items-center justify-between pt-0.5">
+                  <div className="flex items-center gap-1">
+                    <span className="text-[8px]">✈️</span>
+                    <span className="text-[9px] text-slate-600">
+                      <span className="font-bold text-slate-900 text-xs">{(stats.avgMonthlyFlightsThisYear * 12).toFixed(0)}</span> vuelos
+                    </span>
+                  </div>
+                  {renderTrend(stats.flightsTrend)}
+                </div>
+              </div>
+              {/* DESKTOP: Vertical list layout */}
+              <div className="hidden sm:flex flex-col gap-2 flex-1 mt-auto">
+                {/* HOBBS Row */}
+                <div className="flex items-end justify-between border-b border-dashed border-slate-200/50 pb-2">
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-sm">🕐</span>
+                      <span className="text-[10px] font-bold text-slate-500 tracking-wider">HOBBS</span>
+                    </div>
+                    <div className="text-2xl font-bold text-slate-900 leading-none">
                       {stats.hobbsThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-                    </span>
+                    </div>
+                  </div>
+                  <div className="text-right flex flex-col items-end gap-1">
                     {renderTrend(stats.hobbsTrend)}
+                    <div className="text-[10px] text-slate-400 font-medium">{stats.avgMonthlyHobbsThisYear.toFixed(1)}/mes</div>
                   </div>
-                  <div className="text-[7px] text-slate-400 font-medium mt-px">{stats.avgMonthlyHobbsThisYear.toFixed(1)}/mo</div>
                 </div>
-                {/* TACH */}
-                <div>
-                  <div className="flex items-center gap-1 mb-px">
-                    <span className="text-[8px]">⏱️</span>
-                    <span className="text-[7px] font-bold text-slate-400 tracking-wider">TACH</span>
-                  </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-[15px] font-bold text-slate-800 leading-none">
+                {/* TACH Row */}
+                <div className="flex items-end justify-between border-b border-dashed border-slate-200/50 pb-2">
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-sm">⏱️</span>
+                      <span className="text-[10px] font-bold text-slate-500 tracking-wider">TACH</span>
+                    </div>
+                    <div className="text-xl font-bold text-slate-800 leading-none">
                       {stats.tachThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-                    </span>
+                    </div>
+                  </div>
+                  <div className="text-right flex flex-col items-end gap-1">
                     {renderTrend(stats.tachTrend)}
-                  </div>
-                  <div className="text-[7px] text-slate-400 font-medium mt-px">{stats.avgMonthlyTachThisYear.toFixed(1)}/mo</div>
-                </div>
-              </div>
-              {/* VUELOS */}
-              <div className="flex items-center justify-between pt-0.5">
-                <div className="flex items-center gap-1">
-                  <span className="text-[8px]">✈️</span>
-                  <span className="text-[9px] text-slate-600">
-                    <span className="font-bold text-slate-900 text-xs">{(stats.avgMonthlyFlightsThisYear * 12).toFixed(0)}</span> flights
-                  </span>
-                </div>
-                <div className="text-right flex flex-col items-end gap-0.5">
-                  {renderTrend(stats.flightsTrend)}
-                  <div className="text-[7px] text-slate-400 font-medium">{stats.avgMonthlyFlightsThisYear.toFixed(1)}/mo</div>
-                </div>
-              </div>
-            </div>
-            {/* DESKTOP: Vertical list layout */}
-            <div className="hidden sm:flex flex-col gap-2 flex-1 mt-auto">
-              {/* HOBBS Row */}
-              <div className="flex items-end justify-between border-b border-dashed border-slate-200/50 pb-2">
-                <div>
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <span className="text-sm">🕐</span>
-                    <span className="text-[10px] font-bold text-slate-500 tracking-wider">HOBBS</span>
-                  </div>
-                  <div className="text-2xl font-bold text-slate-900 leading-none">
-                    {stats.hobbsThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                    <div className="text-[10px] text-slate-400 font-medium">{stats.avgMonthlyTachThisYear.toFixed(1)}/mes</div>
                   </div>
                 </div>
-                <div className="text-right flex flex-col items-end gap-1">
-                  {renderTrend(stats.hobbsTrend)}
-                  <div className="text-[10px] text-slate-400 font-medium">{stats.avgMonthlyHobbsThisYear.toFixed(1)}/mo</div>
-                </div>
-              </div>
-              {/* TACH Row */}
-              <div className="flex items-end justify-between border-b border-dashed border-slate-200/50 pb-2">
-                <div>
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <span className="text-sm">⏱️</span>
-                    <span className="text-[10px] font-bold text-slate-500 tracking-wider">TACH</span>
+                {/* VUELOS Row */}
+                <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm">✈️</span>
+                    <span className="text-xs text-slate-600">
+                      <span className="font-bold text-slate-900 text-base">{(stats.avgMonthlyFlightsThisYear * 12).toFixed(0)}</span> vuelos
+                    </span>
                   </div>
-                  <div className="text-xl font-bold text-slate-800 leading-none">
-                    {stats.tachThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                  <div className="text-right flex flex-col items-end gap-1">
+                    {renderTrend(stats.flightsTrend)}
+                    <div className="text-[10px] text-slate-400 font-medium">{stats.avgMonthlyFlightsThisYear.toFixed(1)}/mes</div>
                   </div>
-                </div>
-                <div className="text-right flex flex-col items-end gap-1">
-                  {renderTrend(stats.tachTrend)}
-                  <div className="text-[10px] text-slate-400 font-medium">{stats.avgMonthlyTachThisYear.toFixed(1)}/mo</div>
-                </div>
-              </div>
-              {/* VUELOS Row */}
-              <div className="flex items-center justify-between pt-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm">✈️</span>
-                  <span className="text-xs text-slate-600">
-                    <span className="font-bold text-slate-900 text-base">{(stats.avgMonthlyFlightsThisYear * 12).toFixed(0)}</span> flights
-                  </span>
-                </div>
-                <div className="text-right flex flex-col items-end gap-1">
-                  {renderTrend(stats.flightsTrend)}
-                  <div className="text-[10px] text-slate-400 font-medium">{stats.avgMonthlyFlightsThisYear.toFixed(1)}/mo</div>
                 </div>
               </div>
             </div>
-          </div>
-        );
+          );
       })()
     } : {}),
   } : {};
@@ -1045,7 +1008,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
 
       {tab === "overview" && overviewMetrics && cardOrder.length > 0 && (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+          <div ref={gridRef} id="overview-grid" className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
             {cardOrder.map(cardId => overviewCards[cardId] ? renderCard(cardId, overviewCards[cardId]) : null)}
           </div>
         </div>
@@ -2254,7 +2217,7 @@ function FuelTable({ logs }: { logs: any[] }) {
             </thead>
             <tbody className="bg-white divide-y divide-slate-100">
               {paginatedLogs.map((l) => (
-                <tr key={l.id} className={`hover:bg-blue-50 transition-colors ${l.source === 'CSV' ? 'bg-slate-50/50' : ''}`}>
+                <tr key={l.id} className={`hover:bg-blue-50/50 transition-colors ${l.source === 'CSV' ? 'bg-slate-50/50' : ''}`}>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-700">
                     {new Date(l.fecha).toLocaleDateString('es-CL')}
                   </td>
@@ -2864,7 +2827,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
           <div className="flex items-center justify-between">
             <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2h-2a2 2 0 01-2-2v-1" />
               </svg>
               Próximas Inspecciones
             </h3>
@@ -3405,9 +3368,9 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
           <div className={`mt-4 p-4 rounded-xl border-2 ${uploadResult.ok ? 'bg-green-500/10 border-green-300' : 'bg-red-500/10 border-red-300'}`}>
             <div className="flex items-start gap-3">
               {uploadResult.ok ? (
-                <svg className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <svg className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2h-2a2 2 0 01-2-2v-1" /></svg>
               ) : (
-                <svg className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <svg className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               )}
               <div className="flex-1">
                 <p className={`text-sm font-bold ${uploadResult.ok ? 'text-green-800' : 'text-red-800'}`}>
@@ -3585,7 +3548,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
         <div className="overflow-x-auto">
           <table className="w-full text-[10px] sm:text-sm">
             <thead>
-              <tr className="bg-slate-100 border-b-2 border-slate-200">
+              <tr className="bg-slate-100 border-b-2 border-slate-300">
                 <th className="px-1 sm:px-3 py-2 sm:py-3 text-left text-[8px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">#</th>
                 <th className="px-1 sm:px-3 py-2 sm:py-3 text-left text-[8px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</th>
                 <th className="px-1 sm:px-3 py-2 sm:py-3 text-left text-[8px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Descripción</th>
@@ -3783,33 +3746,33 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                   <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2h-2a2 2 0 01-2-2v-1" />
                   </svg>
-                  <div>
-                    <h3 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">Documento Adjunto</h3>
-                    <p className="text-xs sm:text-sm text-slate-500 font-medium">Movimiento #{viewingAttachment.correlativo}</p>
-                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <a
-                    href={viewingAttachment.url}
-                    download
-                    className="hidden sm:flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-sm rounded-lg transition-colors"
-                    title="Descargar"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    Descargar
-                  </a>
-                  <button
-                    onClick={() => setViewingAttachment(null)}
-                    className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
-                    aria-label="Cerrar modal"
-                  >
-                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">Documento Adjunto</h3>
+                  <p className="text-xs sm:text-sm text-slate-500 font-medium">Movimiento #{viewingAttachment.correlativo}</p>
                 </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={viewingAttachment.url}
+                  download
+                  className="hidden sm:flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-sm rounded-lg transition-colors"
+                  title="Descargar"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Descargar
+                </a>
+                <button
+                  onClick={() => setViewingAttachment(null)}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+                  aria-label="Cerrar modal"
+                >
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
             </div>
 
@@ -3844,9 +3807,8 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
             </div>
           </div>
         </div>
-      )
-      }
-    </div >
+      )}
+    </div>
   );
 }
 
@@ -3926,7 +3888,7 @@ function FinanceCharts({ flights, transactions, palette }: { flights: any[]; tra
       <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
         <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2v-1" />
           </svg>
           Financial Performance
         </h3>
@@ -4008,7 +3970,7 @@ function DepositsTable({ depositsDetailsByCode, csvPilotNames }: { depositsDetai
         <div>
           <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2v-1" />
             </svg>
             All Deposits — {allDeposits.length} records
           </h3>
