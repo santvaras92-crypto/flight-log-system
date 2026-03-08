@@ -346,18 +346,37 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
     const isBeingDragged = isDragEnabled && draggedCard === cardId;
     // Complex cards span 2 columns on mobile
     const isComplexCard = cardId === 'nextInspections' || cardId === 'activePilots';
+
+    // --- Scroll lock helpers ---
+    const lockScroll = () => {
+      document.body.style.overflow = 'hidden';
+    };
+    const unlockScroll = () => {
+      document.body.style.overflow = '';
+    };
+
+    // --- Touch handlers ---
+    const handleTouchStartScrollLock = (e: React.TouchEvent, cardId: string) => {
+      lockScroll();
+      handleTouchStart(e, cardId);
+    };
+    const handleTouchEndScrollUnlock = (e: React.TouchEvent, cardId: string) => {
+      unlockScroll();
+      handleTouchEnd(e, cardId);
+    };
+
     return (
       <div
         key={cardId}
         data-card-id={cardId}
         draggable
-        onDragStart={() => handleDragStart(cardId)}
+        onDragStart={() => { lockScroll(); handleDragStart(cardId); }}
         onDragOver={handleDragOver}
-        onDrop={() => handleDrop(cardId)}
-        onDragEnd={handleDragEnd}
-        onTouchStart={(e) => handleTouchStart(e, cardId)}
+        onDrop={() => { unlockScroll(); handleDrop(cardId); }}
+        onDragEnd={() => { unlockScroll(); handleDragEnd(); }}
+        onTouchStart={(e) => handleTouchStartScrollLock(e, cardId)}
         onTouchMove={handleTouchMove}
-        onTouchEnd={(e) => handleTouchEnd(e, cardId)}
+        onTouchEnd={(e) => handleTouchEndScrollUnlock(e, cardId)}
         className={`${isDragging ? 'opacity-50 scale-95' : 'opacity-100'} ${isComplexCard ? 'col-span-2 lg:col-span-1' : ''} transition-all duration-150 cursor-move select-none`}
         style={{
           WebkitUserSelect: 'none',
