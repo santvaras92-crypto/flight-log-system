@@ -742,30 +742,30 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         };
 
         return (
-          <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] flex flex-col justify-between`}>
+          <div className={`${palette.card} rounded-xl p-3 sm:p-4 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] flex flex-col justify-between`}>
 
             {/* Header (Coincide con las otras tarjetas) */}
-            <div className="flex items-start justify-between mb-2">
-              <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-violet-100 flex items-center justify-center">
+            <div className="flex items-start justify-between mb-1 sm:mb-2">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-violet-100 flex items-center justify-center">
                 <svg className="w-4 h-4 sm:w-6 sm:h-6 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
               </div>
-              <span className="px-2 py-1 bg-violet-50 text-violet-700 text-[9px] sm:text-xs font-bold rounded-full border border-violet-100">
+              <span className="px-2 py-1 bg-violet-50 text-violet-700 text-[9px] sm:text-[10px] font-bold rounded-full border border-violet-100">
                 Ratio H/T: {stats.hobbsTachRatio.toFixed(2)}
               </span>
             </div>
 
             <div>
-              <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide">Estadísticas Anuales</h3>
-              <p className="text-[9px] sm:text-xs text-slate-400 mb-2 sm:mb-4">Últimos 365 días</p>
+              <h3 className="text-slate-500 text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide">Estadísticas Anuales</h3>
+              <p className="text-[9px] sm:text-[10px] text-slate-400 mb-1 sm:mb-2">Últimos 365 días</p>
             </div>
 
             {/* Clean List Data */}
-            <div className="flex flex-col gap-2 sm:gap-3 flex-1 mt-auto">
+            <div className="flex flex-col gap-1.5 sm:gap-2 flex-1 mt-auto">
 
               {/* HOBBS Row */}
-              <div className="flex items-end justify-between border-b border-slate-100/60 pb-2">
+              <div className="flex items-end justify-between border-b border-slate-100/60 pb-1.5 sm:pb-2">
                 <div>
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <span className="text-xs sm:text-sm">🕐</span>
@@ -782,7 +782,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               </div>
 
               {/* TACH Row */}
-              <div className="flex items-end justify-between border-b border-slate-100/60 pb-2">
+              <div className="flex items-end justify-between border-b border-slate-100/60 pb-1.5 sm:pb-2">
                 <div>
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <span className="text-xs sm:text-sm">⏱️</span>
@@ -799,7 +799,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               </div>
 
               {/* VUELOS Row */}
-              <div className="flex items-center justify-between pt-1">
+              <div className="flex items-center justify-between pt-0.5 sm:pt-1">
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs sm:text-sm">✈️</span>
                   <span className="text-[10px] sm:text-xs text-slate-600">
