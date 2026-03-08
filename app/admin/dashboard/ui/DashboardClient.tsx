@@ -355,60 +355,59 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
     }
   };
 
+  // --- Robust drag state (must be at component top level, NOT inside renderCard) ---
+  const dragActivatedRef = useRef(false);
+  const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // --- Scroll lock helpers ---
+  const lockScroll = () => {
+    document.body.style.overflow = 'hidden';
+    const grid = document.getElementById('overview-grid');
+    if (grid) grid.style.touchAction = 'none';
+  };
+  const unlockScroll = () => {
+    document.body.style.overflow = '';
+    const grid = document.getElementById('overview-grid');
+    if (grid) grid.style.touchAction = '';
+  };
+
+  // --- Long press drag handlers ---
+  const handleTouchStartLongPress = (e: React.TouchEvent, cardId: string) => {
+    dragActivatedRef.current = false;
+    longPressTimeoutRef.current = setTimeout(() => {
+      dragActivatedRef.current = true;
+      lockScroll();
+      handleDragStart(cardId);
+    }, 400);
+  };
+  const handleTouchMoveLongPress = (e: React.TouchEvent) => {
+    if (!dragActivatedRef.current && longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+    if (dragActivatedRef.current) {
+      e.preventDefault(); // Bloquea scroll nativo
+      handleTouchMove(e);
+    }
+  };
+  const handleTouchEndLongPress = (e: React.TouchEvent, cardId: string) => {
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+    if (dragActivatedRef.current) {
+      unlockScroll();
+      handleDragEnd();
+    } else {
+      handleTouchEnd(e, cardId);
+    }
+    dragActivatedRef.current = false;
+  };
+
   // Render individual metric card with drag-and-drop
   const renderCard = (cardId: string, content: JSX.Element) => {
     const isDragging = draggedCard === cardId;
-    const isBeingDragged = isDragEnabled && draggedCard === cardId;
     const isComplexCard = cardId === 'nextInspections' || cardId === 'activePilots';
-
-    // --- Robust drag state ---
-    const dragActivatedRef = useRef(false);
-    const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-    // --- Scroll lock helpers ---
-    const lockScroll = () => {
-      document.body.style.overflow = 'hidden';
-      const grid = document.getElementById('overview-grid');
-      if (grid) grid.style.touchAction = 'none';
-    };
-    const unlockScroll = () => {
-      document.body.style.overflow = '';
-      const grid = document.getElementById('overview-grid');
-      if (grid) grid.style.touchAction = '';
-    };
-
-    // --- Long press drag handlers ---
-    const handleTouchStartLongPress = (e: React.TouchEvent, cardId: string) => {
-      dragActivatedRef.current = false;
-      longPressTimeoutRef.current = setTimeout(() => {
-        dragActivatedRef.current = true;
-        lockScroll();
-        handleDragStart(cardId);
-      }, 400);
-    };
-    const handleTouchMoveLongPress = (e: React.TouchEvent) => {
-      if (!dragActivatedRef.current && longPressTimeoutRef.current) {
-        clearTimeout(longPressTimeoutRef.current);
-        longPressTimeoutRef.current = null;
-      }
-      if (dragActivatedRef.current) {
-        e.preventDefault(); // Bloquea scroll nativo
-        handleTouchMove(e);
-      }
-    };
-    const handleTouchEndLongPress = (e: React.TouchEvent, cardId: string) => {
-      if (longPressTimeoutRef.current) {
-        clearTimeout(longPressTimeoutRef.current);
-        longPressTimeoutRef.current = null;
-      }
-      if (dragActivatedRef.current) {
-        unlockScroll();
-        handleDragEnd();
-      } else {
-        handleTouchEnd(e, cardId);
-      }
-      dragActivatedRef.current = false;
-    };
 
     return (
       <div
