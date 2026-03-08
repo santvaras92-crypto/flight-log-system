@@ -2089,7 +2089,7 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
       <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-            <svg className="w-4.5 h-4.5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
           </div>
@@ -2219,7 +2219,7 @@ function FuelTable({ logs }: { logs: any[] }) {
         <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
-              <svg className="w-4.5 h-4.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
@@ -2481,7 +2481,7 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-              <svg className="w-4.5 h-4.5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M3 12h18M3 17h18" />
               </svg>
             </div>
@@ -2858,7 +2858,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
-                <svg className="w-4.5 h-4.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
@@ -2931,7 +2931,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
         <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-              <svg className="w-4.5 h-4.5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </div>
@@ -3520,7 +3520,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-                <svg className="w-4.5 h-4.5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
@@ -3926,7 +3926,7 @@ function FinanceCharts({ flights, transactions, palette }: { flights: any[]; tra
       <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-            <svg className="w-4.5 h-4.5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2v-1" />
             </svg>
           </div>
@@ -3944,6 +3944,7 @@ function DepositsTable({ depositsDetailsByCode, csvPilotNames }: { depositsDetai
   const [sortBy, setSortBy] = useState<"date" | "pilot" | "amount">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [editMode, setEditMode] = useState(false);
   const router = useRouter();
 
   const allDeposits = useMemo(() => {
@@ -4010,7 +4011,7 @@ function DepositsTable({ depositsDetailsByCode, csvPilotNames }: { depositsDetai
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-              <svg className="w-4.5 h-4.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2v-1" />
               </svg>
             </div>
@@ -4019,12 +4020,20 @@ function DepositsTable({ depositsDetailsByCode, csvPilotNames }: { depositsDetai
               <p className="text-xs text-slate-500">{allDeposits.length} records · Total: ${totalAmount.toLocaleString('es-CL')}</p>
             </div>
           </div>
-          <a
-            href="/admin/deposits"
-            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-md text-xs font-medium transition-colors"
-          >
-            Fix Deposit
-          </a>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setEditMode(!editMode)}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${editMode ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+            >
+              {editMode ? 'Done' : 'Edit'}
+            </button>
+            <a
+              href="/admin/deposits"
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-md text-xs font-medium transition-colors"
+            >
+              Fix Deposit
+            </a>
+          </div>
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -4052,9 +4061,11 @@ function DepositsTable({ depositsDetailsByCode, csvPilotNames }: { depositsDetai
               >
                 Amount {sortBy === "amount" && (sortOrder === "desc" ? "↓" : "↑")}
               </th>
-              <th className="px-3 sm:px-4 py-3 text-center text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Actions
-              </th>
+              {editMode && (
+                <th className="px-3 sm:px-4 py-3 text-center text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -4069,19 +4080,21 @@ function DepositsTable({ depositsDetailsByCode, csvPilotNames }: { depositsDetai
                 <td className="px-3 sm:px-4 py-2.5 text-right text-xs sm:text-sm text-emerald-600 font-semibold font-mono">
                   ${d.monto.toLocaleString('es-CL')}
                 </td>
-                <td className="px-3 sm:px-4 py-2.5 text-center">
-                  {d.source === 'DB' && d.id ? (
-                    <button
-                      onClick={() => handleDelete(d.id!, d.pilotName, d.monto)}
-                      disabled={deletingId === d.id}
-                      className="px-2 py-1 rounded-md bg-red-50 text-red-600 hover:bg-red-100 text-[10px] sm:text-xs font-medium disabled:opacity-50 border border-red-200 transition-colors"
-                    >
-                      {deletingId === d.id ? '...' : 'Delete'}
-                    </button>
-                  ) : (
-                    <span className="text-slate-400 text-xs">—</span>
-                  )}
-                </td>
+                {editMode && (
+                  <td className="px-3 sm:px-4 py-2.5 text-center">
+                    {d.source === 'DB' && d.id ? (
+                      <button
+                        onClick={() => handleDelete(d.id!, d.pilotName, d.monto)}
+                        disabled={deletingId === d.id}
+                        className="px-2 py-1 rounded-md bg-red-50 text-red-600 hover:bg-red-100 text-[10px] sm:text-xs font-medium disabled:opacity-50 border border-red-200 transition-colors"
+                      >
+                        {deletingId === d.id ? '...' : 'Delete'}
+                      </button>
+                    ) : (
+                      <span className="text-slate-400 text-xs">—</span>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
