@@ -3995,8 +3995,10 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   const [overhaulMotorCLP, setOverhaulMotorCLP] = useState(stored?.overhaulMotorCLP ?? 47926129);
   const [overhaulLaborCLP, setOverhaulLaborCLP] = useState(stored?.overhaulLaborCLP ?? 8000000);
   const [clInflationPct, setClInflationPct] = useState(stored?.clInflationPct ?? 16.35);
-  // Hours/year: LIVE from rolling 365-day hobbs total
-  const horasAnuales = Math.round(overviewMetrics?.annualStats?.hobbsThisYear ?? 220);
+  // Hours/year: defaults to LIVE rolling 365-day hobbs, but user can override
+  const liveHorasAnuales = Math.round(overviewMetrics?.annualStats?.hobbsThisYear ?? 220);
+  const [horasAnuales, setHorasAnuales] = useState(stored?.horasAnuales ?? liveHorasAnuales);
+  const horasIsLive = horasAnuales === liveHorasAnuales;
   // overhaulCycleHrs is now computed live from ENGINE component (TBO - SMOH)
   const engineComp = components?.find((c: any) => c.tipo === 'ENGINE');
   const overhaulCycleHrs = engineComp ? Math.max(0, Number(engineComp.limite_tbo) - Number(engineComp.horas_acumuladas)) : 1379.1;
@@ -4029,7 +4031,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD,
         cambioAceiteCLP, revision100CLP, overhaulMotorCLP, overhaulLaborCLP,
-        clInflationPct, seguroAnual, hangarAnual,
+        clInflationPct, horasAnuales, seguroAnual, hangarAnual,
         toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual,
         recaudado, valorHora, valorHoraUnit, interestRate, clForwardInflation, fuelTrendRate,
         engineMarketPriceUSD,
@@ -4037,7 +4039,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     } catch {}
   }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD,
     cambioAceiteCLP, revision100CLP, overhaulMotorCLP, overhaulLaborCLP,
-    clInflationPct, seguroAnual, hangarAnual,
+    clInflationPct, horasAnuales, seguroAnual, hangarAnual,
     toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual,
     recaudado, valorHora, valorHoraUnit, interestRate, clForwardInflation, fuelTrendRate,
     engineMarketPriceUSD]);
@@ -4492,7 +4494,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               <div>
                 <h3 className="text-sm font-semibold text-slate-800">Cost Analysis — C-172 CC-AQI</h3>
                 <p className="text-xs text-slate-500 flex items-center gap-1.5 flex-wrap">
-                  <span>Operating cost model · {horasAnuales} hobbs hrs/yr</span>
+                  <span>Operating cost model · {horasAnuales} hobbs hrs/yr{!horasIsLive && ' ✏️'}</span>
                   {(liveIndicators.uf || liveIndicators.usd || liveIndicators.fuel || liveIndicators.engine || liveIndicators.ipc) && (
                     <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">
                       LIVE {[liveIndicators.uf && 'UF', liveIndicators.usd && 'USD', liveIndicators.fuel && 'AVGAS', liveIndicators.engine && 'ENGINE', liveIndicators.ipc && 'IPC'].filter(Boolean).join('+')}
@@ -4662,10 +4664,21 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                     </div>
                   </div>
                   <div className="flex items-center justify-between gap-2 py-1.5">
-                    <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">Hours / year (hobbs)<span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">LIVE</span></span>
+                    <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">
+                      Hours / year
+                      {horasIsLive
+                        ? <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">LIVE</span>
+                        : <button onClick={() => setHorasAnuales(liveHorasAnuales)} className="px-1.5 py-0.5 text-[9px] font-bold bg-amber-100 text-amber-700 rounded-full hover:bg-amber-200 transition-colors" title={`Reset to live: ${liveHorasAnuales} hrs`}>↺ LIVE {liveHorasAnuales}</button>
+                      }
+                    </span>
                     <div className="flex items-center gap-1">
-                      <span className="text-[11px] font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">{horasAnuales} hrs</span>
-                      <span className="text-[9px] text-slate-400">({(overviewMetrics?.annualStats?.avgMonthlyHobbsThisYear ?? 0).toFixed(1)}/mo)</span>
+                      <input
+                        type="number"
+                        value={horasAnuales}
+                        onChange={e => setHorasAnuales(Number(e.target.value) || 0)}
+                        className={`w-16 text-right text-[11px] font-mono font-bold px-2 py-0.5 rounded border-0 focus:ring-1 focus:ring-blue-400 ${horasIsLive ? 'text-blue-700 bg-blue-50' : 'text-amber-700 bg-amber-50'}`}
+                      />
+                      <span className="text-[9px] text-slate-400">hrs ({(overviewMetrics?.annualStats?.avgMonthlyHobbsThisYear ?? 0).toFixed(1)}/mo)</span>
                     </div>
                   </div>
                 </div>
