@@ -4191,18 +4191,27 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     return { slope, intercept, rSquared, pairs: pairs.length, brentImpliedAvgas, brentImpliedRate, currentBrentCLP };
   }, [brentData, fuelPriceAnalysis, usdRate]);
 
-  // Auto-populate AVGAS price from fuel records (3-month weighted avg) + trend rate from CAGRCAGR, Brent-implied, 5%)
+  // Conservative AVGAS pricing: always use max(3-month avg, Brent-implied)
+  // so the cost model never underestimates fuel cost
+  const avgasSource = useMemo(() => {
+    if (!fuelPriceAnalysis || fuelPriceAnalysis.avg3m <= 0) return null;
+    const avg3m = fuelPriceAnalysis.avg3m;
+    const brentImplied = (brentCorrelation && brentCorrelation.rSquared >= 0.3) ? brentCorrelation.brentImpliedAvgas : 0;
+    const useBrent = brentImplied > avg3m;
+    return { price: useBrent ? brentImplied : avg3m, source: useBrent ? 'brent' as const : 'avg3m' as const, avg3m, brentImplied };
+  }, [fuelPriceAnalysis, brentCorrelation]);
+
   useEffect(() => {
-    if (fuelPriceAnalysis && fuelPriceAnalysis.avg3m > 0) {
-      setAvgasLiterCLP(fuelPriceAnalysis.avg3m);
-      // Conservative: use the highest of CAGR, Brent-implied rate, or 5% floor
-      const cagrRate = fuelPriceAnalysis.cagr > 0 ? fuelPriceAnalysis.cagr : 5;
+    if (avgasSource) {
+      setAvgasLiterCLP(avgasSource.price);
+      // Trend rate = max(CAGR, Brent-implied rate, 5% floor)
+      const cagrRate = fuelPriceAnalysis!.cagr > 0 ? fuelPriceAnalysis!.cagr : 5;
       const brentRate = (brentCorrelation && brentCorrelation.rSquared >= 0.3) ? brentCorrelation.brentImpliedRate : 0;
       const bestRate = Math.max(cagrRate, brentRate, 5);
       setFuelTrendRate(Math.round(bestRate * 10) / 10);
       setLiveIndicators(prev => ({ ...prev, fuel: true }));
     }
-  }, [fuelPriceAnalysis, brentCorrelation]);
+  }, [avgasSource]);
 
   // Auto-populate IPC Chile cumulative inflation from mindicador.cl (Aug 2022 → present)
   useEffect(() => {
@@ -4646,7 +4655,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                     </div>
                   </div>
                   <div className="flex items-center justify-between gap-2 py-1.5">
-                    <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">AVGAS / liter{liveIndicators.fuel && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">LIVE 3mo avg</span>}</span>
+                    <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">AVGAS / liter{liveIndicators.fuel && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">LIVE {avgasSource?.source === 'brent' ? '🛢️ Brent' : '3mo avg'}</span>}</span>
                     <div className="flex items-center gap-1">
                       <span className="text-[10px] text-slate-400">CLP</span>
                       <input type="number" value={avgasLiterCLP} onChange={e => setAvgasLiterCLP(Number(e.target.value) || 0)} className="w-24 sm:w-28 text-right text-xs font-mono bg-slate-50 border border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none" />
@@ -5453,7 +5462,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 <div className="text-center p-3 bg-amber-50 rounded-lg border border-amber-100">
                   <p className="text-lg font-bold text-amber-700 font-mono">${formatCurrency(avgasLiterCLP)}</p>
                   <p className="text-[10px] text-slate-500">Current $/L</p>
-                  <p className="text-[9px] text-slate-400">3-mo weighted avg</p>
+                  <p className="text-[9px] text-slate-400">{avgasSource?.source === 'brent' ? '🛢️ Brent implied (> 3mo avg)' : '3-mo weighted avg'}</p>
                 </div>
                 <div className="text-center p-3 bg-red-50 rounded-lg border border-red-100">
                   <p className="text-lg font-bold text-red-700 font-mono">${formatCurrency(Math.round(computed.projectedAvgasPrice))}</p>
