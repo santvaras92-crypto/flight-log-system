@@ -1,12 +1,12 @@
-# Force clean install and build - Mar 8 2026 v13 - disable webpack cache
+# Force clean build - Mar 8 2026 v14 - empty cache mount contents
 [phases.setup]
 nixPkgs = ["nodejs_18", "npm-9_x", "openssl"]
 
 [phases.install]
-cmds = ["rm -rf node_modules/.cache .next", "npm ci --force"]
+cmds = ["find .next -mindepth 1 -delete 2>/dev/null; find node_modules/.cache -mindepth 1 -delete 2>/dev/null; true", "npm ci --force"]
 
 [phases.build]
-cmds = ["rm -rf .next node_modules/.cache", "npm run build"]
+cmds = ["find .next -mindepth 1 -delete 2>/dev/null; find node_modules/.cache -mindepth 1 -delete 2>/dev/null; true", "npm run build"]
 
 [start]
 cmd = "npm start"
