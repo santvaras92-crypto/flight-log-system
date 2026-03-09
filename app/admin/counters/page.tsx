@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export default async function CountersPage() {
   // Obtener el último vuelo registrado
   const lastFlight = await prisma.flight.findFirst({
-    orderBy: { fecha: 'desc' },
+    orderBy: [{ fecha: 'desc' }, { id: 'desc' }],
     select: {
       id: true,
       fecha: true,

@@ -126,7 +126,7 @@ export default async function PilotDashboardPage() {
   const getLastTachForDetalle = async (keyword: string): Promise<number | null> => {
     const flight = await prisma.flight.findFirst({
       where: { detalle: { contains: keyword, mode: 'insensitive' } },
-      orderBy: { fecha: 'desc' },
+      orderBy: [{ fecha: 'desc' }, { id: 'desc' }],
       select: { tach_inicio: true, tach_fin: true, diff_tach: true }
     });
     if (!flight) return null;
@@ -146,7 +146,7 @@ export default async function PilotDashboardPage() {
           { detalle: { contains: 'REVISION 100 HORAS', mode: 'insensitive' } },
         ]
       },
-      orderBy: { fecha: 'desc' },
+      orderBy: [{ fecha: 'desc' }, { id: 'desc' }],
       take: 1,
       select: { tach_inicio: true, tach_fin: true, diff_tach: true }
     });

@@ -31,7 +31,7 @@ export async function registerOverhaul(input: RegisterOverhaulInput) {
     // Get the current airframe hours from the last flight
     const lastFlight = await prisma.flight.findFirst({
       where: { aircraftId },
-      orderBy: { fecha: 'desc' },
+      orderBy: [{ fecha: 'desc' }, { id: 'desc' }],
       select: { airframe_hours: true },
     });
 

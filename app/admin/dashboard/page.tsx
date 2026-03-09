@@ -293,7 +293,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       const getLastTachForDetalle = async (keyword: string): Promise<number | null> => {
         const flight = await prisma.flight.findFirst({
           where: { detalle: { contains: keyword, mode: 'insensitive' } },
-          orderBy: { fecha: 'desc' },
+          orderBy: [{ fecha: 'desc' }, { id: 'desc' }],
           select: { tach_inicio: true, tach_fin: true, diff_tach: true }
         });
         if (!flight) return null;
@@ -313,7 +313,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
               { detalle: { contains: 'REVISION 100 HORAS', mode: 'insensitive' } },
             ]
           },
-          orderBy: { fecha: 'desc' },
+          orderBy: [{ fecha: 'desc' }, { id: 'desc' }],
           take: 1,
           select: { tach_inicio: true, tach_fin: true, diff_tach: true }
         });
@@ -637,7 +637,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       // Get the last flight for this aircraft
       const lastFlight = await prisma.flight.findFirst({
         where: { aircraftId: a.matricula },
-        orderBy: { fecha: 'desc' },
+        orderBy: [{ fecha: 'desc' }, { id: 'desc' }],
         select: {
           airframe_hours: true,
           engine_hours: true,
