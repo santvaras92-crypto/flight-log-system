@@ -4555,7 +4555,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 <div className="space-y-0.5 divide-y divide-slate-100">
                   <ParamInput label="Oil change" value={cambioAceiteCLP} onChange={setCambioAceiteCLP} unit="CLP" />
                   <ParamInput label="100hr inspection" value={revision100CLP} onChange={setRevision100CLP} unit="CLP" />
-                  <ParamInput label="Overhaul cycle" value={overhaulCycleHrs} onChange={setOverhaulCycleHrs} unit="hrs" />
+                  <ParamInput label="Hrs to TBO (tach)" value={overhaulCycleHrs} onChange={setOverhaulCycleHrs} unit="hrs" />
                   <ParamInput label="Hours / year" value={horasAnuales} onChange={setHorasAnuales} unit="hrs" />
                 </div>
               </div>
