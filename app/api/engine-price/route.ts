@@ -2,9 +2,17 @@ import { NextResponse } from "next/server";
 
 // Scrape current RENPL-RT8164 Lycoming Rebuilt O-320-D2J price from Air Power Inc
 // Cached for 24 hours to avoid excessive requests
-let cached: { price: number; core: number; total: number; fetchedAt: string } | null = null;
+let cached: { price: number; core: number; total: number; fetchedAt: string; source: string } | null = null;
 let cachedAt = 0;
 const CACHE_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+const FALLBACK_PRICES = {
+  price: 47415.0,
+  core: 29500.0,
+  total: 76915.0,
+  fetchedAt: null as string | null,
+  fallback: true,
+};
 
 export async function GET() {
   const now = Date.now();
@@ -47,6 +55,7 @@ export async function GET() {
         core,
         total,
         fetchedAt: new Date().toISOString(),
+        source: 'airpowerinc.com (scraped)',
       };
       cachedAt = now;
       return NextResponse.json({ ...cached, fromCache: false });
@@ -54,12 +63,9 @@ export async function GET() {
 
     // Fallback: return last known price if scraping fails to parse
     return NextResponse.json({
-      price: 47415.0,
-      core: 29500.0,
-      total: 76915.0,
-      fetchedAt: null,
+      ...FALLBACK_PRICES,
       fromCache: false,
-      fallback: true,
+      source: 'hardcoded (scrape failed)',
     });
   } catch (err: any) {
     // Return fallback on error
@@ -67,12 +73,9 @@ export async function GET() {
       return NextResponse.json({ ...cached, fromCache: true, error: err.message });
     }
     return NextResponse.json({
-      price: 47415.0,
-      core: 29500.0,
-      total: 76915.0,
-      fetchedAt: null,
+      ...FALLBACK_PRICES,
       fromCache: false,
-      fallback: true,
+      source: 'hardcoded (error)',
       error: err.message,
     });
   }

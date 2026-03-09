@@ -4304,6 +4304,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   }, []);
 
   // Auto-populate engine market price from airpowerinc.com (RENPL-RT8164 O-320-D2J)
+  const [enginePriceSource, setEnginePriceSource] = useState<string | null>(null);
   useEffect(() => {
     fetch('/api/engine-price')
       .then(res => res.ok ? res.json() : null)
@@ -4311,7 +4312,8 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         if (!data) return;
         if (data.price > 0) {
           setEngineMarketPriceUSD(data.price);
-          setLiveIndicators(prev => ({ ...prev, engine: true }));
+          setEnginePriceSource(data.source || (data.fallback ? 'hardcoded' : 'scraped'));
+          setLiveIndicators(prev => ({ ...prev, engine: !data.fallback }));
         }
       })
       .catch(() => {}); // Silent fail, keeps defaults
@@ -5257,8 +5259,10 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 Market Replacement Price (airpowerinc.com)
               </p>
-              {liveIndicators.engine && (
-                <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full animate-pulse">LIVE</span>
+              {enginePriceSource && (
+                <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded-full ${liveIndicators.engine ? 'bg-emerald-100 text-emerald-700 animate-pulse' : 'bg-amber-100 text-amber-700'}`}>
+                  {liveIndicators.engine ? 'LIVE · scraped' : '⚠️ fallback'}
+                </span>
               )}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
