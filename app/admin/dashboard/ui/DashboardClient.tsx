@@ -4169,9 +4169,8 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       .catch(() => {}); // Silent fail, keeps defaults
   }, []);
 
-  // Consumption rates
-  const fuelGPH = 7;
-  const fuelLPH = fuelGPH * 3.785;
+  // Consumption rates — use real fuel rate from flight data when available
+  const fuelLPH = overviewMetrics?.fuelRateLph || 26.5; // fallback: 7 GPH × 3.785
   const oilLPH = 0.0475;
 
   // --- Computed values ---
@@ -4573,6 +4572,14 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                     <div className="flex items-center gap-1">
                       <span className="text-[10px] text-slate-400">CLP</span>
                       <input type="number" value={avgasLiterCLP} onChange={e => setAvgasLiterCLP(Number(e.target.value) || 0)} className="w-24 sm:w-28 text-right text-xs font-mono bg-slate-50 border border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none" />
+                    </div>
+                  </div>
+                  {/* Fuel rate — read-only, from real flight data */}
+                  <div className="flex items-center justify-between gap-2 py-1.5">
+                    <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">Fuel rate{overviewMetrics?.fuelRateLph && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">LIVE</span>}</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[11px] font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">{fuelLPH.toFixed(1)} LPH</span>
+                      <span className="text-[9px] text-slate-400">({(fuelLPH / 3.785).toFixed(1)} GPH)</span>
                     </div>
                   </div>
                   <ParamInput label="Oil / liter" value={aceiteLiterCLP} onChange={setAceiteLiterCLP} unit="CLP" />
