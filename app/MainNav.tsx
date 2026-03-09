@@ -7,8 +7,8 @@ import NavLinks from "./NavLinks";
 export default function MainNav() {
   const pathname = usePathname();
   
-  // Hide nav on pilot portal and login pages
-  if (pathname?.startsWith('/pilot') || pathname?.startsWith('/login') || pathname?.startsWith('/forgot-password') || pathname?.startsWith('/reset-password')) {
+  // Hide nav on pilot portal, login, and register pages (they have their own nav)
+  if (pathname?.startsWith('/pilot') || pathname?.startsWith('/login') || pathname?.startsWith('/forgot-password') || pathname?.startsWith('/reset-password') || pathname?.startsWith('/register')) {
     return null;
   }
 
