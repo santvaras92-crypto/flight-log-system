@@ -4236,6 +4236,14 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         ? projectedGap * rMonthly / (Math.pow(1 + rMonthly, monthsToOverhaul) - 1)
         : projectedGap / monthsToOverhaul)
       : 0;
+    // FV of the annuity (verification: PMT payments + compound interest should equal projectedGap)
+    const fvAnnuity = projectedMonthlyTarget > 0
+      ? (rMonthly > 0
+        ? projectedMonthlyTarget * (Math.pow(1 + rMonthly, monthsToOverhaul) - 1) / rMonthly
+        : projectedMonthlyTarget * monthsToOverhaul)
+      : 0;
+    // Total available at TBO = existing funds grown + annuity from monthly savings
+    const totalAtTBO = projectedFunds + fvAnnuity;
 
     // Variable costs per hour (hobbs)
     const combustibleHr = fuelLPH * avgasLiterCLP;
@@ -4261,15 +4269,8 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const gananciaHr = valorHoraCLP - totalCostoHr;
     const margen = valorHoraCLP > 0 ? (gananciaHr / valorHoraCLP) * 100 : 0;
 
-    // Overhaul funding — PMT with compound interest on monthly savings
+    // Overhaul funding
     const faltaOverhaul = effectiveOverhaulCLP - recaudado;
-    const nominalMonths = Math.max(anosRemanentes * 12, 1);
-    const metaMensualOverhaul = faltaOverhaul > 0
-      ? (rMonthly > 0
-        ? faltaOverhaul * rMonthly / (Math.pow(1 + rMonthly, nominalMonths) - 1)
-        : faltaOverhaul / nominalMonths)
-      : 0;
-    const metaAnualOverhaul = metaMensualOverhaul * 12;
 
     // ===== FUEL COST PROJECTIONS =====
     const fuelTrend = fuelTrendRate / 100;
@@ -4317,12 +4318,12 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       combustibleHr, aceiteHr, manttoHr, mantto100hr, manttoOil, manttoOverhaul,
       totalVariableHr, overhaulProvisionAnual, totalFijoAnual, totalFijoMes, totalFijoHr,
       totalCostoHr, gananciaHr, margen, faltaOverhaul, anosRemanentes,
-      metaAnualOverhaul, metaMensualOverhaul,
       effectiveOverhaulCLP, overhaulSource, ipcOverhaulCLP,
       fixedBreakdown, variableBreakdown, costPerHourBreakdown,
       // Financial projections (CLP single-currency model)
       yearsToOverhaul, currentFunds, projectedFunds, interestEarned,
       inflatedOverhaulCost, inflationIncrease, projectedGap, projectedMonthlyTarget,
+      fvAnnuity, monthsToOverhaul, totalAtTBO,
       motorTodayCLP, laborTodayCLP,
       // Market replacement (live engine price + internación)
       motorFobCLP, internacionRatio, motorInternacionCLP, internacionCostCLP, marketReplacementCLP,
@@ -5095,11 +5096,12 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               <div className="text-center p-3 bg-red-50 rounded-lg">
                 <p className="text-lg font-bold text-red-700 font-mono">${formatCurrency(Math.round(computed.faltaOverhaul))}</p>
                 <p className="text-[10px] text-slate-500">Remaining Gap</p>
+                <p className="text-[9px] text-slate-400 font-mono mt-0.5">{(computed.faltaOverhaul / computed.effectiveOverhaulCLP * 100).toFixed(1)}% del costo</p>
               </div>
-              <div className="text-center p-3 bg-blue-50 rounded-lg">
-                <p className="text-lg font-bold text-blue-700 font-mono">${formatCurrency(Math.round(computed.metaMensualOverhaul))}</p>
-                <p className="text-[10px] text-slate-500">Monthly Target</p>
-                <p className="text-[9px] text-blue-500 font-mono mt-0.5">invirtiendo al {interestRate}%/yr</p>
+              <div className="text-center p-3 bg-amber-50 rounded-lg">
+                <p className="text-lg font-bold text-amber-700 font-mono">{computed.anosRemanentes.toFixed(1)} años</p>
+                <p className="text-[10px] text-slate-500">Time to TBO</p>
+                <p className="text-[9px] text-slate-400 font-mono mt-0.5">{Math.round(computed.anosRemanentes * 12)} meses · {horasAnuales} hrs/yr</p>
               </div>
             </div>
           </div>
@@ -5125,13 +5127,39 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 <p className={`text-lg font-bold font-mono ${computed.projectedGap > 0 ? 'text-red-700' : 'text-emerald-700'}`}>${formatCurrency(Math.abs(Math.round(computed.projectedGap)))}</p>
                 <p className="text-[10px] text-slate-500">{computed.projectedGap > 0 ? 'Projected Gap' : 'Projected Surplus'}</p>
               </div>
-              <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-100">
-                <p className="text-lg font-bold text-blue-700 font-mono">${formatCurrency(Math.round(computed.projectedMonthlyTarget))}</p>
-                <p className="text-[10px] text-slate-500">Adj. Monthly Target</p>
-                <p className="text-[9px] text-slate-400 font-mono mt-0.5">PMT al {interestRate}%/yr · vs ${formatCurrency(Math.round(computed.metaMensualOverhaul))} nominal</p>
+              <div className="text-center p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-300 ring-2 ring-blue-100 shadow-sm">
+                <p className="text-xl font-extrabold text-blue-700 font-mono">${formatCurrency(Math.round(computed.projectedMonthlyTarget))}</p>
+                <p className="text-[10px] text-blue-600 font-bold">💰 Monthly Savings Target</p>
+                <p className="text-[9px] text-blue-500 font-mono mt-0.5">PMT al {interestRate}%/yr · {Math.round(computed.monthsToOverhaul)} cuotas</p>
               </div>
             </div>
           </div>
+
+          {/* Savings Plan Verification */}
+          {computed.projectedGap > 0 && (
+            <div className="mb-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-3">
+              <p className="text-[10px] font-semibold text-blue-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <span>✅</span> Verificación del Plan de Ahorro
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] font-mono">
+                <div className="bg-white/70 rounded p-2">
+                  <p className="text-slate-500 text-[9px] mb-0.5">Fondos existentes al TBO</p>
+                  <p className="text-emerald-700 font-bold">${formatCurrency(Math.round(computed.projectedFunds))}</p>
+                  <p className="text-[9px] text-slate-400">${formatCurrency(recaudado)} × (1+{interestRate}%)^{computed.yearsToOverhaul.toFixed(1)}</p>
+                </div>
+                <div className="bg-white/70 rounded p-2">
+                  <p className="text-slate-500 text-[9px] mb-0.5">{Math.round(computed.monthsToOverhaul)} cuotas de ${formatCurrency(Math.round(computed.projectedMonthlyTarget))}/mes</p>
+                  <p className="text-blue-700 font-bold">${formatCurrency(Math.round(computed.fvAnnuity))}</p>
+                  <p className="text-[9px] text-slate-400">PMT × ((1+r)^n - 1) / r</p>
+                </div>
+                <div className="bg-white/70 rounded p-2">
+                  <p className="text-slate-500 text-[9px] mb-0.5">Total disponible al TBO</p>
+                  <p className="text-indigo-700 font-bold">${formatCurrency(Math.round(computed.totalAtTBO))}</p>
+                  <p className="text-[9px] text-slate-400">vs costo ${formatCurrency(Math.round(computed.inflatedOverhaulCost))} {computed.totalAtTBO >= computed.inflatedOverhaulCost ? '✅' : '⚠️'}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Progress bar */}
           <div className="mt-2">
@@ -5170,7 +5198,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 Costo total (<span className="font-mono">${formatCurrency(overhaulCLP)}</span>) proyectado con <span className="font-bold">{clForwardInflation}%/yr IPC Chile</span> → <span className="font-mono text-red-600">${formatCurrency(Math.round(computed.inflatedOverhaulCost))}</span>.
                 Recaudado: <span className="font-mono font-bold">${formatCurrency(recaudado)}</span> crecen a <span className="font-mono font-bold text-emerald-600">${formatCurrency(Math.round(computed.projectedFunds))}</span> al {interestRate}%/yr.
                 {computed.projectedGap > 0
-                  ? ` Necesitas ahorrar $${formatCurrency(Math.round(computed.projectedMonthlyTarget))}/mes (invirtiendo al ${interestRate}%/yr) para cubrir la brecha proyectada.`
+                  ? ` Brecha proyectada: $${formatCurrency(Math.round(computed.projectedGap))}. Plan: invertir $${formatCurrency(Math.round(computed.projectedMonthlyTarget))}/mes en instrumento de bajo riesgo al ${interestRate}%/yr durante ${Math.round(computed.monthsToOverhaul)} meses. Al TBO: fondos $${formatCurrency(Math.round(computed.projectedFunds))} + cuotas $${formatCurrency(Math.round(computed.fvAnnuity))} = $${formatCurrency(Math.round(computed.totalAtTBO))} ≥ costo $${formatCurrency(Math.round(computed.inflatedOverhaulCost))} (fórmula PMT sinking fund).`
                   : ` Los fondos proyectados cubren el costo inflado con un superávit de $${formatCurrency(Math.abs(Math.round(computed.projectedGap)))}.`
                 }</p>
                 <p className="mt-1 text-blue-700"><span className="font-bold">⚡ Precio mercado motor (airpowerinc.com):</span> RENPL-RT8164 FOB USD ${formatCurrency(engineMarketPriceUSD)} × ${formatCurrency(usdRate)} CLP/USD = <span className="font-mono font-bold">${formatCurrency(computed.motorFobCLP)}</span> CLP FOB. Internación (flete + import + IVA) ratio ×{computed.internacionRatio.toFixed(3)} de factura Eagle 2022 → <span className="font-mono font-bold">${formatCurrency(computed.motorInternacionCLP)}</span> CLP puesto en Chile. Inflación aviación <span className="font-bold text-red-600">+{computed.motorPriceInflationPct.toFixed(1)}%</span> desde Jul 2022 ({computed.motorAnnualInflation.toFixed(1)}%/yr) supera el IPC general ({clInflationPct}%). Costo total reemplazo (motor internado + mano de obra): <span className="font-mono font-bold">${formatCurrency(computed.marketReplacementCLP)}</span> CLP.</p>
