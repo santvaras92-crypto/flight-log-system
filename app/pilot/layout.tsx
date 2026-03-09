@@ -3,6 +3,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import Head from "next/head";
 
 const DEVICE_TOKEN_KEY = "aqi_device_token";
@@ -93,7 +94,7 @@ export default function PilotLayout({ children }: { children: React.ReactNode })
       <header className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 border-b border-blue-600/30 backdrop-blur-md shadow-lg">
         <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 sm:gap-4">
+            <Link href="/pilot/dashboard" className="flex items-center gap-3 sm:gap-4 hover:opacity-90 transition-opacity">
               <div className="relative w-12 h-10 sm:w-16 sm:h-12">
                 <Image
                   src="/LOGO_BLANCO.png"
@@ -107,7 +108,7 @@ export default function PilotLayout({ children }: { children: React.ReactNode })
                 <span className="text-white font-bold text-base sm:text-lg tracking-tight">Portal Piloto</span>
                 <span className="text-blue-200 text-xs font-medium">{pilotName}</span>
               </div>
-            </div>
+            </Link>
             <div className="flex items-center gap-1 sm:gap-2">
               <a
                 href="/register"
