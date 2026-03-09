@@ -4179,6 +4179,32 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const htRatio = overviewMetrics?.annualStats?.hobbsTachRatio || 1.25;
     const maintInterval = 100 * htRatio; // 100 tach hrs = ~125 hobbs hrs
 
+    // Current inflated components (from Aug 2022 to today, Chilean IPC)
+    const motorTodayCLP = Math.round(overhaulMotorCLP * (1 + clInflationPct / 100));
+    const laborTodayCLP = Math.round(overhaulLaborCLP * (1 + clInflationPct / 100));
+
+    // ===== MARKET REPLACEMENT COST (live from airpowerinc.com) =====
+    const motorFobCLP = Math.round(engineMarketPriceUSD * usdRate);
+    const originalMotorUSD = 30895.92;
+    const originalUsdRate = 920;
+    const originalFobCLP = Math.round(originalMotorUSD * originalUsdRate);
+    const internacionRatio = overhaulMotorCLP / originalFobCLP;
+    const motorInternacionCLP = Math.round(motorFobCLP * internacionRatio);
+    const internacionCostCLP = motorInternacionCLP - motorFobCLP;
+    const marketReplacementCLP = motorInternacionCLP + laborTodayCLP;
+    const yearsSinceOverhaul = 3.67;
+    const motorPriceInflationPct = engineMarketPriceUSD > 0
+      ? ((engineMarketPriceUSD / originalMotorUSD) - 1) * 100
+      : 0;
+    const motorAnnualInflation = engineMarketPriceUSD > 0
+      ? (Math.pow(engineMarketPriceUSD / originalMotorUSD, 1 / yearsSinceOverhaul) - 1) * 100
+      : 0;
+
+    // ===== EFFECTIVE OVERHAUL COST: max(IPC-adjusted, market replacement) =====
+    const ipcOverhaulCLP = overhaulCLP; // historic cost + IPC Chile
+    const effectiveOverhaulCLP = Math.max(ipcOverhaulCLP, marketReplacementCLP);
+    const overhaulSource = marketReplacementCLP > ipcOverhaulCLP ? 'market' : 'ipc';
+
     // Variable costs per hour (hobbs)
     const combustibleHr = fuelLPH * avgasLiterCLP;
     const aceiteHr = oilLPH * aceiteLiterCLP;
@@ -4186,12 +4212,12 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const manttoOil = cambioAceiteCLP / maintInterval;
     // Convert overhaul cycle from tach to hobbs hours
     const overhaulCycleHobbs = overhaulCycleHrs * htRatio;
-    const manttoOverhaul = overhaulCLP / overhaulCycleHobbs;
+    const manttoOverhaul = effectiveOverhaulCLP / overhaulCycleHobbs;
     const manttoHr = mantto100hr + manttoOil + manttoOverhaul;
     const totalVariableHr = combustibleHr + aceiteHr + manttoHr;
 
     // Fixed costs (overhaul is variable per industry standard — not included here)
-    const overhaulProvisionAnual = overhaulCLP / (overhaulCycleHobbs / horasAnuales);
+    const overhaulProvisionAnual = effectiveOverhaulCLP / (overhaulCycleHobbs / horasAnuales);
     const totalFijoAnual = seguroAnual + hangarAnual + toaPatentesAnual + contingenciasAnual + impuestoContadorAnual + limpiezaAnual;
     const totalFijoMes = totalFijoAnual / 12;
     const totalFijoHr = totalFijoAnual / horasAnuales;
@@ -4204,7 +4230,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const margen = valorHora > 0 ? (gananciaHr / valorHora) * 100 : 0;
 
     // Overhaul funding
-    const faltaOverhaul = overhaulCLP - recaudado;
+    const faltaOverhaul = effectiveOverhaulCLP - recaudado;
     const anosRemanentes = overhaulCycleHobbs / horasAnuales;
     const metaAnualOverhaul = faltaOverhaul / Math.max(anosRemanentes, 0.1);
     const metaMensualOverhaul = metaAnualOverhaul / 12;
@@ -4216,41 +4242,14 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const yearsToOverhaul = Math.max(anosRemanentes, 0.01);
 
     // Current inflated components (from Aug 2022 to today, Chilean IPC)
-    const motorTodayCLP = Math.round(overhaulMotorCLP * (1 + clInflationPct / 100));
-    const laborTodayCLP = Math.round(overhaulLaborCLP * (1 + clInflationPct / 100));
-
-    // ===== MARKET REPLACEMENT COST (live from airpowerinc.com) =====
-    // Motor FOB price in CLP
-    const motorFobCLP = Math.round(engineMarketPriceUSD * usdRate);
-    // Internación ratio: Eagle Copters 2022 charged CLP $47,926,129 for a motor FOB USD $30,895.92
-    // at ~$920/USD = CLP $28,424,246 → ratio 47,926,129 / 28,424,246 = 1.686
-    // This 68.6% markup covers: freight, import duties, customs, IVA (19%), broker fees, Eagle margin
-    const originalMotorUSD = 30895.92;
-    const originalUsdRate = 920; // approximate USD/CLP in Jul 2022
-    const originalFobCLP = Math.round(originalMotorUSD * originalUsdRate); // ~28,424,246
-    const internacionRatio = overhaulMotorCLP / originalFobCLP; // ~1.686 (68.6%)
-    // Apply internación ratio to current FOB price → "puesto en Chile"
-    const motorInternacionCLP = Math.round(motorFobCLP * internacionRatio);
-    const internacionCostCLP = motorInternacionCLP - motorFobCLP; // shipping + import + IVA
-    // Total market replacement: motor internado + labor (IPC-adjusted)
-    const marketReplacementCLP = motorInternacionCLP + laborTodayCLP;
-    // Market-implied annual inflation on motor FOB (from Jul 2022 original)
-    const yearsSinceOverhaul = 3.67; // Jul 2022 → Mar 2026
-    const motorPriceInflationPct = engineMarketPriceUSD > 0
-      ? ((engineMarketPriceUSD / originalMotorUSD) - 1) * 100
-      : 0;
-    const motorAnnualInflation = engineMarketPriceUSD > 0
-      ? (Math.pow(engineMarketPriceUSD / originalMotorUSD, 1 / yearsSinceOverhaul) - 1) * 100
-      : 0;
-
     // Projected accumulated funds with compound interest
     const currentFunds = recaudado;
     const projectedFunds = currentFunds * Math.pow(1 + r, yearsToOverhaul);
     const interestEarned = projectedFunds - currentFunds;
 
-    // Project entire overhaul cost forward to TBO date with Chilean IPC
-    const inflatedOverhaulCost = overhaulCLP * Math.pow(1 + clInf, yearsToOverhaul);
-    const inflationIncrease = inflatedOverhaulCost - overhaulCLP;
+    // Project effective overhaul cost forward to TBO date with Chilean IPC
+    const inflatedOverhaulCost = effectiveOverhaulCLP * Math.pow(1 + clInf, yearsToOverhaul);
+    const inflationIncrease = inflatedOverhaulCost - effectiveOverhaulCLP;
 
     // Projected gap (future)
     const projectedGap = inflatedOverhaulCost - projectedFunds;
@@ -4303,6 +4302,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       totalVariableHr, overhaulProvisionAnual, totalFijoAnual, totalFijoMes, totalFijoHr,
       totalCostoHr, gananciaHr, margen, faltaOverhaul, anosRemanentes,
       metaAnualOverhaul, metaMensualOverhaul,
+      effectiveOverhaulCLP, overhaulSource, ipcOverhaulCLP,
       fixedBreakdown, variableBreakdown, costPerHourBreakdown,
       // Financial projections (CLP single-currency model)
       yearsToOverhaul, currentFunds, projectedFunds, interestEarned,
@@ -4608,18 +4608,31 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                   </div>
                   {/* Computed total — read-only */}
                   <div className="flex items-center justify-between py-1.5">
-                    <span className="text-[11px] text-slate-600">Overhaul total</span>
+                    <span className="text-[11px] text-slate-600">IPC model</span>
                     <div className="flex items-center gap-1">
-                      <span className="text-[11px] font-mono font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded">${formatCurrency(overhaulCLP)}</span>
+                      <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded ${computed.overhaulSource === 'ipc' ? 'text-amber-700 bg-amber-50 ring-1 ring-amber-300' : 'text-slate-500 bg-slate-50'}`}>${formatCurrency(overhaulCLP)}</span>
                       <span className="text-[9px] text-slate-400">CLP</span>
                     </div>
                   </div>
                   {/* Market motor price — read-only */}
                   <div className="flex items-center justify-between py-1.5">
-                    <span className="text-[11px] text-slate-600 flex items-center gap-1">Motor market{liveIndicators.engine && <span className="px-1 py-0.5 text-[8px] font-bold bg-emerald-100 text-emerald-700 rounded-full">LIVE</span>}</span>
+                    <span className="text-[11px] text-slate-600 flex items-center gap-1">Market{liveIndicators.engine && <span className="px-1 py-0.5 text-[8px] font-bold bg-emerald-100 text-emerald-700 rounded-full">LIVE</span>}</span>
                     <div className="flex items-center gap-1">
-                      <span className="text-[11px] font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">USD ${formatCurrency(engineMarketPriceUSD)}</span>
-                      <span className="text-[9px] text-slate-400">→ ${formatCurrency(computed.motorInternacionCLP)} int.</span>
+                      <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded ${computed.overhaulSource === 'market' ? 'text-blue-700 bg-blue-50 ring-1 ring-blue-300' : 'text-slate-500 bg-slate-50'}`}>${formatCurrency(computed.marketReplacementCLP)}</span>
+                      <span className="text-[9px] text-slate-400">CLP</span>
+                    </div>
+                  </div>
+                  {/* Effective cost used — the max */}
+                  <div className="flex items-center justify-between py-1.5 bg-slate-50 -mx-1 px-1 rounded">
+                    <span className="text-[11px] font-semibold text-slate-700 flex items-center gap-1">
+                      Used in calcs
+                      <span className={`px-1 py-0.5 text-[8px] font-bold rounded-full ${computed.overhaulSource === 'market' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {computed.overhaulSource === 'market' ? 'MARKET' : 'IPC'}
+                      </span>
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[11px] font-mono font-bold text-slate-800 bg-white px-2 py-0.5 rounded ring-1 ring-slate-300">${formatCurrency(computed.effectiveOverhaulCLP)}</span>
+                      <span className="text-[9px] text-slate-400">CLP</span>
                     </div>
                   </div>
                 </div>
