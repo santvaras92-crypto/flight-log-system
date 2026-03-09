@@ -4029,6 +4029,8 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   // Econometric forecast inputs (institutional consensus defaults)
   const [forecastBrentUSD, setForecastBrentUSD] = useState(stored?.forecastBrentUSD ?? 59);
   const [forecastUSDCLP, setForecastUSDCLP] = useState(stored?.forecastUSDCLP ?? 880);
+  const [forecastUSInflation, setForecastUSInflation] = useState(stored?.forecastUSInflation ?? 3.0); // US CPI %/yr — indexes structural floor
+  const [unleadedPremiumPct, setUnleadedPremiumPct] = useState(stored?.unleadedPremiumPct ?? 0); // 0-30% price premium for unleaded AVGAS transition
   // Live indicators state
   const [liveIndicators, setLiveIndicators] = useState<{ uf: boolean; usd: boolean; fuel: boolean; engine: boolean; ipc: boolean; brent: boolean }>({ uf: false, usd: false, fuel: false, engine: false, ipc: false, brent: false });
 
@@ -4042,6 +4044,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual,
         recaudado, valorHora, valorHoraUnit, interestRate, clForwardInflation, fuelTrendRate,
         engineMarketPriceUSD, forecastBrentUSD, forecastUSDCLP,
+        forecastUSInflation, unleadedPremiumPct,
       }));
     } catch {}
   }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD,
@@ -4049,7 +4052,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     clInflationPct, horasAnuales, seguroAnual, hangarAnual,
     toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual,
     recaudado, valorHora, valorHoraUnit, interestRate, clForwardInflation, fuelTrendRate,
-    engineMarketPriceUSD, forecastBrentUSD, forecastUSDCLP]);
+    engineMarketPriceUSD, forecastBrentUSD, forecastUSDCLP, forecastUSInflation, unleadedPremiumPct]);
 
   // Computed overhaul cost: inflate total CLP cost from Aug 2022 by Chilean IPC
   const overhaulCLP = useMemo(() => {
@@ -4249,33 +4252,58 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   const econometricProjection = useMemo(() => {
     if (!brentCorrelation || brentCorrelation.rSquaredUSD < 0.3) return null;
     const { slopeUSD, interceptUSD, currentBrentUSD } = brentCorrelation;
-    // Current implied AVGAS in USD
+
+    // Estimate yearsToOverhaul (replicate from computed to avoid circular dep)
+    const htRatioEst = overviewMetrics?.annualStats?.hobbsTachRatio || 1.25;
+    const tachPerYearEst = horasIsLive
+      ? (overviewMetrics?.annualStats?.tachThisYear || 195)
+      : (horasAnuales / htRatioEst);
+    const yrsToOverhaul = Math.max(tachPerYearEst > 0 ? overhaulCycleHrs / tachPerYearEst : 8, 0.5);
+
+    // Current implied AVGAS in USD (static floor — snapshot of today)
     const currentAvgasUSD = interceptUSD + slopeUSD * currentBrentUSD;
     const currentAvgasCLP = currentAvgasUSD * usdRate;
-    // Projected AVGAS at overhaul using forecast values
-    const projectedAvgasUSD = interceptUSD + slopeUSD * forecastBrentUSD;
+
+    // ===== INFLATION-INDEXED FLOOR =====
+    // The structural floor (TEL refining, logistics, FBO margin) inflates with US CPI
+    const usInflation = forecastUSInflation / 100;
+    const inflatedFloorUSD = interceptUSD * Math.pow(1 + usInflation, yrsToOverhaul);
+
+    // ===== UNLEADED TRANSITION PREMIUM =====
+    // EAGLE/G100UL mandate — optional step-up for post-leaded AVGAS economics
+    const unleadedMultiplier = 1 + (unleadedPremiumPct / 100);
+
+    // Projected AVGAS at overhaul: inflated floor + crude component, with unleaded premium
+    const projectedAvgasUSD_base = inflatedFloorUSD + slopeUSD * forecastBrentUSD;
+    const projectedAvgasUSD = projectedAvgasUSD_base * unleadedMultiplier;
     const projectedAvgasCLP = Math.round(projectedAvgasUSD * forecastUSDCLP);
-    // 3-factor decomposition of projected price
+
+    // 3-factor decomposition of projected price (now 5-factor internally)
+    const factorFloor = inflatedFloorUSD;         // inflation-adjusted floor
     const factorCrude = slopeUSD * forecastBrentUSD; // crude component USD
-    const factorFloor = interceptUSD; // structural floor USD
+    const factorUnleaded = projectedAvgasUSD_base * (unleadedMultiplier - 1); // unleaded premium USD
     // factorFX is the multiplication by forecastUSDCLP
+
     // Change attribution (current → projected)
     const currentCLP = Math.round(currentAvgasUSD * usdRate);
     const deltaBrent = slopeUSD * (forecastBrentUSD - currentBrentUSD) * usdRate; // Brent effect in CLP
     const deltaFX = currentAvgasUSD * (forecastUSDCLP - usdRate); // FX effect in CLP
+    const deltaInflation = (inflatedFloorUSD - interceptUSD) * forecastUSDCLP; // Inflation effect in CLP
+    const deltaUnleaded = factorUnleaded * forecastUSDCLP; // Unleaded premium in CLP
     const totalChangeCLP = projectedAvgasCLP - currentCLP;
-    // Simple model comparison (compound growth)
-    const fuelTrend = fuelTrendRate / 100;
-    // We need yearsToOverhaul but it's computed inside computed — use horasAnuales
+
     return {
       currentAvgasUSD, currentAvgasCLP: Math.round(currentAvgasCLP),
       projectedAvgasUSD, projectedAvgasCLP,
-      factorCrude, factorFloor,
+      factorCrude, factorFloor, factorUnleaded,
+      inflatedFloorUSD, staticFloorUSD: interceptUSD,
+      yrsToOverhaul,
       deltaBrent: Math.round(deltaBrent), deltaFX: Math.round(deltaFX),
+      deltaInflation: Math.round(deltaInflation), deltaUnleaded: Math.round(deltaUnleaded),
       totalChangeCLP: Math.round(totalChangeCLP),
       changePct: currentCLP > 0 ? ((projectedAvgasCLP / currentCLP) - 1) * 100 : 0,
     };
-  }, [brentCorrelation, usdRate, forecastBrentUSD, forecastUSDCLP, fuelTrendRate]);
+  }, [brentCorrelation, usdRate, forecastBrentUSD, forecastUSDCLP, forecastUSInflation, unleadedPremiumPct, overhaulCycleHrs, horasAnuales, overviewMetrics, horasIsLive]);
 
   useEffect(() => {
     if (avgasSource) {
@@ -4940,11 +4968,40 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                       <input type="number" value={forecastUSDCLP} onChange={e => setForecastUSDCLP(Number(e.target.value) || 0)} className="w-24 sm:w-28 text-right text-xs font-mono bg-orange-50 border border-orange-200 rounded px-2 py-1 focus:ring-1 focus:ring-orange-400 focus:border-orange-400 outline-none" />
                     </div>
                   </div>
+                  <div className="flex items-center justify-between gap-2 py-1.5">
+                    <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">
+                      US CPI forecast
+                      <span className="text-[8px] text-orange-500">indexes floor</span>
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-slate-400">%/yr</span>
+                      <input type="number" step="0.1" value={forecastUSInflation} onChange={e => setForecastUSInflation(Number(e.target.value) || 0)} className="w-24 sm:w-28 text-right text-xs font-mono bg-orange-50 border border-orange-200 rounded px-2 py-1 focus:ring-1 focus:ring-orange-400 focus:border-orange-400 outline-none" />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 py-1.5">
+                    <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">
+                      Unleaded premium
+                      <span className="text-[8px] text-amber-600">G100UL/EAGLE</span>
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-slate-400">%</span>
+                      <input type="number" step="1" min="0" max="50" value={unleadedPremiumPct} onChange={e => setUnleadedPremiumPct(Math.min(50, Math.max(0, Number(e.target.value) || 0)))} className="w-24 sm:w-28 text-right text-xs font-mono bg-orange-50 border border-orange-200 rounded px-2 py-1 focus:ring-1 focus:ring-orange-400 focus:border-orange-400 outline-none" />
+                    </div>
+                  </div>
                   {econometricProjection && (
                     <div className="flex items-center justify-between gap-2 py-1.5">
                       <span className="text-xs text-slate-600 truncate">Projected AVGAS</span>
                       <span className="text-[11px] font-mono font-bold text-orange-700 bg-orange-50 px-2 py-0.5 rounded">
                         ${formatCurrency(econometricProjection.projectedAvgasCLP)}/L
+                      </span>
+                    </div>
+                  )}
+                  {econometricProjection && (
+                    <div className="flex items-center justify-between gap-2 py-1.5">
+                      <span className="text-xs text-slate-600 truncate">Floor at TBO</span>
+                      <span className="text-[11px] font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">
+                        ${econometricProjection.inflatedFloorUSD.toFixed(2)} USD
+                        <span className="text-[8px] text-slate-400 ml-1">({econometricProjection.staticFloorUSD.toFixed(2)} today)</span>
                       </span>
                     </div>
                   )}
@@ -5541,51 +5598,62 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
 
                 {/* Model Parameters — compact inline */}
                 <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-slate-600 px-1">
-                  <span>📐 <span className="font-mono font-bold text-orange-700">AVGAS_USD = {brentCorrelation.slopeUSD.toFixed(4)} × Brent + ${brentCorrelation.interceptUSD.toFixed(2)}</span></span>
+                  <span>📐 <span className="font-mono font-bold text-orange-700">AVGAS_USD = {brentCorrelation.slopeUSD.toFixed(4)} × Brent + ${brentCorrelation.interceptUSD.toFixed(2)}×(1+CPI)^t</span></span>
                   <span>R² = <span className="font-mono font-bold">{brentCorrelation.rSquaredUSD.toFixed(2)}</span> <span className="text-slate-400">(vs {brentCorrelation.rSquaredCLP.toFixed(2)} CLP)</span></span>
                   <span>+$10 Brent → <span className="font-mono font-bold text-orange-600">+${(brentCorrelation.slopeUSD * 10).toFixed(3)}/L</span></span>
-                  <span>Floor: <span className="font-mono font-bold text-indigo-600">${brentCorrelation.interceptUSD.toFixed(2)} USD</span> <span className="text-slate-400">(TEL + logistics)</span></span>
+                  <span>Floor: <span className="font-mono font-bold text-indigo-600">${brentCorrelation.interceptUSD.toFixed(2)} USD</span> <span className="text-slate-400">(+{forecastUSInflation}%/yr CPI)</span></span>
+                  {unleadedPremiumPct > 0 && <span>⛽ Unleaded: <span className="font-mono font-bold text-amber-600">+{unleadedPremiumPct}%</span></span>}
                 </div>
 
-                {/* 3-Factor Decomposition bar */}
+                {/* 3-Factor Decomposition bar — use exact math so visible equation checks out */}
                 <div className="bg-white/50 rounded-lg p-3 border border-orange-100">
                   <p className="text-[10px] font-semibold text-orange-700 uppercase tracking-wider mb-2">3-Factor Decomposition</p>
-                  <div className="flex items-center gap-2 text-xs">
-                    <div className="flex-1 text-center">
-                      <div className="h-6 bg-indigo-200 rounded flex items-center justify-center">
-                        <span className="font-mono font-bold text-indigo-800">${brentCorrelation.structuralFloorUSD.toFixed(2)}</span>
+                  {(() => {
+                    // Use consistent precision: show 3 decimals for USD components to avoid visible rounding discrepancy
+                    const floor = brentCorrelation.structuralFloorUSD;
+                    const crude = brentCorrelation.crudeComponentUSD;
+                    const avgasUSD = floor + crude; // exact sum, not separately rounded
+                    const fx = usdRate;
+                    const clpResult = Math.round(avgasUSD * fx);
+                    return (
+                      <div className="flex items-center gap-2 text-xs">
+                        <div className="flex-1 text-center">
+                          <div className="h-6 bg-indigo-200 rounded flex items-center justify-center">
+                            <span className="font-mono font-bold text-indigo-800">${floor.toFixed(3)}</span>
+                          </div>
+                          <p className="text-[9px] text-slate-500 mt-1">Floor</p>
+                        </div>
+                        <span className="text-slate-400 font-bold">+</span>
+                        <div className="flex-1 text-center">
+                          <div className="h-6 bg-orange-200 rounded flex items-center justify-center">
+                            <span className="font-mono font-bold text-orange-800">${crude.toFixed(3)}</span>
+                          </div>
+                          <p className="text-[9px] text-slate-500 mt-1">Crude</p>
+                        </div>
+                        <span className="text-slate-400 font-bold">=</span>
+                        <div className="flex-1 text-center">
+                          <div className="h-6 bg-amber-200 rounded flex items-center justify-center">
+                            <span className="font-mono font-bold text-amber-800">${avgasUSD.toFixed(3)}</span>
+                          </div>
+                          <p className="text-[9px] text-slate-500 mt-1">AVGAS USD/L</p>
+                        </div>
+                        <span className="text-slate-400 font-bold">×</span>
+                        <div className="flex-1 text-center">
+                          <div className="h-6 bg-blue-200 rounded flex items-center justify-center">
+                            <span className="font-mono font-bold text-blue-800">{fx.toFixed(1)}</span>
+                          </div>
+                          <p className="text-[9px] text-slate-500 mt-1">USD/CLP</p>
+                        </div>
+                        <span className="text-slate-400 font-bold">=</span>
+                        <div className="flex-1 text-center">
+                          <div className="h-7 bg-gradient-to-r from-orange-300 to-amber-300 rounded flex items-center justify-center ring-2 ring-orange-400">
+                            <span className="font-mono font-bold text-orange-900">${formatCurrency(clpResult)}</span>
+                          </div>
+                          <p className="text-[9px] font-bold text-orange-700 mt-1">CLP/L</p>
+                        </div>
                       </div>
-                      <p className="text-[9px] text-slate-500 mt-1">Floor</p>
-                    </div>
-                    <span className="text-slate-400 font-bold">+</span>
-                    <div className="flex-1 text-center">
-                      <div className="h-6 bg-orange-200 rounded flex items-center justify-center">
-                        <span className="font-mono font-bold text-orange-800">${brentCorrelation.crudeComponentUSD.toFixed(2)}</span>
-                      </div>
-                      <p className="text-[9px] text-slate-500 mt-1">Crude</p>
-                    </div>
-                    <span className="text-slate-400 font-bold">=</span>
-                    <div className="flex-1 text-center">
-                      <div className="h-6 bg-amber-200 rounded flex items-center justify-center">
-                        <span className="font-mono font-bold text-amber-800">${brentCorrelation.currentAvgasUSD.toFixed(2)}</span>
-                      </div>
-                      <p className="text-[9px] text-slate-500 mt-1">AVGAS USD/L</p>
-                    </div>
-                    <span className="text-slate-400 font-bold">×</span>
-                    <div className="flex-1 text-center">
-                      <div className="h-6 bg-blue-200 rounded flex items-center justify-center">
-                        <span className="font-mono font-bold text-blue-800">{Math.round(usdRate)}</span>
-                      </div>
-                      <p className="text-[9px] text-slate-500 mt-1">USD/CLP</p>
-                    </div>
-                    <span className="text-slate-400 font-bold">=</span>
-                    <div className="flex-1 text-center">
-                      <div className="h-7 bg-gradient-to-r from-orange-300 to-amber-300 rounded flex items-center justify-center ring-2 ring-orange-400">
-                        <span className="font-mono font-bold text-orange-900">${formatCurrency(brentCorrelation.brentImpliedAvgas)}</span>
-                      </div>
-                      <p className="text-[9px] font-bold text-orange-700 mt-1">CLP/L</p>
-                    </div>
-                  </div>
+                    );
+                  })()}
                 </div>
               </div>
             )}
@@ -5656,7 +5724,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                   <p className="text-[10px] font-semibold text-orange-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                     🛢️ Econometric Model
                     <span className="text-[8px] font-normal text-orange-500 normal-case">
-                      ({brentCorrelation?.slopeUSD.toFixed(4)} × Brent + ${brentCorrelation?.interceptUSD.toFixed(2)}) × FX
+                      ({brentCorrelation?.slopeUSD.toFixed(4)} × Brent + ${brentCorrelation?.interceptUSD.toFixed(2)}×(1+CPI)^t{unleadedPremiumPct > 0 ? ` × 1.${String(unleadedPremiumPct).padStart(2,'0')}` : ''}) × FX
                     </span>
                   </p>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -5687,12 +5755,12 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                       <p className="text-[9px] text-slate-400 font-mono">{computed.econMargen.toFixed(1)}% margin</p>
                     </div>
                   </div>
-                  {/* 3-factor change attribution */}
+                  {/* 5-factor change attribution */}
                   <div className="mt-3 pt-2 border-t border-orange-100">
-                    <p className="text-[9px] font-semibold text-orange-600 mb-1.5">Change Attribution (current → forecast)</p>
-                    <div className="flex items-center gap-2 text-[10px]">
-                      <div className="flex-1 text-center">
-                        <div className={`rounded px-2 py-1 ${econometricProjection.deltaBrent > 0 ? 'bg-red-100' : 'bg-emerald-100'}`}>
+                    <p className="text-[9px] font-semibold text-orange-600 mb-1.5">Change Attribution (current → forecast · {econometricProjection.yrsToOverhaul.toFixed(1)} yrs)</p>
+                    <div className="flex items-center gap-1 sm:gap-2 text-[10px] flex-wrap">
+                      <div className="flex-1 min-w-[60px] text-center">
+                        <div className={`rounded px-1 py-1 ${econometricProjection.deltaBrent > 0 ? 'bg-red-100' : 'bg-emerald-100'}`}>
                           <span className={`font-mono font-bold ${econometricProjection.deltaBrent > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
                             {econometricProjection.deltaBrent > 0 ? '+' : ''}{formatCurrency(econometricProjection.deltaBrent)}
                           </span>
@@ -5700,17 +5768,39 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                         <p className="text-[8px] text-slate-500 mt-0.5">🛢️ Crude ({brentData?.currentBrentUSD.toFixed(0)}→{forecastBrentUSD})</p>
                       </div>
                       <span className="text-slate-400">+</span>
-                      <div className="flex-1 text-center">
-                        <div className={`rounded px-2 py-1 ${econometricProjection.deltaFX > 0 ? 'bg-red-100' : 'bg-emerald-100'}`}>
+                      <div className="flex-1 min-w-[60px] text-center">
+                        <div className={`rounded px-1 py-1 ${econometricProjection.deltaFX > 0 ? 'bg-red-100' : 'bg-emerald-100'}`}>
                           <span className={`font-mono font-bold ${econometricProjection.deltaFX > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
                             {econometricProjection.deltaFX > 0 ? '+' : ''}{formatCurrency(econometricProjection.deltaFX)}
                           </span>
                         </div>
                         <p className="text-[8px] text-slate-500 mt-0.5">💱 FX ({Math.round(usdRate)}→{forecastUSDCLP})</p>
                       </div>
+                      <span className="text-slate-400">+</span>
+                      <div className="flex-1 min-w-[60px] text-center">
+                        <div className={`rounded px-1 py-1 ${econometricProjection.deltaInflation > 0 ? 'bg-red-100' : 'bg-emerald-100'}`}>
+                          <span className={`font-mono font-bold ${econometricProjection.deltaInflation > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
+                            {econometricProjection.deltaInflation > 0 ? '+' : ''}{formatCurrency(econometricProjection.deltaInflation)}
+                          </span>
+                        </div>
+                        <p className="text-[8px] text-slate-500 mt-0.5">📈 CPI ({forecastUSInflation}%×{econometricProjection.yrsToOverhaul.toFixed(1)}yr)</p>
+                      </div>
+                      {unleadedPremiumPct > 0 && (
+                        <>
+                          <span className="text-slate-400">+</span>
+                          <div className="flex-1 min-w-[60px] text-center">
+                            <div className="rounded px-1 py-1 bg-amber-100">
+                              <span className="font-mono font-bold text-amber-700">
+                                +{formatCurrency(econometricProjection.deltaUnleaded)}
+                              </span>
+                            </div>
+                            <p className="text-[8px] text-slate-500 mt-0.5">⛽ Unleaded ({unleadedPremiumPct}%)</p>
+                          </div>
+                        </>
+                      )}
                       <span className="text-slate-400">=</span>
-                      <div className="flex-1 text-center">
-                        <div className={`rounded px-2 py-1 ${econometricProjection.totalChangeCLP > 0 ? 'bg-red-100' : 'bg-emerald-100'}`}>
+                      <div className="flex-1 min-w-[60px] text-center">
+                        <div className={`rounded px-1 py-1 ${econometricProjection.totalChangeCLP > 0 ? 'bg-red-100' : 'bg-emerald-100'}`}>
                           <span className={`font-mono font-bold ${econometricProjection.totalChangeCLP > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
                             {econometricProjection.totalChangeCLP > 0 ? '+' : ''}{formatCurrency(econometricProjection.totalChangeCLP)}
                           </span>
@@ -5765,7 +5855,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 <div className="text-[11px] text-slate-800">
                   {econometricProjection && brentCorrelation ? (
                     <>
-                      <p className="font-semibold mb-1 text-orange-800">📊 Econometric Fuel Price Analysis — 3-Factor Model</p>
+                      <p className="font-semibold mb-1 text-orange-800">📊 Econometric Fuel Price Analysis — Multi-Factor Model</p>
                       <p>
                         USD-space regression (R²={brentCorrelation.rSquaredUSD.toFixed(2)}, {brentCorrelation.pairs} months) yields:
                         {' '}<span className="font-mono font-bold">AVGAS_USD = {brentCorrelation.slopeUSD.toFixed(4)} × Brent + ${brentCorrelation.interceptUSD.toFixed(2)}</span>.
@@ -5773,16 +5863,21 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                         Each +$10 Brent adds only +${(brentCorrelation.slopeUSD * 10).toFixed(3)}/L.
                       </p>
                       <p className="mt-1">
-                        <span className="font-bold">Current:</span> Brent US${brentData?.currentBrentUSD.toFixed(1)}/bbl × slope + floor = <span className="font-mono font-bold">${brentCorrelation.brentImpliedAvgasUSD.toFixed(2)} USD/L</span> × {Math.round(usdRate)} CLP/USD = <span className="font-mono font-bold">${formatCurrency(brentCorrelation.brentImpliedAvgas)} CLP/L</span>.
+                        <span className="font-bold">Current:</span> Brent US${brentData?.currentBrentUSD.toFixed(1)}/bbl × slope + floor = <span className="font-mono font-bold">${brentCorrelation.brentImpliedAvgasUSD.toFixed(3)} USD/L</span> × {usdRate.toFixed(1)} CLP/USD = <span className="font-mono font-bold">${formatCurrency(brentCorrelation.brentImpliedAvgas)} CLP/L</span>.
                       </p>
                       <p className="mt-1">
-                        <span className="font-bold">Forecast:</span> Brent US${forecastBrentUSD}/bbl (EIA/WB consensus) × {Math.round(forecastUSDCLP)} CLP/USD (BCCH) → <span className="font-mono font-bold text-orange-700">${formatCurrency(econometricProjection.projectedAvgasCLP)} CLP/L</span> (<span className="font-mono">{econometricProjection.changePct >= 0 ? '+' : ''}{econometricProjection.changePct.toFixed(1)}%</span>).
-                        {' '}vs simple model ({fuelTrendRate}%/yr): <span className="font-mono font-bold text-red-600">${formatCurrency(Math.round(computed.projectedAvgasPrice))} CLP/L</span> ({((computed.projectedAvgasPrice / avgasLiterCLP - 1) * 100).toFixed(0)}%).
+                        <span className="font-bold">Forecast ({econometricProjection.yrsToOverhaul.toFixed(1)} yrs):</span> Brent US${forecastBrentUSD}/bbl + floor inflated at {forecastUSInflation}%/yr CPI → <span className="font-mono font-bold">${econometricProjection.inflatedFloorUSD.toFixed(2)} USD</span> (from ${brentCorrelation.interceptUSD.toFixed(2)}).
+                        {unleadedPremiumPct > 0 && <>{' '}G100UL premium: +{unleadedPremiumPct}%.</>}
+                        {' '}× {forecastUSDCLP} CLP/USD → <span className="font-mono font-bold text-orange-700">${formatCurrency(econometricProjection.projectedAvgasCLP)} CLP/L</span> (<span className="font-mono">{econometricProjection.changePct >= 0 ? '+' : ''}{econometricProjection.changePct.toFixed(1)}%</span>).
+                        {' '}vs simple model ({fuelTrendRate}%/yr): <span className="font-mono font-bold text-red-600">${formatCurrency(Math.round(computed.projectedAvgasPrice))} CLP/L</span>.
                       </p>
                       <p className="mt-1 text-orange-700">
-                        💡 <span className="font-bold">Key insight:</span> CLP-space regression (R²={brentCorrelation.rSquaredCLP.toFixed(2)}) conflates commodity and FX effects.
-                        USD-space (R²={brentCorrelation.rSquaredUSD.toFixed(2)}) isolates pure commodity correlation, enabling independent Brent + FX scenario analysis.
-                        The econometric model projects a more realistic price because institutional forecasts show {forecastBrentUSD < (brentData?.currentBrentUSD ?? 0) ? 'declining' : 'stable'} crude and {forecastUSDCLP < usdRate ? 'appreciating' : 'stable'} CLP.
+                        💡 <span className="font-bold">Enhancements:</span> Floor indexed to US CPI ({forecastUSInflation}%/yr) — avoids underestimating logistics/refining cost at TBO.
+                        {unleadedPremiumPct > 0
+                          ? <>{' '}Unleaded transition premium ({unleadedPremiumPct}%) models EAGLE/G100UL mandate risk within the projection window.</>
+                          : <>{' '}Unleaded premium at 0% — set 10-30% to model EAGLE/G100UL transition risk.</>
+                        }
+                        {' '}USD-space R²={brentCorrelation.rSquaredUSD.toFixed(2)} isolates commodity from FX, enabling independent scenario analysis.
                       </p>
                     </>
                   ) : (
