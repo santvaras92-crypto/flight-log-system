@@ -4250,14 +4250,13 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const aceiteHr = oilLPH * aceiteLiterCLP;
     const mantto100hr = revision100CLP / maintInterval;
     const manttoOil = cambioAceiteCLP / maintInterval;
-    // Overhaul reserve: projected gap / remaining hobbs hrs
-    // Covers the future inflated cost minus what funds+interest will provide
-    const manttoOverhaul = Math.max(0, projectedGap) / overhaulCycleHobbs;
+    // Overhaul reserve linked to PMT sinking fund:
+    // PMT × 12 = annual savings needed → ÷ horasAnuales = reserve per flight hour
+    // This is lower than linear (gap/hrs) because invested savings earn compound interest
+    const overhaulProvisionAnual = projectedMonthlyTarget * 12;
+    const manttoOverhaul = overhaulProvisionAnual / horasAnuales;
     const manttoHr = mantto100hr + manttoOil + manttoOverhaul;
     const totalVariableHr = combustibleHr + aceiteHr + manttoHr;
-
-    // Fixed costs (overhaul is variable per industry standard — not included here)
-    const overhaulProvisionAnual = Math.max(0, projectedGap) / Math.max(anosRemanentes, 0.1);
     const totalFijoAnual = seguroAnual + hangarAnual + toaPatentesAnual + contingenciasAnual + impuestoContadorAnual + limpiezaAnual;
     const totalFijoMes = totalFijoAnual / 12;
     const totalFijoHr = totalFijoAnual / horasAnuales;
