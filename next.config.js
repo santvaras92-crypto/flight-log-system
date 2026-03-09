@@ -68,6 +68,11 @@ const nextConfig = {
       bodySizeLimit: '10mb',
     },
   },
+  // Disable webpack persistent cache to prevent Railway/Nixpacks stale module errors
+  webpack: (config, { isServer }) => {
+    config.cache = false;
+    return config;
+  },
 }
 
 module.exports = withPWA(nextConfig)

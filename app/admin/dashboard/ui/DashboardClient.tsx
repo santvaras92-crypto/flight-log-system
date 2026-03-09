@@ -4141,13 +4141,15 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const aceiteHr = oilLPH * aceiteLiterCLP;
     const mantto100hr = revision100CLP / maintInterval;
     const manttoOil = cambioAceiteCLP / maintInterval;
-    const manttoOverhaul = overhaulCLP / overhaulCycleHrs;
+    // Convert overhaul cycle from tach to hobbs hours
+    const overhaulCycleHobbs = overhaulCycleHrs * htRatio;
+    const manttoOverhaul = overhaulCLP / overhaulCycleHobbs;
     const manttoHr = mantto100hr + manttoOil + manttoOverhaul;
     const totalVariableHr = combustibleHr + aceiteHr + manttoHr;
 
-    // Fixed costs 
-    const overhaulProvisionAnual = overhaulCLP / (overhaulCycleHrs / horasAnuales);
-    const totalFijoAnual = seguroAnual + hangarAnual + toaPatentesAnual + contingenciasAnual + impuestoContadorAnual + limpiezaAnual + overhaulProvisionAnual;
+    // Fixed costs (overhaul is variable per industry standard — not included here)
+    const overhaulProvisionAnual = overhaulCLP / (overhaulCycleHobbs / horasAnuales);
+    const totalFijoAnual = seguroAnual + hangarAnual + toaPatentesAnual + contingenciasAnual + impuestoContadorAnual + limpiezaAnual;
     const totalFijoMes = totalFijoAnual / 12;
     const totalFijoHr = totalFijoAnual / horasAnuales;
 
@@ -4160,7 +4162,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
 
     // Overhaul funding
     const faltaOverhaul = overhaulCLP - recaudado;
-    const anosRemanentes = overhaulCycleHrs / horasAnuales;
+    const anosRemanentes = overhaulCycleHobbs / horasAnuales;
     const metaAnualOverhaul = faltaOverhaul / Math.max(anosRemanentes, 0.1);
     const metaMensualOverhaul = metaAnualOverhaul / 12;
 
@@ -4238,13 +4240,14 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       { name: 'Contingencies', value: contingenciasAnual, color: '#f59e0b' },
       { name: 'Tax + Accountant', value: impuestoContadorAnual, color: '#ef4444' },
       { name: 'Cleaning', value: limpiezaAnual, color: '#10b981' },
-      { name: 'Overhaul Prov.', value: overhaulProvisionAnual, color: '#f97316' },
     ];
 
     const variableBreakdown = [
       { name: 'Fuel', value: combustibleHr, color: '#f59e0b' },
       { name: 'Oil', value: aceiteHr, color: '#8b5cf6' },
-      { name: 'Maintenance', value: manttoHr, color: '#3b82f6' },
+      { name: '100hr Insp.', value: mantto100hr, color: '#3b82f6' },
+      { name: 'Oil Change', value: manttoOil, color: '#06b6d4' },
+      { name: 'Overhaul Reserve', value: manttoOverhaul, color: '#f97316' },
     ];
 
     const costPerHourBreakdown = [
