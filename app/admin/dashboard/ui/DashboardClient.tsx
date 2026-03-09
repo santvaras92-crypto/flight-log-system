@@ -3996,7 +3996,9 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   const [overhaulLaborCLP, setOverhaulLaborCLP] = useState(stored?.overhaulLaborCLP ?? 8000000);
   const [clInflationPct, setClInflationPct] = useState(stored?.clInflationPct ?? 16.35);
   const [horasAnuales, setHorasAnuales] = useState(stored?.horasAnuales ?? 220);
-  const [overhaulCycleHrs, setOverhaulCycleHrs] = useState(stored?.overhaulCycleHrs ?? 1379.1);
+  // overhaulCycleHrs is now computed live from ENGINE component (TBO - SMOH)
+  const engineComp = components?.find((c: any) => c.tipo === 'ENGINE');
+  const overhaulCycleHrs = engineComp ? Math.max(0, Number(engineComp.limite_tbo) - Number(engineComp.horas_acumuladas)) : 1379.1;
   // Fixed costs (annual CLP)
   const [seguroAnual, setSeguroAnual] = useState(stored?.seguroAnual ?? 4592270);
   const [hangarAnual, setHangarAnual] = useState(stored?.hangarAnual ?? 4963032);
@@ -4023,7 +4025,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD,
         cambioAceiteCLP, revision100CLP, overhaulMotorCLP, overhaulLaborCLP,
-        clInflationPct, horasAnuales, overhaulCycleHrs, seguroAnual, hangarAnual,
+        clInflationPct, horasAnuales, seguroAnual, hangarAnual,
         toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual,
         recaudado, valorHora, interestRate, clForwardInflation, fuelTrendRate,
         engineMarketPriceUSD,
@@ -4031,7 +4033,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     } catch {}
   }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD,
     cambioAceiteCLP, revision100CLP, overhaulMotorCLP, overhaulLaborCLP,
-    clInflationPct, horasAnuales, overhaulCycleHrs, seguroAnual, hangarAnual,
+    clInflationPct, horasAnuales, seguroAnual, hangarAnual,
     toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual,
     recaudado, valorHora, interestRate, clForwardInflation, fuelTrendRate,
     engineMarketPriceUSD]);
@@ -4316,7 +4318,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       // H/T ratio used
       htRatio, maintInterval,
     };
-  }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD, cambioAceiteCLP, revision100CLP, overhaulCLP, horasAnuales, overhaulCycleHrs, seguroAnual, hangarAnual, toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual, recaudado, valorHora, interestRate, clForwardInflation, fuelTrendRate, overviewMetrics, overhaulMotorCLP, overhaulLaborCLP, clInflationPct, engineMarketPriceUSD]);
+  }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD, cambioAceiteCLP, revision100CLP, overhaulCLP, horasAnuales, overhaulCycleHrs, seguroAnual, hangarAnual, toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual, recaudado, valorHora, interestRate, clForwardInflation, fuelTrendRate, overviewMetrics, overhaulMotorCLP, overhaulLaborCLP, clInflationPct, engineMarketPriceUSD, components]);
 
   // Actual data from flights (yearly hours)
   const yearlyHours = useMemo(() => {
@@ -4590,7 +4592,14 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 <div className="space-y-0.5 divide-y divide-slate-100">
                   <ParamInput label="Oil change" value={cambioAceiteCLP} onChange={setCambioAceiteCLP} unit="CLP" />
                   <ParamInput label="100hr inspection" value={revision100CLP} onChange={setRevision100CLP} unit="CLP" />
-                  <ParamInput label="Hrs to TBO (tach)" value={overhaulCycleHrs} onChange={setOverhaulCycleHrs} unit="hrs" />
+                  {/* Hrs to TBO — read-only, computed live from ENGINE component */}
+                  <div className="flex items-center justify-between gap-2 py-1.5">
+                    <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">Hrs to TBO (tach){engineComp && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">LIVE</span>}</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[11px] font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">{overhaulCycleHrs.toFixed(1)} hrs</span>
+                      <span className="text-[9px] text-slate-400">(SMOH {engineComp ? Number(engineComp.horas_acumuladas).toFixed(1) : '?'})</span>
+                    </div>
+                  </div>
                   <ParamInput label="Hours / year" value={horasAnuales} onChange={setHorasAnuales} unit="hrs" />
                 </div>
               </div>
