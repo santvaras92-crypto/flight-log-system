@@ -2682,10 +2682,11 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
 function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewMetrics }: { components: any[]; aircraft: any[]; aircraftYearlyStats: any[]; overviewMetrics?: OverviewMetrics }) {
   // Get usage stats from new predictive system
   const stats = overviewMetrics?.nextInspections?.usageStats;
-  const weightedRate = stats?.weightedRate || 0;  // hrs/day
+  const weightedRate = stats?.weightedRate || 0;  // hobbs hrs/day
   const stdDev = stats?.stdDev || 0;
   const trend = stats?.trend || 0;
   const rate30d = stats?.rate30d || 0;
+  const htRatio = overviewMetrics?.annualStats?.hobbsTachRatio || 1.25; // tach→hobbs
 
   // Overhaul modal state
   const [overhaulModal, setOverhaulModal] = useState<{ open: boolean; component: any | null }>({ open: false, component: null });
@@ -2981,9 +2982,10 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
             <tbody className="bg-white divide-y divide-slate-100">
               {components.map(c => {
                 const restante = Number(c.limite_tbo) - Number(c.horas_acumuladas);
+                const restanteHobbs = restante * htRatio; // convert tach→hobbs for prediction
                 const pct = (Number(c.horas_acumuladas) / Number(c.limite_tbo)) * 100;
                 const colorClass = pct > 80 ? 'text-red-600 font-bold' : pct > 60 ? 'text-orange-500 font-bold' : 'text-green-600 font-bold';
-                const tboPred = weightedRate > 0 ? getPrediction(restante) : null;
+                const tboPred = weightedRate > 0 ? getPrediction(restanteHobbs) : null;
                 const hasOverhaul = c.overhaul_airframe != null;
 
                 return (
