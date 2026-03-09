@@ -4215,9 +4215,11 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const effectiveOverhaulCLP = Math.max(ipcOverhaulCLP, marketReplacementCLP);
     const overhaulSource = marketReplacementCLP > ipcOverhaulCLP ? 'market' : 'ipc';
 
-    // Years to overhaul: use annual tach rate (tach/tach = years) for consistency across all modules
+    // Years to overhaul: use annual tach rate for consistency
+    // When user overrides horasAnuales, derive tachPerYear from the override
     const overhaulCycleHobbs = overhaulCycleHrs * htRatio; // for display only
-    const tachPerYear = (overviewMetrics?.annualStats?.tachThisYear) || (horasAnuales / htRatio);
+    const liveTachPerYear = overviewMetrics?.annualStats?.tachThisYear || 195;
+    const tachPerYear = horasIsLive ? liveTachPerYear : (horasAnuales / htRatio);
     const anosRemanentes = tachPerYear > 0 ? overhaulCycleHrs / tachPerYear : overhaulCycleHrs / 195;
 
     // ===== FINANCIAL PROJECTIONS (computed early — needed for overhaul reserve) =====
@@ -4874,8 +4876,11 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         const stdDev = stats?.stdDev || 0;
         const trend = stats?.trend || 0;
 
-        // Time predictions: use rateAnnual (tach/day from rolling 365d) for consistency across all modules
-        const effectiveRate = rateAnnual > 0 ? rateAnnual : weightedRate; // prefer annual, fallback to weighted
+        // Time predictions: use rateAnnual when live, or derive from horasAnuales override
+        const liveRate = rateAnnual > 0 ? rateAnnual : weightedRate;
+        const overrideRate = horasAnuales / (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25) / 365;
+        const effectiveRate = horasIsLive ? liveRate : overrideRate;
+        const usingOverride = !horasIsLive;
         const daysRemaining = effectiveRate > 0 ? Math.round(tachRemaining / effectiveRate) : 0;
         const uncertainty = effectiveRate > 0 ? 1.96 * stdDev * Math.sqrt(Math.max(1, daysRemaining)) / effectiveRate : 0;
         const minDays = Math.max(0, Math.round(daysRemaining - uncertainty));
@@ -4914,7 +4919,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                   </div>
                   <div>
                     <h4 className="text-xs font-semibold text-slate-700">Engine Overhaul Timeline</h4>
-                    <p className="text-[10px] text-slate-400">Live data · TBO {tbo} hrs · SMOH {smoh.toFixed(1)} hrs · H/T Ratio {htRatio.toFixed(3)}</p>
+                    <p className="text-[10px] text-slate-400">{usingOverride ? '✏️ User projection' : 'Live data'} · TBO {tbo} hrs · SMOH {smoh.toFixed(1)} hrs · H/T Ratio {htRatio.toFixed(3)}{usingOverride && <span className="ml-1 text-amber-600 font-semibold">@ {horasAnuales} hobbs/yr</span>}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -5029,7 +5034,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
             </div>
             <div>
               <h4 className="text-xs font-semibold text-slate-700">Overhaul Funding Tracker</h4>
-              <p className="text-[10px] text-slate-400">Cycle: {formatCurrency(overhaulCycleHrs)} tach hrs · Est. {computed.yearsToOverhaul.toFixed(1)} years @ {Math.round(computed.tachPerYear)} tach/yr ({horasAnuales} hobbs/yr)</p>
+              <p className="text-[10px] text-slate-400">Cycle: {formatCurrency(overhaulCycleHrs)} tach hrs · Est. {computed.yearsToOverhaul.toFixed(1)} years @ {Math.round(computed.tachPerYear)} tach/yr ({horasAnuales} hobbs/yr){!horasIsLive && <span className="ml-1 text-amber-600 font-semibold">✏️ override</span>}</p>
             </div>
           </div>
         </div>
