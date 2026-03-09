@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 
 // ──────────────────────────────────────────────────────────────
 // Brent Crude Oil  ↔  AVGAS fuel-price correlation endpoint
-// • Hard-coded monthly averages (Sep 2020 → Feb 2026) computed
+// • Hard-coded monthly averages (Sep 2020 → Mar 2026) computed
 //   from EIA daily spot data + Banco Central USD/CLP series
-// • Attempts to scrape the *current* Brent spot from EIA
+// • Live Brent: Yahoo Finance BZ=F → EIA API v2 → EIA HTML → fallback
 // • 24-hour in-memory cache, same pattern as /api/engine-price
 // ──────────────────────────────────────────────────────────────
 
@@ -85,6 +85,7 @@ const MONTHLY_DATA: { month: string; brentUSD: number; usdCLP: number }[] = [
   // 2026
   { month: "2026-01", brentUSD: 65.8,  usdCLP: 979 },
   { month: "2026-02", brentUSD: 71.0,  usdCLP: 966 },
+  { month: "2026-03", brentUSD: 77.2,  usdCLP: 955 },
 ];
 
 // ── In-memory cache ──
@@ -97,7 +98,48 @@ let cached: {
 let cachedAt = 0;
 const CACHE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-async function scrapeLiveBrent(): Promise<number | null> {
+// ── Multi-source live Brent price fetcher ──
+// Priority: Yahoo Finance (real-time) → EIA API v2 (1-3d delay) → EIA HTML → hard-coded
+async function scrapeLiveBrent(): Promise<{ price: number; source: string } | null> {
+  // ── Source 1: Yahoo Finance BZ=F (real-time Brent futures) ──
+  try {
+    const res = await fetch(
+      "https://query2.finance.yahoo.com/v8/finance/chart/BZ=F?range=5d&interval=1d",
+      {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        },
+        signal: AbortSignal.timeout(8000),
+      }
+    );
+    if (res.ok) {
+      const json = await res.json();
+      const price = json?.chart?.result?.[0]?.meta?.regularMarketPrice;
+      if (typeof price === "number" && price > 10) {
+        return { price: Math.round(price * 100) / 100, source: "yahoo-finance (BZ=F live)" };
+      }
+    }
+  } catch { /* fall through to next source */ }
+
+  // ── Source 2: EIA API v2 JSON (official spot, 1-3 day delay) ──
+  try {
+    const url =
+      "https://api.eia.gov/v2/petroleum/pri/spt/data/?frequency=daily&data[0]=value&facets[series][]=RBRTE&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=1&api_key=DEMO_KEY";
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (res.ok) {
+      const json = await res.json();
+      const val = json?.response?.data?.[0]?.value;
+      if (val) {
+        const price = parseFloat(val);
+        if (price > 10) {
+          return { price: Math.round(price * 100) / 100, source: "eia.gov API v2 (spot)" };
+        }
+      }
+    }
+  } catch { /* fall through to next source */ }
+
+  // ── Source 3: EIA HTML scrape (legacy fallback) ──
   try {
     const res = await fetch(
       "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm",
@@ -110,31 +152,25 @@ async function scrapeLiveBrent(): Promise<number | null> {
         signal: AbortSignal.timeout(8000),
       }
     );
-    if (!res.ok) return null;
-    const html = await res.text();
-
-    // Find the Brent row — format: "Brent - Europe" followed by price cells
-    // The page has rows like:  Brent - Europe  |  | 71.90 | 71.21 | ...
-    const brentIdx = html.indexOf("Brent - Europe");
-    if (brentIdx === -1) return null;
-
-    // Get the chunk after "Brent - Europe" — prices are in <td> tags
-    const chunk = html.substring(brentIdx, brentIdx + 1500);
-    // Extract all numbers that look like prices (XX.XX)
-    const prices: number[] = [];
-    const regex = /<td[^>]*>\s*(\d{2,3}\.\d{2})\s*<\/td>/g;
-    let m: RegExpExecArray | null;
-    while ((m = regex.exec(chunk)) !== null) {
-      prices.push(parseFloat(m[1]));
+    if (res.ok) {
+      const html = await res.text();
+      const brentIdx = html.indexOf("Brent - Europe");
+      if (brentIdx !== -1) {
+        const chunk = html.substring(brentIdx, brentIdx + 1500);
+        const prices: number[] = [];
+        const regex = /<td[^>]*>\s*(\d{2,3}\.\d{2})\s*<\/td>/g;
+        let m: RegExpExecArray | null;
+        while ((m = regex.exec(chunk)) !== null) {
+          prices.push(parseFloat(m[1]));
+        }
+        if (prices.length > 0) {
+          return { price: prices[prices.length - 1], source: "eia.gov (HTML scrape)" };
+        }
+      }
     }
-    // The last numeric cell is the most recent trading day
-    if (prices.length > 0) {
-      return prices[prices.length - 1];
-    }
-    return null;
-  } catch {
-    return null;
-  }
+  } catch { /* all sources exhausted */ }
+
+  return null;
 }
 
 export async function GET() {
@@ -143,18 +179,18 @@ export async function GET() {
     return NextResponse.json({ ...cached, fromCache: true });
   }
 
-  // Attempt live scrape
-  const liveBrent = await scrapeLiveBrent();
+  // Attempt live fetch from multiple sources (Yahoo → EIA API → EIA HTML)
+  const liveResult = await scrapeLiveBrent();
 
   // Fallback to most recent hard-coded value
   const lastHC = MONTHLY_DATA[MONTHLY_DATA.length - 1];
-  const currentBrentUSD = liveBrent ?? lastHC.brentUSD;
+  const currentBrentUSD = liveResult ? liveResult.price : lastHC.brentUSD;
 
   cached = {
     currentBrentUSD,
     monthly: MONTHLY_DATA,
     fetchedAt: new Date().toISOString(),
-    source: liveBrent ? "eia.gov (live)" : "hard-coded (fallback)",
+    source: liveResult ? liveResult.source : "hard-coded (fallback)",
   };
   cachedAt = now;
 
