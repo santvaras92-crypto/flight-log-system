@@ -5482,13 +5482,14 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
             {/* 🛢️ Brent Oil ↔ AVGAS Econometric Model (USD-space) */}
             {brentCorrelation && brentCorrelation.rSquaredUSD >= 0.3 && (
               <div className="mb-5 p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl border border-orange-200">
+                {/* Header */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <span className="text-lg">🛢️</span>
                     <div>
-                      <p className="text-xs font-semibold text-orange-800">Econometric Model: Brent → AVGAS (USD-space)</p>
+                      <p className="text-xs font-semibold text-orange-800">Econometric Model: Brent → AVGAS</p>
                       <p className="text-[10px] text-orange-600">
-                        {brentCorrelation.pairs} paired months · AVGAS_USD = {brentCorrelation.slopeUSD.toFixed(4)} × Brent + ${brentCorrelation.interceptUSD.toFixed(2)}
+                        {brentCorrelation.pairs} paired months · USD-space regression
                       </p>
                     </div>
                   </div>
@@ -5499,37 +5500,56 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                   )}
                 </div>
 
-                {/* Row 1: Equation + key parameters */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
-                  {/* Structural Floor */}
-                  <div className="text-center p-3 bg-white/70 rounded-lg">
-                    <p className="text-lg font-bold text-indigo-700 font-mono">${brentCorrelation.interceptUSD.toFixed(2)}</p>
-                    <p className="text-[10px] text-slate-500">Structural Floor</p>
-                    <p className="text-[9px] text-indigo-600">USD/L (TEL + logistics)</p>
-                  </div>
-                  {/* Slope */}
-                  <div className="text-center p-3 bg-white/70 rounded-lg">
-                    <p className="text-lg font-bold text-orange-700 font-mono">{brentCorrelation.slopeUSD.toFixed(4)}</p>
-                    <p className="text-[10px] text-slate-500">Slope (USD/L per USD/bbl)</p>
-                    <p className="text-[9px] text-orange-600">+$10 Brent → +${(brentCorrelation.slopeUSD * 10).toFixed(3)}/L</p>
-                  </div>
-                  {/* R² comparison */}
-                  <div className="text-center p-3 bg-white/70 rounded-lg">
-                    <p className={`text-lg font-bold font-mono ${brentCorrelation.rSquaredUSD >= 0.6 ? 'text-emerald-700' : 'text-amber-700'}`}>{brentCorrelation.rSquaredUSD.toFixed(2)}</p>
-                    <p className="text-[10px] text-slate-500">R² (USD-space)</p>
-                    <p className="text-[9px] text-slate-400">vs {brentCorrelation.rSquaredCLP.toFixed(2)} CLP-space</p>
-                  </div>
-                  {/* Current Brent + Implied */}
-                  <div className="text-center p-3 bg-white/70 rounded-lg">
-                    <p className="text-lg font-bold text-orange-700 font-mono">US${brentData?.currentBrentUSD.toFixed(1)}</p>
-                    <p className="text-[10px] text-slate-500">Brent spot</p>
-                    <p className="text-[9px] text-orange-600">→ ${brentCorrelation.brentImpliedAvgasUSD.toFixed(2)} USD/L</p>
+                {/* ★ HERO: Brent-implied AVGAS price — the main output */}
+                <div className="mb-4 p-4 bg-white rounded-xl border-2 border-orange-300 shadow-sm">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                    {/* Main price */}
+                    <div className="text-center sm:text-left">
+                      <p className="text-[10px] font-semibold text-orange-600 uppercase tracking-wider mb-0.5">Brent-Implied AVGAS Price</p>
+                      <div className="flex items-baseline gap-2">
+                        <p className="text-3xl sm:text-4xl font-bold text-orange-700 font-mono">${formatCurrency(brentCorrelation.brentImpliedAvgas)}</p>
+                        <span className="text-sm text-slate-500">CLP/L</span>
+                      </div>
+                      <p className="text-xs text-orange-600 font-mono mt-0.5">
+                        US${brentCorrelation.brentImpliedAvgasUSD.toFixed(2)}/L × {Math.round(usdRate)} CLP/USD
+                      </p>
+                    </div>
+                    {/* Comparison vs 3-mo avg */}
+                    {fuelPriceAnalysis && (() => {
+                      const diff = brentCorrelation.brentImpliedAvgas - fuelPriceAnalysis.avg3m;
+                      const pct = fuelPriceAnalysis.avg3m > 0 ? (diff / fuelPriceAnalysis.avg3m) * 100 : 0;
+                      const isHigher = diff > 0;
+                      return (
+                        <div className={`text-center px-4 py-2 rounded-lg ${isHigher ? 'bg-red-50 border border-red-200' : 'bg-emerald-50 border border-emerald-200'}`}>
+                          <p className={`text-lg font-bold font-mono ${isHigher ? 'text-red-700' : 'text-emerald-700'}`}>
+                            {isHigher ? '+' : ''}{pct.toFixed(1)}%
+                          </p>
+                          <p className="text-[10px] text-slate-500">vs 3-mo avg ${formatCurrency(fuelPriceAnalysis.avg3m)}</p>
+                          <p className={`text-[9px] font-bold ${isHigher ? 'text-red-600' : 'text-emerald-600'}`}>
+                            {isHigher ? '🛢️ Brent presiona ▲' : '✅ Below market'}
+                          </p>
+                        </div>
+                      );
+                    })()}
+                    {/* Brent spot */}
+                    <div className="text-center px-4 py-2 bg-orange-50 rounded-lg border border-orange-100">
+                      <p className="text-xl font-bold text-orange-700 font-mono">US${brentData?.currentBrentUSD.toFixed(1)}</p>
+                      <p className="text-[10px] text-slate-500">Brent spot</p>
+                    </div>
                   </div>
                 </div>
 
-                {/* Row 2: 3-Factor Decomposition of Current Price */}
+                {/* Model Parameters — compact inline */}
+                <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-slate-600 px-1">
+                  <span>📐 <span className="font-mono font-bold text-orange-700">AVGAS_USD = {brentCorrelation.slopeUSD.toFixed(4)} × Brent + ${brentCorrelation.interceptUSD.toFixed(2)}</span></span>
+                  <span>R² = <span className="font-mono font-bold">{brentCorrelation.rSquaredUSD.toFixed(2)}</span> <span className="text-slate-400">(vs {brentCorrelation.rSquaredCLP.toFixed(2)} CLP)</span></span>
+                  <span>+$10 Brent → <span className="font-mono font-bold text-orange-600">+${(brentCorrelation.slopeUSD * 10).toFixed(3)}/L</span></span>
+                  <span>Floor: <span className="font-mono font-bold text-indigo-600">${brentCorrelation.interceptUSD.toFixed(2)} USD</span> <span className="text-slate-400">(TEL + logistics)</span></span>
+                </div>
+
+                {/* 3-Factor Decomposition bar */}
                 <div className="bg-white/50 rounded-lg p-3 border border-orange-100">
-                  <p className="text-[10px] font-semibold text-orange-700 uppercase tracking-wider mb-2">3-Factor Decomposition (Current Price)</p>
+                  <p className="text-[10px] font-semibold text-orange-700 uppercase tracking-wider mb-2">3-Factor Decomposition</p>
                   <div className="flex items-center gap-2 text-xs">
                     <div className="flex-1 text-center">
                       <div className="h-6 bg-indigo-200 rounded flex items-center justify-center">
@@ -5560,10 +5580,10 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                     </div>
                     <span className="text-slate-400 font-bold">=</span>
                     <div className="flex-1 text-center">
-                      <div className="h-6 bg-emerald-200 rounded flex items-center justify-center">
-                        <span className="font-mono font-bold text-emerald-800">${formatCurrency(brentCorrelation.brentImpliedAvgas)}</span>
+                      <div className="h-7 bg-gradient-to-r from-orange-300 to-amber-300 rounded flex items-center justify-center ring-2 ring-orange-400">
+                        <span className="font-mono font-bold text-orange-900">${formatCurrency(brentCorrelation.brentImpliedAvgas)}</span>
                       </div>
-                      <p className="text-[9px] text-slate-500 mt-1">CLP/L</p>
+                      <p className="text-[9px] font-bold text-orange-700 mt-1">CLP/L</p>
                     </div>
                   </div>
                 </div>
