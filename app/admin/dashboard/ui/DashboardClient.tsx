@@ -5016,7 +5016,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
             <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Current (Nominal)</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="text-center p-3 bg-slate-50 rounded-lg">
-                <p className="text-lg font-bold text-slate-900 font-mono">${formatCurrency(overhaulCLP)}</p>
+                <p className="text-lg font-bold text-slate-900 font-mono">${formatCurrency(Math.round(computed.effectiveOverhaulCLP))}</p>
                 <p className="text-[10px] text-slate-500">Total Cost Today</p>
               </div>
               <div className="text-center p-3 bg-emerald-50 rounded-lg">
@@ -5067,12 +5067,12 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
           <div className="mt-2">
             <div className="flex justify-between text-[10px] text-slate-500 mb-1">
               <span>Recaudado vs costo actual</span>
-              <span>{((recaudado / overhaulCLP) * 100).toFixed(1)}%</span>
+              <span>{((recaudado / computed.effectiveOverhaulCLP) * 100).toFixed(1)}%</span>
             </div>
             <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all"
-                style={{ width: `${Math.min(100, (recaudado / overhaulCLP) * 100)}%` }}
+                style={{ width: `${Math.min(100, (recaudado / computed.effectiveOverhaulCLP) * 100)}%` }}
               />
             </div>
             <div className="flex justify-between text-[10px] text-slate-500 mb-1 mt-2">
