@@ -4024,8 +4024,10 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   const [fuelTrendRate, setFuelTrendRate] = useState(stored?.fuelTrendRate ?? 10);
   // Live engine market price (from airpowerinc.com scraping)
   const [engineMarketPriceUSD, setEngineMarketPriceUSD] = useState(stored?.engineMarketPriceUSD ?? 47415);
+  // Brent oil correlation data
+  const [brentData, setBrentData] = useState<{ currentBrentUSD: number; monthly: { month: string; brentUSD: number; usdCLP: number }[]; source: string } | null>(null);
   // Live indicators state
-  const [liveIndicators, setLiveIndicators] = useState<{ uf: boolean; usd: boolean; fuel: boolean; engine: boolean; ipc: boolean }>({ uf: false, usd: false, fuel: false, engine: false, ipc: false });
+  const [liveIndicators, setLiveIndicators] = useState<{ uf: boolean; usd: boolean; fuel: boolean; engine: boolean; ipc: boolean; brent: boolean }>({ uf: false, usd: false, fuel: false, engine: false, ipc: false, brent: false });
 
   // Save all params to localStorage whenever any changes
   useEffect(() => {
@@ -4137,19 +4139,70 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         }
       })
       .catch(() => {}); // Silent fail, keeps defaults
+    // Also fetch Brent oil data for AVGAS correlation
+    fetch('/api/brent-oil')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (!data) return;
+        setBrentData({ currentBrentUSD: data.currentBrentUSD, monthly: data.monthly, source: data.source });
+        setLiveIndicators(prev => ({ ...prev, brent: true }));
+      })
+      .catch(() => {});
   }, []);
 
-  // Auto-populate AVGAS price from fuel records (3-month weighted avg) + trend rate from CAGR
+  // Brent ↔ AVGAS regression analysis
+  const brentCorrelation = useMemo(() => {
+    if (!brentData || !fuelPriceAnalysis || !fuelPriceAnalysis.monthlyArr.length) return null;
+    // Build paired data: for each AVGAS month, find matching Brent month
+    const pairs: { brentCLP: number; avgasCLP: number; month: string }[] = [];
+    const brentMap = new Map(brentData.monthly.map(b => [b.month, b]));
+    for (const fm of fuelPriceAnalysis.monthlyArr) {
+      const bm = brentMap.get(fm.month);
+      if (bm) {
+        pairs.push({ brentCLP: bm.brentUSD * bm.usdCLP, avgasCLP: fm.ppl, month: fm.month });
+      }
+    }
+    if (pairs.length < 6) return null; // need minimum data for meaningful regression
+    // Simple linear regression: AVGAS_CLP = intercept + slope × Brent_CLP
+    const n = pairs.length;
+    const sumX = pairs.reduce((s, p) => s + p.brentCLP, 0);
+    const sumY = pairs.reduce((s, p) => s + p.avgasCLP, 0);
+    const sumXY = pairs.reduce((s, p) => s + p.brentCLP * p.avgasCLP, 0);
+    const sumX2 = pairs.reduce((s, p) => s + p.brentCLP * p.brentCLP, 0);
+    const sumY2 = pairs.reduce((s, p) => s + p.avgasCLP * p.avgasCLP, 0);
+    const denom = n * sumX2 - sumX * sumX;
+    if (denom === 0) return null;
+    const slope = (n * sumXY - sumX * sumY) / denom;
+    const intercept = (sumY - slope * sumX) / n;
+    // R²
+    const ssRes = pairs.reduce((s, p) => s + Math.pow(p.avgasCLP - (intercept + slope * p.brentCLP), 2), 0);
+    const meanY = sumY / n;
+    const ssTot = pairs.reduce((s, p) => s + Math.pow(p.avgasCLP - meanY, 2), 0);
+    const rSquared = ssTot > 0 ? 1 - ssRes / ssTot : 0;
+    // Current Brent in CLP (use live USD rate)
+    const currentBrentCLP = brentData.currentBrentUSD * usdRate;
+    // Implied AVGAS price from Brent regression
+    const brentImpliedAvgas = Math.round(intercept + slope * currentBrentCLP);
+    // Brent-implied annual rate: annualized difference from current avg3m to implied
+    const avg3m = fuelPriceAnalysis.avg3m;
+    const brentImpliedRate = avg3m > 0 && brentImpliedAvgas > avg3m
+      ? ((brentImpliedAvgas / avg3m) - 1) * 100
+      : 0;
+    return { slope, intercept, rSquared, pairs: pairs.length, brentImpliedAvgas, brentImpliedRate, currentBrentCLP };
+  }, [brentData, fuelPriceAnalysis, usdRate]);
+
+  // Auto-populate AVGAS price from fuel records (3-month weighted avg) + trend rate from CAGRCAGR, Brent-implied, 5%)
   useEffect(() => {
     if (fuelPriceAnalysis && fuelPriceAnalysis.avg3m > 0) {
       setAvgasLiterCLP(fuelPriceAnalysis.avg3m);
-      // Use CAGR as baseline trend, minimum 5% given upward global pressure
-      if (fuelPriceAnalysis.cagr > 0) {
-        setFuelTrendRate(Math.round(Math.max(fuelPriceAnalysis.cagr, 5) * 10) / 10);
-      }
+      // Conservative: use the highest of CAGR, Brent-implied rate, or 5% floor
+      const cagrRate = fuelPriceAnalysis.cagr > 0 ? fuelPriceAnalysis.cagr : 5;
+      const brentRate = (brentCorrelation && brentCorrelation.rSquared >= 0.3) ? brentCorrelation.brentImpliedRate : 0;
+      const bestRate = Math.max(cagrRate, brentRate, 5);
+      setFuelTrendRate(Math.round(bestRate * 10) / 10);
       setLiveIndicators(prev => ({ ...prev, fuel: true }));
     }
-  }, [fuelPriceAnalysis]);
+  }, [fuelPriceAnalysis, brentCorrelation]);
 
   // Auto-populate IPC Chile cumulative inflation from mindicador.cl (Aug 2022 → present)
   useEffect(() => {
@@ -4500,9 +4553,9 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 <h3 className="text-sm font-semibold text-slate-800">Cost Analysis — C-172 CC-AQI</h3>
                 <p className="text-xs text-slate-500 flex items-center gap-1.5 flex-wrap">
                   <span>Operating cost model · {horasAnuales} hobbs hrs/yr{!horasIsLive && ' ✏️'}</span>
-                  {(liveIndicators.uf || liveIndicators.usd || liveIndicators.fuel || liveIndicators.engine || liveIndicators.ipc) && (
+                  {(liveIndicators.uf || liveIndicators.usd || liveIndicators.fuel || liveIndicators.engine || liveIndicators.ipc || liveIndicators.brent) && (
                     <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">
-                      LIVE {[liveIndicators.uf && 'UF', liveIndicators.usd && 'USD', liveIndicators.fuel && 'AVGAS', liveIndicators.engine && 'ENGINE', liveIndicators.ipc && 'IPC'].filter(Boolean).join('+')}
+                      LIVE {[liveIndicators.uf && 'UF', liveIndicators.usd && 'USD', liveIndicators.fuel && 'AVGAS', liveIndicators.engine && 'ENGINE', liveIndicators.ipc && 'IPC', liveIndicators.brent && 'BRENT'].filter(Boolean).join('+')}
                     </span>
                   )}
                 </p>
@@ -5285,6 +5338,58 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               </div>
             </div>
 
+            {/* 🛢️ Brent Oil ↔ AVGAS Correlation */}
+            {brentCorrelation && brentCorrelation.rSquared >= 0.3 && (
+              <div className="mb-5 p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl border border-orange-200">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🛢️</span>
+                    <div>
+                      <p className="text-xs font-semibold text-orange-800">Brent Crude Oil ↔ AVGAS Correlation</p>
+                      <p className="text-[10px] text-orange-600">{brentCorrelation.pairs} paired monthly data points · R² = {brentCorrelation.rSquared.toFixed(2)}</p>
+                    </div>
+                  </div>
+                  {liveIndicators.brent && (
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-700">
+                      LIVE · {brentData?.source}
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="text-center p-3 bg-white/70 rounded-lg">
+                    <p className="text-lg font-bold text-orange-700 font-mono">US${brentData?.currentBrentUSD.toFixed(1)}</p>
+                    <p className="text-[10px] text-slate-500">Brent USD/bbl</p>
+                    <p className="text-[9px] text-orange-600">Current spot</p>
+                  </div>
+                  <div className="text-center p-3 bg-white/70 rounded-lg">
+                    <p className="text-lg font-bold text-amber-700 font-mono">${formatCurrency(brentCorrelation.brentImpliedAvgas)}</p>
+                    <p className="text-[10px] text-slate-500">AVGAS implícito $/L</p>
+                    <p className="text-[9px] text-slate-400">From regression</p>
+                  </div>
+                  <div className="text-center p-3 bg-white/70 rounded-lg">
+                    <p className={`text-lg font-bold font-mono ${brentCorrelation.rSquared >= 0.6 ? 'text-emerald-700' : 'text-amber-700'}`}>{brentCorrelation.rSquared.toFixed(2)}</p>
+                    <p className="text-[10px] text-slate-500">R² Correlation</p>
+                    <p className="text-[9px] text-slate-400">{brentCorrelation.rSquared >= 0.7 ? 'Strong' : brentCorrelation.rSquared >= 0.5 ? 'Moderate' : 'Weak'} fit</p>
+                  </div>
+                  <div className="text-center p-3 rounded-lg" style={{ backgroundColor: brentCorrelation.brentImpliedRate > fuelPriceAnalysis.cagr ? '#fef2f2' : '#f0fdf4' }}>
+                    {(() => {
+                      const brentPushes = brentCorrelation.brentImpliedAvgas > fuelPriceAnalysis.avg3m;
+                      const dominantSource = brentCorrelation.brentImpliedRate > fuelPriceAnalysis.cagr ? 'Brent' : 'CAGR';
+                      return (
+                        <>
+                          <p className={`text-sm font-bold ${brentPushes ? 'text-red-700' : 'text-emerald-700'}`}>
+                            {brentPushes ? '🛢️ Brent presiona ▲' : dominantSource === 'CAGR' ? '📊 CAGR dominante' : '≈ Estable'}
+                          </p>
+                          <p className="text-[10px] text-slate-500 mt-1">Model uses: <span className="font-bold">{fuelTrendRate}%/yr</span></p>
+                          <p className="text-[9px] text-slate-400">max(CAGR {fuelPriceAnalysis.cagr.toFixed(1)}%, Brent {brentCorrelation.brentImpliedRate.toFixed(1)}%, 5%)</p>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Yearly Avg Price */}
             <div className="mb-5">
               <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Annual Average Price per Liter</p>
@@ -5385,7 +5490,18 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                     : <> reducing your margin from <span className="font-bold">{computed.margen.toFixed(1)}%</span> to <span className="font-bold text-red-700">{computed.projectedMargen.toFixed(1)}%</span>.</>
                   }
                   </p>
-                  <p className="mt-1 text-red-700">🛢️ Global factors: US-Iran tensions, OPEC+ production cuts, and refinery capacity constraints are driving crude oil and AVGAS prices upward. Adjust the trend rate in parameters to model different scenarios.</p>
+                  <p className="mt-1 text-red-700">🛢️ {brentData
+                    ? <>Brent crude at <span className="font-bold">US${brentData.currentBrentUSD.toFixed(1)}/bbl</span> ({brentData.source}).{' '}
+                      {brentCorrelation && brentCorrelation.rSquared >= 0.3
+                        ? <>Regression (R²={brentCorrelation.rSquared.toFixed(2)}) implies AVGAS at <span className="font-bold">${formatCurrency(brentCorrelation.brentImpliedAvgas)}/L</span>.{' '}
+                          {brentCorrelation.brentImpliedRate > fuelPriceAnalysis.cagr
+                            ? <>Brent pressure ({brentCorrelation.brentImpliedRate.toFixed(1)}%) exceeds historical CAGR ({fuelPriceAnalysis.cagr.toFixed(1)}%) — model uses the higher rate.</>
+                            : <>Historical CAGR ({fuelPriceAnalysis.cagr.toFixed(1)}%) exceeds Brent-implied rate ({brentCorrelation.brentImpliedRate.toFixed(1)}%) — model uses CAGR as conservative baseline.</>
+                          }</>
+                        : <>AVGAS correlation with Brent weak (R²&lt;0.3) — using CAGR-only trend.</>
+                      }</>
+                    : <>Global factors: crude oil supply constraints and refinery capacity are driving AVGAS prices. Adjust the trend rate to model different scenarios.</>
+                  }</p>
                 </div>
               </div>
             </div>
