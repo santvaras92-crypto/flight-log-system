@@ -29,25 +29,31 @@ export async function GET() {
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
           Accept: "text/html,application/xhtml+xml",
         },
-        next: { revalidate: 86400 },
+        cache: 'no-store', // bypass Next.js fetch cache — we handle our own 24h cache
       }
     );
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const html = await res.text();
 
-    // Extract "Your Price: $XX,XXX.XX"
-    // The page shows: Your Price: $47,415.00
-    const priceMatch = html.match(/Your Price:\s*\$([0-9,]+\.\d{2})/);
-    const coreMatch = html.match(/Refundable Core Charge:\s*\$([0-9,]+\.\d{2})/);
-    const totalMatch = html.match(/Your Price Plus Core:\s*\$([0-9,]+\.\d{2})/);
+    // Extract prices from HTML — labels and values are in separate elements:
+    //   <label>Your Price:</label>
+    //   <span id="user-price-...">$47,415.00</span>
+    const priceMatch = html.match(/id="user-price-\d+"[^>]*>\s*\$([0-9,]+\.\d{2})/);
+    const coreMatch = html.match(/id="core-charge-\d+"[^>]*>\s*\$([0-9,]+\.\d{2})/);
+    const totalMatch = html.match(/id="price-value-\d+"[^>]*>\s*\$([0-9,]+\.\d{2})/);
+
+    // Fallback: try legacy format (label + value on same line)
+    const priceMatchLegacy = priceMatch || html.match(/Your Price:\s*\$([0-9,]+\.\d{2})/);
+    const coreMatchLegacy = coreMatch || html.match(/Refundable Core Charge:\s*\$([0-9,]+\.\d{2})/);
+    const totalMatchLegacy = totalMatch || html.match(/Your Price Plus Core:\s*\$([0-9,]+\.\d{2})/);
 
     const parsePrice = (m: RegExpMatchArray | null) =>
       m ? parseFloat(m[1].replace(/,/g, "")) : 0;
 
-    const price = parsePrice(priceMatch);
-    const core = parsePrice(coreMatch);
-    const total = parsePrice(totalMatch);
+    const price = parsePrice(priceMatchLegacy);
+    const core = parsePrice(coreMatchLegacy);
+    const total = parsePrice(totalMatchLegacy);
 
     if (price > 0) {
       cached = {
