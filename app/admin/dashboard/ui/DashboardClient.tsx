@@ -4004,7 +4004,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   // Live engine market price (from airpowerinc.com scraping)
   const [engineMarketPriceUSD, setEngineMarketPriceUSD] = useState(47415); // fallback: last known RENPL-RT8164
   // Live indicators state
-  const [liveIndicators, setLiveIndicators] = useState<{ uf: boolean; usd: boolean; fuel: boolean; engine: boolean }>({ uf: false, usd: false, fuel: false, engine: false });
+  const [liveIndicators, setLiveIndicators] = useState<{ uf: boolean; usd: boolean; fuel: boolean; engine: boolean; ipc: boolean }>({ uf: false, usd: false, fuel: false, engine: false, ipc: false });
 
   // Computed overhaul cost: inflate total CLP cost from Aug 2022 by Chilean IPC
   const overhaulCLP = useMemo(() => {
@@ -4110,6 +4110,20 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       setLiveIndicators(prev => ({ ...prev, fuel: true }));
     }
   }, [fuelPriceAnalysis]);
+
+  // Auto-populate IPC Chile cumulative inflation from mindicador.cl (Aug 2022 → present)
+  useEffect(() => {
+    fetch('/api/ipc-chile?baseYear=2022&baseMonth=8')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (!data) return;
+        if (data.cumulativePct > 0) {
+          setClInflationPct(data.cumulativePct);
+          setLiveIndicators(prev => ({ ...prev, ipc: true }));
+        }
+      })
+      .catch(() => {}); // Silent fail, keeps default 16.35%
+  }, []);
 
   // Auto-populate engine market price from airpowerinc.com (RENPL-RT8164 O-320-D2J)
   useEffect(() => {
@@ -4433,9 +4447,9 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 <h3 className="text-sm font-semibold text-slate-800">Cost Analysis — C-172 CC-AQI</h3>
                 <p className="text-xs text-slate-500 flex items-center gap-1.5 flex-wrap">
                   <span>Operating cost model · {horasAnuales} hrs/yr estimate</span>
-                  {(liveIndicators.uf || liveIndicators.usd || liveIndicators.fuel || liveIndicators.engine) && (
+                  {(liveIndicators.uf || liveIndicators.usd || liveIndicators.fuel || liveIndicators.engine || liveIndicators.ipc) && (
                     <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">
-                      LIVE {[liveIndicators.uf && 'UF', liveIndicators.usd && 'USD', liveIndicators.fuel && 'AVGAS', liveIndicators.engine && 'ENGINE'].filter(Boolean).join('+')}
+                      LIVE {[liveIndicators.uf && 'UF', liveIndicators.usd && 'USD', liveIndicators.fuel && 'AVGAS', liveIndicators.engine && 'ENGINE', liveIndicators.ipc && 'IPC'].filter(Boolean).join('+')}
                     </span>
                   )}
                 </p>
@@ -4551,7 +4565,10 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 <div className="space-y-0.5 divide-y divide-slate-100">
                   <ParamInput label="Eagle Copters (motor)" value={overhaulMotorCLP} onChange={setOverhaulMotorCLP} unit="CLP" />
                   <ParamInput label="Labor (installation)" value={overhaulLaborCLP} onChange={setOverhaulLaborCLP} unit="CLP" />
-                  <ParamInput label="IPC Chile cumul." value={clInflationPct} onChange={setClInflationPct} unit="%" />
+                  <div className="flex items-center gap-1">
+                    <ParamInput label="IPC Chile cumul." value={clInflationPct} onChange={setClInflationPct} unit="%" />
+                    {liveIndicators.ipc && <span className="px-1.5 py-0.5 text-[8px] font-bold bg-emerald-100 text-emerald-700 rounded-full whitespace-nowrap">LIVE</span>}
+                  </div>
                   {/* Computed total — read-only */}
                   <div className="flex items-center justify-between py-1.5">
                     <span className="text-[11px] text-slate-600">Overhaul total</span>
