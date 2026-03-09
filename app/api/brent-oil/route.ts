@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 // Brent Crude Oil  ↔  AVGAS fuel-price correlation endpoint
 // • Hard-coded monthly averages (Sep 2020 → Mar 2026) computed
 //   from EIA daily spot data + Banco Central USD/CLP series
-// • Live Brent: Yahoo Finance BZ=F → EIA API v2 → EIA HTML → fallback
+// • Live Brent: EIA API v2 (official spot) → EIA HTML → hard-coded fallback
 // • 24-hour in-memory cache, same pattern as /api/engine-price
 // ──────────────────────────────────────────────────────────────
 
@@ -99,30 +99,9 @@ let cachedAt = 0;
 const CACHE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 // ── Multi-source live Brent price fetcher ──
-// Priority: Yahoo Finance (real-time) → EIA API v2 (1-3d delay) → EIA HTML → hard-coded
+// Priority: EIA API v2 (official spot) → EIA HTML → hard-coded
 async function scrapeLiveBrent(): Promise<{ price: number; source: string } | null> {
-  // ── Source 1: Yahoo Finance BZ=F (real-time Brent futures) ──
-  try {
-    const res = await fetch(
-      "https://query2.finance.yahoo.com/v8/finance/chart/BZ=F?range=5d&interval=1d",
-      {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        },
-        signal: AbortSignal.timeout(8000),
-      }
-    );
-    if (res.ok) {
-      const json = await res.json();
-      const price = json?.chart?.result?.[0]?.meta?.regularMarketPrice;
-      if (typeof price === "number" && price > 10) {
-        return { price: Math.round(price * 100) / 100, source: "yahoo-finance (BZ=F live)" };
-      }
-    }
-  } catch { /* fall through to next source */ }
-
-  // ── Source 2: EIA API v2 JSON (official spot, 1-3 day delay) ──
+  // ── Source 1: EIA API v2 JSON (official spot, 1-3 day delay) ──
   try {
     const url =
       "https://api.eia.gov/v2/petroleum/pri/spt/data/?frequency=daily&data[0]=value&facets[series][]=RBRTE&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=1&api_key=DEMO_KEY";
@@ -139,7 +118,7 @@ async function scrapeLiveBrent(): Promise<{ price: number; source: string } | nu
     }
   } catch { /* fall through to next source */ }
 
-  // ── Source 3: EIA HTML scrape (legacy fallback) ──
+  // ── Source 2: EIA HTML scrape (legacy fallback) ──
   try {
     const res = await fetch(
       "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm",
