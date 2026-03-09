@@ -2682,11 +2682,10 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
 function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewMetrics }: { components: any[]; aircraft: any[]; aircraftYearlyStats: any[]; overviewMetrics?: OverviewMetrics }) {
   // Get usage stats from new predictive system
   const stats = overviewMetrics?.nextInspections?.usageStats;
-  const weightedRate = stats?.weightedRate || 0;  // hobbs hrs/day
+  const weightedRate = stats?.weightedRate || 0;  // tach hrs/day
   const stdDev = stats?.stdDev || 0;
   const trend = stats?.trend || 0;
   const rate30d = stats?.rate30d || 0;
-  const htRatio = overviewMetrics?.annualStats?.hobbsTachRatio || 1.25; // tach→hobbs
 
   // Overhaul modal state
   const [overhaulModal, setOverhaulModal] = useState<{ open: boolean; component: any | null }>({ open: false, component: null });
@@ -2982,10 +2981,9 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
             <tbody className="bg-white divide-y divide-slate-100">
               {components.map(c => {
                 const restante = Number(c.limite_tbo) - Number(c.horas_acumuladas);
-                const restanteHobbs = restante * htRatio; // convert tach→hobbs for prediction
                 const pct = (Number(c.horas_acumuladas) / Number(c.limite_tbo)) * 100;
                 const colorClass = pct > 80 ? 'text-red-600 font-bold' : pct > 60 ? 'text-orange-500 font-bold' : 'text-green-600 font-bold';
-                const tboPred = weightedRate > 0 ? getPrediction(restanteHobbs) : null;
+                const tboPred = weightedRate > 0 ? getPrediction(restante) : null;
                 const hasOverhaul = c.overhaul_airframe != null;
 
                 return (
@@ -4844,17 +4842,17 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         const tbo = engineComp ? Number(engineComp.limite_tbo) : 2000;
         const tachRemaining = Math.max(0, tbo - smoh);
         const htRatio = overviewMetrics?.annualStats?.hobbsTachRatio || 1.25;
-        const hobbsRemaining = tachRemaining * htRatio;
+        const hobbsRemaining = tachRemaining * htRatio; // for display only
         const stats = overviewMetrics?.nextInspections?.usageStats;
-        const weightedRate = stats?.weightedRate || 0; // hobbs hrs/day
+        const weightedRate = stats?.weightedRate || 0; // tach hrs/day (from diff_tach)
         const rate30d = stats?.rate30d || 0;
         const rate90d = stats?.rate90d || 0;
         const rateAnnual = stats?.rateAnnual || 0;
         const stdDev = stats?.stdDev || 0;
         const trend = stats?.trend || 0;
 
-        // Time predictions
-        const daysRemaining = weightedRate > 0 ? Math.round(hobbsRemaining / weightedRate) : 0;
+        // Time predictions: tachRemaining(tach) / weightedRate(tach/day) = days
+        const daysRemaining = weightedRate > 0 ? Math.round(tachRemaining / weightedRate) : 0;
         const uncertainty = weightedRate > 0 ? 1.96 * stdDev * Math.sqrt(Math.max(1, daysRemaining)) / weightedRate : 0;
         const minDays = Math.max(0, Math.round(daysRemaining - uncertainty));
         const maxDays = Math.round(daysRemaining + uncertainty);
@@ -4873,8 +4871,8 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
           return `${(days / 365).toFixed(1)}yr`;
         };
         const enginePct = tbo > 0 ? (smoh / tbo) * 100 : 0;
-        const hobbsPerMonth = weightedRate * 30.44;
-        const tachPerMonth = hobbsPerMonth / htRatio;
+        const tachPerMonth = weightedRate * 30.44;  // weightedRate is tach/day
+        const hobbsPerMonth = tachPerMonth * htRatio;
         const monthsRemaining = daysRemaining / 30.44;
 
         // Overhaul funding tied to timeline
@@ -4952,15 +4950,18 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                   <div>
                     <p className="text-[10px] text-slate-400">30-day rate</p>
-                    <p className="text-sm font-bold text-slate-700 font-mono">{(rate30d * 30.44).toFixed(1)} <span className="text-[10px] font-normal text-slate-400">hobbs/mo</span></p>
+                    <p className="text-sm font-bold text-slate-700 font-mono">{(rate30d * 30.44 * htRatio).toFixed(1)} <span className="text-[10px] font-normal text-slate-400">hobbs/mo</span></p>
+                    <p className="text-[9px] text-slate-400">{(rate30d * 30.44).toFixed(1)} tach/mo</p>
                   </div>
                   <div>
                     <p className="text-[10px] text-slate-400">90-day rate</p>
-                    <p className="text-sm font-bold text-slate-700 font-mono">{(rate90d * 30.44).toFixed(1)} <span className="text-[10px] font-normal text-slate-400">hobbs/mo</span></p>
+                    <p className="text-sm font-bold text-slate-700 font-mono">{(rate90d * 30.44 * htRatio).toFixed(1)} <span className="text-[10px] font-normal text-slate-400">hobbs/mo</span></p>
+                    <p className="text-[9px] text-slate-400">{(rate90d * 30.44).toFixed(1)} tach/mo</p>
                   </div>
                   <div>
                     <p className="text-[10px] text-slate-400">Annual rate</p>
-                    <p className="text-sm font-bold text-slate-700 font-mono">{(rateAnnual * 30.44).toFixed(1)} <span className="text-[10px] font-normal text-slate-400">hobbs/mo</span></p>
+                    <p className="text-sm font-bold text-slate-700 font-mono">{(rateAnnual * 30.44 * htRatio).toFixed(1)} <span className="text-[10px] font-normal text-slate-400">hobbs/mo</span></p>
+                    <p className="text-[9px] text-slate-400">{(rateAnnual * 30.44).toFixed(1)} tach/mo</p>
                   </div>
                   <div>
                     <p className="text-[10px] text-slate-400">Weighted avg</p>
