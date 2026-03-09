@@ -4227,7 +4227,15 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const inflationIncrease = inflatedOverhaulCost - effectiveOverhaulCLP;
 
     const projectedGap = inflatedOverhaulCost - projectedFunds;
-    const projectedMonthlyTarget = projectedGap > 0 ? projectedGap / Math.max(yearsToOverhaul * 12, 1) : 0;
+    // PMT formula: monthly savings invested at r%/yr compound interest
+    // PMT = FV × r_m / ((1+r_m)^n - 1)  — annuity "sinking fund" payment
+    const monthsToOverhaul = Math.max(yearsToOverhaul * 12, 1);
+    const rMonthly = Math.pow(1 + r, 1/12) - 1; // effective monthly rate from annual
+    const projectedMonthlyTarget = projectedGap > 0
+      ? (rMonthly > 0
+        ? projectedGap * rMonthly / (Math.pow(1 + rMonthly, monthsToOverhaul) - 1)
+        : projectedGap / monthsToOverhaul)
+      : 0;
 
     // Variable costs per hour (hobbs)
     const combustibleHr = fuelLPH * avgasLiterCLP;
@@ -4253,10 +4261,15 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const gananciaHr = valorHoraCLP - totalCostoHr;
     const margen = valorHoraCLP > 0 ? (gananciaHr / valorHoraCLP) * 100 : 0;
 
-    // Overhaul funding
+    // Overhaul funding — PMT with compound interest on monthly savings
     const faltaOverhaul = effectiveOverhaulCLP - recaudado;
-    const metaAnualOverhaul = faltaOverhaul / Math.max(anosRemanentes, 0.1);
-    const metaMensualOverhaul = metaAnualOverhaul / 12;
+    const nominalMonths = Math.max(anosRemanentes * 12, 1);
+    const metaMensualOverhaul = faltaOverhaul > 0
+      ? (rMonthly > 0
+        ? faltaOverhaul * rMonthly / (Math.pow(1 + rMonthly, nominalMonths) - 1)
+        : faltaOverhaul / nominalMonths)
+      : 0;
+    const metaAnualOverhaul = metaMensualOverhaul * 12;
 
     // ===== FUEL COST PROJECTIONS =====
     const fuelTrend = fuelTrendRate / 100;
@@ -5086,6 +5099,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               <div className="text-center p-3 bg-blue-50 rounded-lg">
                 <p className="text-lg font-bold text-blue-700 font-mono">${formatCurrency(Math.round(computed.metaMensualOverhaul))}</p>
                 <p className="text-[10px] text-slate-500">Monthly Target</p>
+                <p className="text-[9px] text-blue-500 font-mono mt-0.5">invirtiendo al {interestRate}%/yr</p>
               </div>
             </div>
           </div>
@@ -5114,7 +5128,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-100">
                 <p className="text-lg font-bold text-blue-700 font-mono">${formatCurrency(Math.round(computed.projectedMonthlyTarget))}</p>
                 <p className="text-[10px] text-slate-500">Adj. Monthly Target</p>
-                <p className="text-[9px] text-slate-400 font-mono mt-0.5">vs ${formatCurrency(Math.round(computed.metaMensualOverhaul))} nominal</p>
+                <p className="text-[9px] text-slate-400 font-mono mt-0.5">PMT al {interestRate}%/yr · vs ${formatCurrency(Math.round(computed.metaMensualOverhaul))} nominal</p>
               </div>
             </div>
           </div>
@@ -5156,7 +5170,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 Costo total (<span className="font-mono">${formatCurrency(overhaulCLP)}</span>) proyectado con <span className="font-bold">{clForwardInflation}%/yr IPC Chile</span> → <span className="font-mono text-red-600">${formatCurrency(Math.round(computed.inflatedOverhaulCost))}</span>.
                 Recaudado: <span className="font-mono font-bold">${formatCurrency(recaudado)}</span> crecen a <span className="font-mono font-bold text-emerald-600">${formatCurrency(Math.round(computed.projectedFunds))}</span> al {interestRate}%/yr.
                 {computed.projectedGap > 0
-                  ? ` Necesitas ahorrar $${formatCurrency(Math.round(computed.projectedMonthlyTarget))}/mes adicionales para cubrir la brecha proyectada.`
+                  ? ` Necesitas ahorrar $${formatCurrency(Math.round(computed.projectedMonthlyTarget))}/mes (invirtiendo al ${interestRate}%/yr) para cubrir la brecha proyectada.`
                   : ` Los fondos proyectados cubren el costo inflado con un superávit de $${formatCurrency(Math.abs(Math.round(computed.projectedGap)))}.`
                 }</p>
                 <p className="mt-1 text-blue-700"><span className="font-bold">⚡ Precio mercado motor (airpowerinc.com):</span> RENPL-RT8164 FOB USD ${formatCurrency(engineMarketPriceUSD)} × ${formatCurrency(usdRate)} CLP/USD = <span className="font-mono font-bold">${formatCurrency(computed.motorFobCLP)}</span> CLP FOB. Internación (flete + import + IVA) ratio ×{computed.internacionRatio.toFixed(3)} de factura Eagle 2022 → <span className="font-mono font-bold">${formatCurrency(computed.motorInternacionCLP)}</span> CLP puesto en Chile. Inflación aviación <span className="font-bold text-red-600">+{computed.motorPriceInflationPct.toFixed(1)}%</span> desde Jul 2022 ({computed.motorAnnualInflation.toFixed(1)}%/yr) supera el IPC general ({clInflationPct}%). Costo total reemplazo (motor internado + mano de obra): <span className="font-mono font-bold">${formatCurrency(computed.marketReplacementCLP)}</span> CLP.</p>
