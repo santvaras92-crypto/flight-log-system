@@ -2683,6 +2683,8 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
   // Get usage stats from new predictive system
   const stats = overviewMetrics?.nextInspections?.usageStats;
   const weightedRate = stats?.weightedRate || 0;  // tach hrs/day
+  const rateAnnual = stats?.rateAnnual || 0;  // tach hrs/day from rolling 365d
+  const effectiveRate = rateAnnual > 0 ? rateAnnual : weightedRate;  // prefer annual for consistency
   const stdDev = stats?.stdDev || 0;
   const trend = stats?.trend || 0;
   const rate30d = stats?.rate30d || 0;
@@ -2694,12 +2696,12 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
   const [overhaulResult, setOverhaulResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
   const router = useRouter();
 
-  // Calculate predicted inspection with confidence interval
+  // Calculate predicted inspection with confidence interval (uses annual rate for consistency)
   const getPrediction = (hoursRemaining: number) => {
-    if (weightedRate <= 0) return null;
+    if (effectiveRate <= 0) return null;
 
-    const days = Math.round(hoursRemaining / weightedRate);
-    const uncertainty = 1.96 * stdDev * Math.sqrt(days > 0 ? days : 1) / weightedRate;
+    const days = Math.round(hoursRemaining / effectiveRate);
+    const uncertainty = 1.96 * stdDev * Math.sqrt(days > 0 ? days : 1) / effectiveRate;
     const minDays = Math.max(1, Math.round(days - uncertainty));
     const maxDays = Math.round(days + uncertainty);
 
@@ -2974,7 +2976,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
                 <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">TBO</th>
                 <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Remaining</th>
                 <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Life %</th>
-                {weightedRate > 0 && <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Est. TBO</th>}
+                {effectiveRate > 0 && <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Est. TBO</th>}
                 <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Overhaul</th>
               </tr>
             </thead>
@@ -2983,7 +2985,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
                 const restante = Number(c.limite_tbo) - Number(c.horas_acumuladas);
                 const pct = (Number(c.horas_acumuladas) / Number(c.limite_tbo)) * 100;
                 const colorClass = pct > 80 ? 'text-red-600 font-bold' : pct > 60 ? 'text-orange-500 font-bold' : 'text-green-600 font-bold';
-                const tboPred = weightedRate > 0 ? getPrediction(restante) : null;
+                const tboPred = effectiveRate > 0 ? getPrediction(restante) : null;
                 const hasOverhaul = c.overhaul_airframe != null;
 
                 return (
@@ -3005,7 +3007,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
                         {pct.toFixed(1)}%
                       </span>
                     </td>
-                    {weightedRate > 0 && (
+                    {effectiveRate > 0 && (
                       <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600">
                         {tboPred ? (
                           <span className="font-mono font-medium">{formatTimeRemaining(tboPred.days)}</span>
@@ -4213,9 +4215,10 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const effectiveOverhaulCLP = Math.max(ipcOverhaulCLP, marketReplacementCLP);
     const overhaulSource = marketReplacementCLP > ipcOverhaulCLP ? 'market' : 'ipc';
 
-    // Convert overhaul cycle from tach to hobbs hours
-    const overhaulCycleHobbs = overhaulCycleHrs * htRatio;
-    const anosRemanentes = overhaulCycleHobbs / horasAnuales;
+    // Years to overhaul: use annual tach rate (tach/tach = years) for consistency across all modules
+    const overhaulCycleHobbs = overhaulCycleHrs * htRatio; // for display only
+    const tachPerYear = (overviewMetrics?.annualStats?.tachThisYear) || (horasAnuales / htRatio);
+    const anosRemanentes = tachPerYear > 0 ? overhaulCycleHrs / tachPerYear : overhaulCycleHrs / 195;
 
     // ===== FINANCIAL PROJECTIONS (computed early — needed for overhaul reserve) =====
     const r = interestRate / 100;
@@ -4335,7 +4338,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       projectedTotalVariableHr, projectedTotalCostoHr, projectedGananciaHr, projectedMargen,
       currentAnnualFuelCost, projectedAnnualFuelCostAtOverhaul,
       // H/T ratio used
-      htRatio, maintInterval,
+      htRatio, maintInterval, tachPerYear,
     };
   }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD, cambioAceiteCLP, revision100CLP, overhaulCLP, overhaulCycleHrs, seguroAnual, hangarAnual, toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual, recaudado, valorHoraCLP, interestRate, clForwardInflation, fuelTrendRate, overviewMetrics, overhaulMotorCLP, overhaulLaborCLP, clInflationPct, engineMarketPriceUSD, components, horasAnuales]);
 
@@ -4871,9 +4874,10 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         const stdDev = stats?.stdDev || 0;
         const trend = stats?.trend || 0;
 
-        // Time predictions: tachRemaining(tach) / weightedRate(tach/day) = days
-        const daysRemaining = weightedRate > 0 ? Math.round(tachRemaining / weightedRate) : 0;
-        const uncertainty = weightedRate > 0 ? 1.96 * stdDev * Math.sqrt(Math.max(1, daysRemaining)) / weightedRate : 0;
+        // Time predictions: use rateAnnual (tach/day from rolling 365d) for consistency across all modules
+        const effectiveRate = rateAnnual > 0 ? rateAnnual : weightedRate; // prefer annual, fallback to weighted
+        const daysRemaining = effectiveRate > 0 ? Math.round(tachRemaining / effectiveRate) : 0;
+        const uncertainty = effectiveRate > 0 ? 1.96 * stdDev * Math.sqrt(Math.max(1, daysRemaining)) / effectiveRate : 0;
         const minDays = Math.max(0, Math.round(daysRemaining - uncertainty));
         const maxDays = Math.round(daysRemaining + uncertainty);
 
@@ -4891,7 +4895,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
           return `${(days / 365).toFixed(1)}yr`;
         };
         const enginePct = tbo > 0 ? (smoh / tbo) * 100 : 0;
-        const tachPerMonth = weightedRate * 30.44;  // weightedRate is tach/day
+        const tachPerMonth = effectiveRate * 30.44;  // annual rate tach/day
         const hobbsPerMonth = tachPerMonth * htRatio;
         const monthsRemaining = daysRemaining / 30.44;
 
@@ -5025,7 +5029,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
             </div>
             <div>
               <h4 className="text-xs font-semibold text-slate-700">Overhaul Funding Tracker</h4>
-              <p className="text-[10px] text-slate-400">Cycle: {formatCurrency(overhaulCycleHrs)} hrs · Est. {computed.yearsToOverhaul.toFixed(1)} years to overhaul @ {horasAnuales} hrs/yr</p>
+              <p className="text-[10px] text-slate-400">Cycle: {formatCurrency(overhaulCycleHrs)} tach hrs · Est. {computed.yearsToOverhaul.toFixed(1)} years @ {Math.round(computed.tachPerYear)} tach/yr ({horasAnuales} hobbs/yr)</p>
             </div>
           </div>
         </div>
@@ -5123,7 +5127,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               <div className="text-center p-3 bg-amber-50 rounded-lg">
                 <p className="text-lg font-bold text-amber-700 font-mono">{computed.anosRemanentes.toFixed(1)} años</p>
                 <p className="text-[10px] text-slate-500">Time to TBO</p>
-                <p className="text-[9px] text-slate-400 font-mono mt-0.5">{Math.round(computed.anosRemanentes * 12)} meses · {horasAnuales} hrs/yr</p>
+                <p className="text-[9px] text-slate-400 font-mono mt-0.5">{Math.round(computed.anosRemanentes * 12)} meses · {Math.round(computed.tachPerYear)} tach/yr</p>
               </div>
             </div>
           </div>
