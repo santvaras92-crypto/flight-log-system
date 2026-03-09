@@ -4205,19 +4205,38 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const effectiveOverhaulCLP = Math.max(ipcOverhaulCLP, marketReplacementCLP);
     const overhaulSource = marketReplacementCLP > ipcOverhaulCLP ? 'market' : 'ipc';
 
+    // Convert overhaul cycle from tach to hobbs hours
+    const overhaulCycleHobbs = overhaulCycleHrs * htRatio;
+    const anosRemanentes = overhaulCycleHobbs / horasAnuales;
+
+    // ===== FINANCIAL PROJECTIONS (computed early — needed for overhaul reserve) =====
+    const r = interestRate / 100;
+    const clInf = clForwardInflation / 100;
+    const yearsToOverhaul = Math.max(anosRemanentes, 0.01);
+
+    const currentFunds = recaudado;
+    const projectedFunds = currentFunds * Math.pow(1 + r, yearsToOverhaul);
+    const interestEarned = projectedFunds - currentFunds;
+
+    const inflatedOverhaulCost = effectiveOverhaulCLP * Math.pow(1 + clInf, yearsToOverhaul);
+    const inflationIncrease = inflatedOverhaulCost - effectiveOverhaulCLP;
+
+    const projectedGap = inflatedOverhaulCost - projectedFunds;
+    const projectedMonthlyTarget = projectedGap > 0 ? projectedGap / Math.max(yearsToOverhaul * 12, 1) : 0;
+
     // Variable costs per hour (hobbs)
     const combustibleHr = fuelLPH * avgasLiterCLP;
     const aceiteHr = oilLPH * aceiteLiterCLP;
     const mantto100hr = revision100CLP / maintInterval;
     const manttoOil = cambioAceiteCLP / maintInterval;
-    // Convert overhaul cycle from tach to hobbs hours
-    const overhaulCycleHobbs = overhaulCycleHrs * htRatio;
-    const manttoOverhaul = effectiveOverhaulCLP / overhaulCycleHobbs;
+    // Overhaul reserve: projected gap / remaining hobbs hrs
+    // Covers the future inflated cost minus what funds+interest will provide
+    const manttoOverhaul = Math.max(0, projectedGap) / overhaulCycleHobbs;
     const manttoHr = mantto100hr + manttoOil + manttoOverhaul;
     const totalVariableHr = combustibleHr + aceiteHr + manttoHr;
 
     // Fixed costs (overhaul is variable per industry standard — not included here)
-    const overhaulProvisionAnual = effectiveOverhaulCLP / (overhaulCycleHobbs / horasAnuales);
+    const overhaulProvisionAnual = Math.max(0, projectedGap) / Math.max(anosRemanentes, 0.1);
     const totalFijoAnual = seguroAnual + hangarAnual + toaPatentesAnual + contingenciasAnual + impuestoContadorAnual + limpiezaAnual;
     const totalFijoMes = totalFijoAnual / 12;
     const totalFijoHr = totalFijoAnual / horasAnuales;
@@ -4231,29 +4250,8 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
 
     // Overhaul funding
     const faltaOverhaul = effectiveOverhaulCLP - recaudado;
-    const anosRemanentes = overhaulCycleHobbs / horasAnuales;
     const metaAnualOverhaul = faltaOverhaul / Math.max(anosRemanentes, 0.1);
     const metaMensualOverhaul = metaAnualOverhaul / 12;
-
-    // ===== FINANCIAL PROJECTIONS =====
-    // Single-currency CLP model: entire overhaul cost inflated by Chilean IPC forward
-    const r = interestRate / 100;
-    const clInf = clForwardInflation / 100;
-    const yearsToOverhaul = Math.max(anosRemanentes, 0.01);
-
-    // Current inflated components (from Aug 2022 to today, Chilean IPC)
-    // Projected accumulated funds with compound interest
-    const currentFunds = recaudado;
-    const projectedFunds = currentFunds * Math.pow(1 + r, yearsToOverhaul);
-    const interestEarned = projectedFunds - currentFunds;
-
-    // Project effective overhaul cost forward to TBO date with Chilean IPC
-    const inflatedOverhaulCost = effectiveOverhaulCLP * Math.pow(1 + clInf, yearsToOverhaul);
-    const inflationIncrease = inflatedOverhaulCost - effectiveOverhaulCLP;
-
-    // Projected gap (future)
-    const projectedGap = inflatedOverhaulCost - projectedFunds;
-    const projectedMonthlyTarget = projectedGap > 0 ? projectedGap / Math.max(yearsToOverhaul * 12, 1) : 0;
 
     // ===== FUEL COST PROJECTIONS =====
     const fuelTrend = fuelTrendRate / 100;
