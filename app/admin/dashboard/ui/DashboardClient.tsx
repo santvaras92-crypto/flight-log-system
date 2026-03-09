@@ -4008,8 +4008,11 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   const [limpiezaAnual, setLimpiezaAnual] = useState(stored?.limpiezaAnual ?? 180000);
   // Overhaul funding (total collected for overhaul)
   const [recaudado, setRecaudado] = useState(stored?.recaudado ?? 15000000);
-  // Revenue
+  // Revenue — user can enter in CLP or UF
   const [valorHora, setValorHora] = useState(stored?.valorHora ?? 168052);
+  const [valorHoraUnit, setValorHoraUnit] = useState<'CLP' | 'UF'>(stored?.valorHoraUnit ?? 'CLP');
+  // Always derive CLP value for all calculations
+  const valorHoraCLP = valorHoraUnit === 'UF' ? Math.round(valorHora * ufRate) : valorHora;
   // Financial projections
   const [interestRate, setInterestRate] = useState(stored?.interestRate ?? 4);
   const [clForwardInflation, setClForwardInflation] = useState(stored?.clForwardInflation ?? 3.5);
@@ -4027,7 +4030,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         cambioAceiteCLP, revision100CLP, overhaulMotorCLP, overhaulLaborCLP,
         clInflationPct, horasAnuales, seguroAnual, hangarAnual,
         toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual,
-        recaudado, valorHora, interestRate, clForwardInflation, fuelTrendRate,
+        recaudado, valorHora, valorHoraUnit, interestRate, clForwardInflation, fuelTrendRate,
         engineMarketPriceUSD,
       }));
     } catch {}
@@ -4035,7 +4038,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     cambioAceiteCLP, revision100CLP, overhaulMotorCLP, overhaulLaborCLP,
     clInflationPct, horasAnuales, seguroAnual, hangarAnual,
     toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual,
-    recaudado, valorHora, interestRate, clForwardInflation, fuelTrendRate,
+    recaudado, valorHora, valorHoraUnit, interestRate, clForwardInflation, fuelTrendRate,
     engineMarketPriceUSD]);
 
   // Computed overhaul cost: inflate total CLP cost from Aug 2022 by Chilean IPC
@@ -4247,8 +4250,8 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const totalCostoHr = totalFijoHr + totalVariableHr;
 
     // Profitability
-    const gananciaHr = valorHora - totalCostoHr;
-    const margen = valorHora > 0 ? (gananciaHr / valorHora) * 100 : 0;
+    const gananciaHr = valorHoraCLP - totalCostoHr;
+    const margen = valorHoraCLP > 0 ? (gananciaHr / valorHoraCLP) * 100 : 0;
 
     // Overhaul funding
     const faltaOverhaul = effectiveOverhaulCLP - recaudado;
@@ -4267,8 +4270,8 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const projectedCombustibleHr = fuelLPH * avgProjectedAvgasPrice;
     const projectedTotalVariableHr = projectedCombustibleHr + aceiteHr + manttoHr;
     const projectedTotalCostoHr = totalFijoHr + projectedTotalVariableHr;
-    const projectedGananciaHr = valorHora - projectedTotalCostoHr;
-    const projectedMargen = valorHora > 0 ? (projectedGananciaHr / valorHora) * 100 : 0;
+    const projectedGananciaHr = valorHoraCLP - projectedTotalCostoHr;
+    const projectedMargen = valorHoraCLP > 0 ? (projectedGananciaHr / valorHoraCLP) * 100 : 0;
     // Total fuel cost increase over the period
     const annualFuelLitros = fuelLPH * horasAnuales;
     const currentAnnualFuelCost = annualFuelLitros * avgasLiterCLP;
@@ -4318,7 +4321,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       // H/T ratio used
       htRatio, maintInterval,
     };
-  }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD, cambioAceiteCLP, revision100CLP, overhaulCLP, horasAnuales, overhaulCycleHrs, seguroAnual, hangarAnual, toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual, recaudado, valorHora, interestRate, clForwardInflation, fuelTrendRate, overviewMetrics, overhaulMotorCLP, overhaulLaborCLP, clInflationPct, engineMarketPriceUSD, components]);
+  }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD, cambioAceiteCLP, revision100CLP, overhaulCLP, horasAnuales, overhaulCycleHrs, seguroAnual, hangarAnual, toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual, recaudado, valorHoraCLP, interestRate, clForwardInflation, fuelTrendRate, overviewMetrics, overhaulMotorCLP, overhaulLaborCLP, clInflationPct, engineMarketPriceUSD, components]);
 
   // Actual data from flights (yearly hours)
   const yearlyHours = useMemo(() => {
@@ -4382,7 +4385,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       { label: 'Oil/hr', value: computed.aceiteHr, color: '#8b5cf6' },
       { label: 'Maint./hr', value: computed.manttoHr, color: '#3b82f6' },
       { label: 'TOTAL/hr', value: computed.totalCostoHr, color: '#0f172a' },
-      { label: 'Revenue/hr', value: valorHora, color: '#10b981' },
+      { label: 'Revenue/hr', value: valorHoraCLP, color: '#10b981' },
     ];
     const chart = new Chart(ctx, {
       type: 'bar',
@@ -4414,7 +4417,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       },
     });
     return () => chart.destroy();
-  }, [computed, valorHora]);
+  }, [computed, valorHoraCLP]);
 
   // Helper for parameter inputs
   const ParamInput = ({ label, value, onChange, unit = 'CLP', small = false }: { label: string; value: number; onChange: (v: number) => void; unit?: string; small?: boolean }) => (
@@ -4519,7 +4522,8 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
             />
             <StatCard
               label="Revenue/hr"
-              value={`$${formatCurrency(valorHora)}`}
+              value={`$${formatCurrency(valorHoraCLP)}`}
+              sub={valorHoraUnit === 'UF' ? `${valorHora} UF` : undefined}
               color="green"
               icon="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V7m0 1v8m0 1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
@@ -4583,7 +4587,50 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                     </div>
                   </div>
                   <ParamInput label="Oil / liter" value={aceiteLiterCLP} onChange={setAceiteLiterCLP} unit="CLP" />
-                  <ParamInput label="Revenue / hour" value={valorHora} onChange={setValorHora} unit="CLP" />
+                  {/* Revenue / hour — CLP ↔ UF toggle */}
+                  <div className="flex items-center justify-between gap-2 py-1.5">
+                    <span className="text-xs text-slate-600 truncate">Revenue / hour</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => {
+                          if (valorHoraUnit === 'CLP') {
+                            // Switch to UF: convert current CLP to UF
+                            setValorHora(Number((valorHora / ufRate).toFixed(2)));
+                            setValorHoraUnit('UF');
+                          } else {
+                            // Switch to CLP: convert current UF to CLP
+                            setValorHora(Math.round(valorHora * ufRate));
+                            setValorHoraUnit('CLP');
+                          }
+                        }}
+                        className={`px-1.5 py-0.5 text-[9px] font-bold rounded-full transition-colors ${
+                          valorHoraUnit === 'UF'
+                            ? 'bg-indigo-100 text-indigo-700 ring-1 ring-indigo-300'
+                            : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                        }`}
+                        title="Click to toggle between CLP and UF"
+                      >
+                        UF
+                      </button>
+                      <span className="text-[10px] text-slate-400">{valorHoraUnit}</span>
+                      <input
+                        type="number"
+                        step={valorHoraUnit === 'UF' ? '0.01' : '1'}
+                        value={valorHora}
+                        onChange={e => setValorHora(Number(e.target.value) || 0)}
+                        className="w-24 sm:w-28 text-right text-xs font-mono bg-slate-50 border border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                      />
+                    </div>
+                  </div>
+                  {/* Show converted value in the other unit */}
+                  <div className="flex justify-end pr-1 -mt-1 mb-0.5">
+                    <span className="text-[9px] text-slate-400 font-mono">
+                      = {valorHoraUnit === 'UF'
+                        ? `$${formatCurrency(valorHoraCLP)} CLP`
+                        : `${(valorHora / ufRate).toFixed(2)} UF`
+                      }
+                    </span>
+                  </div>
                 </div>
               </div>
               {/* Maintenance */}
@@ -5261,7 +5308,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                   At <span className="font-mono font-bold">{fuelTrendRate}%</span>/yr growth, the price reaches <span className="font-mono font-bold text-red-700">${formatCurrency(Math.round(computed.projectedAvgasPrice))}/L</span> by TBO.
                   This increases your total cost/hr from <span className="font-mono font-bold">${formatCurrency(Math.round(computed.totalCostoHr))}</span> to <span className="font-mono font-bold text-red-700">${formatCurrency(Math.round(computed.projectedTotalCostoHr))}</span>,
                   {computed.projectedGananciaHr < 0
-                    ? <> making the operation <span className="font-bold">unprofitable</span> at the current tariff of ${formatCurrency(valorHora)}/hr. Consider adjusting rates.</>
+                    ? <> making the operation <span className="font-bold">unprofitable</span> at the current tariff of ${formatCurrency(valorHoraCLP)}/hr{valorHoraUnit === 'UF' ? ` (${valorHora} UF)` : ''}. Consider adjusting rates.</>
                     : <> reducing your margin from <span className="font-bold">{computed.margen.toFixed(1)}%</span> to <span className="font-bold text-red-700">{computed.projectedMargen.toFixed(1)}%</span>.</>
                   }
                   </p>
