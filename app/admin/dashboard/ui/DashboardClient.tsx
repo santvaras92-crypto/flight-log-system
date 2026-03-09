@@ -4026,6 +4026,9 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   const [engineMarketPriceUSD, setEngineMarketPriceUSD] = useState(stored?.engineMarketPriceUSD ?? 47415);
   // Brent oil correlation data
   const [brentData, setBrentData] = useState<{ currentBrentUSD: number; monthly: { month: string; brentUSD: number; usdCLP: number }[]; source: string } | null>(null);
+  // Econometric forecast inputs (institutional consensus defaults)
+  const [forecastBrentUSD, setForecastBrentUSD] = useState(stored?.forecastBrentUSD ?? 59);
+  const [forecastUSDCLP, setForecastUSDCLP] = useState(stored?.forecastUSDCLP ?? 880);
   // Live indicators state
   const [liveIndicators, setLiveIndicators] = useState<{ uf: boolean; usd: boolean; fuel: boolean; engine: boolean; ipc: boolean; brent: boolean }>({ uf: false, usd: false, fuel: false, engine: false, ipc: false, brent: false });
 
@@ -4038,7 +4041,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         clInflationPct, horasAnuales, seguroAnual, hangarAnual,
         toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual,
         recaudado, valorHora, valorHoraUnit, interestRate, clForwardInflation, fuelTrendRate,
-        engineMarketPriceUSD,
+        engineMarketPriceUSD, forecastBrentUSD, forecastUSDCLP,
       }));
     } catch {}
   }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD,
@@ -4046,7 +4049,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     clInflationPct, horasAnuales, seguroAnual, hangarAnual,
     toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual,
     recaudado, valorHora, valorHoraUnit, interestRate, clForwardInflation, fuelTrendRate,
-    engineMarketPriceUSD]);
+    engineMarketPriceUSD, forecastBrentUSD, forecastUSDCLP]);
 
   // Computed overhaul cost: inflate total CLP cost from Aug 2022 by Chilean IPC
   const overhaulCLP = useMemo(() => {
@@ -4150,45 +4153,86 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       .catch(() => {});
   }, []);
 
-  // Brent ↔ AVGAS regression analysis
+  // Brent ↔ AVGAS econometric regression (USD-space)
+  // Equation: AVGAS_USD = slope × Brent_USD + intercept
+  // The intercept ≈ $1.45 USD represents structural floor (TEL refining, logistics, FBO margin)
   const brentCorrelation = useMemo(() => {
     if (!brentData || !fuelPriceAnalysis || !fuelPriceAnalysis.monthlyArr.length) return null;
-    // Build paired data: for each AVGAS month, find matching Brent month
-    const pairs: { brentCLP: number; avgasCLP: number; month: string }[] = [];
+    // Build paired data in USD-space: Brent_USD (raw) vs AVGAS_USD (avgasCLP / usdCLP)
+    const pairs: { brentUSD: number; avgasUSD: number; avgasCLP: number; usdCLP: number; month: string }[] = [];
     const brentMap = new Map(brentData.monthly.map(b => [b.month, b]));
     for (const fm of fuelPriceAnalysis.monthlyArr) {
       const bm = brentMap.get(fm.month);
-      if (bm) {
-        pairs.push({ brentCLP: bm.brentUSD * bm.usdCLP, avgasCLP: fm.ppl, month: fm.month });
+      if (bm && bm.usdCLP > 0) {
+        pairs.push({
+          brentUSD: bm.brentUSD,
+          avgasUSD: fm.ppl / bm.usdCLP,
+          avgasCLP: fm.ppl,
+          usdCLP: bm.usdCLP,
+          month: fm.month,
+        });
       }
     }
-    if (pairs.length < 6) return null; // need minimum data for meaningful regression
-    // Simple linear regression: AVGAS_CLP = intercept + slope × Brent_CLP
+    if (pairs.length < 6) return null;
+
+    // --- USD-space regression: AVGAS_USD = slopeUSD × Brent_USD + interceptUSD ---
     const n = pairs.length;
-    const sumX = pairs.reduce((s, p) => s + p.brentCLP, 0);
-    const sumY = pairs.reduce((s, p) => s + p.avgasCLP, 0);
-    const sumXY = pairs.reduce((s, p) => s + p.brentCLP * p.avgasCLP, 0);
-    const sumX2 = pairs.reduce((s, p) => s + p.brentCLP * p.brentCLP, 0);
-    const sumY2 = pairs.reduce((s, p) => s + p.avgasCLP * p.avgasCLP, 0);
-    const denom = n * sumX2 - sumX * sumX;
-    if (denom === 0) return null;
-    const slope = (n * sumXY - sumX * sumY) / denom;
-    const intercept = (sumY - slope * sumX) / n;
-    // R²
-    const ssRes = pairs.reduce((s, p) => s + Math.pow(p.avgasCLP - (intercept + slope * p.brentCLP), 2), 0);
-    const meanY = sumY / n;
-    const ssTot = pairs.reduce((s, p) => s + Math.pow(p.avgasCLP - meanY, 2), 0);
-    const rSquared = ssTot > 0 ? 1 - ssRes / ssTot : 0;
-    // Current Brent in CLP (use live USD rate)
-    const currentBrentCLP = brentData.currentBrentUSD * usdRate;
-    // Implied AVGAS price from Brent regression
-    const brentImpliedAvgas = Math.round(intercept + slope * currentBrentCLP);
-    // Brent-implied annual rate: annualized difference from current avg3m to implied
+    const sumX = pairs.reduce((s, p) => s + p.brentUSD, 0);
+    const sumY = pairs.reduce((s, p) => s + p.avgasUSD, 0);
+    const sumXY = pairs.reduce((s, p) => s + p.brentUSD * p.avgasUSD, 0);
+    const sumX2 = pairs.reduce((s, p) => s + p.brentUSD * p.brentUSD, 0);
+    const denomUSD = n * sumX2 - sumX * sumX;
+    if (denomUSD === 0) return null;
+    const slopeUSD = (n * sumXY - sumX * sumY) / denomUSD;
+    const interceptUSD = (sumY - slopeUSD * sumX) / n;
+    // R² USD-space
+    const ssResUSD = pairs.reduce((s, p) => s + Math.pow(p.avgasUSD - (interceptUSD + slopeUSD * p.brentUSD), 2), 0);
+    const meanYusd = sumY / n;
+    const ssTotUSD = pairs.reduce((s, p) => s + Math.pow(p.avgasUSD - meanYusd, 2), 0);
+    const rSquaredUSD = ssTotUSD > 0 ? 1 - ssResUSD / ssTotUSD : 0;
+
+    // --- CLP-space regression (for comparison display) ---
+    const sumXclp = pairs.reduce((s, p) => s + p.brentUSD * p.usdCLP, 0);
+    const sumYclp = pairs.reduce((s, p) => s + p.avgasCLP, 0);
+    const sumXYclp = pairs.reduce((s, p) => s + (p.brentUSD * p.usdCLP) * p.avgasCLP, 0);
+    const sumX2clp = pairs.reduce((s, p) => s + Math.pow(p.brentUSD * p.usdCLP, 2), 0);
+    const denomCLP = n * sumX2clp - sumXclp * sumXclp;
+    const rSquaredCLP = (() => {
+      if (denomCLP === 0) return 0;
+      const slopeCLP = (n * sumXYclp - sumXclp * sumYclp) / denomCLP;
+      const interceptCLP = (sumYclp - slopeCLP * sumXclp) / n;
+      const ssResCLP = pairs.reduce((s, p) => {
+        const predicted = interceptCLP + slopeCLP * (p.brentUSD * p.usdCLP);
+        return s + Math.pow(p.avgasCLP - predicted, 2);
+      }, 0);
+      const meanYclpVal = sumYclp / n;
+      const ssTotCLP = pairs.reduce((s, p) => s + Math.pow(p.avgasCLP - meanYclpVal, 2), 0);
+      return ssTotCLP > 0 ? 1 - ssResCLP / ssTotCLP : 0;
+    })();
+
+    // Current values
+    const currentBrentUSD = brentData.currentBrentUSD;
+    // Implied AVGAS in USD from USD-space regression
+    const brentImpliedAvgasUSD = interceptUSD + slopeUSD * currentBrentUSD;
+    // Convert to CLP using current FX
+    const brentImpliedAvgas = Math.round(brentImpliedAvgasUSD * usdRate);
+    // Brent-implied annual rate vs current avg3m
     const avg3m = fuelPriceAnalysis.avg3m;
     const brentImpliedRate = avg3m > 0 && brentImpliedAvgas > avg3m
       ? ((brentImpliedAvgas / avg3m) - 1) * 100
       : 0;
-    return { slope, intercept, rSquared, pairs: pairs.length, brentImpliedAvgas, brentImpliedRate, currentBrentCLP };
+    // 3-factor decomposition for current price
+    const structuralFloorUSD = interceptUSD; // ~$1.45 USD
+    const crudeComponentUSD = slopeUSD * currentBrentUSD;
+    const currentAvgasUSD = brentImpliedAvgasUSD;
+
+    return {
+      slopeUSD, interceptUSD, rSquaredUSD, rSquaredCLP,
+      pairs: pairs.length,
+      brentImpliedAvgas, brentImpliedAvgasUSD, brentImpliedRate,
+      currentBrentUSD,
+      structuralFloorUSD, crudeComponentUSD, currentAvgasUSD,
+    };
   }, [brentData, fuelPriceAnalysis, usdRate]);
 
   // Conservative AVGAS pricing: always use max(3-month avg, Brent-implied)
@@ -4196,17 +4240,49 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   const avgasSource = useMemo(() => {
     if (!fuelPriceAnalysis || fuelPriceAnalysis.avg3m <= 0) return null;
     const avg3m = fuelPriceAnalysis.avg3m;
-    const brentImplied = (brentCorrelation && brentCorrelation.rSquared >= 0.3) ? brentCorrelation.brentImpliedAvgas : 0;
+    const brentImplied = (brentCorrelation && brentCorrelation.rSquaredUSD >= 0.3) ? brentCorrelation.brentImpliedAvgas : 0;
     const useBrent = brentImplied > avg3m;
     return { price: useBrent ? brentImplied : avg3m, source: useBrent ? 'brent' as const : 'avg3m' as const, avg3m, brentImplied };
   }, [fuelPriceAnalysis, brentCorrelation]);
+
+  // Econometric fuel projection using 3-factor model
+  const econometricProjection = useMemo(() => {
+    if (!brentCorrelation || brentCorrelation.rSquaredUSD < 0.3) return null;
+    const { slopeUSD, interceptUSD, currentBrentUSD } = brentCorrelation;
+    // Current implied AVGAS in USD
+    const currentAvgasUSD = interceptUSD + slopeUSD * currentBrentUSD;
+    const currentAvgasCLP = currentAvgasUSD * usdRate;
+    // Projected AVGAS at overhaul using forecast values
+    const projectedAvgasUSD = interceptUSD + slopeUSD * forecastBrentUSD;
+    const projectedAvgasCLP = Math.round(projectedAvgasUSD * forecastUSDCLP);
+    // 3-factor decomposition of projected price
+    const factorCrude = slopeUSD * forecastBrentUSD; // crude component USD
+    const factorFloor = interceptUSD; // structural floor USD
+    // factorFX is the multiplication by forecastUSDCLP
+    // Change attribution (current → projected)
+    const currentCLP = Math.round(currentAvgasUSD * usdRate);
+    const deltaBrent = slopeUSD * (forecastBrentUSD - currentBrentUSD) * usdRate; // Brent effect in CLP
+    const deltaFX = currentAvgasUSD * (forecastUSDCLP - usdRate); // FX effect in CLP
+    const totalChangeCLP = projectedAvgasCLP - currentCLP;
+    // Simple model comparison (compound growth)
+    const fuelTrend = fuelTrendRate / 100;
+    // We need yearsToOverhaul but it's computed inside computed — use horasAnuales
+    return {
+      currentAvgasUSD, currentAvgasCLP: Math.round(currentAvgasCLP),
+      projectedAvgasUSD, projectedAvgasCLP,
+      factorCrude, factorFloor,
+      deltaBrent: Math.round(deltaBrent), deltaFX: Math.round(deltaFX),
+      totalChangeCLP: Math.round(totalChangeCLP),
+      changePct: currentCLP > 0 ? ((projectedAvgasCLP / currentCLP) - 1) * 100 : 0,
+    };
+  }, [brentCorrelation, usdRate, forecastBrentUSD, forecastUSDCLP, fuelTrendRate]);
 
   useEffect(() => {
     if (avgasSource) {
       setAvgasLiterCLP(avgasSource.price);
       // Trend rate = max(CAGR, Brent-implied rate, 5% floor)
       const cagrRate = fuelPriceAnalysis!.cagr > 0 ? fuelPriceAnalysis!.cagr : 5;
-      const brentRate = (brentCorrelation && brentCorrelation.rSquared >= 0.3) ? brentCorrelation.brentImpliedRate : 0;
+      const brentRate = (brentCorrelation && brentCorrelation.rSquaredUSD >= 0.3) ? brentCorrelation.brentImpliedRate : 0;
       const bestRate = Math.max(cagrRate, brentRate, 5);
       setFuelTrendRate(Math.round(bestRate * 10) / 10);
       setLiveIndicators(prev => ({ ...prev, fuel: true }));
@@ -4360,6 +4436,17 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const currentAnnualFuelCost = annualFuelLitros * avgasLiterCLP;
     const projectedAnnualFuelCostAtOverhaul = annualFuelLitros * projectedAvgasPrice;
 
+    // ===== ECONOMETRIC FUEL PROJECTION (3-factor model) =====
+    // Uses: AVGAS_USD = slope × Brent_USD + intercept, then × FX
+    const econAvgasPriceAtOverhaul = econometricProjection
+      ? econometricProjection.projectedAvgasCLP
+      : projectedAvgasPrice; // fallback to compound model
+    const econCombustibleHr = fuelLPH * econAvgasPriceAtOverhaul;
+    const econTotalVariableHr = econCombustibleHr + aceiteHr + manttoHr;
+    const econTotalCostoHr = totalFijoHr + econTotalVariableHr;
+    const econGananciaHr = valorHoraCLP - econTotalCostoHr;
+    const econMargen = valorHoraCLP > 0 ? (econGananciaHr / valorHoraCLP) * 100 : 0;
+
     // Breakdowns for charts
     const fixedBreakdown = [
       { name: 'Insurance', value: seguroAnual, color: '#3b82f6' },
@@ -4401,10 +4488,13 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       projectedAvgasPrice, avgProjectedAvgasPrice, projectedCombustibleHr,
       projectedTotalVariableHr, projectedTotalCostoHr, projectedGananciaHr, projectedMargen,
       currentAnnualFuelCost, projectedAnnualFuelCostAtOverhaul,
+      // Econometric fuel projections (3-factor model)
+      econAvgasPriceAtOverhaul, econCombustibleHr, econTotalVariableHr,
+      econTotalCostoHr, econGananciaHr, econMargen,
       // H/T ratio used
       htRatio, maintInterval, tachPerYear,
     };
-  }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD, cambioAceiteCLP, revision100CLP, overhaulCLP, overhaulCycleHrs, seguroAnual, hangarAnual, toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual, recaudado, valorHoraCLP, interestRate, clForwardInflation, fuelTrendRate, overviewMetrics, overhaulMotorCLP, overhaulLaborCLP, clInflationPct, engineMarketPriceUSD, components, horasAnuales]);
+  }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD, cambioAceiteCLP, revision100CLP, overhaulCLP, overhaulCycleHrs, seguroAnual, hangarAnual, toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual, recaudado, valorHoraCLP, interestRate, clForwardInflation, fuelTrendRate, overviewMetrics, overhaulMotorCLP, overhaulLaborCLP, clInflationPct, engineMarketPriceUSD, components, horasAnuales, econometricProjection]);
 
   // Actual data from flights (yearly hours)
   const yearlyHours = useMemo(() => {
@@ -4819,6 +4909,43 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                     <span className="text-[10px] text-slate-400">%</span>
                     <input type="number" value={fuelTrendRate} onChange={e => setFuelTrendRate(Number(e.target.value) || 0)} className="w-24 sm:w-28 text-right text-xs font-mono bg-slate-50 border border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none" />
                   </div>
+                </div>
+              </div>
+              {/* Econometric forecast inputs */}
+              <div className="mt-3 pt-3 border-t border-slate-100">
+                <p className="text-[10px] font-semibold text-orange-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  🛢️ Econometric Forecast Inputs
+                  <span className="text-[8px] text-slate-400 font-normal normal-case">(EIA / World Bank / BCCH consensus)</span>
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  <div className="flex items-center justify-between gap-2 py-1.5">
+                    <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">
+                      Brent forecast
+                      {brentData && <span className="text-[8px] text-orange-500">spot: ${brentData.currentBrentUSD.toFixed(0)}</span>}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-slate-400">USD</span>
+                      <input type="number" value={forecastBrentUSD} onChange={e => setForecastBrentUSD(Number(e.target.value) || 0)} className="w-24 sm:w-28 text-right text-xs font-mono bg-orange-50 border border-orange-200 rounded px-2 py-1 focus:ring-1 focus:ring-orange-400 focus:border-orange-400 outline-none" />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 py-1.5">
+                    <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">
+                      USD/CLP forecast
+                      <span className="text-[8px] text-orange-500">spot: {Math.round(usdRate)}</span>
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-slate-400">CLP</span>
+                      <input type="number" value={forecastUSDCLP} onChange={e => setForecastUSDCLP(Number(e.target.value) || 0)} className="w-24 sm:w-28 text-right text-xs font-mono bg-orange-50 border border-orange-200 rounded px-2 py-1 focus:ring-1 focus:ring-orange-400 focus:border-orange-400 outline-none" />
+                    </div>
+                  </div>
+                  {econometricProjection && (
+                    <div className="flex items-center justify-between gap-2 py-1.5">
+                      <span className="text-xs text-slate-600 truncate">Projected AVGAS</span>
+                      <span className="text-[11px] font-mono font-bold text-orange-700 bg-orange-50 px-2 py-0.5 rounded">
+                        ${formatCurrency(econometricProjection.projectedAvgasCLP)}/L
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -5348,15 +5475,17 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               </div>
             </div>
 
-            {/* 🛢️ Brent Oil ↔ AVGAS Correlation */}
-            {brentCorrelation && brentCorrelation.rSquared >= 0.3 && (
+            {/* 🛢️ Brent Oil ↔ AVGAS Econometric Model (USD-space) */}
+            {brentCorrelation && brentCorrelation.rSquaredUSD >= 0.3 && (
               <div className="mb-5 p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl border border-orange-200">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <span className="text-lg">🛢️</span>
                     <div>
-                      <p className="text-xs font-semibold text-orange-800">Brent Crude Oil ↔ AVGAS Correlation</p>
-                      <p className="text-[10px] text-orange-600">{brentCorrelation.pairs} paired monthly data points · R² = {brentCorrelation.rSquared.toFixed(2)}</p>
+                      <p className="text-xs font-semibold text-orange-800">Econometric Model: Brent → AVGAS (USD-space)</p>
+                      <p className="text-[10px] text-orange-600">
+                        {brentCorrelation.pairs} paired months · AVGAS_USD = {brentCorrelation.slopeUSD.toFixed(4)} × Brent + ${brentCorrelation.interceptUSD.toFixed(2)}
+                      </p>
                     </div>
                   </div>
                   {liveIndicators.brent && (
@@ -5365,36 +5494,73 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                     </span>
                   )}
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+
+                {/* Row 1: Equation + key parameters */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+                  {/* Structural Floor */}
+                  <div className="text-center p-3 bg-white/70 rounded-lg">
+                    <p className="text-lg font-bold text-indigo-700 font-mono">${brentCorrelation.interceptUSD.toFixed(2)}</p>
+                    <p className="text-[10px] text-slate-500">Structural Floor</p>
+                    <p className="text-[9px] text-indigo-600">USD/L (TEL + logistics)</p>
+                  </div>
+                  {/* Slope */}
+                  <div className="text-center p-3 bg-white/70 rounded-lg">
+                    <p className="text-lg font-bold text-orange-700 font-mono">{brentCorrelation.slopeUSD.toFixed(4)}</p>
+                    <p className="text-[10px] text-slate-500">Slope (USD/L per USD/bbl)</p>
+                    <p className="text-[9px] text-orange-600">+$10 Brent → +${(brentCorrelation.slopeUSD * 10).toFixed(3)}/L</p>
+                  </div>
+                  {/* R² comparison */}
+                  <div className="text-center p-3 bg-white/70 rounded-lg">
+                    <p className={`text-lg font-bold font-mono ${brentCorrelation.rSquaredUSD >= 0.6 ? 'text-emerald-700' : 'text-amber-700'}`}>{brentCorrelation.rSquaredUSD.toFixed(2)}</p>
+                    <p className="text-[10px] text-slate-500">R² (USD-space)</p>
+                    <p className="text-[9px] text-slate-400">vs {brentCorrelation.rSquaredCLP.toFixed(2)} CLP-space</p>
+                  </div>
+                  {/* Current Brent + Implied */}
                   <div className="text-center p-3 bg-white/70 rounded-lg">
                     <p className="text-lg font-bold text-orange-700 font-mono">US${brentData?.currentBrentUSD.toFixed(1)}</p>
-                    <p className="text-[10px] text-slate-500">Brent USD/bbl</p>
-                    <p className="text-[9px] text-orange-600">Current spot</p>
+                    <p className="text-[10px] text-slate-500">Brent spot</p>
+                    <p className="text-[9px] text-orange-600">→ ${brentCorrelation.brentImpliedAvgasUSD.toFixed(2)} USD/L</p>
                   </div>
-                  <div className="text-center p-3 bg-white/70 rounded-lg">
-                    <p className="text-lg font-bold text-amber-700 font-mono">${formatCurrency(brentCorrelation.brentImpliedAvgas)}</p>
-                    <p className="text-[10px] text-slate-500">AVGAS implícito $/L</p>
-                    <p className="text-[9px] text-slate-400">From regression</p>
-                  </div>
-                  <div className="text-center p-3 bg-white/70 rounded-lg">
-                    <p className={`text-lg font-bold font-mono ${brentCorrelation.rSquared >= 0.6 ? 'text-emerald-700' : 'text-amber-700'}`}>{brentCorrelation.rSquared.toFixed(2)}</p>
-                    <p className="text-[10px] text-slate-500">R² Correlation</p>
-                    <p className="text-[9px] text-slate-400">{brentCorrelation.rSquared >= 0.7 ? 'Strong' : brentCorrelation.rSquared >= 0.5 ? 'Moderate' : 'Weak'} fit</p>
-                  </div>
-                  <div className="text-center p-3 rounded-lg" style={{ backgroundColor: brentCorrelation.brentImpliedRate > fuelPriceAnalysis.cagr ? '#fef2f2' : '#f0fdf4' }}>
-                    {(() => {
-                      const brentPushes = brentCorrelation.brentImpliedAvgas > fuelPriceAnalysis.avg3m;
-                      const dominantSource = brentCorrelation.brentImpliedRate > fuelPriceAnalysis.cagr ? 'Brent' : 'CAGR';
-                      return (
-                        <>
-                          <p className={`text-sm font-bold ${brentPushes ? 'text-red-700' : 'text-emerald-700'}`}>
-                            {brentPushes ? '🛢️ Brent presiona ▲' : dominantSource === 'CAGR' ? '📊 CAGR dominante' : '≈ Estable'}
-                          </p>
-                          <p className="text-[10px] text-slate-500 mt-1">Model uses: <span className="font-bold">{fuelTrendRate}%/yr</span></p>
-                          <p className="text-[9px] text-slate-400">max(CAGR {fuelPriceAnalysis.cagr.toFixed(1)}%, Brent {brentCorrelation.brentImpliedRate.toFixed(1)}%, 5%)</p>
-                        </>
-                      );
-                    })()}
+                </div>
+
+                {/* Row 2: 3-Factor Decomposition of Current Price */}
+                <div className="bg-white/50 rounded-lg p-3 border border-orange-100">
+                  <p className="text-[10px] font-semibold text-orange-700 uppercase tracking-wider mb-2">3-Factor Decomposition (Current Price)</p>
+                  <div className="flex items-center gap-2 text-xs">
+                    <div className="flex-1 text-center">
+                      <div className="h-6 bg-indigo-200 rounded flex items-center justify-center">
+                        <span className="font-mono font-bold text-indigo-800">${brentCorrelation.structuralFloorUSD.toFixed(2)}</span>
+                      </div>
+                      <p className="text-[9px] text-slate-500 mt-1">Floor</p>
+                    </div>
+                    <span className="text-slate-400 font-bold">+</span>
+                    <div className="flex-1 text-center">
+                      <div className="h-6 bg-orange-200 rounded flex items-center justify-center">
+                        <span className="font-mono font-bold text-orange-800">${brentCorrelation.crudeComponentUSD.toFixed(2)}</span>
+                      </div>
+                      <p className="text-[9px] text-slate-500 mt-1">Crude</p>
+                    </div>
+                    <span className="text-slate-400 font-bold">=</span>
+                    <div className="flex-1 text-center">
+                      <div className="h-6 bg-amber-200 rounded flex items-center justify-center">
+                        <span className="font-mono font-bold text-amber-800">${brentCorrelation.currentAvgasUSD.toFixed(2)}</span>
+                      </div>
+                      <p className="text-[9px] text-slate-500 mt-1">AVGAS USD/L</p>
+                    </div>
+                    <span className="text-slate-400 font-bold">×</span>
+                    <div className="flex-1 text-center">
+                      <div className="h-6 bg-blue-200 rounded flex items-center justify-center">
+                        <span className="font-mono font-bold text-blue-800">{Math.round(usdRate)}</span>
+                      </div>
+                      <p className="text-[9px] text-slate-500 mt-1">USD/CLP</p>
+                    </div>
+                    <span className="text-slate-400 font-bold">=</span>
+                    <div className="flex-1 text-center">
+                      <div className="h-6 bg-emerald-200 rounded flex items-center justify-center">
+                        <span className="font-mono font-bold text-emerald-800">${formatCurrency(brentCorrelation.brentImpliedAvgas)}</span>
+                      </div>
+                      <p className="text-[9px] text-slate-500 mt-1">CLP/L</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -5453,65 +5619,162 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               </div>
             )}
 
-            {/* Projected Fuel Cost */}
+            {/* Projected Fuel Cost — Econometric vs Simple */}
             <div className="mb-5">
               <p className="text-[10px] font-semibold text-red-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-                Fuel Cost Projection ({fuelTrendRate}%/yr · {computed.yearsToOverhaul.toFixed(1)} yrs to overhaul)
+                Fuel Cost Projection · {computed.yearsToOverhaul.toFixed(1)} yrs to overhaul
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="text-center p-3 bg-amber-50 rounded-lg border border-amber-100">
-                  <p className="text-lg font-bold text-amber-700 font-mono">${formatCurrency(avgasLiterCLP)}</p>
-                  <p className="text-[10px] text-slate-500">Current $/L</p>
-                  <p className="text-[9px] text-slate-400">{avgasSource?.source === 'brent' ? '🛢️ Brent implied (> 3mo avg)' : '3-mo weighted avg'}</p>
+
+              {/* Econometric Model (primary) */}
+              {econometricProjection && (
+                <div className="mb-3 p-3 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl border border-orange-200">
+                  <p className="text-[10px] font-semibold text-orange-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    🛢️ Econometric Model
+                    <span className="text-[8px] font-normal text-orange-500 normal-case">
+                      ({brentCorrelation?.slopeUSD.toFixed(4)} × Brent + ${brentCorrelation?.interceptUSD.toFixed(2)}) × FX
+                    </span>
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="text-center p-3 bg-white/70 rounded-lg">
+                      <p className="text-lg font-bold text-amber-700 font-mono">${formatCurrency(avgasLiterCLP)}</p>
+                      <p className="text-[10px] text-slate-500">Current $/L</p>
+                      <p className="text-[9px] text-slate-400">{avgasSource?.source === 'brent' ? '🛢️ Brent implied' : '3-mo avg'}</p>
+                    </div>
+                    <div className="text-center p-3 bg-white/70 rounded-lg border-2 border-orange-300">
+                      <p className="text-lg font-bold text-orange-700 font-mono">${formatCurrency(econometricProjection.projectedAvgasCLP)}</p>
+                      <p className="text-[10px] text-slate-500">Projected $/L</p>
+                      <p className="text-[9px] text-orange-600 font-mono">
+                        {econometricProjection.changePct >= 0 ? '+' : ''}{econometricProjection.changePct.toFixed(0)}% vs today
+                      </p>
+                    </div>
+                    <div className="text-center p-3 bg-white/70 rounded-lg">
+                      <p className={`text-lg font-bold font-mono ${computed.econTotalCostoHr > computed.totalCostoHr ? 'text-red-700' : 'text-emerald-700'}`}>
+                        ${formatCurrency(Math.round(computed.econTotalCostoHr))}
+                      </p>
+                      <p className="text-[10px] text-slate-500">Projected Cost/hr</p>
+                      <p className="text-[9px] text-slate-400 font-mono">vs ${formatCurrency(Math.round(computed.totalCostoHr))} today</p>
+                    </div>
+                    <div className={`text-center p-3 rounded-lg ${computed.econGananciaHr >= 0 ? 'bg-emerald-50' : 'bg-red-50'}`}>
+                      <p className={`text-lg font-bold font-mono ${computed.econGananciaHr >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                        ${formatCurrency(Math.round(computed.econGananciaHr))}
+                      </p>
+                      <p className="text-[10px] text-slate-500">Projected Margin/hr</p>
+                      <p className="text-[9px] text-slate-400 font-mono">{computed.econMargen.toFixed(1)}% margin</p>
+                    </div>
+                  </div>
+                  {/* 3-factor change attribution */}
+                  <div className="mt-3 pt-2 border-t border-orange-100">
+                    <p className="text-[9px] font-semibold text-orange-600 mb-1.5">Change Attribution (current → forecast)</p>
+                    <div className="flex items-center gap-2 text-[10px]">
+                      <div className="flex-1 text-center">
+                        <div className={`rounded px-2 py-1 ${econometricProjection.deltaBrent > 0 ? 'bg-red-100' : 'bg-emerald-100'}`}>
+                          <span className={`font-mono font-bold ${econometricProjection.deltaBrent > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
+                            {econometricProjection.deltaBrent > 0 ? '+' : ''}{formatCurrency(econometricProjection.deltaBrent)}
+                          </span>
+                        </div>
+                        <p className="text-[8px] text-slate-500 mt-0.5">🛢️ Crude ({brentData?.currentBrentUSD.toFixed(0)}→{forecastBrentUSD})</p>
+                      </div>
+                      <span className="text-slate-400">+</span>
+                      <div className="flex-1 text-center">
+                        <div className={`rounded px-2 py-1 ${econometricProjection.deltaFX > 0 ? 'bg-red-100' : 'bg-emerald-100'}`}>
+                          <span className={`font-mono font-bold ${econometricProjection.deltaFX > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
+                            {econometricProjection.deltaFX > 0 ? '+' : ''}{formatCurrency(econometricProjection.deltaFX)}
+                          </span>
+                        </div>
+                        <p className="text-[8px] text-slate-500 mt-0.5">💱 FX ({Math.round(usdRate)}→{forecastUSDCLP})</p>
+                      </div>
+                      <span className="text-slate-400">=</span>
+                      <div className="flex-1 text-center">
+                        <div className={`rounded px-2 py-1 ${econometricProjection.totalChangeCLP > 0 ? 'bg-red-100' : 'bg-emerald-100'}`}>
+                          <span className={`font-mono font-bold ${econometricProjection.totalChangeCLP > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
+                            {econometricProjection.totalChangeCLP > 0 ? '+' : ''}{formatCurrency(econometricProjection.totalChangeCLP)}
+                          </span>
+                        </div>
+                        <p className="text-[8px] text-slate-500 mt-0.5">Δ Total CLP/L</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-center p-3 bg-red-50 rounded-lg border border-red-100">
-                  <p className="text-lg font-bold text-red-700 font-mono">${formatCurrency(Math.round(computed.projectedAvgasPrice))}</p>
-                  <p className="text-[10px] text-slate-500">Projected $/L at overhaul</p>
-                  <p className="text-[9px] text-red-500 font-mono">+{((computed.projectedAvgasPrice / avgasLiterCLP - 1) * 100).toFixed(0)}% in {computed.yearsToOverhaul.toFixed(1)} yrs</p>
+              )}
+
+              {/* Simple Compound Model (secondary/comparison) */}
+              <div className={`p-3 rounded-xl border ${econometricProjection ? 'bg-slate-50 border-slate-200' : 'bg-red-50 border-red-200'}`}>
+                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  📊 {econometricProjection ? 'Simple Model (comparison)' : 'Compound Growth Model'}
+                  <span className="text-[8px] font-normal text-slate-400 normal-case">{fuelTrendRate}%/yr compound</span>
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="text-center p-2 bg-white/70 rounded-lg">
+                    <p className="text-sm font-bold text-slate-600 font-mono">${formatCurrency(avgasLiterCLP)}</p>
+                    <p className="text-[9px] text-slate-500">Current $/L</p>
+                  </div>
+                  <div className="text-center p-2 bg-white/70 rounded-lg">
+                    <p className="text-sm font-bold text-red-600 font-mono">${formatCurrency(Math.round(computed.projectedAvgasPrice))}</p>
+                    <p className="text-[9px] text-slate-500">Projected $/L</p>
+                    <p className="text-[8px] text-red-500 font-mono">+{((computed.projectedAvgasPrice / avgasLiterCLP - 1) * 100).toFixed(0)}%</p>
+                  </div>
+                  <div className="text-center p-2 bg-white/70 rounded-lg">
+                    <p className="text-sm font-bold text-red-600 font-mono">${formatCurrency(Math.round(computed.projectedTotalCostoHr))}</p>
+                    <p className="text-[9px] text-slate-500">Cost/hr</p>
+                  </div>
+                  <div className="text-center p-2 bg-white/70 rounded-lg">
+                    <p className={`text-sm font-bold font-mono ${computed.projectedGananciaHr >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      ${formatCurrency(Math.round(computed.projectedGananciaHr))}
+                    </p>
+                    <p className="text-[9px] text-slate-500">Margin/hr ({computed.projectedMargen.toFixed(1)}%)</p>
+                  </div>
                 </div>
-                <div className="text-center p-3 bg-red-50 rounded-lg border border-red-100">
-                  <p className="text-lg font-bold text-red-700 font-mono">${formatCurrency(Math.round(computed.projectedTotalCostoHr))}</p>
-                  <p className="text-[10px] text-slate-500">Projected Total Cost/hr</p>
-                  <p className="text-[9px] text-red-500 font-mono">vs ${formatCurrency(Math.round(computed.totalCostoHr))} today</p>
-                </div>
-                <div className={`text-center p-3 rounded-lg border ${computed.projectedGananciaHr >= 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'}`}>
-                  <p className={`text-lg font-bold font-mono ${computed.projectedGananciaHr >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>${formatCurrency(Math.round(computed.projectedGananciaHr))}</p>
-                  <p className="text-[10px] text-slate-500">Projected Margin/hr</p>
-                  <p className="text-[9px] text-slate-400 font-mono">{computed.projectedMargen.toFixed(1)}% margin</p>
-                </div>
+                {econometricProjection && (
+                  <p className="text-[9px] text-slate-400 mt-2 text-center">
+                    ⚠️ Simple model projects ${formatCurrency(Math.round(computed.projectedAvgasPrice))}/L vs econometric ${formatCurrency(econometricProjection.projectedAvgasCLP)}/L — 
+                    difference of {formatCurrency(Math.abs(Math.round(computed.projectedAvgasPrice) - econometricProjection.projectedAvgasCLP))}/L
+                  </p>
+                )}
               </div>
             </div>
 
-            {/* Context note */}
-            <div className="bg-red-50 rounded-lg p-3">
+            {/* Context note — Econometric narrative */}
+            <div className={`${econometricProjection ? 'bg-orange-50' : 'bg-red-50'} rounded-lg p-3`}>
               <div className="flex items-start gap-2">
-                <svg className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-                <div className="text-[11px] text-red-800">
-                  <p className="font-semibold mb-1">⚠️ Fuel Price Outlook — Upward Pressure</p>
-                  <p>AVGAS historical CAGR: <span className="font-mono font-bold">{fuelPriceAnalysis.cagr.toFixed(1)}%</span>/yr ({fuelPriceAnalysis.yearlyArr[0]?.year}–{fuelPriceAnalysis.yearlyArr[fuelPriceAnalysis.yearlyArr.length - 1]?.year}).
-                  Current model price: <span className="font-bold">${formatCurrency(avgasLiterCLP)}/L</span> (3-mo avg from actual records).
-                  At <span className="font-mono font-bold">{fuelTrendRate}%</span>/yr growth, the price reaches <span className="font-mono font-bold text-red-700">${formatCurrency(Math.round(computed.projectedAvgasPrice))}/L</span> by TBO.
-                  This increases your total cost/hr from <span className="font-mono font-bold">${formatCurrency(Math.round(computed.totalCostoHr))}</span> to <span className="font-mono font-bold text-red-700">${formatCurrency(Math.round(computed.projectedTotalCostoHr))}</span>,
-                  {computed.projectedGananciaHr < 0
-                    ? <> making the operation <span className="font-bold">unprofitable</span> at the current tariff of ${formatCurrency(valorHoraCLP)}/hr{valorHoraUnit === 'UF' ? ` (${valorHora} UF)` : ''}. Consider adjusting rates.</>
-                    : <> reducing your margin from <span className="font-bold">{computed.margen.toFixed(1)}%</span> to <span className="font-bold text-red-700">{computed.projectedMargen.toFixed(1)}%</span>.</>
-                  }
-                  </p>
-                  <p className="mt-1 text-red-700">🛢️ {brentData
-                    ? <>Brent crude at <span className="font-bold">US${brentData.currentBrentUSD.toFixed(1)}/bbl</span> ({brentData.source}).{' '}
-                      {brentCorrelation && brentCorrelation.rSquared >= 0.3
-                        ? <>Regression (R²={brentCorrelation.rSquared.toFixed(2)}) implies AVGAS at <span className="font-bold">${formatCurrency(brentCorrelation.brentImpliedAvgas)}/L</span>.{' '}
-                          {brentCorrelation.brentImpliedRate > fuelPriceAnalysis.cagr
-                            ? <>Brent pressure ({brentCorrelation.brentImpliedRate.toFixed(1)}%) exceeds historical CAGR ({fuelPriceAnalysis.cagr.toFixed(1)}%) — model uses the higher rate.</>
-                            : <>Historical CAGR ({fuelPriceAnalysis.cagr.toFixed(1)}%) exceeds Brent-implied rate ({brentCorrelation.brentImpliedRate.toFixed(1)}%) — model uses CAGR as conservative baseline.</>
-                          }</>
-                        : <>AVGAS correlation with Brent weak (R²&lt;0.3) — using CAGR-only trend.</>
-                      }</>
-                    : <>Global factors: crude oil supply constraints and refinery capacity are driving AVGAS prices. Adjust the trend rate to model different scenarios.</>
-                  }</p>
+                <span className="text-sm mt-0.5 flex-shrink-0">{econometricProjection ? '🛢️' : '⚠️'}</span>
+                <div className="text-[11px] text-slate-800">
+                  {econometricProjection && brentCorrelation ? (
+                    <>
+                      <p className="font-semibold mb-1 text-orange-800">📊 Econometric Fuel Price Analysis — 3-Factor Model</p>
+                      <p>
+                        USD-space regression (R²={brentCorrelation.rSquaredUSD.toFixed(2)}, {brentCorrelation.pairs} months) yields:
+                        {' '}<span className="font-mono font-bold">AVGAS_USD = {brentCorrelation.slopeUSD.toFixed(4)} × Brent + ${brentCorrelation.interceptUSD.toFixed(2)}</span>.
+                        The <span className="font-bold">${brentCorrelation.interceptUSD.toFixed(2)} USD structural floor</span> represents TEL refining, segregated logistics, and FBO margin — irreducible even if crude were free.
+                        Each +$10 Brent adds only +${(brentCorrelation.slopeUSD * 10).toFixed(3)}/L.
+                      </p>
+                      <p className="mt-1">
+                        <span className="font-bold">Current:</span> Brent US${brentData?.currentBrentUSD.toFixed(1)}/bbl × slope + floor = <span className="font-mono font-bold">${brentCorrelation.brentImpliedAvgasUSD.toFixed(2)} USD/L</span> × {Math.round(usdRate)} CLP/USD = <span className="font-mono font-bold">${formatCurrency(brentCorrelation.brentImpliedAvgas)} CLP/L</span>.
+                      </p>
+                      <p className="mt-1">
+                        <span className="font-bold">Forecast:</span> Brent US${forecastBrentUSD}/bbl (EIA/WB consensus) × {Math.round(forecastUSDCLP)} CLP/USD (BCCH) → <span className="font-mono font-bold text-orange-700">${formatCurrency(econometricProjection.projectedAvgasCLP)} CLP/L</span> (<span className="font-mono">{econometricProjection.changePct >= 0 ? '+' : ''}{econometricProjection.changePct.toFixed(1)}%</span>).
+                        {' '}vs simple model ({fuelTrendRate}%/yr): <span className="font-mono font-bold text-red-600">${formatCurrency(Math.round(computed.projectedAvgasPrice))} CLP/L</span> ({((computed.projectedAvgasPrice / avgasLiterCLP - 1) * 100).toFixed(0)}%).
+                      </p>
+                      <p className="mt-1 text-orange-700">
+                        💡 <span className="font-bold">Key insight:</span> CLP-space regression (R²={brentCorrelation.rSquaredCLP.toFixed(2)}) conflates commodity and FX effects.
+                        USD-space (R²={brentCorrelation.rSquaredUSD.toFixed(2)}) isolates pure commodity correlation, enabling independent Brent + FX scenario analysis.
+                        The econometric model projects a more realistic price because institutional forecasts show {forecastBrentUSD < (brentData?.currentBrentUSD ?? 0) ? 'declining' : 'stable'} crude and {forecastUSDCLP < usdRate ? 'appreciating' : 'stable'} CLP.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-semibold mb-1">⚠️ Fuel Price Outlook</p>
+                      <p>AVGAS historical CAGR: <span className="font-mono font-bold">{fuelPriceAnalysis.cagr.toFixed(1)}%</span>/yr.
+                      Current: <span className="font-bold">${formatCurrency(avgasLiterCLP)}/L</span>.
+                      At <span className="font-mono font-bold">{fuelTrendRate}%</span>/yr → <span className="font-mono font-bold text-red-700">${formatCurrency(Math.round(computed.projectedAvgasPrice))}/L</span> by TBO.
+                      {computed.projectedGananciaHr < 0
+                        ? <> Operation becomes <span className="font-bold">unprofitable</span> at ${formatCurrency(valorHoraCLP)}/hr. Consider adjusting rates.</>
+                        : <> Margin reduces from {computed.margen.toFixed(1)}% to <span className="text-red-700">{computed.projectedMargen.toFixed(1)}%</span>.</>
+                      }
+                      </p>
+                      {brentData && <p className="mt-1 text-slate-600">🛢️ Brent at US${brentData.currentBrentUSD.toFixed(1)}/bbl. Econometric model unavailable (insufficient data or low R²).</p>}
+                    </>
+                  )}
                 </div>
               </div>
             </div>
