@@ -3968,43 +3968,73 @@ function FinanceCharts({ flights, transactions, palette }: { flights: any[]; tra
 
 // ==================== COST ANALYSIS COMPONENT ====================
 function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flights: any[]; overviewMetrics?: OverviewMetrics; components?: any[]; fuelLogs?: any[] }) {
+  // --- Persist parameters in localStorage ---
+  const STORAGE_KEY = 'cost-analysis-params';
+  const getStored = () => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  };
+  const stored = getStored();
+
   // --- Editable Parameters (from Excel "Analisis de costos") ---
-  const [usdRate, setUsdRate] = useState(975);
-  const [ufRate, setUfRate] = useState(39700);
-  const [avgasLiterCLP, setAvgasLiterCLP] = useState(1750);
-  const [aceiteLiterCLP, setAceiteLiterCLP] = useState(14280);
-  const [toaCLP, setToaCLP] = useState(205000);
-  const [seguroUSD, setSeguroUSD] = useState(4710.02);
-  const [cambioAceiteCLP, setCambioAceiteCLP] = useState(281090);
-  const [revision100CLP, setRevision100CLP] = useState(3577930);
+  const [usdRate, setUsdRate] = useState(stored?.usdRate ?? 975);
+  const [ufRate, setUfRate] = useState(stored?.ufRate ?? 39700);
+  const [avgasLiterCLP, setAvgasLiterCLP] = useState(stored?.avgasLiterCLP ?? 1750);
+  const [aceiteLiterCLP, setAceiteLiterCLP] = useState(stored?.aceiteLiterCLP ?? 14280);
+  const [toaCLP, setToaCLP] = useState(stored?.toaCLP ?? 205000);
+  const [seguroUSD, setSeguroUSD] = useState(stored?.seguroUSD ?? 4710.02);
+  const [cambioAceiteCLP, setCambioAceiteCLP] = useState(stored?.cambioAceiteCLP ?? 281090);
+  const [revision100CLP, setRevision100CLP] = useState(stored?.revision100CLP ?? 3577930);
   // Overhaul cost model: real Aug 2022 invoices, all paid in CLP
   // Eagle Copters INV22-00211 (04-Ago-2022): CLP $47,926,129 (motor O-320-D2J + freight + import + IVA)
   // Labor (installation): CLP $8,000,000
   // Total: CLP $55,926,129 — single-currency, only Chilean IPC inflation applies
-  const [overhaulMotorCLP, setOverhaulMotorCLP] = useState(47926129); // Eagle Copters invoice total
-  const [overhaulLaborCLP, setOverhaulLaborCLP] = useState(8000000);
-  const [clInflationPct, setClInflationPct] = useState(16.35); // Chilean IPC cumulative Sep 2022→Dec 2025 (mindicador.cl)
-  const [horasAnuales, setHorasAnuales] = useState(220);
-  const [overhaulCycleHrs, setOverhaulCycleHrs] = useState(1379.1);
+  const [overhaulMotorCLP, setOverhaulMotorCLP] = useState(stored?.overhaulMotorCLP ?? 47926129);
+  const [overhaulLaborCLP, setOverhaulLaborCLP] = useState(stored?.overhaulLaborCLP ?? 8000000);
+  const [clInflationPct, setClInflationPct] = useState(stored?.clInflationPct ?? 16.35);
+  const [horasAnuales, setHorasAnuales] = useState(stored?.horasAnuales ?? 220);
+  const [overhaulCycleHrs, setOverhaulCycleHrs] = useState(stored?.overhaulCycleHrs ?? 1379.1);
   // Fixed costs (annual CLP)
-  const [seguroAnual, setSeguroAnual] = useState(4592270);
-  const [hangarAnual, setHangarAnual] = useState(4963032);
-  const [toaPatentesAnual, setToaPatentesAnual] = useState(405000);
-  const [contingenciasAnual, setContingenciasAnual] = useState(2000000);
-  const [impuestoContadorAnual, setImpuestoContadorAnual] = useState(3211728);
-  const [limpiezaAnual, setLimpiezaAnual] = useState(180000);
+  const [seguroAnual, setSeguroAnual] = useState(stored?.seguroAnual ?? 4592270);
+  const [hangarAnual, setHangarAnual] = useState(stored?.hangarAnual ?? 4963032);
+  const [toaPatentesAnual, setToaPatentesAnual] = useState(stored?.toaPatentesAnual ?? 405000);
+  const [contingenciasAnual, setContingenciasAnual] = useState(stored?.contingenciasAnual ?? 2000000);
+  const [impuestoContadorAnual, setImpuestoContadorAnual] = useState(stored?.impuestoContadorAnual ?? 3211728);
+  const [limpiezaAnual, setLimpiezaAnual] = useState(stored?.limpiezaAnual ?? 180000);
   // Overhaul funding (total collected for overhaul)
-  const [recaudado, setRecaudado] = useState(15000000);
+  const [recaudado, setRecaudado] = useState(stored?.recaudado ?? 15000000);
   // Revenue
-  const [valorHora, setValorHora] = useState(168052);
+  const [valorHora, setValorHora] = useState(stored?.valorHora ?? 168052);
   // Financial projections
-  const [interestRate, setInterestRate] = useState(4); // % annual compound interest on accumulated funds
-  const [clForwardInflation, setClForwardInflation] = useState(3.5); // % annual Chilean IPC forward estimate (BCCh target 3%, actual ~3.5-4.5%)
-  const [fuelTrendRate, setFuelTrendRate] = useState(10); // % annual AVGAS price increase (geopolitical + CAGR)
+  const [interestRate, setInterestRate] = useState(stored?.interestRate ?? 4);
+  const [clForwardInflation, setClForwardInflation] = useState(stored?.clForwardInflation ?? 3.5);
+  const [fuelTrendRate, setFuelTrendRate] = useState(stored?.fuelTrendRate ?? 10);
   // Live engine market price (from airpowerinc.com scraping)
-  const [engineMarketPriceUSD, setEngineMarketPriceUSD] = useState(47415); // fallback: last known RENPL-RT8164
+  const [engineMarketPriceUSD, setEngineMarketPriceUSD] = useState(stored?.engineMarketPriceUSD ?? 47415);
   // Live indicators state
   const [liveIndicators, setLiveIndicators] = useState<{ uf: boolean; usd: boolean; fuel: boolean; engine: boolean; ipc: boolean }>({ uf: false, usd: false, fuel: false, engine: false, ipc: false });
+
+  // Save all params to localStorage whenever any changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD,
+        cambioAceiteCLP, revision100CLP, overhaulMotorCLP, overhaulLaborCLP,
+        clInflationPct, horasAnuales, overhaulCycleHrs, seguroAnual, hangarAnual,
+        toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual,
+        recaudado, valorHora, interestRate, clForwardInflation, fuelTrendRate,
+        engineMarketPriceUSD,
+      }));
+    } catch {}
+  }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD,
+    cambioAceiteCLP, revision100CLP, overhaulMotorCLP, overhaulLaborCLP,
+    clInflationPct, horasAnuales, overhaulCycleHrs, seguroAnual, hangarAnual,
+    toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual,
+    recaudado, valorHora, interestRate, clForwardInflation, fuelTrendRate,
+    engineMarketPriceUSD]);
 
   // Computed overhaul cost: inflate total CLP cost from Aug 2022 by Chilean IPC
   const overhaulCLP = useMemo(() => {
