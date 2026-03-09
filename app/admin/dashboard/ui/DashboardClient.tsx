@@ -5325,10 +5325,11 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
           <div className="p-4 sm:p-6">
             {/* Weighted Averages */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-              <div className="text-center p-3 bg-amber-50 rounded-lg">
-                <p className="text-lg font-bold text-amber-700 font-mono">${formatCurrency(fuelPriceAnalysis.avg3m)}</p>
+              <div className={`text-center p-3 rounded-lg ${avgasSource?.source === 'avg3m' ? 'bg-amber-50 ring-1 ring-amber-200' : 'bg-slate-50'}`}>
+                <p className={`text-lg font-bold font-mono ${avgasSource?.source === 'avg3m' ? 'text-amber-700' : 'text-slate-700'}`}>${formatCurrency(fuelPriceAnalysis.avg3m)}</p>
                 <p className="text-[10px] text-slate-500">3-month avg $/L</p>
-                <p className="text-[9px] text-emerald-600 font-bold">← Used in model</p>
+                {avgasSource?.source === 'avg3m' && <p className="text-[9px] text-emerald-600 font-bold">← Used in model</p>}
+                {avgasSource?.source === 'brent' && <p className="text-[9px] text-slate-400">Brent implied is higher</p>}
               </div>
               <div className="text-center p-3 bg-slate-50 rounded-lg">
                 <p className="text-lg font-bold text-slate-700 font-mono">${formatCurrency(fuelPriceAnalysis.avg6m)}</p>
