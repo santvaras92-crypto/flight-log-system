@@ -2844,7 +2844,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
                 <div className="text-[10px] text-slate-500">TACH/wk</div>
               </div>
               <div className="text-center">
-                <div className="text-lg font-bold text-slate-800 font-mono">{(weightedRate * 30).toFixed(1)}</div>
+                <div className="text-lg font-bold text-slate-800 font-mono">{(weightedRate * 30.44).toFixed(1)}</div>
                 <div className="text-[10px] text-slate-500">TACH/mo</div>
               </div>
               <div className="text-center">
@@ -2858,23 +2858,23 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
               <div className="text-[10px] text-slate-500 font-medium">30-day rate</div>
-              <div className="font-mono font-semibold text-sm text-slate-800">{(rate30d * 30).toFixed(1)} <span className="text-slate-400 text-xs">T/mo</span></div>
-              <div className="text-[10px] text-slate-400">≈{(rate30d * 30 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} H/mo</div>
+              <div className="font-mono font-semibold text-sm text-slate-800">{(rate30d * 30.44).toFixed(1)} <span className="text-slate-400 text-xs">T/mo</span></div>
+              <div className="text-[10px] text-slate-400">≈{(rate30d * 30.44 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} H/mo</div>
             </div>
             <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
               <div className="text-[10px] text-slate-500 font-medium">60-day rate</div>
-              <div className="font-mono font-semibold text-sm text-slate-800">{((stats.rate60d || 0) * 30).toFixed(1)} <span className="text-slate-400 text-xs">T/mo</span></div>
-              <div className="text-[10px] text-slate-400">≈{((stats.rate60d || 0) * 30 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} H/mo</div>
+              <div className="font-mono font-semibold text-sm text-slate-800">{((stats.rate60d || 0) * 30.44).toFixed(1)} <span className="text-slate-400 text-xs">T/mo</span></div>
+              <div className="text-[10px] text-slate-400">≈{((stats.rate60d || 0) * 30.44 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} H/mo</div>
             </div>
             <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
               <div className="text-[10px] text-slate-500 font-medium">90-day rate</div>
-              <div className="font-mono font-semibold text-sm text-slate-800">{((stats.rate90d || 0) * 30).toFixed(1)} <span className="text-slate-400 text-xs">T/mo</span></div>
-              <div className="text-[10px] text-slate-400">≈{((stats.rate90d || 0) * 30 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} H/mo</div>
+              <div className="font-mono font-semibold text-sm text-slate-800">{((stats.rate90d || 0) * 30.44).toFixed(1)} <span className="text-slate-400 text-xs">T/mo</span></div>
+              <div className="text-[10px] text-slate-400">≈{((stats.rate90d || 0) * 30.44 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} H/mo</div>
             </div>
             <div className="bg-slate-50 rounded-lg p-3 border-2 border-slate-200">
               <div className="text-[10px] text-slate-500 font-medium">Annual rate</div>
-              <div className="font-mono font-semibold text-sm text-slate-800">{((stats.rateAnnual || 0) * 30).toFixed(1)} <span className="text-slate-400 text-xs">T/mo</span></div>
-              <div className="text-[10px] text-slate-400">≈{((stats.rateAnnual || 0) * 30 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} H/mo</div>
+              <div className="font-mono font-semibold text-sm text-slate-800">{((stats.rateAnnual || 0) * 30.44).toFixed(1)} <span className="text-slate-400 text-xs">T/mo</span></div>
+              <div className="text-[10px] text-slate-400">≈{((stats.rateAnnual || 0) * 30.44 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} H/mo</div>
             </div>
           </div>
         </div>

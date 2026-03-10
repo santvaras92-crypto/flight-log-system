@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 
 // ──────────────────────────────────────────────────────────────
 // Brent Crude Oil  ↔  AVGAS fuel-price correlation endpoint
-// • Hard-coded monthly averages (Sep 2020 → Mar 2026) computed
-//   from EIA daily spot data + Banco Central USD/CLP series
-// • Live Brent: EIA API v2 (official spot) → EIA HTML → hard-coded fallback
-// • 24-hour in-memory cache, same pattern as /api/engine-price
+// • Hard-coded monthly averages (Sep 2020 → last verified month)
+// • Auto-extends with live data for months beyond MONTHLY_DATA
+//   using EIA API v2 (monthly Brent) + mindicador.cl (USD/CLP)
+// • Live Brent spot: EIA API v2 → EIA HTML → hard-coded fallback
+// • 24-hour in-memory cache
 // ──────────────────────────────────────────────────────────────
 
 // Monthly Brent USD/bbl averages (source: EIA RBRTE daily → monthly mean)
@@ -88,12 +89,114 @@ const MONTHLY_DATA: { month: string; brentUSD: number; usdCLP: number }[] = [
   { month: "2026-03", brentUSD: 77.2,  usdCLP: 955 },
 ];
 
+// ── Auto-extend: fetch missing months between last hardcoded and current ──
+// Uses EIA API v2 (monthly Brent averages) + mindicador.cl (monthly USD/CLP)
+let dynamicMonths: typeof MONTHLY_DATA = [];
+let dynamicFetchedAt = 0;
+const DYNAMIC_CACHE_MS = 24 * 60 * 60 * 1000; // refresh once per day
+
+async function fetchMissingMonths(): Promise<typeof MONTHLY_DATA> {
+  const now = Date.now();
+  if (dynamicMonths.length > 0 && now - dynamicFetchedAt < DYNAMIC_CACHE_MS) {
+    return dynamicMonths;
+  }
+
+  const lastHC = MONTHLY_DATA[MONTHLY_DATA.length - 1].month; // e.g. "2026-03"
+  const today = new Date();
+  const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+
+  // If we're still in the last hardcoded month or before, nothing to extend
+  if (currentMonth <= lastHC) return [];
+
+  try {
+    // Determine how many months we might need (max 24 to bound the request)
+    const [lastY, lastM] = lastHC.split('-').map(Number);
+    const monthsNeeded = (today.getFullYear() - lastY) * 12 + (today.getMonth() + 1 - lastM);
+    if (monthsNeeded <= 0) return [];
+
+    // ── Fetch Brent monthly from EIA API v2 ──
+    const eiaLen = Math.min(monthsNeeded + 2, 24); // extra buffer
+    const eiaUrl = `https://api.eia.gov/v2/petroleum/pri/spt/data/?frequency=monthly&data[0]=value&facets[series][]=RBRTE&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=${eiaLen}&api_key=DEMO_KEY`;
+    const eiaRes = await fetch(eiaUrl, { signal: AbortSignal.timeout(10000) });
+    if (!eiaRes.ok) return dynamicMonths; // keep stale if fetch fails
+
+    const eiaJson = await eiaRes.json();
+    const eiaData: { period: string; value: string }[] = eiaJson?.response?.data || [];
+    const brentByMonth = new Map<string, number>();
+    for (const row of eiaData) {
+      if (row.period && row.value) {
+        brentByMonth.set(row.period, Math.round(parseFloat(row.value) * 10) / 10);
+      }
+    }
+
+    // ── Fetch USD/CLP from mindicador.cl (by year) ──
+    // We need to fetch each relevant year
+    const yearsNeeded = new Set<number>();
+    for (let m = 1; m <= monthsNeeded; m++) {
+      const d = new Date(lastY, lastM - 1 + m, 1);
+      yearsNeeded.add(d.getFullYear());
+    }
+
+    const usdClpByMonth = new Map<string, number>();
+    for (const year of yearsNeeded) {
+      try {
+        const mdRes = await fetch(`https://mindicador.cl/api/dolar/${year}`, {
+          signal: AbortSignal.timeout(10000),
+        });
+        if (mdRes.ok) {
+          const mdJson = await mdRes.json();
+          const dailyByMonth = new Map<string, number[]>();
+          for (const item of mdJson?.serie || []) {
+            const month = (item.fecha as string).substring(0, 7);
+            if (!dailyByMonth.has(month)) dailyByMonth.set(month, []);
+            dailyByMonth.get(month)!.push(item.valor);
+          }
+          for (const [month, vals] of dailyByMonth) {
+            usdClpByMonth.set(month, Math.round(vals.reduce((a, b) => a + b, 0) / vals.length));
+          }
+        }
+      } catch { /* skip this year */ }
+    }
+
+    // ── Build new months ──
+    const newMonths: typeof MONTHLY_DATA = [];
+    const existingMonths = new Set(MONTHLY_DATA.map(d => d.month));
+
+    for (let m = 1; m <= monthsNeeded; m++) {
+      const d = new Date(lastY, lastM - 1 + m, 1);
+      const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+      if (existingMonths.has(monthStr)) continue;
+
+      const brent = brentByMonth.get(monthStr);
+      const usdClp = usdClpByMonth.get(monthStr);
+
+      // Only add if we have BOTH data points (skip partial/current month if EIA hasn't published yet)
+      if (brent && brent > 10 && usdClp && usdClp > 300) {
+        newMonths.push({ month: monthStr, brentUSD: brent, usdCLP: usdClp });
+      }
+    }
+
+    dynamicMonths = newMonths;
+    dynamicFetchedAt = now;
+    return dynamicMonths;
+  } catch {
+    return dynamicMonths; // return stale on error
+  }
+}
+
+function getAllMonthlyData(dynamic: typeof MONTHLY_DATA): typeof MONTHLY_DATA {
+  if (dynamic.length === 0) return MONTHLY_DATA;
+  return [...MONTHLY_DATA, ...dynamic];
+}
+
 // ── In-memory cache ──
 let cached: {
   currentBrentUSD: number;
   monthly: typeof MONTHLY_DATA;
   fetchedAt: string;
   source: string;
+  dynamicMonths: number;
 } | null = null;
 let cachedAt = 0;
 const CACHE_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -158,18 +261,24 @@ export async function GET() {
     return NextResponse.json({ ...cached, fromCache: true });
   }
 
-  // Attempt live fetch from multiple sources (Yahoo → EIA API → EIA HTML)
-  const liveResult = await scrapeLiveBrent();
+  // Fetch live Brent spot + dynamically extend monthly series in parallel
+  const [liveResult, dynamic] = await Promise.all([
+    scrapeLiveBrent(),
+    fetchMissingMonths(),
+  ]);
 
-  // Fallback to most recent hard-coded value
-  const lastHC = MONTHLY_DATA[MONTHLY_DATA.length - 1];
-  const currentBrentUSD = liveResult ? liveResult.price : lastHC.brentUSD;
+  const allMonthly = getAllMonthlyData(dynamic);
+
+  // Fallback to most recent value (dynamic or hard-coded)
+  const lastEntry = allMonthly[allMonthly.length - 1];
+  const currentBrentUSD = liveResult ? liveResult.price : lastEntry.brentUSD;
 
   cached = {
     currentBrentUSD,
-    monthly: MONTHLY_DATA,
+    monthly: allMonthly,
     fetchedAt: new Date().toISOString(),
     source: liveResult ? liveResult.source : "hard-coded (fallback)",
+    dynamicMonths: dynamic.length,
   };
   cachedAt = now;
 
