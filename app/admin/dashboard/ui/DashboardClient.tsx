@@ -5517,23 +5517,51 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
             </div>
           </div>
 
-          {/* Projection formula explanation */}
+          {/* Projection summary — clean card layout */}
           <div className="mt-4 bg-slate-50 rounded-lg p-3">
-            <div className="flex items-start gap-2">
-              <svg className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <div className="text-[11px] text-slate-600">
-                <p className="font-semibold mb-1">CLP Single-Currency Projection Model</p>
-                <p>Based on real invoices (Ago 2022): Eagle Copters INV22-00211 <span className="font-mono font-bold">${formatCurrency(overhaulMotorCLP)}</span> CLP (motor O-320-D2J + flete + importación + IVA) + <span className="font-mono font-bold">${formatCurrency(overhaulLaborCLP)}</span> CLP (mano de obra) = <span className="font-mono font-bold">${formatCurrency(overhaulMotorCLP + overhaulLaborCLP)}</span> CLP original. Ajustado por IPC Chile acumulado (+{clInflationPct}%) = <span className="font-mono font-bold">${formatCurrency(overhaulCLP)}</span> CLP hoy.</p>
-                <p className="mt-1">A <span className="font-mono font-bold">{horasAnuales}</span> hrs/año, TBO en <span className="font-mono font-bold">{computed.yearsToOverhaul.toFixed(1)}</span> años.
-                Costo total (<span className="font-mono">${formatCurrency(overhaulCLP)}</span>) proyectado con <span className="font-bold">{clForwardInflation}%/yr IPC Chile</span> → <span className="font-mono text-red-600">${formatCurrency(Math.round(computed.inflatedOverhaulCost))}</span>.
-                Recaudado: <span className="font-mono font-bold">${formatCurrency(recaudado)}</span> crecen a <span className="font-mono font-bold text-emerald-600">${formatCurrency(Math.round(computed.projectedFunds))}</span> al {interestRate}%/yr.
-                {computed.projectedGap > 0
-                  ? ` Brecha proyectada: $${formatCurrency(Math.round(computed.projectedGap))}. Plan: invertir $${formatCurrency(Math.round(computed.projectedMonthlyTarget))}/mes en instrumento de bajo riesgo al ${interestRate}%/yr durante ${Math.round(computed.monthsToOverhaul)} meses. Al TBO: fondos $${formatCurrency(Math.round(computed.projectedFunds))} + cuotas $${formatCurrency(Math.round(computed.fvAnnuity))} = $${formatCurrency(Math.round(computed.totalAtTBO))} ≥ costo $${formatCurrency(Math.round(computed.inflatedOverhaulCost))} (fórmula PMT sinking fund).`
-                  : ` Los fondos proyectados cubren el costo inflado con un superávit de $${formatCurrency(Math.abs(Math.round(computed.projectedGap)))}.`
-                }</p>
-                <p className="mt-1 text-blue-700"><span className="font-bold">⚡ Precio mercado motor (airpowerinc.com):</span> RENPL-RT8164 FOB USD ${formatCurrency(engineMarketPriceUSD)} × ${formatCurrency(usdRate)} CLP/USD = <span className="font-mono font-bold">${formatCurrency(computed.motorFobCLP)}</span> CLP FOB. Internación (flete + import + IVA) ratio ×{computed.internacionRatio.toFixed(3)} de factura Eagle 2022 → <span className="font-mono font-bold">${formatCurrency(computed.motorInternacionCLP)}</span> CLP puesto en Chile. Inflación aviación <span className="font-bold text-red-600">+{computed.motorPriceInflationPct.toFixed(1)}%</span> desde Jul 2022 ({computed.motorAnnualInflation.toFixed(1)}%/yr) supera el IPC general ({clInflationPct}%). Costo total reemplazo (motor internado + mano de obra): <span className="font-mono font-bold">${formatCurrency(computed.marketReplacementCLP)}</span> CLP.</p>
+            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Overhaul Cost Projection</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
+              {/* Invoice basis */}
+              <div className="bg-white rounded-lg p-2 border border-slate-100">
+                <p className="text-[9px] text-slate-400">Invoice (Ago 2022)</p>
+                <p className="font-mono font-bold text-slate-700">${formatCurrency(overhaulMotorCLP + overhaulLaborCLP)}</p>
+                <p className="text-[9px] text-slate-400">+IPC {clInflationPct}% → <span className="font-bold text-slate-600">${formatCurrency(overhaulCLP)}</span></p>
+              </div>
+              {/* Projected cost at TBO */}
+              <div className="bg-white rounded-lg p-2 border border-slate-100">
+                <p className="text-[9px] text-slate-400">Cost at TBO ({computed.yearsToOverhaul.toFixed(1)} yrs)</p>
+                <p className="font-mono font-bold text-red-600">${formatCurrency(Math.round(computed.inflatedOverhaulCost))}</p>
+                <p className="text-[9px] text-slate-400">+{clForwardInflation}%/yr IPC fwd</p>
+              </div>
+              {/* Projected funds */}
+              <div className="bg-white rounded-lg p-2 border border-slate-100">
+                <p className="text-[9px] text-slate-400">Projected funds</p>
+                <p className={`font-mono font-bold ${computed.projectedFunds >= computed.inflatedOverhaulCost ? 'text-emerald-600' : 'text-amber-600'}`}>${formatCurrency(Math.round(computed.projectedFunds))}</p>
+                <p className="text-[9px] text-slate-400">${formatCurrency(recaudado)} @ {interestRate}%/yr</p>
+              </div>
+              {/* Gap or surplus */}
+              <div className={`bg-white rounded-lg p-2 border ${computed.projectedGap > 0 ? 'border-red-200' : 'border-emerald-200'}`}>
+                <p className="text-[9px] text-slate-400">{computed.projectedGap > 0 ? 'Gap' : 'Surplus'}</p>
+                <p className={`font-mono font-bold ${computed.projectedGap > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                  {computed.projectedGap > 0 ? '-' : '+'}${formatCurrency(Math.abs(Math.round(computed.projectedGap)))}
+                </p>
+                {computed.projectedGap > 0 && (
+                  <p className="text-[9px] text-slate-400">PMT: ${formatCurrency(Math.round(computed.projectedMonthlyTarget))}/mo</p>
+                )}
+              </div>
+              {/* Market price (airpowerinc) */}
+              <div className="bg-white rounded-lg p-2 border border-blue-100">
+                <p className="text-[9px] text-blue-500">⚡ Market price</p>
+                <p className="font-mono font-bold text-blue-700">${formatCurrency(computed.marketReplacementCLP)}</p>
+                <p className="text-[9px] text-slate-400">FOB ${formatCurrency(engineMarketPriceUSD)} USD + internación</p>
+              </div>
+              {/* Aviation inflation */}
+              <div className="bg-white rounded-lg p-2 border border-slate-100">
+                <p className="text-[9px] text-slate-400">Aviation inflation</p>
+                <p className={`font-mono font-bold ${computed.motorAnnualInflation > clInflationPct ? 'text-red-600' : 'text-slate-700'}`}>
+                  {computed.motorAnnualInflation.toFixed(1)}%/yr
+                </p>
+                <p className="text-[9px] text-slate-400">vs IPC {clInflationPct}%</p>
               </div>
             </div>
           </div>
