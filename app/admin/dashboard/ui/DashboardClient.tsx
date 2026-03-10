@@ -4031,6 +4031,8 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   const [forecastUSDCLP, setForecastUSDCLP] = useState(stored?.forecastUSDCLP ?? 880);
   const [forecastUSInflation, setForecastUSInflation] = useState(stored?.forecastUSInflation ?? 3.0); // US CPI %/yr — indexes structural floor
   const [unleadedPremiumPct, setUnleadedPremiumPct] = useState(stored?.unleadedPremiumPct ?? 0); // 0-30% price premium for unleaded AVGAS transition
+  const [consensusLoading, setConsensusLoading] = useState(false);
+  const [consensusInfo, setConsensusInfo] = useState<{ brentSource: string; usdclpSource: string; inflationSource: string; brentDetail: { year: string; value: number }[]; fetchedAt: string } | null>(null);
   // Live indicators state
   const [liveIndicators, setLiveIndicators] = useState<{ uf: boolean; usd: boolean; fuel: boolean; engine: boolean; ipc: boolean; brent: boolean }>({ uf: false, usd: false, fuel: false, engine: false, ipc: false, brent: false });
 
@@ -4155,6 +4157,30 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       })
       .catch(() => {});
   }, []);
+
+  // 🔄 Restore Consensus — fetch EIA STEO + mindicador + Fed CPI projections
+  const restoreConsensus = async () => {
+    setConsensusLoading(true);
+    try {
+      const res = await fetch('/api/consensus-forecast');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.brentForecastUSD > 0) setForecastBrentUSD(data.brentForecastUSD);
+      if (data.usdclpForecast > 0) setForecastUSDCLP(data.usdclpForecast);
+      if (data.usInflation > 0) setForecastUSInflation(data.usInflation);
+      setConsensusInfo({
+        brentSource: data.brentSource,
+        usdclpSource: data.usdclpSource,
+        inflationSource: data.inflationSource,
+        brentDetail: data.brentDetail || [],
+        fetchedAt: data.fetchedAt,
+      });
+    } catch (e) {
+      console.error('[consensus] Failed:', e);
+    } finally {
+      setConsensusLoading(false);
+    }
+  };
 
   // Brent ↔ AVGAS econometric regression (USD-space)
   // Equation: AVGAS_USD = slope × Brent_USD + intercept
@@ -4943,10 +4969,35 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               </div>
               {/* Econometric forecast inputs */}
               <div className="mt-3 pt-3 border-t border-slate-100">
-                <p className="text-[10px] font-semibold text-orange-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  🛢️ Econometric Forecast Inputs
-                  <span className="text-[8px] text-slate-400 font-normal normal-case">(EIA / World Bank / BCCH consensus)</span>
-                </p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-semibold text-orange-500 uppercase tracking-wider flex items-center gap-1.5">
+                    🛢️ Econometric Forecast Inputs
+                    <span className="text-[8px] text-slate-400 font-normal normal-case">(EIA / World Bank / BCCH consensus)</span>
+                  </p>
+                  <button
+                    onClick={restoreConsensus}
+                    disabled={consensusLoading}
+                    className="flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded-md border transition-all
+                      bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100 hover:border-orange-300
+                      disabled:opacity-50 disabled:cursor-wait"
+                    title="Fetch latest EIA STEO Brent forecast + mindicador USD/CLP spot + Fed CPI projection"
+                  >
+                    {consensusLoading ? (
+                      <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" /><path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-75" /></svg>
+                    ) : (
+                      <span>🔄</span>
+                    )}
+                    {consensusLoading ? 'Loading...' : 'Restore Consensus'}
+                  </button>
+                </div>
+                {consensusInfo && (
+                  <div className="mb-2 px-2 py-1.5 bg-emerald-50 rounded border border-emerald-200 text-[9px] text-emerald-700 flex flex-wrap gap-x-3 gap-y-0.5">
+                    <span>✅ Brent: {consensusInfo.brentSource}{consensusInfo.brentDetail.length > 0 && ` (${consensusInfo.brentDetail.map(d => `${d.year}: $${d.value}`).join(', ')})`}</span>
+                    <span>✅ USD/CLP: {consensusInfo.usdclpSource}</span>
+                    <span>✅ CPI: {consensusInfo.inflationSource}</span>
+                    <span className="text-slate-400">Updated {new Date(consensusInfo.fetchedAt).toLocaleDateString()}</span>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   <div className="flex items-center justify-between gap-2 py-1.5">
                     <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">
