@@ -5,6 +5,7 @@ import { Chart, LineController, LineElement, PointElement, LinearScale, Title, C
 import { generateAccountStatementPDF } from "../../../../lib/generate-account-pdf";
 import ImagePreviewModal from "../../../components/ImagePreviewModal";
 import { registerOverhaul } from "../../../actions/register-overhaul";
+import EngineAnalysis from "./EngineAnalysis";
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler, DoughnutController, ArcElement);
 
@@ -108,6 +109,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
   const [tab, setTab] = useState("overview");
   const [pilotSubTab, setPilotSubTab] = useState<"accounts" | "directory" | "deposits">("accounts");
   const [financeSubTab, setFinanceSubTab] = useState<"movements" | "costs">("movements");
+  const [mxSubTab, setMxSubTab] = useState<"components" | "engine">("components");
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [backupLoading, setBackupLoading] = useState(false);
   const [backupMessage, setBackupMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -1212,7 +1214,32 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         </>
       )}
       {tab === "fuel" && <FuelTable logs={initialData.fuelLogs || []} />}
-      {tab === "maintenance" && <MaintenanceTable components={initialData.components} aircraft={initialData.aircraft} aircraftYearlyStats={initialData.aircraftYearlyStats || []} overviewMetrics={overviewMetrics} />}
+      {tab === "maintenance" && (
+        <>
+          <div className="flex gap-1 bg-slate-100/80 p-1 rounded-lg mb-4 max-w-sm">
+            <button
+              onClick={() => setMxSubTab("components")}
+              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${mxSubTab === "components"
+                ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                }`}
+            >
+              🔩 Components
+            </button>
+            <button
+              onClick={() => setMxSubTab("engine")}
+              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${mxSubTab === "engine"
+                ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                }`}
+            >
+              🔧 Engine Monitor
+            </button>
+          </div>
+          {mxSubTab === "components" && <MaintenanceTable components={initialData.components} aircraft={initialData.aircraft} aircraftYearlyStats={initialData.aircraftYearlyStats || []} overviewMetrics={overviewMetrics} />}
+          {mxSubTab === "engine" && <EngineAnalysis />}
+        </>
+      )}
       {tab === "finance" && (
         <>
           <div className="flex gap-1 bg-slate-100/80 p-1 rounded-lg mb-4 max-w-md">
