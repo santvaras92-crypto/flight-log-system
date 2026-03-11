@@ -515,7 +515,7 @@ export default function EngineAnalysis() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv,.jpi,.JPI"
+              accept=".csv,.jpi,.JPI,application/octet-stream,text/csv,*/*"
               onChange={handleUpload}
               className="hidden"
               disabled={uploading}
