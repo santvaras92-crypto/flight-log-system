@@ -15,6 +15,9 @@ const ENGINE_LIMITS = {
   hp_max: 160,
 };
 
+// Convert Prisma Decimal to plain number
+const toNum = (v: any): number | null => (v != null ? Number(v) : null);
+
 // GET — list all flights with summary stats
 export async function GET(req: NextRequest) {
   try {
@@ -30,7 +33,26 @@ export async function GET(req: NextRequest) {
       if (!flight) {
         return NextResponse.json({ error: "Flight not found" }, { status: 404 });
       }
-      return NextResponse.json({ flight, limits: ENGINE_LIMITS });
+      // Convert Decimal fields to plain numbers
+      const serialized = {
+        ...flight,
+        maxEGT: toNum(flight.maxEGT),
+        maxCHT: toNum(flight.maxCHT),
+        maxOilTemp: toNum(flight.maxOilTemp),
+        minOilPress: toNum(flight.minOilPress),
+        avgRPM: toNum(flight.avgRPM),
+        avgFF: toNum(flight.avgFF),
+        readings: flight.readings.map(r => ({
+          ...r,
+          egt1: toNum(r.egt1), egt2: toNum(r.egt2), egt3: toNum(r.egt3), egt4: toNum(r.egt4),
+          cht1: toNum(r.cht1), cht2: toNum(r.cht2), cht3: toNum(r.cht3), cht4: toNum(r.cht4),
+          oilTemp: toNum(r.oilTemp), oilPress: toNum(r.oilPress),
+          rpm: toNum(r.rpm), map: toNum(r.map), hp: toNum(r.hp),
+          fuelFlow: toNum(r.fuelFlow), fuelUsed: toNum(r.fuelUsed), fuelRem: toNum(r.fuelRem),
+          oat: toNum(r.oat), volts: toNum(r.volts), carbTemp: toNum(r.carbTemp),
+        })),
+      };
+      return NextResponse.json({ flight: serialized, limits: ENGINE_LIMITS });
     }
 
     // List all flights (summary only, no readings)
@@ -56,7 +78,17 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ flights, limits: ENGINE_LIMITS });
+    const serialized = flights.map(f => ({
+      ...f,
+      maxEGT: toNum(f.maxEGT),
+      maxCHT: toNum(f.maxCHT),
+      maxOilTemp: toNum(f.maxOilTemp),
+      minOilPress: toNum(f.minOilPress),
+      avgRPM: toNum(f.avgRPM),
+      avgFF: toNum(f.avgFF),
+    }));
+
+    return NextResponse.json({ flights: serialized, limits: ENGINE_LIMITS });
   } catch (error: any) {
     console.error("Engine data GET error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
