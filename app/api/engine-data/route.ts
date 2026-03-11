@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parse } from "csv-parse/sync";
+import { decodeJPI } from "@/lib/jpi-decoder";
 
 // Engine limits for Lycoming O-320-D2J
 const ENGINE_LIMITS = {
@@ -95,7 +96,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST — upload CSV file and store in DB
+// POST — upload CSV or JPI file and store in DB
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
@@ -105,124 +106,244 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    const text = await file.text();
-    const records: Record<string, string>[] = parse(text, {
-      columns: true,
-      skip_empty_lines: true,
-      trim: true,
-    });
+    const filename = file.name.toLowerCase();
+    const isJPI = filename.endsWith(".jpi");
 
-    if (records.length === 0) {
-      return NextResponse.json({ error: "Empty CSV file" }, { status: 400 });
-    }
-
-    // Extract flight metadata from filename: flight_XXX_YYYYMMDD_HHMM.csv
-    const filename = file.name;
-    const match = filename.match(/flight_(\d+)_(\d{8})_(\d{4})\.csv/);
-
-    let flightNumber = 0;
-    let flightDate = new Date();
-
-    if (match) {
-      flightNumber = parseInt(match[1]);
-      const dateStr = match[2];
-      const timeStr = match[3];
-      flightDate = new Date(
-        `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}T${timeStr.slice(0, 2)}:${timeStr.slice(2, 4)}:00`
-      );
+    if (isJPI) {
+      return handleJPIUpload(file);
     } else {
-      // Try to get date from first record timestamp
-      const firstTs = records[0]?.Timestamp;
-      if (firstTs) {
-        flightDate = new Date(firstTs);
-      }
-      // Use hash of filename for flight number
-      flightNumber = Math.abs(filename.split('').reduce((a: number, b: string) => ((a << 5) - a) + b.charCodeAt(0), 0)) % 100000;
+      return handleCSVUpload(file);
     }
+  } catch (error: any) {
+    console.error("Engine data POST error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
 
+// ─── JPI Binary Upload Handler ────────────────────────────────
+async function handleJPIUpload(file: File) {
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
+  const decodedFlights = decodeJPI(buffer, file.name);
+
+  if (decodedFlights.length === 0) {
+    return NextResponse.json(
+      { error: "No valid flights found in JPI file. The file may be corrupted or empty." },
+      { status: 400 }
+    );
+  }
+
+  const results: Array<{ flightNumber: number; readingsCount: number; status: string }> = [];
+  let importedCount = 0;
+
+  for (const df of decodedFlights) {
     // Check for duplicate
     const existing = await prisma.engineMonitorFlight.findFirst({
-      where: { flightNumber, flightDate },
+      where: { flightNumber: df.flightNumber, flightDate: df.flightDate },
     });
 
     if (existing) {
-      return NextResponse.json(
-        { error: `Flight #${flightNumber} on ${flightDate.toISOString().slice(0, 10)} already exists`, existingId: existing.id },
-        { status: 409 }
-      );
+      results.push({ flightNumber: df.flightNumber, readingsCount: 0, status: "duplicate" });
+      continue;
     }
 
-    // Parse readings
-    const readings = records.map((r: any) => ({
-      elapsedSec: parseInt(r.Elapsed_s) || 0,
-      timestamp: new Date(r.Timestamp),
-      egt1: r.EGT1_F ? parseFloat(r.EGT1_F) : null,
-      egt2: r.EGT2_F ? parseFloat(r.EGT2_F) : null,
-      egt3: r.EGT3_F ? parseFloat(r.EGT3_F) : null,
-      egt4: r.EGT4_F ? parseFloat(r.EGT4_F) : null,
-      cht1: r.CHT1_F ? parseFloat(r.CHT1_F) : null,
-      cht2: r.CHT2_F ? parseFloat(r.CHT2_F) : null,
-      cht3: r.CHT3_F ? parseFloat(r.CHT3_F) : null,
-      cht4: r.CHT4_F ? parseFloat(r.CHT4_F) : null,
-      oilTemp: r.OilTemp_F ? parseFloat(r.OilTemp_F) : null,
-      oilPress: r.OilPress_PSI ? parseFloat(r.OilPress_PSI) : null,
-      rpm: r.RPM ? parseFloat(r.RPM) : null,
-      map: r.MAP_inHg ? parseFloat(r.MAP_inHg) : null,
-      hp: r.HP ? parseFloat(r.HP) : null,
-      fuelFlow: r.FuelFlow_GPH ? parseFloat(r.FuelFlow_GPH) : null,
-      fuelUsed: r.FuelUsed_gal ? parseFloat(r.FuelUsed_gal) : null,
-      fuelRem: r.FuelRem_gal ? parseFloat(r.FuelRem_gal) : null,
-      oat: r.OAT_F ? parseFloat(r.OAT_F) : null,
-      volts: r.Volts ? parseFloat(r.Volts) : null,
-      carbTemp: r.CarbTemp_F ? parseFloat(r.CarbTemp_F) : null,
+    // Build readings array
+    const readings = df.records.map((r) => ({
+      elapsedSec: r.elapsedSec,
+      timestamp: r.timestamp || new Date(df.flightDate.getTime() + r.elapsedSec * 1000),
+      egt1: r.egt1,
+      egt2: r.egt2,
+      egt3: r.egt3,
+      egt4: r.egt4,
+      cht1: r.cht1,
+      cht2: r.cht2,
+      cht3: r.cht3,
+      cht4: r.cht4,
+      oilTemp: r.oilTemp,
+      oilPress: r.oilPress,
+      rpm: r.rpm,
+      map: r.map,
+      hp: r.hp,
+      fuelFlow: r.fuelFlow,
+      fuelUsed: r.fuelUsed,
+      fuelRem: r.fuelRem,
+      oat: r.oat,
+      volts: r.volts,
+      carbTemp: r.carbTemp,
     }));
 
     // Calculate summary stats
-    const egts = readings.flatMap((r: any) => [r.egt1, r.egt2, r.egt3, r.egt4].filter((v: any) => v != null && v > 0));
-    const chts = readings.flatMap((r: any) => [r.cht1, r.cht2, r.cht3, r.cht4].filter((v: any) => v != null && v > 0));
-    const oils = readings.map((r: any) => r.oilTemp).filter((v: any) => v != null && v > 0);
-    const oilPs = readings.map((r: any) => r.oilPress).filter((v: any) => v != null && v > 0);
-    const rpms = readings.map((r: any) => r.rpm).filter((v: any) => v != null && v > 0);
-    const ffs = readings.map((r: any) => r.fuelFlow).filter((v: any) => v != null && v > 0);
+    const nums = (arr: (number | null)[]) => arr.filter((v): v is number => v != null && v > 0);
+    const egts = readings.flatMap((r) => nums([r.egt1, r.egt2, r.egt3, r.egt4]));
+    const chts = readings.flatMap((r) => nums([r.cht1, r.cht2, r.cht3, r.cht4]));
+    const oils = nums(readings.map((r) => r.oilTemp));
+    const oilPs = nums(readings.map((r) => r.oilPress));
+    const rpms = nums(readings.map((r) => r.rpm));
+    const ffs = nums(readings.map((r) => r.fuelFlow));
 
     const maxEGT = egts.length > 0 ? Math.max(...egts) : null;
     const maxCHT = chts.length > 0 ? Math.max(...chts) : null;
     const maxOilTemp = oils.length > 0 ? Math.max(...oils) : null;
     const minOilPress = oilPs.length > 0 ? Math.min(...oilPs) : null;
-    const avgRPM = rpms.length > 0 ? rpms.reduce((a: number, b: number) => a + b, 0) / rpms.length : null;
-    const avgFF = ffs.length > 0 ? ffs.reduce((a: number, b: number) => a + b, 0) / ffs.length : null;
-    const durationSec = readings.length > 0 ? Math.max(...readings.map((r: any) => r.elapsedSec)) : 0;
+    const avgRPM = rpms.length > 0 ? rpms.reduce((a, b) => a + b, 0) / rpms.length : null;
+    const avgFF = ffs.length > 0 ? ffs.reduce((a, b) => a + b, 0) / ffs.length : null;
 
-    // Create flight with nested readings
+    // Create flight + readings
     const flight = await prisma.engineMonitorFlight.create({
       data: {
-        flightNumber,
-        flightDate,
-        durationSec,
+        flightNumber: df.flightNumber,
+        flightDate: df.flightDate,
+        durationSec: df.durationSec,
         maxEGT,
         maxCHT,
         maxOilTemp,
         minOilPress,
         avgRPM,
         avgFF,
-        sourceFile: filename,
-        readings: {
-          create: readings,
-        },
+        sourceFile: file.name,
+        readings: { create: readings },
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      flightId: flight.id,
-      flightNumber,
+    importedCount++;
+    results.push({
+      flightNumber: df.flightNumber,
       readingsCount: readings.length,
-      summary: { maxEGT, maxCHT, maxOilTemp, minOilPress, avgRPM: avgRPM?.toFixed(0), avgFF: avgFF?.toFixed(1) },
+      status: "imported",
     });
-  } catch (error: any) {
-    console.error("Engine data POST error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  const duplicates = results.filter((r) => r.status === "duplicate").length;
+  const totalReadings = results.reduce((s, r) => s + r.readingsCount, 0);
+
+  return NextResponse.json({
+    success: true,
+    source: "jpi",
+    totalFlightsInFile: decodedFlights.length,
+    imported: importedCount,
+    duplicates,
+    totalReadings,
+    flights: results,
+  });
+}
+
+// ─── CSV Upload Handler ───────────────────────────────────────
+async function handleCSVUpload(file: File) {
+  const text = await file.text();
+  const records: Record<string, string>[] = parse(text, {
+    columns: true,
+    skip_empty_lines: true,
+    trim: true,
+  });
+
+  if (records.length === 0) {
+    return NextResponse.json({ error: "Empty CSV file" }, { status: 400 });
+  }
+
+  // Extract flight metadata from filename: flight_XXX_YYYYMMDD_HHMM.csv
+  const filename = file.name;
+  const match = filename.match(/flight_(\d+)_(\d{8})_(\d{4})\.csv/);
+
+  let flightNumber = 0;
+  let flightDate = new Date();
+
+  if (match) {
+    flightNumber = parseInt(match[1]);
+    const dateStr = match[2];
+    const timeStr = match[3];
+    flightDate = new Date(
+      `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}T${timeStr.slice(0, 2)}:${timeStr.slice(2, 4)}:00`
+    );
+  } else {
+    // Try to get date from first record timestamp
+    const firstTs = records[0]?.Timestamp;
+    if (firstTs) {
+      flightDate = new Date(firstTs);
+    }
+    // Use hash of filename for flight number
+    flightNumber = Math.abs(filename.split('').reduce((a: number, b: string) => ((a << 5) - a) + b.charCodeAt(0), 0)) % 100000;
+  }
+
+  // Check for duplicate
+  const existing = await prisma.engineMonitorFlight.findFirst({
+    where: { flightNumber, flightDate },
+  });
+
+  if (existing) {
+    return NextResponse.json(
+      { error: `Flight #${flightNumber} on ${flightDate.toISOString().slice(0, 10)} already exists`, existingId: existing.id },
+      { status: 409 }
+    );
+  }
+
+  // Parse readings
+  const readings = records.map((r: any) => ({
+    elapsedSec: parseInt(r.Elapsed_s) || 0,
+    timestamp: new Date(r.Timestamp),
+    egt1: r.EGT1_F ? parseFloat(r.EGT1_F) : null,
+    egt2: r.EGT2_F ? parseFloat(r.EGT2_F) : null,
+    egt3: r.EGT3_F ? parseFloat(r.EGT3_F) : null,
+    egt4: r.EGT4_F ? parseFloat(r.EGT4_F) : null,
+    cht1: r.CHT1_F ? parseFloat(r.CHT1_F) : null,
+    cht2: r.CHT2_F ? parseFloat(r.CHT2_F) : null,
+    cht3: r.CHT3_F ? parseFloat(r.CHT3_F) : null,
+    cht4: r.CHT4_F ? parseFloat(r.CHT4_F) : null,
+    oilTemp: r.OilTemp_F ? parseFloat(r.OilTemp_F) : null,
+    oilPress: r.OilPress_PSI ? parseFloat(r.OilPress_PSI) : null,
+    rpm: r.RPM ? parseFloat(r.RPM) : null,
+    map: r.MAP_inHg ? parseFloat(r.MAP_inHg) : null,
+    hp: r.HP ? parseFloat(r.HP) : null,
+    fuelFlow: r.FuelFlow_GPH ? parseFloat(r.FuelFlow_GPH) : null,
+    fuelUsed: r.FuelUsed_gal ? parseFloat(r.FuelUsed_gal) : null,
+    fuelRem: r.FuelRem_gal ? parseFloat(r.FuelRem_gal) : null,
+    oat: r.OAT_F ? parseFloat(r.OAT_F) : null,
+    volts: r.Volts ? parseFloat(r.Volts) : null,
+    carbTemp: r.CarbTemp_F ? parseFloat(r.CarbTemp_F) : null,
+  }));
+
+  // Calculate summary stats
+  const egts = readings.flatMap((r: any) => [r.egt1, r.egt2, r.egt3, r.egt4].filter((v: any) => v != null && v > 0));
+  const chts = readings.flatMap((r: any) => [r.cht1, r.cht2, r.cht3, r.cht4].filter((v: any) => v != null && v > 0));
+  const oils = readings.map((r: any) => r.oilTemp).filter((v: any) => v != null && v > 0);
+  const oilPs = readings.map((r: any) => r.oilPress).filter((v: any) => v != null && v > 0);
+  const rpms = readings.map((r: any) => r.rpm).filter((v: any) => v != null && v > 0);
+  const ffs = readings.map((r: any) => r.fuelFlow).filter((v: any) => v != null && v > 0);
+
+  const maxEGT = egts.length > 0 ? Math.max(...egts) : null;
+  const maxCHT = chts.length > 0 ? Math.max(...chts) : null;
+  const maxOilTemp = oils.length > 0 ? Math.max(...oils) : null;
+  const minOilPress = oilPs.length > 0 ? Math.min(...oilPs) : null;
+  const avgRPM = rpms.length > 0 ? rpms.reduce((a: number, b: number) => a + b, 0) / rpms.length : null;
+  const avgFF = ffs.length > 0 ? ffs.reduce((a: number, b: number) => a + b, 0) / ffs.length : null;
+  const durationSec = readings.length > 0 ? Math.max(...readings.map((r: any) => r.elapsedSec)) : 0;
+
+  // Create flight with nested readings
+  const flight = await prisma.engineMonitorFlight.create({
+    data: {
+      flightNumber,
+      flightDate,
+      durationSec,
+      maxEGT,
+      maxCHT,
+      maxOilTemp,
+      minOilPress,
+      avgRPM,
+      avgFF,
+      sourceFile: filename,
+      readings: {
+        create: readings,
+      },
+    },
+  });
+
+  return NextResponse.json({
+    success: true,
+    source: "csv",
+    flightId: flight.id,
+    flightNumber,
+    readingsCount: readings.length,
+    summary: { maxEGT, maxCHT, maxOilTemp, minOilPress, avgRPM: avgRPM?.toFixed(0), avgFF: avgFF?.toFixed(1) },
+  });
 }
 
 // DELETE — remove a flight and its readings

@@ -141,7 +141,11 @@ export default function EngineAnalysis() {
       const res = await fetch("/api/engine-data", { method: "POST", body: formData });
       const data = await res.json();
       if (res.ok) {
-        setUploadMsg({ type: "success", text: `✅ Flight #${data.flightNumber} imported — ${data.readingsCount} readings` });
+        if (data.source === "jpi") {
+          setUploadMsg({ type: "success", text: `✅ JPI: ${data.imported} flight(s) imported, ${data.totalReadings} readings${data.duplicates > 0 ? `, ${data.duplicates} duplicate(s) skipped` : ""}` });
+        } else {
+          setUploadMsg({ type: "success", text: `✅ Flight #${data.flightNumber} imported — ${data.readingsCount} readings` });
+        }
         loadFlights();
       } else {
         setUploadMsg({ type: "error", text: `❌ ${data.error}` });
@@ -511,7 +515,7 @@ export default function EngineAnalysis() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv"
+              accept=".csv,.jpi,.JPI"
               onChange={handleUpload}
               className="hidden"
               disabled={uploading}
@@ -520,7 +524,7 @@ export default function EngineAnalysis() {
               {uploading ? (
                 <><span className="animate-spin">⏳</span> Uploading...</>
               ) : (
-                <>📤 Upload CSV</>
+                <>📤 Upload CSV/JPI</>
               )}
             </span>
           </label>
