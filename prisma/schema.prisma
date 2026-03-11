@@ -227,3 +227,55 @@ model BankMovement {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
+
+model EngineMonitorFlight {
+  id            Int                    @id @default(autoincrement())
+  flightNumber  Int
+  flightDate    DateTime
+  aircraftId    String                 @default("CC-AQI")
+  engineModel   String                 @default("O-320-D2J")
+  engineSerial  String                 @default("RL-7662-39E")
+  durationSec   Int                    @default(0)
+  maxEGT        Decimal?
+  maxCHT        Decimal?
+  maxOilTemp    Decimal?
+  minOilPress   Decimal?
+  avgRPM        Decimal?
+  avgFF         Decimal?
+  sourceFile    String?
+  createdAt     DateTime               @default(now())
+  readings      EngineMonitorReading[]
+
+  @@unique([flightNumber, flightDate])
+  @@index([flightDate])
+}
+
+model EngineMonitorReading {
+  id         Int                @id @default(autoincrement())
+  flightId   Int
+  elapsedSec Int
+  timestamp  DateTime
+  egt1       Decimal?
+  egt2       Decimal?
+  egt3       Decimal?
+  egt4       Decimal?
+  cht1       Decimal?
+  cht2       Decimal?
+  cht3       Decimal?
+  cht4       Decimal?
+  oilTemp    Decimal?
+  oilPress   Decimal?
+  rpm        Decimal?
+  map        Decimal?
+  hp         Decimal?
+  fuelFlow   Decimal?
+  fuelUsed   Decimal?
+  fuelRem    Decimal?
+  oat        Decimal?
+  volts      Decimal?
+  carbTemp   Decimal?
+
+  flight     EngineMonitorFlight @relation(fields: [flightId], references: [id], onDelete: Cascade)
+
+  @@index([flightId])
+}
