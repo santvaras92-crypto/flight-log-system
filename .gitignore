@@ -32,6 +32,9 @@ prisma/dev.db-journal
 *.db
 *.db-journal
 
+# Engine monitor raw data (CSVs and JPI binaries — already imported to DB)
+Engine Analisis/
+
 # IDE
 .vscode/
 .idea/
