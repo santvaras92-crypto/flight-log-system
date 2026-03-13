@@ -6,8 +6,8 @@ import { decodeJPI } from "@/lib/jpi-decoder";
 // Engine limits for Lycoming O-320-D2J
 const ENGINE_LIMITS = {
   egt_max: 1500,
-  cht_redline: 500,
-  cht_max: 500,
+  cht_redline: 430,
+  cht_max: 430,
   oil_temp_max: 245,
   oil_press_max: 115,
   oil_press_min: 25,

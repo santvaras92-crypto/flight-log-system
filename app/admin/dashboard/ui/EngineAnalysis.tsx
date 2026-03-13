@@ -865,7 +865,7 @@ export default function EngineAnalysis() {
                           <th className="px-3 py-1.5 text-left font-semibold text-slate-600">Avg EGT</th>
                           <th className="px-3 py-1.5 text-left font-semibold text-slate-600">Max CHT</th>
                           <th className="px-3 py-1.5 text-left font-semibold text-slate-600">Avg CHT</th>
-                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600">CHT &gt;500°F</th>
+                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600">CHT &gt;{ENGINE_LIMITS.cht_redline}°F</th>
                         </tr>
                       </thead>
                       <tbody>
