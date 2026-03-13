@@ -102,6 +102,7 @@ export default function EngineAnalysis() {
   const [trendRange, setTrendRange] = useState<'all' | '5y' | '3y' | '2y' | '1y' | '6m' | '3m' | 'custom'>('6m');
   const [customRangeStart, setCustomRangeStart] = useState(0);   // index into sorted flights
   const [customRangeEnd, setCustomRangeEnd] = useState(100);     // percentage (0-100)
+  const [smoothTrend, setSmoothTrend] = useState(false);         // EMA smoothing toggle
 
   // Load flights list
   const loadFlights = useCallback(async () => {
@@ -438,21 +439,26 @@ export default function EngineAnalysis() {
       interaction: { mode: "index" as const, intersect: false },
       plugins: { legend: { position: "top" as const, labels: { usePointStyle: true, pointStyle: "circle" as const, font: { size: 10 } } } },
       scales: { x: { ticks: { maxTicksLimit: 15, font: { size: 9 } }, grid: { display: false } } },
-      elements: { point: { radius: 0, hoverRadius: 3 }, line: { borderWidth: 2.5, tension: 0.4 } },
+      elements: {
+        point: { radius: smoothTrend ? 0 : 1.5, hoverRadius: 4 },
+        line: { borderWidth: smoothTrend ? 2.5 : 1.5, tension: smoothTrend ? 0.4 : 0.1 },
+      },
     };
 
-    // --- CHT Trend (EMA smoothed) ---
+    // --- CHT Trend ---
     if (trendChtRef.current) {
       const ctx = trendChtRef.current.getContext("2d")!;
-      const chtSmooth = ema(sorted.map(f => f.maxCHT), 20);
-      const egtSmooth = ema(sorted.map(f => f.maxEGT), 20);
+      const rawCHT = sorted.map(f => f.maxCHT);
+      const rawEGT = sorted.map(f => f.maxEGT);
+      const chtData = smoothTrend ? ema(rawCHT, 20) : rawCHT;
+      const egtData = smoothTrend ? ema(rawEGT, 20) : rawEGT;
       const chart = new ChartJS(ctx, {
         type: "line",
         data: {
           labels: trendLabels,
           datasets: [
-            { label: "Max CHT", data: chtSmooth, borderColor: "#ef4444", backgroundColor: "rgba(239,68,68,0.08)", fill: true },
-            { label: "Max EGT", data: egtSmooth, borderColor: "#f97316", backgroundColor: "rgba(249,115,22,0.05)", fill: false },
+            { label: "Max CHT", data: chtData, borderColor: "#ef4444", backgroundColor: "rgba(239,68,68,0.08)", fill: smoothTrend },
+            { label: "Max EGT", data: egtData, borderColor: "#f97316", backgroundColor: "rgba(249,115,22,0.05)", fill: false },
           ],
         },
         options: {
@@ -472,18 +478,20 @@ export default function EngineAnalysis() {
       trendChartInstances.current.push(chart);
     }
 
-    // --- Oil Trend (EMA smoothed) ---
+    // --- Oil Trend ---
     if (trendOilRef.current) {
       const ctx = trendOilRef.current.getContext("2d")!;
-      const oilTempSmooth = ema(sorted.map(f => f.maxOilTemp), 20);
-      const oilPressSmooth = ema(sorted.map(f => f.minOilPress), 20);
+      const rawOilTemp = sorted.map(f => f.maxOilTemp);
+      const rawOilPress = sorted.map(f => f.minOilPress);
+      const oilTempData = smoothTrend ? ema(rawOilTemp, 20) : rawOilTemp;
+      const oilPressData = smoothTrend ? ema(rawOilPress, 20) : rawOilPress;
       const chart = new ChartJS(ctx, {
         type: "line",
         data: {
           labels: trendLabels,
           datasets: [
-            { label: "Max Oil Temp", data: oilTempSmooth, borderColor: "#f97316", backgroundColor: "rgba(249,115,22,0.08)", fill: true },
-            { label: "Min Oil Press", data: oilPressSmooth, borderColor: "#06b6d4", backgroundColor: "rgba(6,182,212,0.08)", fill: true },
+            { label: "Max Oil Temp", data: oilTempData, borderColor: "#f97316", backgroundColor: "rgba(249,115,22,0.08)", fill: smoothTrend },
+            { label: "Min Oil Press", data: oilPressData, borderColor: "#06b6d4", backgroundColor: "rgba(6,182,212,0.08)", fill: smoothTrend },
           ],
         },
         options: {
@@ -504,7 +512,7 @@ export default function EngineAnalysis() {
     }
 
     return () => { trendChartInstances.current.forEach(c => c.destroy()); trendChartInstances.current = []; };
-  }, [trendSlice, view]);
+  }, [trendSlice, view, smoothTrend]);
 
   // ============ COMPUTED STATS FOR DETAIL ============
   const detailStats = useMemo(() => {
@@ -668,6 +676,16 @@ export default function EngineAnalysis() {
                       : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
                 >
                   Custom
+                </button>
+                <div className="w-px h-5 bg-slate-200 mx-1" />
+                <button
+                  onClick={() => setSmoothTrend(!smoothTrend)}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-all flex items-center gap-1
+                    ${smoothTrend
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+                >
+                  〰️ Smooth
                 </button>
                 <span className="ml-auto text-[11px] text-slate-400 font-medium">
                   {trendDateRange.start} → {trendDateRange.end} · {trendDateRange.count} flights
