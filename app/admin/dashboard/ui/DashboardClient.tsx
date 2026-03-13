@@ -1582,29 +1582,45 @@ function FuelForecastChart({
     const ma6 = computeMA(6);
     const ma12 = computeMA(12);
 
-    // Forecast extension (dashed) — from current month + 1 to +6
+    // Forecast extension (dashed) — anchored to last real AVGAS price
     const forecastData: Record<string, number> = {};
     if (brentAvgasCorrelation) {
-      const lastAvgas = avgasMonthly.length > 0 ? avgasMonthly[avgasMonthly.length - 1].ppl : 0;
-      // Add current "implied now" as the anchor
-      forecastData[nowMonth] = brentAvgasCorrelation.impliedNowCLP || lastAvgas;
-      // 3m and 6m forecasts
+      // Find the last month with actual AVGAS data as anchor
+      const sortedAvgas = [...avgasMonthly].sort((a: any, b: any) => a.month.localeCompare(b.month));
+      const lastEntry = sortedAvgas.length > 0 ? sortedAvgas[sortedAvgas.length - 1] : null;
+      const lastAvgasMonth = lastEntry?.month || nowMonth;
+      const lastAvgasPrice = lastEntry?.ppl || 0;
+
+      // Anchor forecast at the last real data point
+      forecastData[lastAvgasMonth] = lastAvgasPrice;
+
+      // 3m and 6m forecast targets from WLS model (from now, not from last data)
       const m3 = new Date(now); m3.setMonth(m3.getMonth() + 3);
       const m6 = new Date(now); m6.setMonth(m6.getMonth() + 6);
       const m3key = `${m3.getFullYear()}-${String(m3.getMonth() + 1).padStart(2, '0')}`;
       const m6key = `${m6.getFullYear()}-${String(m6.getMonth() + 1).padStart(2, '0')}`;
       if (brentAvgasCorrelation.forecast3m > 0) forecastData[m3key] = brentAvgasCorrelation.forecast3m;
       if (brentAvgasCorrelation.forecast6m > 0) forecastData[m6key] = brentAvgasCorrelation.forecast6m;
-      // Linear interpolation for months 1,2 and 4,5
-      const anchor = forecastData[nowMonth];
+
+      // Interpolate from anchor (last real price) through 3m to 6m targets
+      const anchor = lastAvgasPrice;
       const f3 = brentAvgasCorrelation.forecast3m || anchor;
       const f6 = brentAvgasCorrelation.forecast6m || f3;
-      for (let i = 1; i <= 6; i++) {
-        const d = new Date(now); d.setMonth(d.getMonth() + i);
+
+      // Calculate month spans from last actual data to forecast targets
+      const [ly, lm] = lastAvgasMonth.split('-').map(Number);
+      const totalMonths = (m6.getFullYear() - ly) * 12 + (m6.getMonth() - (lm - 1));
+      const midMonths = (m3.getFullYear() - ly) * 12 + (m3.getMonth() - (lm - 1));
+
+      for (let i = 1; i <= totalMonths; i++) {
+        const d = new Date(ly, lm - 1 + i, 1);
         const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         if (!forecastData[k]) {
-          if (i < 3) forecastData[k] = Math.round(anchor + (f3 - anchor) * (i / 3));
-          else forecastData[k] = Math.round(f3 + (f6 - f3) * ((i - 3) / 3));
+          if (midMonths > 0 && i <= midMonths) {
+            forecastData[k] = Math.round(anchor + (f3 - anchor) * (i / midMonths));
+          } else if (totalMonths > midMonths) {
+            forecastData[k] = Math.round(f3 + (f6 - f3) * ((i - midMonths) / (totalMonths - midMonths)));
+          }
         }
       }
     }
