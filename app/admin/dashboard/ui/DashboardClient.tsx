@@ -5588,13 +5588,6 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-2">
                 <ParamInput label="Interest on funds" value={interestRate} onChange={setInterestRate} unit="%/yr" />
                 <ParamInput label="IPC Chile fwd" value={clForwardInflation} onChange={setClForwardInflation} unit="%/yr" />
-                <div className="flex items-center justify-between gap-2 py-1.5">
-                  <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">AVGAS trend/yr{liveIndicators.fuel && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-amber-100 text-amber-700 rounded-full">CAGR</span>}</span>
-                  <div className="flex items-center gap-1">
-                    <span className="text-[10px] text-slate-400">%</span>
-                    <input type="number" value={fuelTrendRate} onChange={e => setFuelTrendRate(Number(e.target.value) || 0)} className="w-24 sm:w-28 text-right text-xs font-mono bg-slate-50 border border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none" />
-                  </div>
-                </div>
               </div>
             </div>
           </div>
