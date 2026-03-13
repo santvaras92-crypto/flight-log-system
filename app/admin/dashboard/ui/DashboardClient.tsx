@@ -5424,61 +5424,6 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 </div>
               </div>
             )}
-
-            {/* Projected Fuel Cost */}
-            <div className="mb-5">
-              <p className="text-[10px] font-semibold text-red-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-                Fuel Cost Projection · {computed.yearsToOverhaul.toFixed(1)} yrs to overhaul
-              </p>
-
-              <div className="p-3 bg-red-50 border-red-200 rounded-xl border">
-                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  📊 Compound Growth Model
-                  <span className="text-[8px] font-normal text-slate-400 normal-case">{fuelTrendRate}%/yr compound</span>
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="text-center p-2 bg-white/70 rounded-lg">
-                    <p className="text-sm font-bold text-slate-600 font-mono">${formatCurrency(avgasLiterCLP)}</p>
-                    <p className="text-[9px] text-slate-500">Current $/L</p>
-                  </div>
-                  <div className="text-center p-2 bg-white/70 rounded-lg">
-                    <p className="text-sm font-bold text-red-600 font-mono">${formatCurrency(Math.round(computed.projectedAvgasPrice))}</p>
-                    <p className="text-[9px] text-slate-500">Projected $/L</p>
-                    <p className="text-[8px] text-red-500 font-mono">+{((computed.projectedAvgasPrice / avgasLiterCLP - 1) * 100).toFixed(0)}%</p>
-                  </div>
-                  <div className="text-center p-2 bg-white/70 rounded-lg">
-                    <p className="text-sm font-bold text-red-600 font-mono">${formatCurrency(Math.round(computed.projectedTotalCostoHr))}</p>
-                    <p className="text-[9px] text-slate-500">Cost/hr</p>
-                  </div>
-                  <div className="text-center p-2 bg-white/70 rounded-lg">
-                    <p className={`text-sm font-bold font-mono ${computed.projectedGananciaHr >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                      ${formatCurrency(Math.round(computed.projectedGananciaHr))}
-                    </p>
-                    <p className="text-[9px] text-slate-500">Margin/hr ({computed.projectedMargen.toFixed(1)}%)</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Context note */}
-            <div className="bg-red-50 rounded-lg p-3">
-              <div className="flex items-start gap-2">
-                <span className="text-sm mt-0.5 flex-shrink-0">⚠️</span>
-                <div className="text-[11px] text-slate-800">
-                  <p className="font-semibold mb-1">Fuel Price Outlook</p>
-                  <p>AVGAS historical CAGR: <span className="font-mono font-bold">{fuelPriceAnalysis.cagr.toFixed(1)}%</span>/yr.
-                  Current: <span className="font-bold">${formatCurrency(avgasLiterCLP)}/L</span>.
-                  At <span className="font-mono font-bold">{fuelTrendRate}%</span>/yr → <span className="font-mono font-bold text-red-700">${formatCurrency(Math.round(computed.projectedAvgasPrice))}/L</span> by TBO.
-                  {computed.projectedGananciaHr < 0
-                    ? <> Operation becomes <span className="font-bold">unprofitable</span> at ${formatCurrency(valorHoraCLP)}/hr. Consider adjusting rates.</>
-                    : <> Margin reduces from {computed.margen.toFixed(1)}% to <span className="text-red-700">{computed.projectedMargen.toFixed(1)}%</span>.</>
-                  }
-                  </p>
-                  {brentData && <p className="mt-1 text-slate-600">🛢️ Brent at US${brentData.currentBrentUSD.toFixed(1)}/bbl.</p>}
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       )}
