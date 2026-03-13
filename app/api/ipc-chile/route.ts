@@ -40,7 +40,7 @@ export async function GET(request: Request) {
     const responses = await Promise.all(
       years.map((y) =>
         fetch(`https://mindicador.cl/api/ipc/${y}`, {
-          next: { revalidate: 86400 },
+          cache: 'no-store',
         }).then((res) => (res.ok ? res.json() : null))
       )
     );

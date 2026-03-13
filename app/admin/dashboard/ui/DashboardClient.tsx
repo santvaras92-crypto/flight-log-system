@@ -4486,15 +4486,16 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD,
         cambioAceiteCLP, revision100CLP, overhaulMotorCLP, overhaulLaborCLP,
-        clInflationPct, horasAnuales, seguroAnual, hangarAnual,
+        horasAnuales, seguroAnual, hangarAnual,
         toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual,
         recaudado, valorHora, valorHoraUnit, interestRate, clForwardInflation, fuelTrendRate,
         engineMarketPriceUSD,
+        // clInflationPct excluded — always fetched live from /api/ipc-chile
       }));
     } catch {}
   }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD,
     cambioAceiteCLP, revision100CLP, overhaulMotorCLP, overhaulLaborCLP,
-    clInflationPct, horasAnuales, seguroAnual, hangarAnual,
+    horasAnuales, seguroAnual, hangarAnual,
     toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual,
     recaudado, valorHora, valorHoraUnit, interestRate, clForwardInflation, fuelTrendRate,
     engineMarketPriceUSD]);
