@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
 
 // ──────────────────────────────────────────────────────────────
-// Brent Crude Oil  ↔  AVGAS fuel-price correlation endpoint
-// • Hard-coded monthly averages (Sep 2020 → last verified month)
-// • Auto-extends with live data for months beyond MONTHLY_DATA
-//   using EIA API v2 (monthly Brent) + mindicador.cl (USD/CLP)
-// • Live Brent spot: EIA API v2 → EIA HTML → hard-coded fallback
-// • 24-hour in-memory cache
+// Brent Crude Oil spot price + monthly historical data
+// • Hard-coded monthly averages (Sep 2020 → Dec 2025)
+// • Live Brent spot: multiple free sources (no API key needed)
+// • 6-hour in-memory cache
 // ──────────────────────────────────────────────────────────────
 
 // Monthly Brent USD/bbl averages (source: EIA RBRTE daily → monthly mean)
@@ -83,112 +81,7 @@ const MONTHLY_DATA: { month: string; brentUSD: number; usdCLP: number }[] = [
   { month: "2025-10", brentUSD: 63.5,  usdCLP: 942 },
   { month: "2025-11", brentUSD: 63.6,  usdCLP: 970 },
   { month: "2025-12", brentUSD: 62.4,  usdCLP: 985 },
-  // 2026
-  { month: "2026-01", brentUSD: 65.8,  usdCLP: 979 },
-  { month: "2026-02", brentUSD: 71.0,  usdCLP: 966 },
-  { month: "2026-03", brentUSD: 77.2,  usdCLP: 955 },
 ];
-
-// ── Auto-extend: fetch missing months between last hardcoded and current ──
-// Uses EIA API v2 (monthly Brent averages) + mindicador.cl (monthly USD/CLP)
-let dynamicMonths: typeof MONTHLY_DATA = [];
-let dynamicFetchedAt = 0;
-const DYNAMIC_CACHE_MS = 24 * 60 * 60 * 1000; // refresh once per day
-
-async function fetchMissingMonths(): Promise<typeof MONTHLY_DATA> {
-  const now = Date.now();
-  if (dynamicMonths.length > 0 && now - dynamicFetchedAt < DYNAMIC_CACHE_MS) {
-    return dynamicMonths;
-  }
-
-  const lastHC = MONTHLY_DATA[MONTHLY_DATA.length - 1].month; // e.g. "2026-03"
-  const today = new Date();
-  const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-
-  // If we're still in the last hardcoded month or before, nothing to extend
-  if (currentMonth <= lastHC) return [];
-
-  try {
-    // Determine how many months we might need (max 24 to bound the request)
-    const [lastY, lastM] = lastHC.split('-').map(Number);
-    const monthsNeeded = (today.getFullYear() - lastY) * 12 + (today.getMonth() + 1 - lastM);
-    if (monthsNeeded <= 0) return [];
-
-    // ── Fetch Brent monthly from EIA API v2 ──
-    const eiaLen = Math.min(monthsNeeded + 2, 24); // extra buffer
-    const eiaUrl = `https://api.eia.gov/v2/petroleum/pri/spt/data/?frequency=monthly&data[0]=value&facets[series][]=RBRTE&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=${eiaLen}&api_key=DEMO_KEY`;
-    const eiaRes = await fetch(eiaUrl, { signal: AbortSignal.timeout(10000) });
-    if (!eiaRes.ok) return dynamicMonths; // keep stale if fetch fails
-
-    const eiaJson = await eiaRes.json();
-    const eiaData: { period: string; value: string }[] = eiaJson?.response?.data || [];
-    const brentByMonth = new Map<string, number>();
-    for (const row of eiaData) {
-      if (row.period && row.value) {
-        brentByMonth.set(row.period, Math.round(parseFloat(row.value) * 10) / 10);
-      }
-    }
-
-    // ── Fetch USD/CLP from mindicador.cl (by year) ──
-    // We need to fetch each relevant year
-    const yearsNeeded = new Set<number>();
-    for (let m = 1; m <= monthsNeeded; m++) {
-      const d = new Date(lastY, lastM - 1 + m, 1);
-      yearsNeeded.add(d.getFullYear());
-    }
-
-    const usdClpByMonth = new Map<string, number>();
-    for (const year of yearsNeeded) {
-      try {
-        const mdRes = await fetch(`https://mindicador.cl/api/dolar/${year}`, {
-          signal: AbortSignal.timeout(10000),
-        });
-        if (mdRes.ok) {
-          const mdJson = await mdRes.json();
-          const dailyByMonth = new Map<string, number[]>();
-          for (const item of mdJson?.serie || []) {
-            const month = (item.fecha as string).substring(0, 7);
-            if (!dailyByMonth.has(month)) dailyByMonth.set(month, []);
-            dailyByMonth.get(month)!.push(item.valor);
-          }
-          for (const [month, vals] of dailyByMonth) {
-            usdClpByMonth.set(month, Math.round(vals.reduce((a, b) => a + b, 0) / vals.length));
-          }
-        }
-      } catch { /* skip this year */ }
-    }
-
-    // ── Build new months ──
-    const newMonths: typeof MONTHLY_DATA = [];
-    const existingMonths = new Set(MONTHLY_DATA.map(d => d.month));
-
-    for (let m = 1; m <= monthsNeeded; m++) {
-      const d = new Date(lastY, lastM - 1 + m, 1);
-      const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-
-      if (existingMonths.has(monthStr)) continue;
-
-      const brent = brentByMonth.get(monthStr);
-      const usdClp = usdClpByMonth.get(monthStr);
-
-      // Only add if we have BOTH data points (skip partial/current month if EIA hasn't published yet)
-      if (brent && brent > 10 && usdClp && usdClp > 300) {
-        newMonths.push({ month: monthStr, brentUSD: brent, usdCLP: usdClp });
-      }
-    }
-
-    dynamicMonths = newMonths;
-    dynamicFetchedAt = now;
-    return dynamicMonths;
-  } catch {
-    return dynamicMonths; // return stale on error
-  }
-}
-
-function getAllMonthlyData(dynamic: typeof MONTHLY_DATA): typeof MONTHLY_DATA {
-  if (dynamic.length === 0) return MONTHLY_DATA;
-  return [...MONTHLY_DATA, ...dynamic];
-}
 
 // ── In-memory cache ──
 let cached: {
@@ -196,40 +89,78 @@ let cached: {
   monthly: typeof MONTHLY_DATA;
   fetchedAt: string;
   source: string;
-  dynamicMonths: number;
 } | null = null;
 let cachedAt = 0;
-const CACHE_MS = 24 * 60 * 60 * 1000; // 24 hours
+const CACHE_MS = 6 * 60 * 60 * 1000; // 6 hours
 
-// ── Multi-source live Brent price fetcher ──
-// Priority: EIA API v2 (official spot) → EIA HTML → hard-coded
-async function scrapeLiveBrent(): Promise<{ price: number; source: string } | null> {
-  // ── Source 1: EIA API v2 JSON (official spot, 1-3 day delay) ──
+// ── Multi-source live Brent price fetcher (no API keys needed) ──
+async function fetchLiveBrent(): Promise<{ price: number; source: string } | null> {
+
+  // ── Source 1: EIA open data (DEMO_KEY — rate limited but works intermittently) ──
   try {
     const url =
-      "https://api.eia.gov/v2/petroleum/pri/spt/data/?frequency=daily&data[0]=value&facets[series][]=RBRTE&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=1&api_key=DEMO_KEY";
+      "https://api.eia.gov/v2/petroleum/pri/spt/data/?frequency=daily&data[0]=value&facets[series][]=RBRTE&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=5&api_key=DEMO_KEY";
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
     if (res.ok) {
       const json = await res.json();
-      const val = json?.response?.data?.[0]?.value;
-      if (val) {
-        const price = parseFloat(val);
-        if (price > 10) {
-          return { price: Math.round(price * 100) / 100, source: "eia.gov API v2 (spot)" };
+      const data = json?.response?.data;
+      if (Array.isArray(data) && data.length > 0) {
+        for (const row of data) {
+          const val = parseFloat(row?.value);
+          if (val > 10) {
+            return { price: Math.round(val * 100) / 100, source: `eia.gov (${row.period})` };
+          }
         }
       }
     }
-  } catch { /* fall through to next source */ }
+  } catch { /* fall through */ }
 
-  // ── Source 2: EIA HTML scrape (legacy fallback) ──
+  // ── Source 2: Yahoo Finance Brent futures (BZ=F) ──
+  try {
+    const res = await fetch("https://query1.finance.yahoo.com/v8/finance/chart/BZ=F?range=5d&interval=1d", {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const price = json?.chart?.result?.[0]?.meta?.regularMarketPrice;
+      if (price && price > 10) {
+        return { price: Math.round(price * 100) / 100, source: "Yahoo Finance (BZ=F)" };
+      }
+    }
+  } catch { /* fall through */ }
+
+  // ── Source 3: Google Finance scrape ──
+  try {
+    const res = await fetch("https://www.google.com/finance/quote/BZ=F:NYMEX", {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html",
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (res.ok) {
+      const html = await res.text();
+      const match = html.match(/data-last-price="([\d.]+)"/);
+      if (match) {
+        const price = parseFloat(match[1]);
+        if (price > 10) {
+          return { price: Math.round(price * 100) / 100, source: "Google Finance" };
+        }
+      }
+    }
+  } catch { /* fall through */ }
+
+  // ── Source 4: EIA HTML scrape (legacy) ──
   try {
     const res = await fetch(
       "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm",
       {
         headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          Accept: "text/html,application/xhtml+xml",
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+          Accept: "text/html",
         },
         signal: AbortSignal.timeout(8000),
       }
@@ -246,7 +177,7 @@ async function scrapeLiveBrent(): Promise<{ price: number; source: string } | nu
           prices.push(parseFloat(m[1]));
         }
         if (prices.length > 0) {
-          return { price: prices[prices.length - 1], source: "eia.gov (HTML scrape)" };
+          return { price: prices[prices.length - 1], source: "eia.gov (HTML)" };
         }
       }
     }
@@ -261,24 +192,17 @@ export async function GET() {
     return NextResponse.json({ ...cached, fromCache: true });
   }
 
-  // Fetch live Brent spot + dynamically extend monthly series in parallel
-  const [liveResult, dynamic] = await Promise.all([
-    scrapeLiveBrent(),
-    fetchMissingMonths(),
-  ]);
+  const liveResult = await fetchLiveBrent();
 
-  const allMonthly = getAllMonthlyData(dynamic);
-
-  // Fallback to most recent value (dynamic or hard-coded)
-  const lastEntry = allMonthly[allMonthly.length - 1];
+  // Fallback to most recent hardcoded value
+  const lastEntry = MONTHLY_DATA[MONTHLY_DATA.length - 1];
   const currentBrentUSD = liveResult ? liveResult.price : lastEntry.brentUSD;
 
   cached = {
     currentBrentUSD,
-    monthly: allMonthly,
+    monthly: MONTHLY_DATA,
     fetchedAt: new Date().toISOString(),
     source: liveResult ? liveResult.source : "hard-coded (fallback)",
-    dynamicMonths: dynamic.length,
   };
   cachedAt = now;
 
