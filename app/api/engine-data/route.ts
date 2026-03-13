@@ -57,8 +57,8 @@ export async function GET(req: NextRequest) {
     }
 
     // List all flights (summary only, no readings)
-    // Exclude flights < 10 min (600 sec) — typically taxi to fuel, not real flights
-    const MIN_FLIGHT_DURATION = 600;
+    // Exclude flights < 15 min (900 sec) — typically taxi/runup/fuel, not real flights
+    const MIN_FLIGHT_DURATION = 900;
     const flights = await prisma.engineMonitorFlight.findMany({
       where: { durationSec: { gte: MIN_FLIGHT_DURATION } },
       orderBy: { flightDate: "desc" },
