@@ -60,9 +60,11 @@ export async function GET(request: Request) {
 
     // Filter: only months AFTER baseYear-baseMonth
     // e.g., base Aug 2022 → start accumulating from Sep 2022
-    const baseDate = new Date(baseYear, baseMonth - 1, 1); // Month is 0-indexed in JS
+    // Use UTC end-of-month to avoid timezone issues on the server
+    // (mindicador returns dates like "2022-08-01T04:00:00.000Z" which is > midnight UTC)
+    const baseCutoff = new Date(Date.UTC(baseYear, baseMonth - 1, 28, 23, 59, 59));
     const relevantMonths = allMonths.filter(
-      (m) => new Date(m.fecha) > baseDate
+      (m) => new Date(m.fecha) > baseCutoff
     );
 
     if (relevantMonths.length === 0) {
