@@ -4441,7 +4441,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   // Total: CLP $55,926,129 — single-currency, only Chilean IPC inflation applies
   const [overhaulMotorCLP, setOverhaulMotorCLP] = useState(stored?.overhaulMotorCLP ?? 47926129);
   const [overhaulLaborCLP, setOverhaulLaborCLP] = useState(stored?.overhaulLaborCLP ?? 8000000);
-  const [clInflationPct, setClInflationPct] = useState(stored?.clInflationPct ?? 16.35);
+  const [clInflationPct, setClInflationPct] = useState(16.35); // Always starts at fallback, overwritten by live /api/ipc-chile fetch
   // Hours/year: defaults to LIVE rolling 365-day hobbs, but user can override
   const liveHorasAnuales = Math.round(overviewMetrics?.annualStats?.hobbsThisYear ?? 220);
   const [horasAnuales, setHorasAnuales] = useState(stored?.horasAnuales ?? liveHorasAnuales);

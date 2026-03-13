@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 86400; // 24 hours — IPC updates monthly
 
 // Calculate cumulative IPC inflation from a base month to present
 // Default: Aug 2022 (Eagle Copters overhaul invoice date)
@@ -16,7 +15,7 @@ let cached: {
   fetchedAt: string;
 } | null = null;
 let cachedAt = 0;
-const CACHE_MS = 24 * 60 * 60 * 1000; // 24 hours
+const CACHE_MS = 60 * 60 * 1000; // 1 hour (IPC updates monthly, no need for longer)
 
 export async function GET(request: Request) {
   const now = Date.now();
