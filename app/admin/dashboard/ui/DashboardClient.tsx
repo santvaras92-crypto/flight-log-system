@@ -1487,6 +1487,9 @@ function FuelForecastChart({
     avg12m: false,
     forecast: true,
   });
+  const [fuelChartRange, setFuelChartRange] = useState<'all' | '5y' | '3y' | '2y' | '1y' | '6m' | '3m' | 'custom'>('all');
+  const [customStart, setCustomStart] = useState(0);
+  const [customEnd, setCustomEnd] = useState(100);
 
   const toggleSeries = useCallback((key: string) => {
     setVisibleSeries(prev => ({ ...prev, [key]: !prev[key] }));
@@ -1518,6 +1521,23 @@ function FuelForecastChart({
       cur.setMonth(cur.getMonth() + 1);
     }
     const nowMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    // ── Filter allMonths by selected range ──
+    let visibleMonths = allMonths;
+    if (fuelChartRange !== 'all' && fuelChartRange !== 'custom') {
+      const rangeMonths: Record<string, number> = { '5y': 60, '3y': 36, '2y': 24, '1y': 12, '6m': 6, '3m': 3 };
+      const windowMonths = rangeMonths[fuelChartRange] || allMonths.length;
+      // Find the nowMonth index, then go back windowMonths
+      const nowIdx = allMonths.indexOf(nowMonth);
+      const effectiveEnd = nowIdx >= 0 ? nowIdx : allMonths.length - 1;
+      // Include 6 months of forecast beyond nowMonth
+      const startIdx = Math.max(0, effectiveEnd - windowMonths + 1);
+      visibleMonths = allMonths.slice(startIdx);
+    } else if (fuelChartRange === 'custom') {
+      const startIdx = Math.round((customStart / 100) * (allMonths.length - 1));
+      const endIdx = Math.round((customEnd / 100) * (allMonths.length - 1));
+      visibleMonths = allMonths.slice(startIdx, endIdx + 1);
+    }
 
     // Index data by month
     const avgasMap: Record<string, number> = {};
@@ -1590,7 +1610,7 @@ function FuelForecastChart({
     }
 
     // Labels (short format)
-    const labels = allMonths.map(m => {
+    const labels = visibleMonths.map(m => {
       const [y, mo] = m.split('-');
       return `${mo}/${y.slice(2)}`;
     });
@@ -1602,7 +1622,7 @@ function FuelForecastChart({
     if (visibleSeries.avgas) {
       datasets.push({
         label: 'AVGAS $/L',
-        data: allMonths.map(m => avgasMap[m] ?? null),
+        data: visibleMonths.map(m => avgasMap[m] ?? null),
         borderColor: '#d97706',
         backgroundColor: '#d9770622',
         borderWidth: 2,
@@ -1620,7 +1640,7 @@ function FuelForecastChart({
     if (visibleSeries.implied) {
       datasets.push({
         label: 'WLS Implied $/L',
-        data: allMonths.map(m => impliedMap[m] ?? null),
+        data: visibleMonths.map(m => impliedMap[m] ?? null),
         borderColor: '#6366f1',
         backgroundColor: 'transparent',
         borderWidth: 1.5,
@@ -1637,7 +1657,7 @@ function FuelForecastChart({
     if (visibleSeries.avg3m) {
       datasets.push({
         label: 'MA 3m',
-        data: allMonths.map(m => ma3[m] ?? null),
+        data: visibleMonths.map(m => ma3[m] ?? null),
         borderColor: '#10b981',
         backgroundColor: 'transparent',
         borderWidth: 1.5,
@@ -1653,7 +1673,7 @@ function FuelForecastChart({
     if (visibleSeries.avg6m) {
       datasets.push({
         label: 'MA 6m',
-        data: allMonths.map(m => ma6[m] ?? null),
+        data: visibleMonths.map(m => ma6[m] ?? null),
         borderColor: '#0ea5e9',
         backgroundColor: 'transparent',
         borderWidth: 1.5,
@@ -1669,7 +1689,7 @@ function FuelForecastChart({
     if (visibleSeries.avg12m) {
       datasets.push({
         label: 'MA 12m',
-        data: allMonths.map(m => ma12[m] ?? null),
+        data: visibleMonths.map(m => ma12[m] ?? null),
         borderColor: '#8b5cf6',
         backgroundColor: 'transparent',
         borderWidth: 1.5,
@@ -1685,12 +1705,12 @@ function FuelForecastChart({
     if (visibleSeries.forecast && Object.keys(forecastData).length > 0) {
       datasets.push({
         label: 'Forecast WLS',
-        data: allMonths.map(m => forecastData[m] ?? null),
+        data: visibleMonths.map(m => forecastData[m] ?? null),
         borderColor: '#ef4444',
         backgroundColor: '#ef444418',
         borderWidth: 2,
         borderDash: [6, 3],
-        pointRadius: allMonths.map(m => forecastData[m] != null ? 3 : 0),
+        pointRadius: visibleMonths.map(m => forecastData[m] != null ? 3 : 0),
         pointBackgroundColor: '#ef4444',
         tension: 0.3,
         fill: true,
@@ -1704,7 +1724,7 @@ function FuelForecastChart({
     if (visibleSeries.brent) {
       datasets.push({
         label: 'Brent US$/bbl',
-        data: allMonths.map(m => brentMap[m]?.brentUSD ?? null),
+        data: visibleMonths.map(m => brentMap[m]?.brentUSD ?? null),
         borderColor: '#1e293b',
         backgroundColor: 'transparent',
         borderWidth: 1.5,
@@ -1720,7 +1740,7 @@ function FuelForecastChart({
     if (visibleSeries.usdclp) {
       datasets.push({
         label: 'USD/CLP',
-        data: allMonths.map(m => brentMap[m]?.usdCLP ?? null),
+        data: visibleMonths.map(m => brentMap[m]?.usdCLP ?? null),
         borderColor: '#94a3b8',
         backgroundColor: 'transparent',
         borderWidth: 1,
@@ -1815,7 +1835,7 @@ function FuelForecastChart({
 
     chartInstance.current = chart;
     return () => { chart.destroy(); chartInstance.current = null; };
-  }, [fuelPriceAnalysis, brentData, brentAvgasCorrelation, currentFX, visibleSeries]);
+  }, [fuelPriceAnalysis, brentData, brentAvgasCorrelation, currentFX, visibleSeries, fuelChartRange, customStart, customEnd]);
 
   // Series legend config
   const seriesConfig = [
@@ -1829,11 +1849,25 @@ function FuelForecastChart({
     { key: 'usdclp', label: 'USD/CLP', color: '#94a3b8', dashed: true },
   ];
 
+  // Helper to build the full month array (used by custom slider labels)
+  const buildAllMonths = useCallback(() => {
+    const now = new Date();
+    const endForecast = new Date(now);
+    endForecast.setMonth(endForecast.getMonth() + 6);
+    const months: string[] = [];
+    const cur = new Date(2020, 8, 1);
+    while (cur <= endForecast) {
+      months.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`);
+      cur.setMonth(cur.getMonth() + 1);
+    }
+    return months;
+  }, []);
+
   return (
     <div className="mb-5">
       <div className="flex items-center justify-between mb-2">
         <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-          Fuel Price — All Variables (Sep 2020 → Present + Forecast)
+          Fuel Price — All Variables
         </p>
         {brentAvgasCorrelation && (
           <span className="text-[8px] text-indigo-500 font-mono">
@@ -1870,6 +1904,80 @@ function FuelForecastChart({
           </button>
         ))}
       </div>
+      {/* Period Selector */}
+      <div className="flex flex-wrap items-center gap-1.5 mb-2">
+        <span className="text-[10px] font-semibold text-slate-400 mr-0.5">Period:</span>
+        {([
+          ['all', 'All'],
+          ['5y', '5Y'],
+          ['3y', '3Y'],
+          ['2y', '2Y'],
+          ['1y', '1Y'],
+          ['6m', '6M'],
+          ['3m', '3M'],
+          ['custom', 'Custom'],
+        ] as const).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setFuelChartRange(key)}
+            className={`px-2 py-0.5 text-[9px] font-medium rounded-full border transition-all
+              ${fuelChartRange === key
+                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {/* Custom Range Sliders */}
+      {fuelChartRange === 'custom' && (
+        <div className="mb-2 px-1">
+          <div className="flex items-center gap-3">
+            <label className="text-[10px] text-slate-400 w-8 text-right">From</label>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={customStart}
+              onChange={e => {
+                const v = Number(e.target.value);
+                setCustomStart(v > customEnd ? customEnd : v);
+              }}
+              className="flex-1 h-1.5 accent-blue-600"
+            />
+            <span className="text-[10px] text-slate-500 w-14 tabular-nums font-mono">
+              {(() => {
+                const allM = buildAllMonths();
+                const idx = Math.round((customStart / 100) * (allM.length - 1));
+                const [y, mo] = allM[idx].split('-');
+                return `${mo}/${y.slice(2)}`;
+              })()}
+            </span>
+          </div>
+          <div className="flex items-center gap-3 mt-1">
+            <label className="text-[10px] text-slate-400 w-8 text-right">To</label>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={customEnd}
+              onChange={e => {
+                const v = Number(e.target.value);
+                setCustomEnd(v < customStart ? customStart : v);
+              }}
+              className="flex-1 h-1.5 accent-blue-600"
+            />
+            <span className="text-[10px] text-slate-500 w-14 tabular-nums font-mono">
+              {(() => {
+                const allM = buildAllMonths();
+                const idx = Math.round((customEnd / 100) * (allM.length - 1));
+                const [y, mo] = allM[idx].split('-');
+                return `${mo}/${y.slice(2)}`;
+              })()}
+            </span>
+          </div>
+        </div>
+      )}
       {/* Chart */}
       <div style={{ height: 280 }}>
         <canvas ref={chartRef} />
