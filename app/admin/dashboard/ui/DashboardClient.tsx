@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Chart, LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler, DoughnutController, ArcElement } from "chart.js";
 import { generateAccountStatementPDF } from "../../../../lib/generate-account-pdf";
@@ -1458,6 +1458,424 @@ function LineChart({ labels, values, palette }: { labels: string[]; values: numb
     return () => chart.destroy();
   }, [labels, values]);
   return <canvas ref={ref} height={120} />;
+}
+
+// ── Fuel Forecast Multi-Variable Chart ──
+// Shows all variables used in fuel price forecasting from Sep 2020 to present + projections
+function FuelForecastChart({
+  fuelPriceAnalysis,
+  brentData,
+  brentAvgasCorrelation,
+  currentFX,
+  formatCurrency,
+}: {
+  fuelPriceAnalysis: any;
+  brentData: any;
+  brentAvgasCorrelation: any;
+  currentFX: number;
+  formatCurrency: (n: number) => string;
+}) {
+  const chartRef = useRef<HTMLCanvasElement>(null);
+  const chartInstance = useRef<Chart | null>(null);
+  const [visibleSeries, setVisibleSeries] = useState<Record<string, boolean>>({
+    avgas: true,
+    brent: true,
+    usdclp: false,
+    implied: true,
+    avg3m: true,
+    avg6m: false,
+    avg12m: false,
+    forecast: true,
+  });
+
+  const toggleSeries = useCallback((key: string) => {
+    setVisibleSeries(prev => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+
+  useEffect(() => {
+    if (!chartRef.current || !fuelPriceAnalysis) return;
+    const ctx = chartRef.current.getContext('2d');
+    if (!ctx) return;
+
+    // Destroy previous chart
+    if (chartInstance.current) {
+      chartInstance.current.destroy();
+      chartInstance.current = null;
+    }
+
+    const avgasMonthly = fuelPriceAnalysis.monthlyArr || [];
+    const brentMonthly = brentData?.monthly || [];
+
+    // Build unified timeline from Sep 2020 to present + 6 months forecast
+    const startMonth = '2020-09';
+    const now = new Date();
+    const endForecast = new Date(now);
+    endForecast.setMonth(endForecast.getMonth() + 6);
+    const allMonths: string[] = [];
+    const cur = new Date(2020, 8, 1); // Sep 2020
+    while (cur <= endForecast) {
+      allMonths.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`);
+      cur.setMonth(cur.getMonth() + 1);
+    }
+    const nowMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    // Index data by month
+    const avgasMap: Record<string, number> = {};
+    avgasMonthly.forEach((m: any) => { avgasMap[m.month] = m.ppl; });
+
+    const brentMap: Record<string, { brentUSD: number; usdCLP: number }> = {};
+    brentMonthly.forEach((b: any) => { brentMap[b.month] = { brentUSD: b.brentUSD, usdCLP: b.usdCLP }; });
+
+    // Compute WLS implied AVGAS for each historical month
+    const impliedMap: Record<string, number> = {};
+    if (brentAvgasCorrelation && brentAvgasCorrelation.slope) {
+      const { slope, intercept, bestLag } = brentAvgasCorrelation;
+      for (const month of allMonths) {
+        if (month > nowMonth) continue;
+        // Find the brent month with lag offset
+        const [y, m] = month.split('-').map(Number);
+        const lagDate = new Date(y, m - 1 - bestLag, 1);
+        const lagMonth = `${lagDate.getFullYear()}-${String(lagDate.getMonth() + 1).padStart(2, '0')}`;
+        const brent = brentMap[lagMonth];
+        const fxForMonth = brentMap[month]?.usdCLP || currentFX;
+        if (brent) {
+          const impliedUSD = slope * brent.brentUSD + intercept;
+          impliedMap[month] = Math.round(Math.max(0, impliedUSD * fxForMonth));
+        }
+      }
+    }
+
+    // Compute rolling averages
+    const computeMA = (window: number) => {
+      const result: Record<string, number> = {};
+      const sorted = [...avgasMonthly].sort((a: any, b: any) => a.month.localeCompare(b.month));
+      for (let i = 0; i < sorted.length; i++) {
+        if (i < window - 1) continue;
+        const slice = sorted.slice(i - window + 1, i + 1);
+        const totalLitros = slice.reduce((s: number, m: any) => s + m.litros, 0);
+        const totalMonto = slice.reduce((s: number, m: any) => s + m.litros * m.ppl, 0);
+        result[sorted[i].month] = totalLitros > 0 ? Math.round(totalMonto / totalLitros) : 0;
+      }
+      return result;
+    };
+    const ma3 = computeMA(3);
+    const ma6 = computeMA(6);
+    const ma12 = computeMA(12);
+
+    // Forecast extension (dashed) — from current month + 1 to +6
+    const forecastData: Record<string, number> = {};
+    if (brentAvgasCorrelation) {
+      const lastAvgas = avgasMonthly.length > 0 ? avgasMonthly[avgasMonthly.length - 1].ppl : 0;
+      // Add current "implied now" as the anchor
+      forecastData[nowMonth] = brentAvgasCorrelation.impliedNowCLP || lastAvgas;
+      // 3m and 6m forecasts
+      const m3 = new Date(now); m3.setMonth(m3.getMonth() + 3);
+      const m6 = new Date(now); m6.setMonth(m6.getMonth() + 6);
+      const m3key = `${m3.getFullYear()}-${String(m3.getMonth() + 1).padStart(2, '0')}`;
+      const m6key = `${m6.getFullYear()}-${String(m6.getMonth() + 1).padStart(2, '0')}`;
+      if (brentAvgasCorrelation.forecast3m > 0) forecastData[m3key] = brentAvgasCorrelation.forecast3m;
+      if (brentAvgasCorrelation.forecast6m > 0) forecastData[m6key] = brentAvgasCorrelation.forecast6m;
+      // Linear interpolation for months 1,2 and 4,5
+      const anchor = forecastData[nowMonth];
+      const f3 = brentAvgasCorrelation.forecast3m || anchor;
+      const f6 = brentAvgasCorrelation.forecast6m || f3;
+      for (let i = 1; i <= 6; i++) {
+        const d = new Date(now); d.setMonth(d.getMonth() + i);
+        const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (!forecastData[k]) {
+          if (i < 3) forecastData[k] = Math.round(anchor + (f3 - anchor) * (i / 3));
+          else forecastData[k] = Math.round(f3 + (f6 - f3) * ((i - 3) / 3));
+        }
+      }
+    }
+
+    // Labels (short format)
+    const labels = allMonths.map(m => {
+      const [y, mo] = m.split('-');
+      return `${mo}/${y.slice(2)}`;
+    });
+
+    // Build datasets
+    const datasets: any[] = [];
+
+    // 1. AVGAS actual price (primary Y)
+    if (visibleSeries.avgas) {
+      datasets.push({
+        label: 'AVGAS $/L',
+        data: allMonths.map(m => avgasMap[m] ?? null),
+        borderColor: '#d97706',
+        backgroundColor: '#d9770622',
+        borderWidth: 2,
+        pointRadius: 1.5,
+        pointHoverRadius: 4,
+        tension: 0.3,
+        fill: true,
+        yAxisID: 'yAvgas',
+        spanGaps: true,
+        order: 2,
+      });
+    }
+
+    // 2. WLS Implied AVGAS
+    if (visibleSeries.implied) {
+      datasets.push({
+        label: 'WLS Implied $/L',
+        data: allMonths.map(m => impliedMap[m] ?? null),
+        borderColor: '#6366f1',
+        backgroundColor: 'transparent',
+        borderWidth: 1.5,
+        borderDash: [4, 2],
+        pointRadius: 0,
+        tension: 0.3,
+        yAxisID: 'yAvgas',
+        spanGaps: true,
+        order: 3,
+      });
+    }
+
+    // 3. 3-month moving average
+    if (visibleSeries.avg3m) {
+      datasets.push({
+        label: 'MA 3m',
+        data: allMonths.map(m => ma3[m] ?? null),
+        borderColor: '#10b981',
+        backgroundColor: 'transparent',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        tension: 0.4,
+        yAxisID: 'yAvgas',
+        spanGaps: true,
+        order: 4,
+      });
+    }
+
+    // 4. 6-month moving average
+    if (visibleSeries.avg6m) {
+      datasets.push({
+        label: 'MA 6m',
+        data: allMonths.map(m => ma6[m] ?? null),
+        borderColor: '#0ea5e9',
+        backgroundColor: 'transparent',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        tension: 0.4,
+        yAxisID: 'yAvgas',
+        spanGaps: true,
+        order: 5,
+      });
+    }
+
+    // 5. 12-month moving average
+    if (visibleSeries.avg12m) {
+      datasets.push({
+        label: 'MA 12m',
+        data: allMonths.map(m => ma12[m] ?? null),
+        borderColor: '#8b5cf6',
+        backgroundColor: 'transparent',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        tension: 0.4,
+        yAxisID: 'yAvgas',
+        spanGaps: true,
+        order: 6,
+      });
+    }
+
+    // 6. Forecast (dashed amber)
+    if (visibleSeries.forecast && Object.keys(forecastData).length > 0) {
+      datasets.push({
+        label: 'Forecast WLS',
+        data: allMonths.map(m => forecastData[m] ?? null),
+        borderColor: '#ef4444',
+        backgroundColor: '#ef444418',
+        borderWidth: 2,
+        borderDash: [6, 3],
+        pointRadius: allMonths.map(m => forecastData[m] != null ? 3 : 0),
+        pointBackgroundColor: '#ef4444',
+        tension: 0.3,
+        fill: true,
+        yAxisID: 'yAvgas',
+        spanGaps: true,
+        order: 1,
+      });
+    }
+
+    // 7. Brent USD/bbl (secondary Y)
+    if (visibleSeries.brent) {
+      datasets.push({
+        label: 'Brent US$/bbl',
+        data: allMonths.map(m => brentMap[m]?.brentUSD ?? null),
+        borderColor: '#1e293b',
+        backgroundColor: 'transparent',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        tension: 0.3,
+        yAxisID: 'yBrent',
+        spanGaps: true,
+        order: 7,
+      });
+    }
+
+    // 8. USD/CLP (secondary Y right)
+    if (visibleSeries.usdclp) {
+      datasets.push({
+        label: 'USD/CLP',
+        data: allMonths.map(m => brentMap[m]?.usdCLP ?? null),
+        borderColor: '#94a3b8',
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        borderDash: [2, 2],
+        pointRadius: 0,
+        tension: 0.3,
+        yAxisID: 'yFX',
+        spanGaps: true,
+        order: 8,
+      });
+    }
+
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#0f172a',
+            titleColor: '#f1f5f9',
+            bodyColor: '#e2e8f0',
+            borderColor: '#334155',
+            borderWidth: 1,
+            padding: 10,
+            bodySpacing: 4,
+            callbacks: {
+              label: function(context: any) {
+                const label = context.dataset.label || '';
+                const val = context.parsed.y;
+                if (val == null) return '';
+                if (label.includes('Brent')) return `${label}: US$${val.toFixed(1)}`;
+                if (label.includes('USD/CLP')) return `${label}: $${Math.round(val).toLocaleString('es-CL')}`;
+                return `${label}: $${Math.round(val).toLocaleString('es-CL')}`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: { color: '#f1f5f9' },
+            ticks: {
+              font: { size: 9 },
+              color: '#94a3b8',
+              maxTicksLimit: 20,
+              maxRotation: 45,
+            },
+          },
+          yAvgas: {
+            type: 'linear',
+            position: 'left',
+            title: { display: true, text: 'AVGAS $/L (CLP)', font: { size: 9 }, color: '#d97706' },
+            grid: { color: '#f8fafc' },
+            ticks: {
+              font: { size: 9 },
+              color: '#d97706',
+              callback: function(value: any) { return '$' + Math.round(value).toLocaleString('es-CL'); },
+            },
+          },
+          yBrent: {
+            type: 'linear',
+            position: 'right',
+            display: visibleSeries.brent,
+            title: { display: true, text: 'Brent US$/bbl', font: { size: 9 }, color: '#1e293b' },
+            grid: { drawOnChartArea: false },
+            ticks: {
+              font: { size: 9 },
+              color: '#1e293b',
+              callback: function(value: any) { return 'US$' + Math.round(value); },
+            },
+          },
+          yFX: {
+            type: 'linear',
+            position: 'right',
+            display: visibleSeries.usdclp,
+            title: { display: true, text: 'USD/CLP', font: { size: 9 }, color: '#94a3b8' },
+            grid: { drawOnChartArea: false },
+            ticks: {
+              font: { size: 9 },
+              color: '#94a3b8',
+            },
+          },
+        },
+      },
+    });
+
+    chartInstance.current = chart;
+    return () => { chart.destroy(); chartInstance.current = null; };
+  }, [fuelPriceAnalysis, brentData, brentAvgasCorrelation, currentFX, visibleSeries]);
+
+  // Series legend config
+  const seriesConfig = [
+    { key: 'avgas', label: 'AVGAS $/L', color: '#d97706', solid: true },
+    { key: 'implied', label: 'WLS Implied', color: '#6366f1', dashed: true },
+    { key: 'forecast', label: 'Forecast', color: '#ef4444', dashed: true },
+    { key: 'avg3m', label: 'MA 3m', color: '#10b981', solid: true },
+    { key: 'avg6m', label: 'MA 6m', color: '#0ea5e9', solid: true },
+    { key: 'avg12m', label: 'MA 12m', color: '#8b5cf6', solid: true },
+    { key: 'brent', label: 'Brent $/bbl', color: '#1e293b', solid: true },
+    { key: 'usdclp', label: 'USD/CLP', color: '#94a3b8', dashed: true },
+  ];
+
+  return (
+    <div className="mb-5">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+          Fuel Price — All Variables (Sep 2020 → Present + Forecast)
+        </p>
+        {brentAvgasCorrelation && (
+          <span className="text-[8px] text-indigo-500 font-mono">
+            WLS R²={brentAvgasCorrelation.bestR2.toFixed(3)} · Lag {brentAvgasCorrelation.bestLag}m · N<sub>eff</sub>={brentAvgasCorrelation.effectiveN}
+          </span>
+        )}
+      </div>
+      {/* Interactive Legend */}
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        {seriesConfig.map(s => (
+          <button
+            key={s.key}
+            onClick={() => toggleSeries(s.key)}
+            className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-medium transition-all border ${
+              visibleSeries[s.key]
+                ? 'shadow-sm'
+                : 'opacity-40 hover:opacity-70 border-transparent'
+            }`}
+            style={{
+              backgroundColor: visibleSeries[s.key] ? `${s.color}18` : '#f1f5f9',
+              color: visibleSeries[s.key] ? s.color : '#94a3b8',
+              borderColor: visibleSeries[s.key] ? `${s.color}40` : 'transparent',
+            }}
+          >
+            <span
+              className="inline-block w-3 h-0.5 rounded-full"
+              style={{
+                backgroundColor: s.color,
+                opacity: visibleSeries[s.key] ? 1 : 0.3,
+                borderBottom: s.dashed ? `1px dashed ${s.color}` : 'none',
+              }}
+            />
+            {s.label}
+          </button>
+        ))}
+      </div>
+      {/* Chart */}
+      <div style={{ height: 280 }}>
+        <canvas ref={chartRef} />
+      </div>
+    </div>
+  );
 }
 
 function FlightsTable({ flights, allFlightsComplete, users, editMode = false, clientOptions, depositsByCode, depositsDetailsByCode, fuelByCode, fuelDetailsByCode, csvPilotNames }: {
@@ -5846,58 +6264,14 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               </div>
             )}
 
-            {/* Yearly Avg Price */}
-            <div className="mb-5">
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Annual Average Price per Liter</p>
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {fuelPriceAnalysis.yearlyArr.map((y, i) => {
-                  const prev = i > 0 ? fuelPriceAnalysis.yearlyArr[i - 1].ppl : y.ppl;
-                  const change = prev > 0 ? ((y.ppl - prev) / prev) * 100 : 0;
-                  return (
-                    <div key={y.year} className="flex-1 min-w-[65px] text-center p-2 bg-slate-50 rounded-lg">
-                      <p className="text-xs font-bold text-slate-800">{y.year}</p>
-                      <p className="text-sm font-bold text-amber-700 font-mono">${formatCurrency(y.ppl)}</p>
-                      <p className="text-[9px] text-slate-400">/L</p>
-                      {i > 0 && (
-                        <p className={`text-[9px] font-bold ${change > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
-                          {change > 0 ? '▲' : '▼'} {Math.abs(change).toFixed(1)}%
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Monthly Recent Prices */}
-            {fuelPriceAnalysis.monthlyArr.length > 0 && (
-              <div className="mb-5">
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Monthly Price (Last 12 months)</p>
-                <div className="flex gap-1.5 overflow-x-auto pb-1">
-                  {fuelPriceAnalysis.monthlyArr.slice(-12).map((m, i, arr) => {
-                    const prev = i > 0 ? arr[i - 1].ppl : m.ppl;
-                    const change = prev > 0 ? ((m.ppl - prev) / prev) * 100 : 0;
-                    const maxP = Math.max(...arr.map(x => x.ppl));
-                    const minP = Math.min(...arr.map(x => x.ppl));
-                    const range = maxP - minP || 1;
-                    const barH = 20 + ((m.ppl - minP) / range) * 40; // 20-60px
-                    return (
-                      <div key={m.month} className="flex-1 min-w-[48px] text-center">
-                        <div className="flex flex-col items-center justify-end" style={{ height: 70 }}>
-                          <p className="text-[9px] font-mono font-bold text-slate-700">${formatCurrency(m.ppl)}</p>
-                          <div
-                            className={`w-full rounded-t ${m.ppl >= (arr[arr.length - 1]?.ppl || 0) ? 'bg-amber-400' : 'bg-amber-200'}`}
-                            style={{ height: barH }}
-                          />
-                        </div>
-                        <p className="text-[8px] text-slate-400 mt-1">{m.month.slice(2)}</p>
-                        <p className="text-[8px] text-slate-400">{m.count}×</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            {/* ── Fuel Forecast Multi-Variable Chart ── */}
+            <FuelForecastChart
+              fuelPriceAnalysis={fuelPriceAnalysis}
+              brentData={brentData}
+              brentAvgasCorrelation={brentAvgasCorrelation}
+              currentFX={usdRate}
+              formatCurrency={formatCurrency}
+            />
           </div>
         </div>
       )}
