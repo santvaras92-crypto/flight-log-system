@@ -4833,6 +4833,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   };
 
   const [showParams, setShowParams] = useState(false);
+  const [showCostModel, setShowCostModel] = useState(false);
 
   return (
     <div className="space-y-4">
@@ -5373,249 +5374,184 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         );
       })()}
 
-      {/* Overhaul Funding Status */}
+      {/* Overhaul Funding Tracker — Redesigned */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        {/* Header */}
         <div className="px-4 sm:px-6 py-3 border-b border-slate-200">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
-              <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
+                <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h4 className="text-xs font-semibold text-slate-700">Overhaul Funding Tracker</h4>
+                <p className="text-[10px] text-slate-400">
+                  {formatCurrency(overhaulCycleHrs)} tach hrs · {computed.yearsToOverhaul.toFixed(1)} yrs @ {Math.round(computed.tachPerYear)} tach/yr ({horasAnuales} hobbs/yr)
+                  {!horasIsLive && <span className="ml-1 text-amber-600 font-semibold">✏️</span>}
+                </p>
+              </div>
             </div>
-            <div>
-              <h4 className="text-xs font-semibold text-slate-700">Overhaul Funding Tracker</h4>
-              <p className="text-[10px] text-slate-400">Cycle: {formatCurrency(overhaulCycleHrs)} tach hrs · Est. {computed.yearsToOverhaul.toFixed(1)} years @ {Math.round(computed.tachPerYear)} tach/yr ({horasAnuales} hobbs/yr){!horasIsLive && <span className="ml-1 text-amber-600 font-semibold">✏️ override</span>}</p>
-            </div>
+            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${computed.overhaulSource === 'market' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
+              {computed.overhaulSource === 'market' ? '✦ MARKET' : '✦ IPC'}
+            </span>
           </div>
         </div>
-        <div className="p-4 sm:p-6">
-          {/* Overhaul cost breakdown */}
-          <div className="mb-4 bg-amber-50/60 rounded-lg p-3 border border-amber-100">
-            <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider mb-2">Overhaul Cost Breakdown (Ago 2022 → Present · IPC Chile +{clInflationPct}%)</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
-              <div>
-                <p className="text-slate-500">Eagle Copters (motor)</p>
-                <p className="font-mono font-bold text-slate-800">${formatCurrency(overhaulMotorCLP)} <span className="text-[9px] font-normal text-blue-600">+{clInflationPct}% IPC</span></p>
-                <p className="font-mono text-[10px] text-slate-500">= ${formatCurrency(computed.motorTodayCLP)} CLP</p>
+
+        <div className="p-4 sm:p-6 space-y-4">
+          {/* ── Row 1: Current Status ── */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
+              <p className="text-[9px] text-slate-400 uppercase tracking-wider mb-1">Total Cost</p>
+              <p className="text-lg font-bold text-slate-900 font-mono">${formatCurrency(Math.round(computed.effectiveOverhaulCLP))}</p>
+              <p className="text-[9px] text-slate-400">{computed.overhaulSource === 'market' ? 'FOB + internación + labor' : 'IPC Chile adjusted'}</p>
+            </div>
+            <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-100">
+              <p className="text-[9px] text-emerald-600 uppercase tracking-wider mb-1">Funded</p>
+              <p className="text-lg font-bold text-emerald-700 font-mono">${formatCurrency(computed.currentFunds)}</p>
+              <div className="mt-1.5 h-1.5 bg-emerald-100 rounded-full overflow-hidden">
+                <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(100, (recaudado / computed.effectiveOverhaulCLP) * 100)}%` }} />
               </div>
-              <div>
-                <p className="text-slate-500">Labor (installation)</p>
-                <p className="font-mono font-bold text-slate-800">${formatCurrency(overhaulLaborCLP)} <span className="text-[9px] font-normal text-blue-600">+{clInflationPct}% IPC</span></p>
-                <p className="font-mono text-[10px] text-slate-500">= ${formatCurrency(computed.laborTodayCLP)} CLP</p>
-              </div>
-              <div className="col-span-2 sm:col-span-1">
-                <p className="text-slate-500">Total IPC-Adjusted</p>
-                <p className="font-mono font-bold text-amber-800 text-base">${formatCurrency(overhaulCLP)} CLP</p>
-                <p className="text-[9px] text-slate-400">IPC Chile acum. {clInflationPct}%</p>
-              </div>
+              <p className="text-[9px] text-emerald-600 font-mono mt-0.5">{((recaudado / computed.effectiveOverhaulCLP) * 100).toFixed(1)}%</p>
+            </div>
+            <div className="p-3 rounded-lg bg-red-50 border border-red-100">
+              <p className="text-[9px] text-red-500 uppercase tracking-wider mb-1">Gap</p>
+              <p className="text-lg font-bold text-red-700 font-mono">${formatCurrency(Math.round(computed.faltaOverhaul))}</p>
+              <p className="text-[9px] text-slate-400">{(computed.faltaOverhaul / computed.effectiveOverhaulCLP * 100).toFixed(0)}% remaining</p>
+            </div>
+            <div className="p-3 rounded-lg bg-amber-50 border border-amber-100">
+              <p className="text-[9px] text-amber-600 uppercase tracking-wider mb-1">Time to TBO</p>
+              <p className="text-lg font-bold text-amber-700 font-mono">{computed.anosRemanentes.toFixed(1)} <span className="text-sm">yrs</span></p>
+              <p className="text-[9px] text-slate-400">{Math.round(computed.anosRemanentes * 12)} mo · {Math.round(computed.tachPerYear)} tach/yr</p>
             </div>
           </div>
 
-          {/* Market Replacement Price (live) */}
-          <div className="mb-4 bg-blue-50/60 rounded-lg p-3 border border-blue-100">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] font-semibold text-blue-700 uppercase tracking-wider flex items-center gap-1.5">
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                Market Replacement Price (airpowerinc.com)
-              </p>
-              {enginePriceSource && (
-                <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded-full ${liveIndicators.engine ? 'bg-emerald-100 text-emerald-700 animate-pulse' : 'bg-amber-100 text-amber-700'}`}>
-                  {liveIndicators.engine ? 'LIVE · scraped' : '⚠️ fallback'}
-                </span>
-              )}
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
-              <div>
-                <p className="text-slate-500">Motor FOB (airpowerinc)</p>
-                <p className="font-mono font-bold text-blue-800">USD ${formatCurrency(engineMarketPriceUSD)}</p>
-                <p className="font-mono text-[10px] text-slate-500">= ${formatCurrency(computed.motorFobCLP)} CLP</p>
-                <p className="text-[9px] text-red-500 font-bold">+{computed.motorPriceInflationPct.toFixed(1)}% vs 2022 ({computed.motorAnnualInflation.toFixed(1)}%/yr)</p>
-              </div>
-              <div>
-                <p className="text-slate-500">Internación ({(computed.internacionRatio * 100 - 100).toFixed(0)}% s/FOB)</p>
-                <p className="font-mono font-bold text-slate-700">${formatCurrency(computed.internacionCostCLP)} CLP</p>
-                <p className="font-mono text-[10px] text-slate-400">Flete + import + IVA + Eagle</p>
-                <p className="text-[9px] text-slate-400">Ratio real factura 2022: ×{computed.internacionRatio.toFixed(3)}</p>
-              </div>
-              <div className="col-span-2 sm:col-span-1">
-                <p className="text-slate-500">Motor puesto en Chile</p>
-                <p className="font-mono font-bold text-blue-800">${formatCurrency(computed.motorInternacionCLP)} CLP</p>
-                <p className="font-mono text-[10px] text-slate-400">+ Mano de obra: ${formatCurrency(computed.laborTodayCLP)}</p>
-                <p className="text-slate-500 font-bold mt-1">Total Reemplazo</p>
-                <p className="font-mono font-bold text-blue-800 text-base">${formatCurrency(computed.marketReplacementCLP)} CLP</p>
-              </div>
-            </div>
-            {/* Comparison bar: IPC vs Market */}
-            <div className="mt-3 pt-2 border-t border-blue-100">
-              <div className="flex items-center justify-between text-[10px] mb-1">
-                <span className="text-amber-700 font-semibold">IPC Model: ${formatCurrency(overhaulCLP)}</span>
-                <span className="text-blue-700 font-semibold">Market: ${formatCurrency(computed.marketReplacementCLP)}</span>
-              </div>
-              <div className="flex h-2.5 rounded-full overflow-hidden bg-slate-100">
-                <div className="bg-amber-400 rounded-l-full" style={{ width: `${Math.min(50, (overhaulCLP / (overhaulCLP + computed.marketReplacementCLP)) * 100)}%` }} />
-                <div className="bg-blue-400 rounded-r-full" style={{ width: `${Math.min(50, (computed.marketReplacementCLP / (overhaulCLP + computed.marketReplacementCLP)) * 100)}%` }} />
-              </div>
-              <p className="text-[9px] text-slate-500 mt-1">
-                {computed.marketReplacementCLP > overhaulCLP
-                  ? `Mercado ${formatCurrency(computed.marketReplacementCLP - overhaulCLP)} CLP (+${(((computed.marketReplacementCLP / overhaulCLP) - 1) * 100).toFixed(1)}%) más caro que modelo IPC — la inflación aeronáutica supera el IPC general.`
-                  : `Modelo IPC ${formatCurrency(overhaulCLP - computed.marketReplacementCLP)} CLP más caro que mercado actual.`
-                }
-              </p>
-            </div>
-          </div>
-
-          {/* Today's Nominal Values */}
-          <div className="mb-4">
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Current (Nominal)</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="text-center p-3 bg-slate-50 rounded-lg">
-                <p className="text-lg font-bold text-slate-900 font-mono">${formatCurrency(Math.round(computed.effectiveOverhaulCLP))}</p>
-                <p className="text-[10px] text-slate-500">Total Cost Today</p>
-              </div>
-              <div className="text-center p-3 bg-emerald-50 rounded-lg">
-                <p className="text-lg font-bold text-emerald-700 font-mono">${formatCurrency(computed.currentFunds)}</p>
-                <p className="text-[10px] text-slate-500">Recaudado</p>
-              </div>
-              <div className="text-center p-3 bg-red-50 rounded-lg">
-                <p className="text-lg font-bold text-red-700 font-mono">${formatCurrency(Math.round(computed.faltaOverhaul))}</p>
-                <p className="text-[10px] text-slate-500">Remaining Gap</p>
-                <p className="text-[9px] text-slate-400 font-mono mt-0.5">{(computed.faltaOverhaul / computed.effectiveOverhaulCLP * 100).toFixed(1)}% del costo</p>
-              </div>
-              <div className="text-center p-3 bg-amber-50 rounded-lg">
-                <p className="text-lg font-bold text-amber-700 font-mono">{computed.anosRemanentes.toFixed(1)} años</p>
-                <p className="text-[10px] text-slate-500">Time to TBO</p>
-                <p className="text-[9px] text-slate-400 font-mono mt-0.5">{Math.round(computed.anosRemanentes * 12)} meses · {Math.round(computed.tachPerYear)} tach/yr</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Projected Values */}
-          <div className="mb-4">
-            <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          {/* ── Row 2: At TBO (Projected) ── */}
+          <div className="border border-slate-200 rounded-lg p-3">
+            <p className="text-[9px] text-slate-400 uppercase tracking-wider font-semibold mb-2 flex items-center gap-1.5">
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-              Projected at Overhaul ({computed.yearsToOverhaul.toFixed(1)} yrs · {interestRate}% int. · {clForwardInflation}% IPC Chile/yr)
+              At TBO · {interestRate}% int · {clForwardInflation}% IPC/yr
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="text-center p-3 bg-red-50 rounded-lg border border-red-100">
-                <p className="text-lg font-bold text-red-700 font-mono">${formatCurrency(Math.round(computed.inflatedOverhaulCost))}</p>
-                <p className="text-[10px] text-slate-500">Overhaul Cost w/ Inflation</p>
-                <p className="text-[9px] text-red-500 font-mono mt-0.5">+${formatCurrency(Math.round(computed.inflationIncrease))} ({clForwardInflation}%/yr IPC)</p>
+              <div className="text-center">
+                <p className="text-base font-bold text-red-700 font-mono">${formatCurrency(Math.round(computed.inflatedOverhaulCost))}</p>
+                <p className="text-[9px] text-slate-400">Cost w/ inflation</p>
+                <p className="text-[8px] text-red-400 font-mono">+${formatCurrency(Math.round(computed.inflationIncrease))}</p>
               </div>
-              <div className="text-center p-3 bg-emerald-50 rounded-lg border border-emerald-100">
-                <p className="text-lg font-bold text-emerald-700 font-mono">${formatCurrency(Math.round(computed.projectedFunds))}</p>
-                <p className="text-[10px] text-slate-500">Projected Funds w/ Interest</p>
-                <p className="text-[9px] text-emerald-600 font-mono mt-0.5">+${formatCurrency(Math.round(computed.interestEarned))} ({interestRate}%/yr)</p>
+              <div className="text-center">
+                <p className="text-base font-bold text-emerald-700 font-mono">${formatCurrency(Math.round(computed.projectedFunds))}</p>
+                <p className="text-[9px] text-slate-400">Funds w/ interest</p>
+                <p className="text-[8px] text-emerald-500 font-mono">+${formatCurrency(Math.round(computed.interestEarned))}</p>
               </div>
-              <div className="text-center p-3 rounded-lg border" style={{ backgroundColor: computed.projectedGap > 0 ? '#fef2f2' : '#f0fdf4', borderColor: computed.projectedGap > 0 ? '#fecaca' : '#bbf7d0' }}>
-                <p className={`text-lg font-bold font-mono ${computed.projectedGap > 0 ? 'text-red-700' : 'text-emerald-700'}`}>${formatCurrency(Math.abs(Math.round(computed.projectedGap)))}</p>
-                <p className="text-[10px] text-slate-500">{computed.projectedGap > 0 ? 'Projected Gap' : 'Projected Surplus'}</p>
+              <div className="text-center">
+                <p className={`text-base font-bold font-mono ${computed.projectedGap > 0 ? 'text-red-700' : 'text-emerald-700'}`}>${formatCurrency(Math.abs(Math.round(computed.projectedGap)))}</p>
+                <p className="text-[9px] text-slate-400">{computed.projectedGap > 0 ? 'Gap' : 'Surplus'}</p>
+                <div className="mt-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full ${computed.projectedFunds >= computed.inflatedOverhaulCost ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: `${Math.min(100, (computed.projectedFunds / computed.inflatedOverhaulCost) * 100)}%` }} />
+                </div>
+                <p className="text-[8px] text-slate-400 font-mono mt-0.5">{((computed.projectedFunds / computed.inflatedOverhaulCost) * 100).toFixed(1)}% funded</p>
               </div>
-              <div className="text-center p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-300 ring-2 ring-blue-100 shadow-sm">
-                <p className="text-xl font-extrabold text-blue-700 font-mono">${formatCurrency(Math.round(computed.projectedMonthlyTarget))}</p>
-                <p className="text-[10px] text-blue-600 font-bold">💰 Monthly Savings Target</p>
-                <p className="text-[9px] text-blue-500 font-mono mt-0.5">PMT al {interestRate}%/yr · {Math.round(computed.monthsToOverhaul)} cuotas</p>
+              <div className="text-center bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-2 border border-blue-200">
+                <p className="text-lg font-extrabold text-blue-700 font-mono">${formatCurrency(Math.round(computed.projectedMonthlyTarget))}</p>
+                <p className="text-[9px] text-blue-600 font-bold">💰 Monthly Target</p>
+                <p className="text-[8px] text-blue-400 font-mono">{Math.round(computed.monthsToOverhaul)} payments</p>
               </div>
             </div>
           </div>
 
-          {/* Savings Plan Verification */}
-          {computed.projectedGap > 0 && (
-            <div className="mb-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-3">
-              <p className="text-[10px] font-semibold text-blue-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <span>✅</span> Verificación del Plan de Ahorro
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] font-mono">
-                <div className="bg-white/70 rounded p-2">
-                  <p className="text-slate-500 text-[9px] mb-0.5">Fondos existentes al TBO</p>
-                  <p className="text-emerald-700 font-bold">${formatCurrency(Math.round(computed.projectedFunds))}</p>
-                  <p className="text-[9px] text-slate-400">${formatCurrency(recaudado)} × (1+{interestRate}%)^{computed.yearsToOverhaul.toFixed(1)}</p>
+          {/* ── Row 3: Cost Model (collapsible) ── */}
+          <button
+            onClick={() => setShowCostModel(!showCostModel)}
+            className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors"
+          >
+            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+              Cost Model Detail
+            </span>
+            <svg className={`w-4 h-4 text-slate-400 transition-transform ${showCostModel ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {showCostModel && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-in fade-in duration-200">
+              {/* IPC Model */}
+              <div className={`rounded-lg p-3 border ${computed.overhaulSource === 'ipc' ? 'bg-amber-50 border-amber-200 ring-1 ring-amber-300' : 'bg-slate-50 border-slate-200'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider">📋 IPC Chile (+{clInflationPct}%)</p>
+                  {computed.overhaulSource === 'ipc' && <span className="px-1.5 py-0.5 text-[8px] font-bold bg-amber-200 text-amber-800 rounded-full">WINNER</span>}
                 </div>
-                <div className="bg-white/70 rounded p-2">
-                  <p className="text-slate-500 text-[9px] mb-0.5">{Math.round(computed.monthsToOverhaul)} cuotas de ${formatCurrency(Math.round(computed.projectedMonthlyTarget))}/mes</p>
-                  <p className="text-blue-700 font-bold">${formatCurrency(Math.round(computed.fvAnnuity))}</p>
-                  <p className="text-[9px] text-slate-400">PMT × ((1+r)^n - 1) / r</p>
+                <div className="space-y-1 text-[11px]">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Motor (Eagle Copters)</span>
+                    <span className="font-mono text-slate-700">${formatCurrency(computed.motorTodayCLP)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Labor</span>
+                    <span className="font-mono text-slate-700">${formatCurrency(computed.laborTodayCLP)}</span>
+                  </div>
+                  <div className="flex justify-between pt-1 border-t border-amber-200">
+                    <span className="text-slate-700 font-semibold">Total</span>
+                    <span className="font-mono font-bold text-amber-800">${formatCurrency(overhaulCLP)}</span>
+                  </div>
+                  <p className="text-[9px] text-slate-400">Base ago 2022: ${formatCurrency(overhaulMotorCLP + overhaulLaborCLP)}</p>
                 </div>
-                <div className="bg-white/70 rounded p-2">
-                  <p className="text-slate-500 text-[9px] mb-0.5">Total disponible al TBO</p>
-                  <p className="text-indigo-700 font-bold">${formatCurrency(Math.round(computed.totalAtTBO))}</p>
-                  <p className="text-[9px] text-slate-400">vs costo ${formatCurrency(Math.round(computed.inflatedOverhaulCost))} {computed.totalAtTBO >= computed.inflatedOverhaulCost ? '✅' : '⚠️'}</p>
+              </div>
+
+              {/* Market Model */}
+              <div className={`rounded-lg p-3 border ${computed.overhaulSource === 'market' ? 'bg-blue-50 border-blue-200 ring-1 ring-blue-300' : 'bg-slate-50 border-slate-200'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-semibold text-blue-700 uppercase tracking-wider flex items-center gap-1">
+                    🌐 Market
+                    {enginePriceSource && (
+                      <span className={`px-1 py-0.5 text-[8px] font-bold rounded-full ${liveIndicators.engine ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {liveIndicators.engine ? 'LIVE' : 'fallback'}
+                      </span>
+                    )}
+                  </p>
+                  {computed.overhaulSource === 'market' && <span className="px-1.5 py-0.5 text-[8px] font-bold bg-blue-200 text-blue-800 rounded-full">WINNER</span>}
+                </div>
+                <div className="space-y-1 text-[11px]">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Motor FOB</span>
+                    <span className="font-mono text-slate-700">USD ${formatCurrency(engineMarketPriceUSD)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Internación (×{computed.internacionRatio.toFixed(2)})</span>
+                    <span className="font-mono text-slate-700">${formatCurrency(computed.internacionCostCLP)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Labor (IPC)</span>
+                    <span className="font-mono text-slate-700">${formatCurrency(computed.laborTodayCLP)}</span>
+                  </div>
+                  <div className="flex justify-between pt-1 border-t border-blue-200">
+                    <span className="text-slate-700 font-semibold">Total</span>
+                    <span className="font-mono font-bold text-blue-800">${formatCurrency(computed.marketReplacementCLP)}</span>
+                  </div>
+                  <p className="text-[9px] text-red-500 font-semibold">+{computed.motorPriceInflationPct.toFixed(1)}% vs 2022 ({computed.motorAnnualInflation.toFixed(1)}%/yr)</p>
+                </div>
+              </div>
+
+              {/* IPC vs Market bar */}
+              <div className="sm:col-span-2">
+                <div className="flex items-center justify-between text-[9px] mb-1">
+                  <span className="text-amber-600 font-mono">${formatCurrency(overhaulCLP)}</span>
+                  <span className="text-slate-400">
+                    {computed.marketReplacementCLP > overhaulCLP
+                      ? `Market +${(((computed.marketReplacementCLP / overhaulCLP) - 1) * 100).toFixed(0)}% over IPC`
+                      : `IPC +${(((overhaulCLP / computed.marketReplacementCLP) - 1) * 100).toFixed(0)}% over Market`
+                    }
+                  </span>
+                  <span className="text-blue-600 font-mono">${formatCurrency(computed.marketReplacementCLP)}</span>
+                </div>
+                <div className="flex h-2 rounded-full overflow-hidden bg-slate-100">
+                  <div className="bg-amber-400" style={{ width: `${(overhaulCLP / (overhaulCLP + computed.marketReplacementCLP)) * 100}%` }} />
+                  <div className="bg-blue-400" style={{ width: `${(computed.marketReplacementCLP / (overhaulCLP + computed.marketReplacementCLP)) * 100}%` }} />
                 </div>
               </div>
             </div>
           )}
-
-          {/* Progress bar */}
-          <div className="mt-2">
-            <div className="flex justify-between text-[10px] text-slate-500 mb-1">
-              <span>Recaudado vs costo actual</span>
-              <span>{((recaudado / computed.effectiveOverhaulCLP) * 100).toFixed(1)}%</span>
-            </div>
-            <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all"
-                style={{ width: `${Math.min(100, (recaudado / computed.effectiveOverhaulCLP) * 100)}%` }}
-              />
-            </div>
-            <div className="flex justify-between text-[10px] text-slate-500 mb-1 mt-2">
-              <span>Projected funds vs inflated cost</span>
-              <span>{((computed.projectedFunds / computed.inflatedOverhaulCost) * 100).toFixed(1)}%</span>
-            </div>
-            <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all ${computed.projectedFunds >= computed.inflatedOverhaulCost ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-gradient-to-r from-amber-500 to-amber-400'}`}
-                style={{ width: `${Math.min(100, (computed.projectedFunds / computed.inflatedOverhaulCost) * 100)}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Projection summary — clean card layout */}
-          <div className="mt-4 bg-slate-50 rounded-lg p-3">
-            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Overhaul Cost Projection</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
-              {/* Invoice basis */}
-              <div className="bg-white rounded-lg p-2 border border-slate-100">
-                <p className="text-[9px] text-slate-400">Invoice (Ago 2022)</p>
-                <p className="font-mono font-bold text-slate-700">${formatCurrency(overhaulMotorCLP + overhaulLaborCLP)}</p>
-                <p className="text-[9px] text-slate-400">+IPC {clInflationPct}% → <span className="font-bold text-slate-600">${formatCurrency(overhaulCLP)}</span></p>
-              </div>
-              {/* Projected cost at TBO */}
-              <div className="bg-white rounded-lg p-2 border border-slate-100">
-                <p className="text-[9px] text-slate-400">Cost at TBO ({computed.yearsToOverhaul.toFixed(1)} yrs)</p>
-                <p className="font-mono font-bold text-red-600">${formatCurrency(Math.round(computed.inflatedOverhaulCost))}</p>
-                <p className="text-[9px] text-slate-400">+{clForwardInflation}%/yr IPC fwd</p>
-              </div>
-              {/* Projected funds */}
-              <div className="bg-white rounded-lg p-2 border border-slate-100">
-                <p className="text-[9px] text-slate-400">Projected funds</p>
-                <p className={`font-mono font-bold ${computed.projectedFunds >= computed.inflatedOverhaulCost ? 'text-emerald-600' : 'text-amber-600'}`}>${formatCurrency(Math.round(computed.projectedFunds))}</p>
-                <p className="text-[9px] text-slate-400">${formatCurrency(recaudado)} @ {interestRate}%/yr</p>
-              </div>
-              {/* Gap or surplus */}
-              <div className={`bg-white rounded-lg p-2 border ${computed.projectedGap > 0 ? 'border-red-200' : 'border-emerald-200'}`}>
-                <p className="text-[9px] text-slate-400">{computed.projectedGap > 0 ? 'Gap' : 'Surplus'}</p>
-                <p className={`font-mono font-bold ${computed.projectedGap > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                  {computed.projectedGap > 0 ? '-' : '+'}${formatCurrency(Math.abs(Math.round(computed.projectedGap)))}
-                </p>
-                {computed.projectedGap > 0 && (
-                  <p className="text-[9px] text-slate-400">PMT: ${formatCurrency(Math.round(computed.projectedMonthlyTarget))}/mo</p>
-                )}
-              </div>
-              {/* Market price (airpowerinc) */}
-              <div className="bg-white rounded-lg p-2 border border-blue-100">
-                <p className="text-[9px] text-blue-500">⚡ Market price</p>
-                <p className="font-mono font-bold text-blue-700">${formatCurrency(computed.marketReplacementCLP)}</p>
-                <p className="text-[9px] text-slate-400">FOB ${formatCurrency(engineMarketPriceUSD)} USD + internación</p>
-              </div>
-              {/* Aviation inflation */}
-              <div className="bg-white rounded-lg p-2 border border-slate-100">
-                <p className="text-[9px] text-slate-400">Aviation inflation</p>
-                <p className={`font-mono font-bold ${computed.motorAnnualInflation > clInflationPct ? 'text-red-600' : 'text-slate-700'}`}>
-                  {computed.motorAnnualInflation.toFixed(1)}%/yr
-                </p>
-                <p className="text-[9px] text-slate-400">vs IPC {clInflationPct}%</p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
