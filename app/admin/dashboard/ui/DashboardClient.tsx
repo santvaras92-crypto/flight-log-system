@@ -4051,8 +4051,14 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   const [fuelTrendRate, setFuelTrendRate] = useState(stored?.fuelTrendRate ?? 10);
   // Live engine market price (from airpowerinc.com scraping)
   const [engineMarketPriceUSD, setEngineMarketPriceUSD] = useState(stored?.engineMarketPriceUSD ?? 47415);
-  // Brent oil correlation data
-  const [brentData, setBrentData] = useState<{ currentBrentUSD: number; monthly: { month: string; brentUSD: number; usdCLP: number }[]; source: string } | null>(null);
+  // Brent oil historical data (weekly + monthly from EIA + mindicador)
+  const [brentData, setBrentData] = useState<{
+    currentBrentUSD: number;
+    weekly: { week: string; brentUSD: number; usdCLP: number }[];
+    monthly: { month: string; brentUSD: number; usdCLP: number; weeks: number }[];
+    totalWeeks: number;
+    source: string;
+  } | null>(null);
   // Live indicators state
   const [liveIndicators, setLiveIndicators] = useState<{ uf: boolean; usd: boolean; fuel: boolean; engine: boolean; ipc: boolean; brent: boolean }>({ uf: false, usd: false, fuel: false, engine: false, ipc: false, brent: false });
 
@@ -4150,6 +4156,262 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     return { monthlyArr, avg3m, avg6m, avg12m, yearlyArr, cagr, totalRecords: withPrice.length };
   }, [fuelLogs]);
 
+  // ===== BRENT → AVGAS PREDICTIVE INTELLIGENCE ENGINE =====
+  // Self-learning correlation model with dynamic lag discovery,
+  // volatility adjustment, FX cross-correlation, and structural break detection.
+  // Recalculates automatically whenever new fuel data or Brent data arrives.
+  const brentAvgasCorrelation = useMemo(() => {
+    if (!fuelPriceAnalysis || !brentData || !brentData.monthly || brentData.monthly.length < 6) return null;
+    const avgasMonthly = fuelPriceAnalysis.monthlyArr; // {month, ppl (CLP/L), litros, count}
+    const brentMonthly = brentData.monthly;            // {month, brentUSD, usdCLP, weeks}
+    const brentWeekly = brentData.weekly || [];         // {week, brentUSD, usdCLP}
+    const currentBrent = brentData.currentBrentUSD;
+    const currentFX = usdRate; // Live USD/CLP from economic-indicators
+
+    // Build lookup maps
+    const brentByMonth: Record<string, { brentUSD: number; usdCLP: number }> = {};
+    brentMonthly.forEach(b => { brentByMonth[b.month] = { brentUSD: b.brentUSD, usdCLP: b.usdCLP }; });
+
+    // ── LAYER 1: Dynamic Lag Discovery (OLS for lags 0–6) ──
+    // For each lag, pair AVGAS month with Brent from `lag` months earlier
+    // Convert AVGAS CLP/L → USD/L using that month's FX rate
+    type LagResult = {
+      lag: number;
+      slope: number;
+      intercept: number;
+      r2: number;
+      pairs: number;
+      residualStdDev: number;
+    };
+
+    function shiftMonth(month: string, offset: number): string {
+      const [y, m] = month.split('-').map(Number);
+      const d = new Date(y, m - 1 + offset, 1);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    function runOLS(pairs: { x: number; y: number }[]): { slope: number; intercept: number; r2: number; residualStdDev: number } {
+      const n = pairs.length;
+      if (n < 3) return { slope: 0, intercept: 0, r2: 0, residualStdDev: 0 };
+      const sumX = pairs.reduce((s, p) => s + p.x, 0);
+      const sumY = pairs.reduce((s, p) => s + p.y, 0);
+      const sumXY = pairs.reduce((s, p) => s + p.x * p.y, 0);
+      const sumX2 = pairs.reduce((s, p) => s + p.x * p.x, 0);
+      const meanX = sumX / n;
+      const meanY = sumY / n;
+      const denom = sumX2 - n * meanX * meanX;
+      if (Math.abs(denom) < 1e-10) return { slope: 0, intercept: meanY, r2: 0, residualStdDev: 0 };
+      const slope = (sumXY - n * meanX * meanY) / denom;
+      const intercept = meanY - slope * meanX;
+      // R²
+      const ssRes = pairs.reduce((s, p) => s + Math.pow(p.y - (slope * p.x + intercept), 2), 0);
+      const ssTot = pairs.reduce((s, p) => s + Math.pow(p.y - meanY, 2), 0);
+      const r2 = ssTot > 0 ? 1 - ssRes / ssTot : 0;
+      const residualStdDev = n > 2 ? Math.sqrt(ssRes / (n - 2)) : 0;
+      return { slope, intercept, r2: Math.max(0, r2), residualStdDev };
+    }
+
+    const MAX_LAG = 6;
+    const allLags: LagResult[] = [];
+
+    for (let lag = 0; lag <= MAX_LAG; lag++) {
+      const pairs: { x: number; y: number }[] = [];
+      for (const avgas of avgasMonthly) {
+        const brentMonth = shiftMonth(avgas.month, -lag);
+        const brent = brentByMonth[brentMonth];
+        if (!brent) continue;
+        // Convert AVGAS CLP/L to USD/L using the Brent month's FX
+        const avgasUSD = avgas.ppl / brent.usdCLP;
+        pairs.push({ x: brent.brentUSD, y: avgasUSD });
+      }
+      const ols = runOLS(pairs);
+      allLags.push({ lag, ...ols, pairs: pairs.length });
+    }
+
+    // Select lag with highest R² (minimum 6 paired months)
+    const validLags = allLags.filter(l => l.pairs >= 6);
+    if (validLags.length === 0) return null;
+    const bestLag = validLags.reduce((best, l) => l.r2 > best.r2 ? l : best, validLags[0]);
+
+    // ── LAYER 2: Volatility Adjustment ──
+    // High Brent volatility → distributors add risk premium → AVGAS rises more than linear model predicts
+    let volatilityAdj = 0;
+    let brentVolatility8w = 0;
+    if (brentWeekly.length >= 12) {
+      const recent8w = brentWeekly.slice(-8);
+      const mean8w = recent8w.reduce((s, w) => s + w.brentUSD, 0) / recent8w.length;
+      brentVolatility8w = Math.sqrt(
+        recent8w.reduce((s, w) => s + Math.pow(w.brentUSD - mean8w, 2), 0) / recent8w.length
+      );
+      // If volatility > 5 USD/bbl → add 2% per extra dollar of vol
+      const volThreshold = 5;
+      if (brentVolatility8w > volThreshold) {
+        volatilityAdj = (brentVolatility8w - volThreshold) * 0.02;
+      }
+    }
+
+    // ── LAYER 3: FX Cross-Correlation ──
+    // Evaluate if CLP weakness amplifies Brent impact on local AVGAS price
+    // Multiple regression: AVGAS_CLP = β₁×Brent + β₂×USDCLP + β₃×Brent×USDCLP + intercept
+    let fxSensitivity = 0;
+    let fxBeta = 0;
+    let interactionBeta = 0;
+    {
+      // Build paired data for multiple regression (use best lag)
+      const mPairs: { brent: number; fx: number; avgasCLP: number }[] = [];
+      for (const avgas of avgasMonthly) {
+        const brentMonth = shiftMonth(avgas.month, -bestLag.lag);
+        const brent = brentByMonth[brentMonth];
+        if (!brent) continue;
+        mPairs.push({ brent: brent.brentUSD, fx: brent.usdCLP, avgasCLP: avgas.ppl });
+      }
+      if (mPairs.length >= 8) {
+        // Normalize for numerical stability
+        const meanB = mPairs.reduce((s, p) => s + p.brent, 0) / mPairs.length;
+        const meanFX = mPairs.reduce((s, p) => s + p.fx, 0) / mPairs.length;
+        const meanA = mPairs.reduce((s, p) => s + p.avgasCLP, 0) / mPairs.length;
+        // Simple: compute correlation between FX changes and residuals from Brent-only model
+        const residuals = mPairs.map(p => {
+          const predicted = (bestLag.slope * p.brent + bestLag.intercept) * p.fx;
+          return p.avgasCLP - predicted;
+        });
+        const fxDeviations = mPairs.map(p => p.fx - meanFX);
+        const corrNum = residuals.reduce((s, r, i) => s + r * fxDeviations[i], 0);
+        const corrDenR = Math.sqrt(residuals.reduce((s, r) => s + r * r, 0));
+        const corrDenFX = Math.sqrt(fxDeviations.reduce((s, d) => s + d * d, 0));
+        if (corrDenR > 0 && corrDenFX > 0) {
+          fxSensitivity = corrNum / (corrDenR * corrDenFX); // Pearson correlation
+        }
+        // Approximate β for FX: regression of residual on FX deviation
+        const fxVar = fxDeviations.reduce((s, d) => s + d * d, 0);
+        if (fxVar > 0) {
+          fxBeta = corrNum / fxVar; // CLP/L per CLP/USD deviation
+        }
+      }
+    }
+
+    // ── LAYER 4: Structural Break Detection ──
+    // If last 12 months have systematically different residuals from full-period model,
+    // use only post-break data for forecasting ("recent regime")
+    let structuralBreak: { detected: boolean; breakMonth: string; recentR2: number; fullR2: number } = {
+      detected: false, breakMonth: '', recentR2: bestLag.r2, fullR2: bestLag.r2,
+    };
+    let effectiveSlope = bestLag.slope;
+    let effectiveIntercept = bestLag.intercept;
+    let effectiveR2 = bestLag.r2;
+    {
+      // Get residuals for last 12 months vs earlier
+      const sortedAvgas = [...avgasMonthly].sort((a, b) => a.month.localeCompare(b.month));
+      const now = new Date();
+      const cutoffMonth = `${now.getFullYear() - 1}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const recentPairs: { x: number; y: number }[] = [];
+      const earlyPairs: { x: number; y: number }[] = [];
+      for (const avgas of sortedAvgas) {
+        const brentMonth = shiftMonth(avgas.month, -bestLag.lag);
+        const brent = brentByMonth[brentMonth];
+        if (!brent) continue;
+        const avgasUSD = avgas.ppl / brent.usdCLP;
+        const pair = { x: brent.brentUSD, y: avgasUSD };
+        if (avgas.month >= cutoffMonth) recentPairs.push(pair);
+        else earlyPairs.push(pair);
+      }
+      if (recentPairs.length >= 6 && earlyPairs.length >= 6) {
+        // Check if mean residual for recent period is significantly different
+        const recentResiduals = recentPairs.map(p => p.y - (bestLag.slope * p.x + bestLag.intercept));
+        const earlyResiduals = earlyPairs.map(p => p.y - (bestLag.slope * p.x + bestLag.intercept));
+        const meanRecent = recentResiduals.reduce((s, r) => s + r, 0) / recentResiduals.length;
+        const meanEarly = earlyResiduals.reduce((s, r) => s + r, 0) / earlyResiduals.length;
+        const pooledStd = bestLag.residualStdDev || 0.01;
+        // If recent bias > 1.5 std deviations from historical, switch to recent regime
+        if (Math.abs(meanRecent - meanEarly) > 1.5 * pooledStd && pooledStd > 0) {
+          const recentOLS = runOLS(recentPairs);
+          if (recentPairs.length >= 6 && recentOLS.r2 >= 0.15) {
+            structuralBreak = {
+              detected: true,
+              breakMonth: cutoffMonth,
+              recentR2: recentOLS.r2,
+              fullR2: bestLag.r2,
+            };
+            effectiveSlope = recentOLS.slope;
+            effectiveIntercept = recentOLS.intercept;
+            effectiveR2 = recentOLS.r2;
+          }
+        }
+      }
+    }
+
+    // ── FORECASTING ──
+    // Extrapolate Brent forward using linear trend of last 6 months of weekly data
+    let brentTrend = 0; // USD/bbl per month
+    if (brentWeekly.length >= 12) {
+      const last26w = brentWeekly.slice(-26); // ~6 months
+      // Linear regression: Brent vs time (weeks as x)
+      const tPairs = last26w.map((w, i) => ({ x: i, y: w.brentUSD }));
+      const tOLS = runOLS(tPairs);
+      brentTrend = tOLS.slope * 4.33; // Convert weekly slope to monthly
+    }
+
+    // Projected Brent at 3 and 6 months
+    const brent3m = Math.max(30, currentBrent + brentTrend * 3);
+    const brent6m = Math.max(30, currentBrent + brentTrend * 6);
+
+    // Apply regression to get AVGAS USD/L, then convert to CLP
+    const impliedNowUSD = effectiveSlope * currentBrent + effectiveIntercept;
+    const implied3mUSD = effectiveSlope * brent3m + effectiveIntercept;
+    const implied6mUSD = effectiveSlope * brent6m + effectiveIntercept;
+
+    // Apply volatility adjustment (multiplicative)
+    const volMultiplier = 1 + volatilityAdj;
+
+    // Apply FX adjustment for current deviation from mean
+    const historicalMeanFX = brentMonthly.length > 0
+      ? brentMonthly.reduce((s, b) => s + b.usdCLP, 0) / brentMonthly.length
+      : currentFX;
+    const fxDeviation = currentFX - historicalMeanFX;
+    const fxAdjCLP = fxBeta * fxDeviation; // Additional CLP/L from FX deviation
+
+    // Final forecasts in CLP/L
+    const impliedNowCLP = Math.round(Math.max(0, impliedNowUSD * volMultiplier * currentFX + fxAdjCLP));
+    const forecast3m = Math.round(Math.max(0, implied3mUSD * volMultiplier * currentFX + fxAdjCLP));
+    const forecast6m = Math.round(Math.max(0, implied6mUSD * volMultiplier * currentFX + fxAdjCLP));
+
+    // Confidence score (0-100) based on R², data quantity, and recency
+    const dataQuality = Math.min(bestLag.pairs / 40, 1); // 40 months = 100%
+    const r2Score = effectiveR2;
+    const confidence = Math.round((r2Score * 0.6 + dataQuality * 0.4) * 100);
+
+    return {
+      // Core regression
+      bestLag: bestLag.lag,
+      bestR2: effectiveR2,
+      slope: effectiveSlope,
+      intercept: effectiveIntercept,
+      pairedMonths: bestLag.pairs,
+      allLags,
+      // Forecasts
+      impliedNowCLP,
+      forecast3m,
+      forecast6m,
+      brentTrend: Math.round(brentTrend * 100) / 100,
+      brent3m: Math.round(brent3m * 10) / 10,
+      brent6m: Math.round(brent6m * 10) / 10,
+      // Volatility
+      brentVolatility8w: Math.round(brentVolatility8w * 100) / 100,
+      volatilityAdj: Math.round(volatilityAdj * 10000) / 100, // as %
+      // FX
+      fxSensitivity: Math.round(fxSensitivity * 1000) / 1000,
+      fxBeta: Math.round(fxBeta * 100) / 100,
+      fxDeviation: Math.round(fxDeviation),
+      // Structural break
+      structuralBreak,
+      // Meta
+      confidence,
+      totalWeeks: brentWeekly.length,
+      currentBrent,
+      currentFX,
+    };
+  }, [fuelPriceAnalysis, brentData, usdRate]);
+
   // Fetch live UF/USD on mount + auto-populate AVGAS from fuel records
   useEffect(() => {
     fetch('/api/economic-indicators')
@@ -4166,33 +4428,76 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         }
       })
       .catch(() => {}); // Silent fail, keeps defaults
-    // Also fetch Brent oil data for AVGAS correlation
-    fetch('/api/brent-oil')
+    // Also fetch Brent oil weekly historical data for AVGAS correlation
+    fetch('/api/brent-history')
       .then(res => res.ok ? res.json() : null)
       .then(data => {
-        if (!data) return;
-        setBrentData({ currentBrentUSD: data.currentBrentUSD, monthly: data.monthly, source: data.source });
+        if (!data || !data.weekly) return;
+        setBrentData({
+          currentBrentUSD: data.currentBrentUSD,
+          weekly: data.weekly,
+          monthly: data.monthly,
+          totalWeeks: data.totalWeeks,
+          source: data.source,
+        });
         setLiveIndicators(prev => ({ ...prev, brent: true }));
       })
       .catch(() => {});
   }, []);
 
-  // AVGAS pricing: use 3-month weighted average from fuel records
+  // AVGAS pricing: MAX(avg3m, avg6m, avg12m, brentForecast3m) — highest signal wins
   const avgasSource = useMemo(() => {
     if (!fuelPriceAnalysis || fuelPriceAnalysis.avg3m <= 0) return null;
-    return { price: fuelPriceAnalysis.avg3m, source: 'avg3m' as const, avg3m: fuelPriceAnalysis.avg3m };
-  }, [fuelPriceAnalysis]);
+
+    const candidates: { price: number; source: string; label: string }[] = [
+      { price: fuelPriceAnalysis.avg3m, source: 'avg3m', label: '3mo avg' },
+      { price: fuelPriceAnalysis.avg6m, source: 'avg6m', label: '6mo avg' },
+      { price: fuelPriceAnalysis.avg12m, source: 'avg12m', label: '12mo avg' },
+    ];
+
+    // Add Brent correlation forecast if available and meaningful
+    if (brentAvgasCorrelation && brentAvgasCorrelation.forecast3m > 0 && brentAvgasCorrelation.bestR2 > 0.3) {
+      candidates.push({
+        price: Math.round(brentAvgasCorrelation.forecast3m),
+        source: 'brentForecast3m',
+        label: `Brent→3m (R²=${brentAvgasCorrelation.bestR2.toFixed(2)})`,
+      });
+    }
+
+    // Filter out zero/invalid candidates
+    const valid = candidates.filter(c => c.price > 0);
+    if (valid.length === 0) return null;
+
+    // MAX wins — most conservative (highest cost) signal
+    const winner = valid.reduce((best, c) => c.price > best.price ? c : best, valid[0]);
+
+    return {
+      price: winner.price,
+      source: winner.source,
+      label: winner.label,
+      breakdown: valid.map(c => ({ ...c, isWinner: c.source === winner.source })),
+    };
+  }, [fuelPriceAnalysis, brentAvgasCorrelation]);
 
   useEffect(() => {
     if (avgasSource) {
       setAvgasLiterCLP(avgasSource.price);
-      // Trend rate = max(CAGR, 5% floor)
+      // Derive trend rate from Brent forecast or CAGR, whichever is higher
+      let bestRate = 5; // floor
       const cagrRate = fuelPriceAnalysis!.cagr > 0 ? fuelPriceAnalysis!.cagr : 5;
-      const bestRate = Math.max(cagrRate, 5);
-      setFuelTrendRate(Math.round(bestRate * 10) / 10);
+      bestRate = Math.max(bestRate, cagrRate);
+
+      // If Brent forecast available, compute annualized rate from current→forecast6m
+      if (brentAvgasCorrelation && brentAvgasCorrelation.forecast6m > 0 && avgasSource.price > 0) {
+        const fwd6m = brentAvgasCorrelation.forecast6m;
+        const fwdAnnualized = ((fwd6m / avgasSource.price) - 1) * 2 * 100; // 6m → annualized
+        if (fwdAnnualized > bestRate) bestRate = fwdAnnualized;
+      }
+
+      setFuelTrendRate(Math.round(Math.min(bestRate, 50) * 10) / 10); // cap at 50%
       setLiveIndicators(prev => ({ ...prev, fuel: true }));
     }
-  }, [avgasSource]);
+  }, [avgasSource, brentAvgasCorrelation]);
 
   // Auto-populate IPC Chile cumulative inflation from mindicador.cl (Aug 2022 → present)
   useEffect(() => {
@@ -4638,7 +4943,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                     </div>
                   </div>
                   <div className="flex items-center justify-between gap-2 py-1.5">
-                    <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">AVGAS / liter{liveIndicators.fuel && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">LIVE 3mo avg</span>}</span>
+                    <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">AVGAS / liter{liveIndicators.fuel && avgasSource && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">LIVE {avgasSource.label}</span>}</span>
                     <div className="flex items-center gap-1">
                       <span className="text-[10px] text-slate-400">CLP</span>
                       <input type="number" value={avgasLiterCLP} onChange={e => setAvgasLiterCLP(Number(e.target.value) || 0)} className="w-24 sm:w-28 text-right text-xs font-mono bg-slate-50 border border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none" />
@@ -5338,19 +5643,20 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
           <div className="p-4 sm:p-6">
             {/* Weighted Averages */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-              <div className="text-center p-3 bg-amber-50 ring-1 ring-amber-200 rounded-lg">
-                <p className="text-lg font-bold font-mono text-amber-700">${formatCurrency(fuelPriceAnalysis.avg3m)}</p>
-                <p className="text-[10px] text-slate-500">3-month avg $/L</p>
-                <p className="text-[9px] text-emerald-600 font-bold">← Used in model</p>
-              </div>
-              <div className="text-center p-3 bg-slate-50 rounded-lg">
-                <p className="text-lg font-bold text-slate-700 font-mono">${formatCurrency(fuelPriceAnalysis.avg6m)}</p>
-                <p className="text-[10px] text-slate-500">6-month avg $/L</p>
-              </div>
-              <div className="text-center p-3 bg-slate-50 rounded-lg">
-                <p className="text-lg font-bold text-slate-700 font-mono">${formatCurrency(fuelPriceAnalysis.avg12m)}</p>
-                <p className="text-[10px] text-slate-500">12-month avg $/L</p>
-              </div>
+              {[
+                { price: fuelPriceAnalysis.avg3m, label: '3-month avg $/L', source: 'avg3m' },
+                { price: fuelPriceAnalysis.avg6m, label: '6-month avg $/L', source: 'avg6m' },
+                { price: fuelPriceAnalysis.avg12m, label: '12-month avg $/L', source: 'avg12m' },
+              ].map(item => {
+                const isWinner = avgasSource?.source === item.source;
+                return (
+                  <div key={item.source} className={`text-center p-3 rounded-lg ${isWinner ? 'bg-amber-50 ring-1 ring-amber-200' : 'bg-slate-50'}`}>
+                    <p className={`text-lg font-bold font-mono ${isWinner ? 'text-amber-700' : 'text-slate-700'}`}>${formatCurrency(item.price)}</p>
+                    <p className="text-[10px] text-slate-500">{item.label}</p>
+                    {isWinner && <p className="text-[9px] text-emerald-600 font-bold">← Used in model (MAX)</p>}
+                  </div>
+                );
+              })}
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: fuelPriceAnalysis.cagr > 0 ? '#fef2f2' : '#f0fdf4' }}>
                 <p className={`text-lg font-bold font-mono ${fuelPriceAnalysis.cagr > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
                   {fuelPriceAnalysis.cagr > 0 ? '+' : ''}{fuelPriceAnalysis.cagr.toFixed(1)}%
@@ -5367,7 +5673,174 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 <div className="text-xs text-slate-700">
                   <span className="font-semibold">Brent Spot:</span>{' '}
                   <span className="font-mono font-bold text-orange-700">US${brentData.currentBrentUSD.toFixed(1)}/bbl</span>
-                  <span className="text-[10px] text-slate-400 ml-2">({brentData.source})</span>
+                  <span className="text-[10px] text-slate-400 ml-2">({brentData.source} · {brentData.totalWeeks} weeks of data)</span>
+                </div>
+              </div>
+            )}
+
+            {/* ===== BRENT → AVGAS PREDICTIVE INTELLIGENCE ===== */}
+            {brentAvgasCorrelation && (
+              <div className="mb-5 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-200 overflow-hidden">
+                <div className="px-4 py-3 border-b border-indigo-200/50 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">🧠</span>
+                    <div>
+                      <h5 className="text-xs font-bold text-indigo-800">Brent → AVGAS Predictive Intelligence</h5>
+                      <p className="text-[9px] text-indigo-500">Self-learning · {brentAvgasCorrelation.totalWeeks} weeks · Lag {brentAvgasCorrelation.bestLag}m · R²={brentAvgasCorrelation.bestR2.toFixed(3)}</p>
+                    </div>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                    brentAvgasCorrelation.confidence >= 70 ? 'bg-emerald-100 text-emerald-700' :
+                    brentAvgasCorrelation.confidence >= 40 ? 'bg-amber-100 text-amber-700' :
+                    'bg-red-100 text-red-700'
+                  }`}>
+                    {brentAvgasCorrelation.confidence}% CONF
+                  </span>
+                </div>
+                <div className="p-4">
+                  {/* Forecasts Row */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                    <div className="text-center p-2.5 bg-white/60 rounded-lg">
+                      <p className="text-sm font-bold font-mono text-indigo-700">${formatCurrency(Math.round(brentAvgasCorrelation.impliedNowCLP))}</p>
+                      <p className="text-[9px] text-slate-500">Implied Now $/L</p>
+                      <p className="text-[8px] text-slate-400">from Brent regression</p>
+                    </div>
+                    <div className={`text-center p-2.5 rounded-lg ${avgasSource?.source === 'brentForecast3m' ? 'bg-amber-50 ring-1 ring-amber-300' : 'bg-white/60'}`}>
+                      <p className="text-sm font-bold font-mono text-purple-700">${formatCurrency(Math.round(brentAvgasCorrelation.forecast3m))}</p>
+                      <p className="text-[9px] text-slate-500">Forecast 3m $/L</p>
+                      {avgasSource?.source === 'brentForecast3m' && <p className="text-[8px] text-emerald-600 font-bold">← MAX winner</p>}
+                    </div>
+                    <div className="text-center p-2.5 bg-white/60 rounded-lg">
+                      <p className="text-sm font-bold font-mono text-purple-700">${formatCurrency(Math.round(brentAvgasCorrelation.forecast6m))}</p>
+                      <p className="text-[9px] text-slate-500">Forecast 6m $/L</p>
+                    </div>
+                    <div className="text-center p-2.5 bg-white/60 rounded-lg">
+                      <p className="text-sm font-bold font-mono text-slate-700">US${brentAvgasCorrelation.brent3m.toFixed(1)}</p>
+                      <p className="text-[9px] text-slate-500">Brent 3m forecast</p>
+                      <p className="text-[8px] text-slate-400">trend: {brentAvgasCorrelation.brentTrend > 0 ? '↑' : '↓'}{Math.abs(brentAvgasCorrelation.brentTrend).toFixed(2)}/wk</p>
+                    </div>
+                  </div>
+
+                  {/* Model Details Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-1.5 text-[10px] mb-3">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Best Lag</span>
+                      <span className="font-mono font-bold text-indigo-700">{brentAvgasCorrelation.bestLag} months</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">R² (fit)</span>
+                      <span className="font-mono font-bold text-indigo-700">{brentAvgasCorrelation.bestR2.toFixed(4)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Paired months</span>
+                      <span className="font-mono font-bold text-slate-700">{brentAvgasCorrelation.pairedMonths}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Slope (β)</span>
+                      <span className="font-mono font-bold text-slate-700">{brentAvgasCorrelation.slope.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Intercept (α)</span>
+                      <span className="font-mono font-bold text-slate-700">{formatCurrency(Math.round(brentAvgasCorrelation.intercept))}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Current FX</span>
+                      <span className="font-mono font-bold text-slate-700">${formatCurrency(Math.round(brentAvgasCorrelation.currentFX))}</span>
+                    </div>
+                  </div>
+
+                  {/* Advanced Analytics Row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* Volatility */}
+                    <div className="p-2.5 bg-white/50 rounded-lg border border-slate-200/50">
+                      <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-1">📊 Volatility</p>
+                      <div className="space-y-1 text-[10px]">
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">8w σ (Brent)</span>
+                          <span className="font-mono font-bold">${brentAvgasCorrelation.brentVolatility8w.toFixed(2)}/bbl</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Vol. adjustment</span>
+                          <span className={`font-mono font-bold ${brentAvgasCorrelation.volatilityAdj > 0 ? 'text-red-600' : 'text-slate-500'}`}>
+                            {brentAvgasCorrelation.volatilityAdj > 0 ? '+' : ''}{brentAvgasCorrelation.volatilityAdj.toFixed(2)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    {/* FX Sensitivity */}
+                    <div className="p-2.5 bg-white/50 rounded-lg border border-slate-200/50">
+                      <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-1">💱 FX Sensitivity</p>
+                      <div className="space-y-1 text-[10px]">
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">FX β (residual)</span>
+                          <span className="font-mono font-bold">{brentAvgasCorrelation.fxBeta.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">FX deviation</span>
+                          <span className={`font-mono font-bold ${brentAvgasCorrelation.fxDeviation > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                            {brentAvgasCorrelation.fxDeviation > 0 ? '+' : ''}{formatCurrency(Math.round(brentAvgasCorrelation.fxDeviation))} CLP
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Structural Break */}
+                    <div className="p-2.5 bg-white/50 rounded-lg border border-slate-200/50">
+                      <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-1">🔬 Structural Break</p>
+                      <div className="space-y-1 text-[10px]">
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Detected</span>
+                          <span className={`font-mono font-bold ${brentAvgasCorrelation.structuralBreak?.detected ? 'text-orange-600' : 'text-emerald-600'}`}>
+                            {brentAvgasCorrelation.structuralBreak?.detected ? '⚠️ YES' : '✓ Stable'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Regime</span>
+                          <span className="font-mono font-bold text-slate-600">
+                            {brentAvgasCorrelation.structuralBreak?.detected ? 'Recent-only' : 'Full history'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Lag Discovery Table */}
+                  <div className="mt-3">
+                    <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Lag Discovery (0–6 months)</p>
+                    <div className="flex gap-1.5 overflow-x-auto pb-1">
+                      {brentAvgasCorrelation.allLags.map((lag: { lag: number; r2: number; pairs: number }) => (
+                        <div key={lag.lag} className={`flex-1 min-w-[52px] text-center p-1.5 rounded-lg ${lag.lag === brentAvgasCorrelation.bestLag ? 'bg-indigo-100 ring-1 ring-indigo-300' : 'bg-white/50'}`}>
+                          <p className="text-[10px] font-bold text-slate-700">{lag.lag}m</p>
+                          <p className={`text-[10px] font-mono font-bold ${lag.lag === brentAvgasCorrelation.bestLag ? 'text-indigo-700' : 'text-slate-500'}`}>
+                            {lag.r2.toFixed(3)}
+                          </p>
+                          <p className="text-[8px] text-slate-400">{lag.pairs} pts</p>
+                          {/* Visual R² bar */}
+                          <div className="mt-1 h-1 bg-slate-200 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${lag.lag === brentAvgasCorrelation.bestLag ? 'bg-indigo-500' : 'bg-slate-400'}`} style={{ width: `${Math.max(lag.r2 * 100, 2)}%` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* MAX Source Selection Indicator */}
+                  {avgasSource?.breakdown && (
+                    <div className="mt-3 px-3 py-2 bg-white/60 rounded-lg border border-indigo-100">
+                      <p className="text-[9px] font-semibold text-indigo-600 uppercase tracking-wider mb-1">AVGAS = MAX(signals) — Highest price wins</p>
+                      <div className="flex gap-2 flex-wrap">
+                        {avgasSource.breakdown.map((b: { source: string; label: string; price: number; isWinner: boolean }) => (
+                          <span key={b.source} className={`px-2 py-0.5 rounded text-[9px] font-mono ${
+                            b.isWinner
+                              ? 'bg-amber-100 text-amber-800 font-bold ring-1 ring-amber-300'
+                              : 'bg-slate-100 text-slate-500'
+                          }`}>
+                            {b.label}: ${formatCurrency(b.price)}
+                            {b.isWinner && ' ✓'}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
