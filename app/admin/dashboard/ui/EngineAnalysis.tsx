@@ -360,6 +360,28 @@ export default function EngineAnalysis() {
     const sorted = [...flights].sort((a, b) => new Date(a.flightDate).getTime() - new Date(b.flightDate).getTime());
     const trendLabels = sorted.map(f => new Date(f.flightDate).toLocaleDateString("es-CL", { month: "short", year: "2-digit" }));
 
+    // ── Smoothing: Exponential Moving Average (EMA) ──
+    // Produces a clean trend line from noisy per-flight data
+    // α = 2/(window+1), higher window = smoother line
+    const ema = (data: (number | null)[], window: number = 15): (number | null)[] => {
+      const alpha = 2 / (window + 1);
+      const result: (number | null)[] = [];
+      let prev: number | null = null;
+      for (const val of data) {
+        if (val == null || val <= 0) {
+          result.push(prev); // carry forward last value for gaps
+          continue;
+        }
+        if (prev == null) {
+          prev = val;
+        } else {
+          prev = alpha * val + (1 - alpha) * prev;
+        }
+        result.push(Math.round(prev * 10) / 10);
+      }
+      return result;
+    };
+
     const trendOptions = {
       responsive: true,
       maintainAspectRatio: false,
@@ -367,19 +389,21 @@ export default function EngineAnalysis() {
       interaction: { mode: "index" as const, intersect: false },
       plugins: { legend: { position: "top" as const, labels: { usePointStyle: true, pointStyle: "circle" as const, font: { size: 10 } } } },
       scales: { x: { ticks: { maxTicksLimit: 15, font: { size: 9 } }, grid: { display: false } } },
-      elements: { point: { radius: 1.5 }, line: { borderWidth: 1.5 } },
+      elements: { point: { radius: 0, hoverRadius: 3 }, line: { borderWidth: 2.5, tension: 0.4 } },
     };
 
-    // --- CHT Trend ---
+    // --- CHT Trend (EMA smoothed) ---
     if (trendChtRef.current) {
       const ctx = trendChtRef.current.getContext("2d")!;
+      const chtSmooth = ema(sorted.map(f => f.maxCHT), 20);
+      const egtSmooth = ema(sorted.map(f => f.maxEGT), 20);
       const chart = new ChartJS(ctx, {
         type: "line",
         data: {
           labels: trendLabels,
           datasets: [
-            { label: "Max CHT", data: sorted.map(f => f.maxCHT), borderColor: "#ef4444", backgroundColor: "rgba(239,68,68,0.1)", fill: true },
-            { label: "Max EGT", data: sorted.map(f => f.maxEGT), borderColor: "#f97316", backgroundColor: "rgba(249,115,22,0.05)", fill: false },
+            { label: "Max CHT", data: chtSmooth, borderColor: "#ef4444", backgroundColor: "rgba(239,68,68,0.08)", fill: true },
+            { label: "Max EGT", data: egtSmooth, borderColor: "#f97316", backgroundColor: "rgba(249,115,22,0.05)", fill: false },
           ],
         },
         options: {
@@ -399,16 +423,18 @@ export default function EngineAnalysis() {
       trendChartInstances.current.push(chart);
     }
 
-    // --- Oil Trend ---
+    // --- Oil Trend (EMA smoothed) ---
     if (trendOilRef.current) {
       const ctx = trendOilRef.current.getContext("2d")!;
+      const oilTempSmooth = ema(sorted.map(f => f.maxOilTemp), 20);
+      const oilPressSmooth = ema(sorted.map(f => f.minOilPress), 20);
       const chart = new ChartJS(ctx, {
         type: "line",
         data: {
           labels: trendLabels,
           datasets: [
-            { label: "Max Oil Temp", data: sorted.map(f => f.maxOilTemp), borderColor: "#f97316", backgroundColor: "rgba(249,115,22,0.1)", fill: true },
-            { label: "Min Oil Press", data: sorted.map(f => f.minOilPress), borderColor: "#06b6d4", backgroundColor: "rgba(6,182,212,0.1)", fill: true },
+            { label: "Max Oil Temp", data: oilTempSmooth, borderColor: "#f97316", backgroundColor: "rgba(249,115,22,0.08)", fill: true },
+            { label: "Min Oil Press", data: oilPressSmooth, borderColor: "#06b6d4", backgroundColor: "rgba(6,182,212,0.08)", fill: true },
           ],
         },
         options: {
