@@ -4182,6 +4182,8 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       r2: number;
       pairs: number;
       residualStdDev: number;
+      effectiveN: number;
+      halfLife: number;
     };
 
     function shiftMonth(month: string, offset: number): string {
@@ -4211,25 +4213,83 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       return { slope, intercept, r2: Math.max(0, r2), residualStdDev };
     }
 
+    // ── WLS: Weighted Least Squares with exponential recency weighting ──
+    // λ = 0.03 → half-life ≈ 23 months (ln(2)/0.03 ≈ 23.1)
+    // Recent data dominates the regression, naturally adapting to inflation,
+    // structural changes, and regime shifts without needing CPI deflation.
+    const LAMBDA = 0.03;
+    const nowDate = new Date();
+    const nowMonthIdx = nowDate.getFullYear() * 12 + nowDate.getMonth(); // absolute month index
+
+    function monthAge(month: string): number {
+      const [y, m] = month.split('-').map(Number);
+      return Math.max(0, nowMonthIdx - (y * 12 + (m - 1)));
+    }
+
+    function runWLS(pairs: { x: number; y: number; month: string }[]): {
+      slope: number; intercept: number; r2: number; residualStdDev: number;
+      effectiveN: number; halfLife: number;
+    } {
+      const n = pairs.length;
+      if (n < 3) return { slope: 0, intercept: 0, r2: 0, residualStdDev: 0, effectiveN: 0, halfLife: 23 };
+
+      // Compute weights: w_i = exp(-λ × age_in_months)
+      const weights = pairs.map(p => Math.exp(-LAMBDA * monthAge(p.month)));
+      const sumW = weights.reduce((s, w) => s + w, 0);
+      // Effective sample size: (ΣW)² / Σ(W²) — Kish's formula
+      const sumW2 = weights.reduce((s, w) => s + w * w, 0);
+      const effectiveN = sumW2 > 0 ? (sumW * sumW) / sumW2 : 0;
+
+      // Weighted means
+      const wMeanX = pairs.reduce((s, p, i) => s + weights[i] * p.x, 0) / sumW;
+      const wMeanY = pairs.reduce((s, p, i) => s + weights[i] * p.y, 0) / sumW;
+
+      // Weighted covariance & variance
+      let wCovXY = 0, wVarX = 0;
+      for (let i = 0; i < n; i++) {
+        const dx = pairs[i].x - wMeanX;
+        const dy = pairs[i].y - wMeanY;
+        wCovXY += weights[i] * dx * dy;
+        wVarX += weights[i] * dx * dx;
+      }
+
+      if (Math.abs(wVarX) < 1e-10) return { slope: 0, intercept: wMeanY, r2: 0, residualStdDev: 0, effectiveN, halfLife: 23 };
+
+      const slope = wCovXY / wVarX;
+      const intercept = wMeanY - slope * wMeanX;
+
+      // Weighted R²
+      let wSSRes = 0, wSSTot = 0;
+      for (let i = 0; i < n; i++) {
+        const predicted = slope * pairs[i].x + intercept;
+        wSSRes += weights[i] * Math.pow(pairs[i].y - predicted, 2);
+        wSSTot += weights[i] * Math.pow(pairs[i].y - wMeanY, 2);
+      }
+      const r2 = wSSTot > 0 ? Math.max(0, 1 - wSSRes / wSSTot) : 0;
+      const residualStdDev = effectiveN > 2 ? Math.sqrt(wSSRes / (effectiveN - 2)) : 0;
+
+      return { slope, intercept, r2, residualStdDev, effectiveN, halfLife: Math.round(Math.LN2 / LAMBDA) };
+    }
+
     const MAX_LAG = 6;
     const allLags: LagResult[] = [];
 
     for (let lag = 0; lag <= MAX_LAG; lag++) {
-      const pairs: { x: number; y: number }[] = [];
+      const pairs: { x: number; y: number; month: string }[] = [];
       for (const avgas of avgasMonthly) {
         const brentMonth = shiftMonth(avgas.month, -lag);
         const brent = brentByMonth[brentMonth];
         if (!brent) continue;
         // Convert AVGAS CLP/L to USD/L using the Brent month's FX
         const avgasUSD = avgas.ppl / brent.usdCLP;
-        pairs.push({ x: brent.brentUSD, y: avgasUSD });
+        pairs.push({ x: brent.brentUSD, y: avgasUSD, month: avgas.month });
       }
-      const ols = runOLS(pairs);
-      allLags.push({ lag, ...ols, pairs: pairs.length });
+      const wls = runWLS(pairs);
+      allLags.push({ lag, ...wls, pairs: pairs.length });
     }
 
-    // Select lag with highest R² (minimum 6 paired months)
-    const validLags = allLags.filter(l => l.pairs >= 6);
+    // Select lag with highest weighted R² (minimum 6 paired months, effective N ≥ 4)
+    const validLags = allLags.filter(l => l.pairs >= 6 && l.effectiveN >= 4);
     if (validLags.length === 0) return null;
     const bestLag = validLags.reduce((best, l) => l.r2 > best.r2 ? l : best, validLags[0]);
 
@@ -4296,45 +4356,47 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     let structuralBreak: { detected: boolean; breakMonth: string; recentR2: number; fullR2: number } = {
       detected: false, breakMonth: '', recentR2: bestLag.r2, fullR2: bestLag.r2,
     };
+    // With WLS, recent data already dominates the regression via exponential weights.
+    // Structural break detection now serves as a diagnostic — if detected, we report it
+    // but WLS coefficients are already adapted. Only override if recent-only WLS is
+    // significantly better (>10% R² improvement), indicating a hard regime shift.
     let effectiveSlope = bestLag.slope;
     let effectiveIntercept = bestLag.intercept;
     let effectiveR2 = bestLag.r2;
     {
-      // Get residuals for last 12 months vs earlier
       const sortedAvgas = [...avgasMonthly].sort((a, b) => a.month.localeCompare(b.month));
-      const now = new Date();
-      const cutoffMonth = `${now.getFullYear() - 1}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      const recentPairs: { x: number; y: number }[] = [];
-      const earlyPairs: { x: number; y: number }[] = [];
+      const cutoffMonth = `${nowDate.getFullYear() - 1}-${String(nowDate.getMonth() + 1).padStart(2, '0')}`;
+      const recentPairs: { x: number; y: number; month: string }[] = [];
+      const earlyPairs: { x: number; y: number; month: string }[] = [];
       for (const avgas of sortedAvgas) {
         const brentMonth = shiftMonth(avgas.month, -bestLag.lag);
         const brent = brentByMonth[brentMonth];
         if (!brent) continue;
         const avgasUSD = avgas.ppl / brent.usdCLP;
-        const pair = { x: brent.brentUSD, y: avgasUSD };
+        const pair = { x: brent.brentUSD, y: avgasUSD, month: avgas.month };
         if (avgas.month >= cutoffMonth) recentPairs.push(pair);
         else earlyPairs.push(pair);
       }
       if (recentPairs.length >= 6 && earlyPairs.length >= 6) {
-        // Check if mean residual for recent period is significantly different
+        // Check weighted residual drift between periods
         const recentResiduals = recentPairs.map(p => p.y - (bestLag.slope * p.x + bestLag.intercept));
         const earlyResiduals = earlyPairs.map(p => p.y - (bestLag.slope * p.x + bestLag.intercept));
         const meanRecent = recentResiduals.reduce((s, r) => s + r, 0) / recentResiduals.length;
         const meanEarly = earlyResiduals.reduce((s, r) => s + r, 0) / earlyResiduals.length;
         const pooledStd = bestLag.residualStdDev || 0.01;
-        // If recent bias > 1.5 std deviations from historical, switch to recent regime
-        if (Math.abs(meanRecent - meanEarly) > 1.5 * pooledStd && pooledStd > 0) {
-          const recentOLS = runOLS(recentPairs);
-          if (recentPairs.length >= 6 && recentOLS.r2 >= 0.15) {
+        // Hard structural break: recent bias > 2σ AND recent-only WLS improves R² by >10%
+        if (Math.abs(meanRecent - meanEarly) > 2.0 * pooledStd && pooledStd > 0) {
+          const recentWLS = runWLS(recentPairs);
+          if (recentPairs.length >= 6 && recentWLS.r2 > bestLag.r2 + 0.10) {
             structuralBreak = {
               detected: true,
               breakMonth: cutoffMonth,
-              recentR2: recentOLS.r2,
+              recentR2: recentWLS.r2,
               fullR2: bestLag.r2,
             };
-            effectiveSlope = recentOLS.slope;
-            effectiveIntercept = recentOLS.intercept;
-            effectiveR2 = recentOLS.r2;
+            effectiveSlope = recentWLS.slope;
+            effectiveIntercept = recentWLS.intercept;
+            effectiveR2 = recentWLS.r2;
           }
         }
       }
@@ -4375,19 +4437,25 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const forecast3m = Math.round(Math.max(0, implied3mUSD * volMultiplier * currentFX + fxAdjCLP));
     const forecast6m = Math.round(Math.max(0, implied6mUSD * volMultiplier * currentFX + fxAdjCLP));
 
-    // Confidence score (0-100) based on R², data quantity, and recency
-    const dataQuality = Math.min(bestLag.pairs / 40, 1); // 40 months = 100%
+    // Confidence score (0-100) based on weighted R², effective N, and data span
+    const effectiveNScore = Math.min(bestLag.effectiveN / 20, 1); // 20 effective months = 100%
+    const dataSpanScore = Math.min(bestLag.pairs / 40, 1); // 40 raw months = 100%
     const r2Score = effectiveR2;
-    const confidence = Math.round((r2Score * 0.6 + dataQuality * 0.4) * 100);
+    const confidence = Math.round((r2Score * 0.50 + effectiveNScore * 0.30 + dataSpanScore * 0.20) * 100);
 
     return {
-      // Core regression
+      // Core regression (WLS)
       bestLag: bestLag.lag,
       bestR2: effectiveR2,
       slope: effectiveSlope,
       intercept: effectiveIntercept,
       pairedMonths: bestLag.pairs,
       allLags,
+      // WLS metadata
+      method: 'WLS' as const,
+      lambda: LAMBDA,
+      halfLife: bestLag.halfLife,
+      effectiveN: Math.round(bestLag.effectiveN * 10) / 10,
       // Forecasts
       impliedNowCLP,
       forecast3m,
@@ -5615,7 +5683,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                     <span className="text-base">🧠</span>
                     <div>
                       <h5 className="text-xs font-bold text-indigo-800">Brent → AVGAS Predictive Intelligence</h5>
-                      <p className="text-[9px] text-indigo-500">Self-learning · {brentAvgasCorrelation.totalWeeks} weeks · Lag {brentAvgasCorrelation.bestLag}m · R²={brentAvgasCorrelation.bestR2.toFixed(3)}</p>
+                      <p className="text-[9px] text-indigo-500">WLS (λ={brentAvgasCorrelation.lambda}, t½={brentAvgasCorrelation.halfLife}m) · {brentAvgasCorrelation.totalWeeks} weeks · Lag {brentAvgasCorrelation.bestLag}m · R²={brentAvgasCorrelation.bestR2.toFixed(3)}</p>
                     </div>
                   </div>
                   <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
@@ -5663,6 +5731,10 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                     <div className="flex justify-between">
                       <span className="text-slate-500">Paired months</span>
                       <span className="font-mono font-bold text-slate-700">{brentAvgasCorrelation.pairedMonths}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Effective N</span>
+                      <span className="font-mono font-bold text-indigo-600">{brentAvgasCorrelation.effectiveN}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-500">Slope (β)</span>
@@ -5714,10 +5786,10 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                     </div>
                     {/* Structural Break */}
                     <div className="p-2.5 bg-white/50 rounded-lg border border-slate-200/50">
-                      <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-1">🔬 Structural Break</p>
+                      <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-1">🔬 Regime / Break</p>
                       <div className="space-y-1 text-[10px]">
                         <div className="flex justify-between">
-                          <span className="text-slate-500">Detected</span>
+                          <span className="text-slate-500">Hard break</span>
                           <span className={`font-mono font-bold ${brentAvgasCorrelation.structuralBreak?.detected ? 'text-orange-600' : 'text-emerald-600'}`}>
                             {brentAvgasCorrelation.structuralBreak?.detected ? '⚠️ YES' : '✓ Stable'}
                           </span>
@@ -5725,7 +5797,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                         <div className="flex justify-between">
                           <span className="text-slate-500">Regime</span>
                           <span className="font-mono font-bold text-slate-600">
-                            {brentAvgasCorrelation.structuralBreak?.detected ? 'Recent-only' : 'Full history'}
+                            {brentAvgasCorrelation.structuralBreak?.detected ? 'Recent-only' : 'WLS-adapted'}
                           </span>
                         </div>
                       </div>
