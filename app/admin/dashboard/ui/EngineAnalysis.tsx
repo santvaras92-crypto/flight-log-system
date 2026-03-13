@@ -19,7 +19,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarEleme
 // Lycoming O-320-D2J limits
 const ENGINE_LIMITS = {
   egt_max: 1500,
-  cht_redline: 500,
+  cht_redline: 430,
   cht_caution: 400,
   oil_temp_max: 245,
   oil_temp_caution: 220,
@@ -99,7 +99,7 @@ export default function EngineAnalysis() {
   const trendChartInstances = useRef<ChartJS[]>([]);
 
   // Trend range selection — shared between both trend charts
-  const [trendRange, setTrendRange] = useState<'all' | '5y' | '3y' | '2y' | '1y' | '6m' | '3m' | 'custom'>('all');
+  const [trendRange, setTrendRange] = useState<'all' | '5y' | '3y' | '2y' | '1y' | '6m' | '3m' | 'custom'>('6m');
   const [customRangeStart, setCustomRangeStart] = useState(0);   // index into sorted flights
   const [customRangeEnd, setCustomRangeEnd] = useState(100);     // percentage (0-100)
 
