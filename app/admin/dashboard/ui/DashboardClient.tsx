@@ -5642,7 +5642,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
           </div>
           <div className="p-4 sm:p-6">
             {/* Weighted Averages */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+            <div className="grid grid-cols-3 gap-3 mb-5">
               {[
                 { price: fuelPriceAnalysis.avg3m, label: '3-month avg $/L', source: 'avg3m' },
                 { price: fuelPriceAnalysis.avg6m, label: '6-month avg $/L', source: 'avg6m' },
@@ -5657,13 +5657,6 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                   </div>
                 );
               })}
-              <div className="text-center p-3 rounded-lg" style={{ backgroundColor: fuelPriceAnalysis.cagr > 0 ? '#fef2f2' : '#f0fdf4' }}>
-                <p className={`text-lg font-bold font-mono ${fuelPriceAnalysis.cagr > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
-                  {fuelPriceAnalysis.cagr > 0 ? '+' : ''}{fuelPriceAnalysis.cagr.toFixed(1)}%
-                </p>
-                <p className="text-[10px] text-slate-500">Annual CAGR</p>
-                <p className="text-[9px] text-slate-400">Compound growth rate</p>
-              </div>
             </div>
 
             {/* Brent spot indicator (if available) */}
