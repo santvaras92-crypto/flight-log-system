@@ -1491,6 +1491,11 @@ function FuelForecastChart({
   const [customStart, setCustomStart] = useState(0);
   const [customEnd, setCustomEnd] = useState(100);
 
+  // Default to 1Y on mobile, All on desktop
+  useEffect(() => {
+    if (window.innerWidth < 768) setFuelChartRange('1y');
+  }, []);
+
   const toggleSeries = useCallback((key: string) => {
     setVisibleSeries(prev => ({ ...prev, [key]: !prev[key] }));
   }, []);
