@@ -457,8 +457,8 @@ export default function EngineAnalysis() {
         data: {
           labels: trendLabels,
           datasets: [
-            { label: "Max CHT", data: chtData, borderColor: "#ef4444", backgroundColor: "rgba(239,68,68,0.08)", fill: smoothTrend },
-            { label: "Max EGT", data: egtData, borderColor: "#f97316", backgroundColor: "rgba(249,115,22,0.05)", fill: false },
+            { label: "Max CHT", data: chtData, borderColor: "#ef4444", backgroundColor: "rgba(239,68,68,0.08)", fill: smoothTrend, yAxisID: "y" },
+            { label: "Max EGT", data: egtData, borderColor: "#f97316", backgroundColor: "rgba(249,115,22,0.05)", fill: false, yAxisID: "y1" },
           ],
         },
         options: {
@@ -468,11 +468,15 @@ export default function EngineAnalysis() {
             title: { display: true, text: "Temperature Trend — Max EGT & CHT per Flight", font: { size: 12, weight: "bold" as const }, color: "#334155" },
             annotation: {
               annotations: {
-                chtLine: { type: "line" as const, yMin: ENGINE_LIMITS.cht_redline, yMax: ENGINE_LIMITS.cht_redline, borderColor: "rgba(239,68,68,0.4)", borderWidth: 1.5, borderDash: [4, 4] },
+                chtLine: { type: "line" as const, yMin: ENGINE_LIMITS.cht_redline, yMax: ENGINE_LIMITS.cht_redline, borderColor: "rgba(239,68,68,0.4)", borderWidth: 1.5, borderDash: [4, 4], yScaleID: "y" },
               },
             },
           },
-          scales: { ...trendOptions.scales, y: { title: { display: true, text: "°F" } } },
+          scales: {
+            ...trendOptions.scales,
+            y: { position: "left" as const, title: { display: true, text: "CHT °F" }, ticks: { color: "#ef4444", font: { size: 9 } }, grid: { color: "rgba(239,68,68,0.06)" } },
+            y1: { position: "right" as const, title: { display: true, text: "EGT °F" }, ticks: { color: "#f97316", font: { size: 9 } }, grid: { drawOnChartArea: false } },
+          },
         },
       });
       trendChartInstances.current.push(chart);
@@ -490,8 +494,8 @@ export default function EngineAnalysis() {
         data: {
           labels: trendLabels,
           datasets: [
-            { label: "Max Oil Temp", data: oilTempData, borderColor: "#f97316", backgroundColor: "rgba(249,115,22,0.08)", fill: smoothTrend },
-            { label: "Min Oil Press", data: oilPressData, borderColor: "#06b6d4", backgroundColor: "rgba(6,182,212,0.08)", fill: smoothTrend },
+            { label: "Max Oil Temp", data: oilTempData, borderColor: "#f97316", backgroundColor: "rgba(249,115,22,0.08)", fill: smoothTrend, yAxisID: "y" },
+            { label: "Min Oil Press", data: oilPressData, borderColor: "#06b6d4", backgroundColor: "rgba(6,182,212,0.08)", fill: smoothTrend, yAxisID: "y1" },
           ],
         },
         options: {
@@ -501,11 +505,15 @@ export default function EngineAnalysis() {
             title: { display: true, text: "Oil Health Trend — Max Temp & Min Press per Flight", font: { size: 12, weight: "bold" as const }, color: "#334155" },
             annotation: {
               annotations: {
-                oilMax: { type: "line" as const, yMin: ENGINE_LIMITS.oil_temp_max, yMax: ENGINE_LIMITS.oil_temp_max, borderColor: "rgba(239,68,68,0.4)", borderWidth: 1.5, borderDash: [4, 4] },
+                oilMax: { type: "line" as const, yMin: ENGINE_LIMITS.oil_temp_max, yMax: ENGINE_LIMITS.oil_temp_max, borderColor: "rgba(239,68,68,0.4)", borderWidth: 1.5, borderDash: [4, 4], yScaleID: "y" },
               },
             },
           },
-          scales: { ...trendOptions.scales, y: { title: { display: true, text: "°F / PSI" } } },
+          scales: {
+            ...trendOptions.scales,
+            y: { position: "left" as const, title: { display: true, text: "Oil Temp °F" }, ticks: { color: "#f97316", font: { size: 9 } }, grid: { color: "rgba(249,115,22,0.06)" } },
+            y1: { position: "right" as const, title: { display: true, text: "Oil Press PSI" }, ticks: { color: "#06b6d4", font: { size: 9 } }, grid: { drawOnChartArea: false } },
+          },
         },
       });
       trendChartInstances.current.push(chart);
