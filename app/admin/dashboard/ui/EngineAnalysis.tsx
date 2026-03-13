@@ -98,6 +98,11 @@ export default function EngineAnalysis() {
   const trendOilRef = useRef<HTMLCanvasElement>(null);
   const trendChartInstances = useRef<ChartJS[]>([]);
 
+  // Trend range selection — shared between both trend charts
+  const [trendRange, setTrendRange] = useState<'all' | '5y' | '3y' | '2y' | '1y' | '6m' | '3m' | 'custom'>('all');
+  const [customRangeStart, setCustomRangeStart] = useState(0);   // index into sorted flights
+  const [customRangeEnd, setCustomRangeEnd] = useState(100);     // percentage (0-100)
+
   // Load flights list
   const loadFlights = useCallback(async () => {
     setLoading(true);
@@ -350,14 +355,58 @@ export default function EngineAnalysis() {
   }, [selectedFlight]);
 
   // ============ TREND CHARTS (Fleet Overview) ============
+  // Sorted flights (memoized for range slider)
+  const sortedFlights = useMemo(() =>
+    [...flights].sort((a, b) => new Date(a.flightDate).getTime() - new Date(b.flightDate).getTime()),
+    [flights]
+  );
+
+  // Compute the visible slice based on range selection
+  const trendSlice = useMemo(() => {
+    if (sortedFlights.length < 2) return sortedFlights;
+    const now = new Date();
+    let cutoff: Date | null = null;
+
+    switch (trendRange) {
+      case '5y': cutoff = new Date(now); cutoff.setFullYear(cutoff.getFullYear() - 5); break;
+      case '3y': cutoff = new Date(now); cutoff.setFullYear(cutoff.getFullYear() - 3); break;
+      case '2y': cutoff = new Date(now); cutoff.setFullYear(cutoff.getFullYear() - 2); break;
+      case '1y': cutoff = new Date(now); cutoff.setFullYear(cutoff.getFullYear() - 1); break;
+      case '6m': cutoff = new Date(now); cutoff.setMonth(cutoff.getMonth() - 6); break;
+      case '3m': cutoff = new Date(now); cutoff.setMonth(cutoff.getMonth() - 3); break;
+      case 'custom': {
+        const startIdx = Math.round((customRangeStart / 100) * (sortedFlights.length - 1));
+        const endIdx = Math.round((customRangeEnd / 100) * (sortedFlights.length - 1));
+        return sortedFlights.slice(Math.min(startIdx, endIdx), Math.max(startIdx, endIdx) + 1);
+      }
+      default: return sortedFlights; // 'all'
+    }
+
+    if (cutoff) {
+      const filtered = sortedFlights.filter(f => new Date(f.flightDate) >= cutoff!);
+      return filtered.length >= 2 ? filtered : sortedFlights;
+    }
+    return sortedFlights;
+  }, [sortedFlights, trendRange, customRangeStart, customRangeEnd]);
+
+  // Date range labels for the slider
+  const trendDateRange = useMemo(() => {
+    if (trendSlice.length === 0) return { start: '', end: '', count: 0 };
+    const fmt = (d: string) => new Date(d).toLocaleDateString("es-CL", { month: "short", year: "2-digit" });
+    return {
+      start: fmt(trendSlice[0].flightDate),
+      end: fmt(trendSlice[trendSlice.length - 1].flightDate),
+      count: trendSlice.length,
+    };
+  }, [trendSlice]);
+
   useEffect(() => {
     trendChartInstances.current.forEach(c => c.destroy());
     trendChartInstances.current = [];
 
-    if (flights.length < 2) return;
+    if (trendSlice.length < 2) return;
 
-    // Sort flights chronologically for trends
-    const sorted = [...flights].sort((a, b) => new Date(a.flightDate).getTime() - new Date(b.flightDate).getTime());
+    const sorted = trendSlice;
     const trendLabels = sorted.map(f => new Date(f.flightDate).toLocaleDateString("es-CL", { month: "short", year: "2-digit" }));
 
     // ── Smoothing: Exponential Moving Average (EMA) ──
@@ -455,7 +504,7 @@ export default function EngineAnalysis() {
     }
 
     return () => { trendChartInstances.current.forEach(c => c.destroy()); trendChartInstances.current = []; };
-  }, [flights, view]);
+  }, [trendSlice, view]);
 
   // ============ COMPUTED STATS FOR DETAIL ============
   const detailStats = useMemo(() => {
@@ -583,6 +632,93 @@ export default function EngineAnalysis() {
                   <div className={`text-lg font-bold mt-0.5 ${s.warn ? "text-red-600" : "text-slate-800"}`}>{s.value}</div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Trend Range Selector */}
+          {flights.length >= 2 && (
+            <div className="bg-white rounded-xl border border-slate-200 p-3">
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <span className="text-xs font-semibold text-slate-500 mr-1">Period:</span>
+                {([
+                  ['all', 'All'],
+                  ['5y', '5Y'],
+                  ['3y', '3Y'],
+                  ['2y', '2Y'],
+                  ['1y', '1Y'],
+                  ['6m', '6M'],
+                  ['3m', '3M'],
+                ] as const).map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => setTrendRange(key)}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-all
+                      ${trendRange === key
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setTrendRange('custom')}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-all
+                    ${trendRange === 'custom'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+                >
+                  Custom
+                </button>
+                <span className="ml-auto text-[11px] text-slate-400 font-medium">
+                  {trendDateRange.start} → {trendDateRange.end} · {trendDateRange.count} flights
+                </span>
+              </div>
+
+              {/* Custom dual-range slider */}
+              {trendRange === 'custom' && (
+                <div className="mt-2 px-1">
+                  <div className="flex items-center gap-3">
+                    <label className="text-[11px] text-slate-400 w-10 text-right">From</label>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={customRangeStart}
+                      onChange={e => {
+                        const v = Number(e.target.value);
+                        setCustomRangeStart(v > customRangeEnd ? customRangeEnd : v);
+                      }}
+                      className="flex-1 h-1.5 accent-blue-600"
+                    />
+                    <span className="text-[11px] text-slate-500 w-16 tabular-nums">
+                      {sortedFlights.length > 0
+                        ? new Date(sortedFlights[Math.round((customRangeStart / 100) * (sortedFlights.length - 1))].flightDate)
+                            .toLocaleDateString("es-CL", { month: "short", year: "2-digit" })
+                        : ''}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-1">
+                    <label className="text-[11px] text-slate-400 w-10 text-right">To</label>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={customRangeEnd}
+                      onChange={e => {
+                        const v = Number(e.target.value);
+                        setCustomRangeEnd(v < customRangeStart ? customRangeStart : v);
+                      }}
+                      className="flex-1 h-1.5 accent-blue-600"
+                    />
+                    <span className="text-[11px] text-slate-500 w-16 tabular-nums">
+                      {sortedFlights.length > 0
+                        ? new Date(sortedFlights[Math.round((customRangeEnd / 100) * (sortedFlights.length - 1))].flightDate)
+                            .toLocaleDateString("es-CL", { month: "short", year: "2-digit" })
+                        : ''}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
