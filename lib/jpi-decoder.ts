@@ -38,6 +38,10 @@ export interface DecodedRecord {
   oat: number | null;
   volts: number | null;
   carbTemp: number | null;
+  latitude: number | null;
+  longitude: number | null;
+  gpsAltitude: number | null;  // pressure alt in feet from GPS (field 83)
+  groundSpeed: number | null;  // knots (field 81)
 }
 
 export interface DecodedFlight {
@@ -47,6 +51,8 @@ export interface DecodedFlight {
   durationSec: number;
   records: DecodedRecord[];
   sourceFile: string;
+  latitude: number | null;   // GPS start position from GTN 650
+  longitude: number | null;  // GPS start position from GTN 650
 }
 
 interface JPIHeader {
@@ -71,6 +77,8 @@ interface FlightHeader {
   flagsHigh: number;
   interval: number;
   date: Date | null;
+  latRaw: number;  // GPS initial lat (raw signed 32-bit)
+  lonRaw: number;  // GPS initial lon (raw signed 32-bit)
 }
 
 // ─── Decoder Class ──────────────────────────────────────────────
@@ -262,6 +270,20 @@ class JPIDecoderImpl {
           ? Math.max(...records.map((r) => r.elapsedSec))
           : 0;
 
+      // Extract GPS start position from flight header
+      // Divide raw signed 32-bit by 6,000 to get decimal degrees
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+      if (fhdr.latRaw !== 0 || fhdr.lonRaw !== 0) {
+        const latDeg = fhdr.latRaw / 6000;
+        const lonDeg = fhdr.lonRaw / 6000;
+        // Bounding box: South America
+        if (latDeg >= -60 && latDeg <= -10 && lonDeg >= -80 && lonDeg <= -55) {
+          latitude = Math.round(latDeg * 1000000) / 1000000;
+          longitude = Math.round(lonDeg * 1000000) / 1000000;
+        }
+      }
+
       return {
         flightNumber: fhdr.flightNumber,
         flightDate: fhdr.date || new Date(),
@@ -269,6 +291,8 @@ class JPIDecoderImpl {
         durationSec,
         records,
         sourceFile: this.sourceFile,
+        latitude,
+        longitude,
       };
     } catch (e) {
       this.pos = flightStartPos + dataBytes;
@@ -283,6 +307,8 @@ class JPIDecoderImpl {
       flagsHigh: 0,
       interval: 6,
       date: null,
+      latRaw: 0,
+      lonRaw: 0,
     };
 
     if (this.header.protocol >= 2) {
@@ -297,6 +323,15 @@ class JPIDecoderImpl {
       hdr.flagsLow = words[1];
       hdr.flagsHigh = words[2];
       hdr.interval = words[11] > 0 ? words[11] : 6;
+
+      // GPS initial position (words 6-9)
+      // Two 16-bit words combined into signed 32-bit value
+      let latCombined = (words[6] << 16) | words[7];
+      let lonCombined = (words[8] << 16) | words[9];
+      if (latCombined > 0x7fffffff) latCombined -= 0x100000000;
+      if (lonCombined > 0x7fffffff) lonCombined -= 0x100000000;
+      hdr.latRaw = latCombined;
+      hdr.lonRaw = lonCombined;
 
       // Date (word 12)
       const dateRaw = words[12];
@@ -396,7 +431,7 @@ class JPIDecoderImpl {
         // Emit repeated copies of previous record
         for (let r = 0; r < repeatCount; r++) {
           records.push(
-            this.makeRecord(accum, elapsed, flightHdr.date, currentInterval)
+            this.makeRecord(accum, elapsed, flightHdr, currentInterval)
           );
           elapsed += currentInterval;
           recordCount++;
@@ -472,7 +507,7 @@ class JPIDecoderImpl {
 
         // Create record
         records.push(
-          this.makeRecord(accum, elapsed, flightHdr.date, currentInterval)
+          this.makeRecord(accum, elapsed, flightHdr, currentInterval)
         );
         elapsed += currentInterval;
         recordCount++;
@@ -487,12 +522,12 @@ class JPIDecoderImpl {
   private makeRecord(
     accum: number[],
     elapsed: number,
-    startDate: Date | null,
+    flightHdr: FlightHeader,
     _interval: number
   ): DecodedRecord {
     let timestamp: Date | null = null;
-    if (startDate) {
-      timestamp = new Date(startDate.getTime() + elapsed * 1000);
+    if (flightHdr.date) {
+      timestamp = new Date(flightHdr.date.getTime() + elapsed * 1000);
     }
 
     // EGT: low byte (fields 0-3) + high byte (fields 48-51) << 8
@@ -561,6 +596,36 @@ class JPIDecoderImpl {
     const rpmRaw = accum[41] + (accum[42] << 8);
     const rpm = rpmRaw > 0 && rpmRaw < 5000 ? rpmRaw : 0;
 
+    // GPS per-record position from GTN 650 via EDM-830
+    // f86 = longitude offset from header in 1/6000 degree units
+    // f87 = latitude offset from header in 1/6000 degree units
+    // f83 = GPS pressure altitude in feet
+    // f81 = ground speed (knots × 10)
+    let latitude: number | null = null;
+    let longitude: number | null = null;
+    let gpsAltitude: number | null = null;
+    let groundSpeed: number | null = null;
+
+    if (flightHdr.latRaw !== 0 || flightHdr.lonRaw !== 0) {
+      const latDeg = (flightHdr.latRaw + accum[87]) / 6000;
+      const lonDeg = (flightHdr.lonRaw + accum[86]) / 6000;
+      // Validate within South America bounding box
+      if (latDeg >= -60 && latDeg <= -10 && lonDeg >= -80 && lonDeg <= -55) {
+        latitude = Math.round(latDeg * 1000000) / 1000000;
+        longitude = Math.round(lonDeg * 1000000) / 1000000;
+      }
+      // GPS altitude (field 83) — pressure altitude in feet
+      const altFeet = accum[83];
+      if (altFeet >= 0 && altFeet < 30000) {
+        gpsAltitude = altFeet;
+      }
+      // Ground speed (field 81) — knots × 10
+      const gsRaw = accum[81];
+      if (gsRaw > 0 && gsRaw < 5000) {
+        groundSpeed = gsRaw / 10;
+      }
+    }
+
     return {
       elapsedSec: elapsed,
       timestamp,
@@ -583,6 +648,10 @@ class JPIDecoderImpl {
       oat: oat || null,
       volts: volts || null,
       carbTemp: carbTemp || null,
+      latitude,
+      longitude,
+      gpsAltitude,
+      groundSpeed,
     };
   }
 }

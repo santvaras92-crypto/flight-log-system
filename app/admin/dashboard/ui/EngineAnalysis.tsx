@@ -1,5 +1,8 @@
 "use client";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import dynamic from "next/dynamic";
+
+const FlightMap = dynamic(() => import("@/app/components/FlightMap"), { ssr: false, loading: () => <div className="h-[350px] bg-slate-50 rounded-xl border border-slate-200 animate-pulse" /> });
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -55,6 +58,8 @@ interface Reading {
   rpm: number | null; map: number | null; hp: number | null;
   fuelFlow: number | null; fuelUsed: number | null; fuelRem: number | null;
   oat: number | null; volts: number | null; carbTemp: number | null;
+  latitude: number | null; longitude: number | null;
+  gpsAlt: number | null; groundSpd: number | null;
 }
 
 interface FlightDetail {
@@ -912,6 +917,23 @@ export default function EngineAnalysis() {
                   <canvas ref={powerChartRef}></canvas>
                 </div>
               </div>
+
+              {/* GPS Flight Track Map */}
+              {selectedFlight && selectedFlight.readings.some(r => r.latitude != null && r.longitude != null) && (
+                <div className="mt-3">
+                  <FlightMap
+                    points={selectedFlight.readings
+                      .filter(r => r.latitude != null && r.longitude != null)
+                      .map(r => ({
+                        lat: r.latitude!,
+                        lng: r.longitude!,
+                        alt: r.gpsAlt ?? undefined,
+                        spd: r.groundSpd ?? undefined,
+                        elapsed: r.elapsedSec,
+                      }))}
+                  />
+                </div>
+              )}
             </>
           )}
         </>

@@ -51,6 +51,8 @@ export async function GET(req: NextRequest) {
           rpm: toNum(r.rpm), map: toNum(r.map), hp: toNum(r.hp),
           fuelFlow: toNum(r.fuelFlow), fuelUsed: toNum(r.fuelUsed), fuelRem: toNum(r.fuelRem),
           oat: toNum(r.oat), volts: toNum(r.volts), carbTemp: toNum(r.carbTemp),
+          latitude: toNum(r.latitude), longitude: toNum(r.longitude),
+          gpsAlt: toNum(r.gpsAlt), groundSpd: toNum(r.groundSpd),
         })),
       };
       return NextResponse.json({ flight: serialized, limits: ENGINE_LIMITS });
@@ -173,6 +175,10 @@ async function handleJPIUpload(file: File) {
       oat: r.oat,
       volts: r.volts,
       carbTemp: r.carbTemp,
+      latitude: r.latitude,
+      longitude: r.longitude,
+      gpsAlt: r.gpsAltitude,
+      groundSpd: r.groundSpeed,
     }));
 
     // Calculate summary stats
@@ -203,6 +209,8 @@ async function handleJPIUpload(file: File) {
         minOilPress,
         avgRPM,
         avgFF,
+        latitude: df.latitude,
+        longitude: df.longitude,
         sourceFile: file.name,
         readings: { create: readings },
       },

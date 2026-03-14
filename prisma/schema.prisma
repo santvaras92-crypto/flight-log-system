@@ -242,6 +242,8 @@ model EngineMonitorFlight {
   minOilPress   Decimal?
   avgRPM        Decimal?
   avgFF         Decimal?
+  latitude      Decimal?
+  longitude     Decimal?
   sourceFile    String?
   createdAt     DateTime               @default(now())
   readings      EngineMonitorReading[]
@@ -274,6 +276,10 @@ model EngineMonitorReading {
   oat        Decimal?
   volts      Decimal?
   carbTemp   Decimal?
+  latitude   Decimal?
+  longitude  Decimal?
+  gpsAlt     Decimal?
+  groundSpd  Decimal?
 
   flight     EngineMonitorFlight @relation(fields: [flightId], references: [id], onDelete: Cascade)
 
