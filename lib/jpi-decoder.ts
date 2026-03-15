@@ -403,6 +403,12 @@ class JPIDecoderImpl {
     // Fields 64+ init to 0
     for (let i = 64; i < 128; i++) accum[i] = 0;
 
+    // GPS stabilization tracking — delta-compression accumulator starts at 0
+    // for GPS fields and needs ~120-130 records to converge to real offsets.
+    // We simply suppress GPS output until enough records have elapsed.
+    // Mid-flight GPS quality issues are handled by the FlightMap display filter.
+    const GPS_MIN_RECORDS = 135; // records before GPS can be emitted
+
     const MAX_RECORDS = 50000;
     let recordCount = 0;
 
@@ -431,7 +437,7 @@ class JPIDecoderImpl {
         // Emit repeated copies of previous record
         for (let r = 0; r < repeatCount; r++) {
           records.push(
-            this.makeRecord(accum, elapsed, flightHdr, currentInterval)
+            this.makeRecord(accum, elapsed, flightHdr, currentInterval, recordCount)
           );
           elapsed += currentInterval;
           recordCount++;
@@ -507,7 +513,7 @@ class JPIDecoderImpl {
 
         // Create record
         records.push(
-          this.makeRecord(accum, elapsed, flightHdr, currentInterval)
+          this.makeRecord(accum, elapsed, flightHdr, currentInterval, recordCount)
         );
         elapsed += currentInterval;
         recordCount++;
@@ -523,7 +529,8 @@ class JPIDecoderImpl {
     accum: number[],
     elapsed: number,
     flightHdr: FlightHeader,
-    _interval: number
+    _interval: number,
+    recordCount: number = 0
   ): DecodedRecord {
     let timestamp: Date | null = null;
     if (flightHdr.date) {
@@ -606,23 +613,36 @@ class JPIDecoderImpl {
     let gpsAltitude: number | null = null;
     let groundSpeed: number | null = null;
 
-    if (flightHdr.latRaw !== 0 || flightHdr.lonRaw !== 0) {
+    if (recordCount >= 135 && (flightHdr.latRaw !== 0 || flightHdr.lonRaw !== 0)) {
       const latDeg = (flightHdr.latRaw + accum[87]) / 6000;
       const lonDeg = (flightHdr.lonRaw + accum[86]) / 6000;
-      // Validate within South America bounding box
-      if (latDeg >= -60 && latDeg <= -10 && lonDeg >= -80 && lonDeg <= -55) {
-        latitude = Math.round(latDeg * 1000000) / 1000000;
-        longitude = Math.round(lonDeg * 1000000) / 1000000;
-      }
-      // GPS altitude (field 83) — pressure altitude in feet
-      const altFeet = accum[83];
-      if (altFeet >= 0 && altFeet < 30000) {
-        gpsAltitude = altFeet;
-      }
+
       // Ground speed (field 81) — knots × 10
       const gsRaw = accum[81];
-      if (gsRaw > 0 && gsRaw < 5000) {
-        groundSpeed = gsRaw / 10;
+      const gsKnots = gsRaw > 0 && gsRaw < 5000 ? gsRaw / 10 : 0;
+
+      // During the first ~10 minutes (600 records at 1s), the delta-compression
+      // accumulator may still be converging. Coordinates paired with an impossible
+      // ground speed (>149 kts — C172 max is ~140 kts, Savvy shows 150 during
+      // init artifacts) are initialization garbage and must be discarded entirely.
+      const GPS_INIT_WINDOW = 600;
+      const MAX_VALID_GS = 149; // knots — anything above this during init is artifact
+      const isInitArtifact = recordCount < GPS_INIT_WINDOW && gsKnots > MAX_VALID_GS;
+
+      if (!isInitArtifact) {
+        // Validate within South America bounding box
+        if (latDeg >= -60 && latDeg <= -10 && lonDeg >= -80 && lonDeg <= -55) {
+          latitude = Math.round(latDeg * 1000000) / 1000000;
+          longitude = Math.round(lonDeg * 1000000) / 1000000;
+        }
+        // GPS altitude (field 83) — pressure altitude in feet
+        const altFeet = accum[83];
+        if (altFeet >= 0 && altFeet < 30000) {
+          gpsAltitude = altFeet;
+        }
+        if (gsKnots > 0) {
+          groundSpeed = gsKnots;
+        }
       }
     }
 

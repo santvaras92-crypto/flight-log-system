@@ -26,6 +26,31 @@ export default function FlightMap({ points, className }: FlightMapProps) {
     (p) => p.lat !== 0 && p.lng !== 0 && p.lat >= -60 && p.lat <= 0 && p.lng >= -80 && p.lng <= -55
   );
 
+  // Fix ground speed at flight start: the delta-compression accumulator
+  // converges ground speed to a non-zero value even when the aircraft is parked.
+  // At the start, if position doesn't change between consecutive points,
+  // the real ground speed is 0 — override the false converged value.
+  for (let i = 0; i < validPoints.length; i++) {
+    if (i === 0) {
+      // First point — if followed by same position, it's ground
+      if (validPoints.length > 1 &&
+          Math.abs(validPoints[0].lat - validPoints[1].lat) < 0.0001 &&
+          Math.abs(validPoints[0].lng - validPoints[1].lng) < 0.0001) {
+        validPoints[0] = { ...validPoints[0], spd: 0 };
+      }
+      continue;
+    }
+    const prev = validPoints[i - 1];
+    const curr = validPoints[i];
+    // If position unchanged → parked, ground speed = 0
+    if (Math.abs(curr.lat - prev.lat) < 0.0001 && Math.abs(curr.lng - prev.lng) < 0.0001) {
+      validPoints[i] = { ...validPoints[i], spd: 0 };
+    } else {
+      // Position started changing → aircraft moving, stop overriding
+      break;
+    }
+  }
+
   // Remove consecutive duplicates (GPS updates every few seconds)
   const dedupedPoints: GpsPoint[] = [];
   for (const p of validPoints) {
@@ -35,8 +60,58 @@ export default function FlightMap({ points, className }: FlightMapProps) {
     }
   }
 
+  // Filter GPS initialization artifacts — the GPS accumulator may "stabilize"
+  // at a wrong intermediate position before jumping to the real one.
+  // Strategy: find the first big jump (>3km between consecutive points) in the
+  // opening segment (first 60 points). Everything before that jump is init artifact.
+  // Then filter mid-flight outliers using implied speed (distance/time).
+  let startIdx = 0;
+  const MAX_INIT_WINDOW = 60; // only look for init artifacts in first 60 points
+  for (let i = 1; i < Math.min(dedupedPoints.length, MAX_INIT_WINDOW); i++) {
+    const prev = dedupedPoints[i - 1];
+    const curr = dedupedPoints[i];
+    const dLat = (curr.lat - prev.lat) * 111320;
+    const dLng = (curr.lng - prev.lng) * 111320 * Math.cos(prev.lat * Math.PI / 180);
+    const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+    if (dist > 3000) {
+      // Everything before index i is init artifact — start from i
+      startIdx = i;
+    }
+  }
+
+  // Filter mid-flight outlier points using implied speed.
+  // Cessna 172 max ground speed ≈ 150 kts ≈ 77 m/s. Use 100 m/s as generous limit.
+  // When consecutive GPS points have a gap in time, use speed = distance/time_gap.
+  // When no elapsed time info, fall back to 3km flat distance filter.
+  const MAX_SPEED_MS = 100; // ~194 knots, generous for C172 with tailwind
+  const trimmed = dedupedPoints.slice(startIdx);
+  const cleanPoints: GpsPoint[] = trimmed.length > 0 ? [trimmed[0]] : [];
+  for (let i = 1; i < trimmed.length; i++) {
+    const prev = cleanPoints[cleanPoints.length - 1];
+    const curr = trimmed[i];
+    const dLat = (curr.lat - prev.lat) * 111320;
+    const dLng = (curr.lng - prev.lng) * 111320 * Math.cos(prev.lat * Math.PI / 180);
+    const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+
+    // Use time-based speed check if elapsed data available
+    if (prev.elapsed != null && curr.elapsed != null) {
+      const timeDiff = curr.elapsed - prev.elapsed;
+      if (timeDiff > 0) {
+        const speed = dist / timeDiff; // m/s
+        if (speed <= MAX_SPEED_MS) {
+          cleanPoints.push(curr);
+        }
+        continue;
+      }
+    }
+    // Fallback: flat distance filter
+    if (dist < 3000) {
+      cleanPoints.push(curr);
+    }
+  }
+
   useEffect(() => {
-    if (!mapRef.current || dedupedPoints.length < 2) return;
+    if (!mapRef.current || cleanPoints.length < 2) return;
 
     // Destroy previous map if exists
     if (mapInstance.current) {
@@ -58,16 +133,16 @@ export default function FlightMap({ points, className }: FlightMapProps) {
     }).addTo(map);
 
     // Build polyline
-    const latLngs: L.LatLng[] = dedupedPoints.map((p) => L.latLng(p.lat, p.lng));
+    const latLngs: L.LatLng[] = cleanPoints.map((p) => L.latLng(p.lat, p.lng));
 
     // Color gradient based on altitude
-    const maxAlt = Math.max(...dedupedPoints.map((p) => p.alt || 0));
-    const minAlt = Math.min(...dedupedPoints.filter(p => (p.alt || 0) > 0).map((p) => p.alt || 0));
+    const maxAlt = Math.max(...cleanPoints.map((p) => p.alt || 0));
+    const minAlt = Math.min(...cleanPoints.filter(p => (p.alt || 0) > 0).map((p) => p.alt || 0));
 
     // Draw segments with altitude coloring
-    if (maxAlt > minAlt && dedupedPoints.some(p => p.alt && p.alt > 0)) {
+    if (maxAlt > minAlt && cleanPoints.some(p => p.alt && p.alt > 0)) {
       for (let i = 0; i < latLngs.length - 1; i++) {
-        const alt = dedupedPoints[i].alt || minAlt;
+        const alt = cleanPoints[i].alt || minAlt;
         const ratio = Math.min(1, Math.max(0, (alt - minAlt) / (maxAlt - minAlt)));
         // Blue (low) → Red (high)
         const r = Math.round(ratio * 220);
@@ -130,7 +205,7 @@ export default function FlightMap({ points, className }: FlightMapProps) {
         mapInstance.current = null;
       }
     };
-  }, [dedupedPoints.length, expanded]);
+  }, [cleanPoints.length, expanded]);
 
   // Resize map when expanding
   useEffect(() => {
@@ -139,7 +214,7 @@ export default function FlightMap({ points, className }: FlightMapProps) {
     }
   }, [expanded]);
 
-  if (dedupedPoints.length < 2) {
+  if (cleanPoints.length < 2) {
     return (
       <div className={`bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-center text-slate-400 text-sm ${className || ""}`} style={{ height: 200 }}>
         <span>📍 Sin datos GPS para este vuelo</span>
@@ -148,15 +223,15 @@ export default function FlightMap({ points, className }: FlightMapProps) {
   }
 
   // GPS stats
-  const maxSpd = Math.max(...dedupedPoints.filter(p => p.spd).map(p => p.spd || 0));
-  const gpsMaxAlt = Math.max(...dedupedPoints.filter(p => p.alt && p.alt > 0).map(p => p.alt || 0));
+  const maxSpd = Math.max(...cleanPoints.filter(p => p.spd).map(p => p.spd || 0));
+  const gpsMaxAlt = Math.max(...cleanPoints.filter(p => p.alt && p.alt > 0).map(p => p.alt || 0));
 
   return (
     <div className={`relative ${className || ""}`}>
       {/* GPS Stats Bar */}
       <div className="flex items-center gap-4 px-3 py-1.5 bg-slate-800 text-white text-xs rounded-t-xl">
         <span className="font-semibold text-slate-300">📍 GPS Track</span>
-        <span>{dedupedPoints.length} pts</span>
+        <span>{cleanPoints.length} pts</span>
         {gpsMaxAlt > 0 && <span>⬆ {Math.round(gpsMaxAlt * 3.281)} ft</span>}
         {maxSpd > 0 && <span>🏃 {Math.round(maxSpd)} kts</span>}
         <div className="flex-1" />

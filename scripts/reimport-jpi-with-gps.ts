@@ -18,12 +18,13 @@ const JPI_DIR = path.join(__dirname2, "..", "Engine Analisis");
 const MIN_FLIGHT_DURATION = 900; // 15 minutes
 
 async function main() {
-  // Find all JPI files
+  // Find all JPI files, sort newest first (reverse alphabetical by date in filename)
   const files = fs.readdirSync(JPI_DIR)
     .filter(f => f.endsWith(".JPI") && !f.startsWith("Copia"))
-    .sort();
+    .sort()
+    .reverse();
 
-  console.log(`Found ${files.length} JPI files`);
+  console.log(`Found ${files.length} JPI files (processing newest first)`);
 
   // Delete existing data
   console.log("Deleting existing engine monitor data...");
