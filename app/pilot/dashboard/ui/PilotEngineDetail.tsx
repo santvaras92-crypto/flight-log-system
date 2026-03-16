@@ -7,7 +7,9 @@ import {
   LinearScale,
   PointElement,
   LineElement,
+  LineController,
   BarElement,
+  BarController,
   Title,
   Tooltip,
   Legend,
@@ -15,7 +17,10 @@ import {
 } from "chart.js";
 import annotationPlugin from "chartjs-plugin-annotation";
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler, annotationPlugin);
+ChartJS.register(
+  CategoryScale, LinearScale, PointElement, LineElement, LineController,
+  BarElement, BarController, Title, Tooltip, Legend, Filler, annotationPlugin
+);
 
 const FlightMap = dynamic(() => import("@/app/components/FlightMap"), {
   ssr: false,
