@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import PilotEngineDetail from "./PilotEngineDetail";
 
 type Flight = {
   id: number;
@@ -97,24 +98,11 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [showAllFlights, setShowAllFlights] = useState(false);
   const [expandedEngineId, setExpandedEngineId] = useState<number | null>(null);
-  const [engineData, setEngineData] = useState<any>(null);
-  const [engineLoading, setEngineLoading] = useState(false);
   const [cardOrder, setCardOrder] = useState<string[]>(defaultCardOrder);
   const [draggedCard, setDraggedCard] = useState<string | null>(null);
   const [isDragEnabled, setIsDragEnabled] = useState(false);
   const [touchStartTime, setTouchStartTime] = useState<number>(0);
   const [touchStartPos, setTouchStartPos] = useState<{x: number, y: number}>({x: 0, y: 0});
-
-  // Fetch engine data when expanded
-  useEffect(() => {
-    if (!expandedEngineId) { setEngineData(null); return; }
-    setEngineLoading(true);
-    fetch(`/api/engine-data?flightId=${expandedEngineId}`)
-      .then(r => r.json())
-      .then(d => setEngineData(d.flight))
-      .catch(() => setEngineData(null))
-      .finally(() => setEngineLoading(false));
-  }, [expandedEngineId]);
 
   // Load card order from localStorage
   useEffect(() => {
@@ -696,6 +684,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
   };
 
   return (
+    <>
     <div className="space-y-6">
       {/* Overview Cards - Same style as admin */}
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
@@ -763,14 +752,10 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setExpandedEngineId(expandedEngineId === flight.engineFlightId ? null : flight.engineFlightId);
+                          setExpandedEngineId(flight.engineFlightId);
                         }}
-                        className={`px-2 py-1 text-xs rounded-lg font-medium transition-colors ${
-                          expandedEngineId === flight.engineFlightId
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-blue-100 hover:bg-blue-200 text-blue-700'
-                        }`}
-                        title="Ver datos del motor"
+                        className="px-2 py-1 text-xs rounded-lg font-medium transition-colors bg-blue-100 hover:bg-blue-200 text-blue-700"
+                        title="Ver análisis completo del motor"
                       >
                         🔧
                       </button>
@@ -779,62 +764,6 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
                     )}
                   </td>
                 </tr>
-                {/* Expandable Engine Data Row */}
-                {expandedEngineId === flight.engineFlightId && flight.engineFlightId && (
-                  <tr>
-                    <td colSpan={8} className="px-0 py-0">
-                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-t border-b border-blue-200 px-4 py-3">
-                        {engineLoading ? (
-                          <div className="flex items-center justify-center py-4 gap-2">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                            <span className="text-xs text-blue-600">Cargando datos del motor...</span>
-                          </div>
-                        ) : engineData ? (
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="text-xs font-bold text-blue-800">🔧 Engine Monitor — Flight #{engineData.flightNumber}</span>
-                              <span className="text-[10px] text-blue-600">{engineData.readings?.length || 0} data points</span>
-                            </div>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-xs">
-                              <div className="bg-white/80 rounded-lg px-2 py-1.5 border border-blue-100">
-                                <div className="text-[10px] text-slate-500">Max EGT</div>
-                                <div className="font-bold text-slate-800 font-mono">{engineData.maxEGT?.toFixed(0) || '—'}°F</div>
-                              </div>
-                              <div className="bg-white/80 rounded-lg px-2 py-1.5 border border-blue-100">
-                                <div className="text-[10px] text-slate-500">Max CHT</div>
-                                <div className={`font-bold font-mono ${(engineData.maxCHT || 0) >= 430 ? 'text-red-600' : (engineData.maxCHT || 0) >= 400 ? 'text-amber-600' : 'text-slate-800'}`}>
-                                  {engineData.maxCHT?.toFixed(0) || '—'}°F
-                                </div>
-                              </div>
-                              <div className="bg-white/80 rounded-lg px-2 py-1.5 border border-blue-100">
-                                <div className="text-[10px] text-slate-500">Max Oil T</div>
-                                <div className={`font-bold font-mono ${(engineData.maxOilTemp || 0) >= 245 ? 'text-red-600' : 'text-slate-800'}`}>
-                                  {engineData.maxOilTemp?.toFixed(0) || '—'}°F
-                                </div>
-                              </div>
-                              <div className="bg-white/80 rounded-lg px-2 py-1.5 border border-blue-100">
-                                <div className="text-[10px] text-slate-500">Min Oil P</div>
-                                <div className={`font-bold font-mono ${(engineData.minOilPress || 999) < 25 ? 'text-red-600' : 'text-slate-800'}`}>
-                                  {engineData.minOilPress?.toFixed(0) || '—'} PSI
-                                </div>
-                              </div>
-                              <div className="bg-white/80 rounded-lg px-2 py-1.5 border border-blue-100">
-                                <div className="text-[10px] text-slate-500">Avg RPM</div>
-                                <div className="font-bold text-slate-800 font-mono">{engineData.avgRPM?.toFixed(0) || '—'}</div>
-                              </div>
-                              <div className="bg-white/80 rounded-lg px-2 py-1.5 border border-blue-100">
-                                <div className="text-[10px] text-slate-500">Avg FF</div>
-                                <div className="font-bold text-slate-800 font-mono">{engineData.avgFF?.toFixed(1) || '—'} GPH</div>
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="text-xs text-slate-500 text-center py-2">No se pudieron cargar los datos del motor.</p>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                )}
                 </React.Fragment>
               ))}
               {displayedFlights.length === 0 && (
@@ -997,5 +926,14 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
         </div>
       </div>
     </div>
+
+    {/* Engine Analysis Full Modal */}
+    {expandedEngineId && (
+      <PilotEngineDetail
+        engineFlightId={expandedEngineId}
+        onClose={() => setExpandedEngineId(null)}
+      />
+    )}
+    </>
   );
 }
