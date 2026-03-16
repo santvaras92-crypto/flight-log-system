@@ -110,7 +110,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
   const [pilotSubTab, setPilotSubTab] = useState<"accounts" | "directory" | "deposits">("accounts");
   const [financeSubTab, setFinanceSubTab] = useState<"movements" | "costs">("movements");
   const [mxSubTab, setMxSubTab] = useState<"components" | "engine">("components");
-  const [pendingEngineFlightId, setPendingEngineFlightId] = useState<number | null>(null);
+  const [pendingEngineFlightIds, setPendingEngineFlightIds] = useState<number[] | null>(null);
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [backupLoading, setBackupLoading] = useState(false);
   const [backupMessage, setBackupMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -1074,8 +1074,8 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             fuelByCode={initialData.fuelByCode}
             fuelDetailsByCode={initialData.fuelDetailsByCode}
             csvPilotNames={csvPilotNames}
-            onNavigateToEngine={(engineFlightId) => {
-              setPendingEngineFlightId(engineFlightId);
+            onNavigateToEngine={(engineFlightIds) => {
+              setPendingEngineFlightIds(engineFlightIds);
               setTab("maintenance");
               setMxSubTab("engine");
             }}
@@ -1243,7 +1243,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             </button>
           </div>
           {mxSubTab === "components" && <MaintenanceTable components={initialData.components} aircraft={initialData.aircraft} aircraftYearlyStats={initialData.aircraftYearlyStats || []} overviewMetrics={overviewMetrics} />}
-          {mxSubTab === "engine" && <EngineAnalysis initialFlightId={pendingEngineFlightId} onFlightOpened={() => setPendingEngineFlightId(null)} />}
+          {mxSubTab === "engine" && <EngineAnalysis initialFlightIds={pendingEngineFlightIds} onFlightOpened={() => setPendingEngineFlightIds(null)} />}
         </>
       )}
       {tab === "finance" && (
@@ -2024,7 +2024,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
   fuelByCode?: Record<string, number>;
   fuelDetailsByCode?: Record<string, { fecha: string; litros: number; monto: number }[]>;
   csvPilotNames?: Record<string, string>;
-  onNavigateToEngine?: (engineFlightId: number) => void;
+  onNavigateToEngine?: (engineFlightIds: number[]) => void;
 }) {
   const [drafts, setDrafts] = useState<Record<number, any>>({});
   const [saving, setSaving] = useState(false);
@@ -2607,7 +2607,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                   <td className="px-2 py-2 whitespace-nowrap text-center">
                     {f.engineFlightIds && f.engineFlightIds.length > 0 ? (
                       <button
-                        onClick={() => onNavigateToEngine?.(f.engineFlightIds[0])}
+                        onClick={() => onNavigateToEngine?.(f.engineFlightIds)}
                         className="px-2 py-1 text-[10px] sm:text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg font-medium transition-colors"
                         title={`Ver Engine Analysis${f.engineFlightIds.length > 1 ? ` (${f.engineFlightIds.length} tramos)` : ''}`}
                       >

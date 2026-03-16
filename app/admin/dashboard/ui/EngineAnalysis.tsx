@@ -95,7 +95,7 @@ function formatDate(d: string) {
   return new Date(d).toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export default function EngineAnalysis({ initialFlightId, onFlightOpened }: { initialFlightId?: number | null; onFlightOpened?: () => void } = {}) {
+export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { initialFlightIds?: number[] | null; onFlightOpened?: () => void } = {}) {
   const [flights, setFlights] = useState<FlightSummary[]>([]);
   const [selectedFlight, setSelectedFlight] = useState<FlightDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -104,6 +104,10 @@ export default function EngineAnalysis({ initialFlightId, onFlightOpened }: { in
   const [uploadMsg, setUploadMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [view, setView] = useState<"list" | "detail">("list");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Multi-tramo state
+  const [tramoIds, setTramoIds] = useState<number[]>([]);
+  const [activeTramo, setActiveTramo] = useState(0);
 
   // Chart refs
   const egtChartRef = useRef<HTMLCanvasElement>(null);
@@ -140,11 +144,13 @@ export default function EngineAnalysis({ initialFlightId, onFlightOpened }: { in
 
   // Auto-open a specific flight if navigated from FlightsTable
   useEffect(() => {
-    if (initialFlightId && !loadingDetail) {
-      loadFlightDetail(initialFlightId);
+    if (initialFlightIds && initialFlightIds.length > 0 && !loadingDetail) {
+      setTramoIds(initialFlightIds);
+      setActiveTramo(0);
+      loadFlightDetail(initialFlightIds[0]);
       onFlightOpened?.();
     }
-  }, [initialFlightId]);
+  }, [initialFlightIds]);
 
   // Load flight detail
   const loadFlightDetail = useCallback(async (id: number) => {
@@ -623,7 +629,7 @@ export default function EngineAnalysis({ initialFlightId, onFlightOpened }: { in
         <div className="flex items-center gap-2">
           {view === "detail" && (
             <button
-              onClick={() => { setView("list"); setSelectedFlight(null); }}
+              onClick={() => { setView("list"); setSelectedFlight(null); setTramoIds([]); setActiveTramo(0); }}
               className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-medium transition-colors"
             >
               ← Back to Fleet
@@ -809,7 +815,7 @@ export default function EngineAnalysis({ initialFlightId, onFlightOpened }: { in
                     return (
                       <tr
                         key={f.id}
-                        onClick={() => loadFlightDetail(f.id)}
+                        onClick={() => { setTramoIds([f.id]); setActiveTramo(0); loadFlightDetail(f.id); }}
                         className="border-t border-slate-100 hover:bg-blue-50/50 cursor-pointer transition-colors"
                       >
                         <td className="px-3 py-2 font-mono text-slate-500">{f.flightNumber}</td>
@@ -884,6 +890,36 @@ export default function EngineAnalysis({ initialFlightId, onFlightOpened }: { in
                   )}
                 </div>
               </div>
+
+              {/* Tramo Tabs (multi-engine flights) */}
+              {tramoIds.length > 1 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-500">Tramos:</span>
+                  <div className="flex gap-1">
+                    {tramoIds.map((tid, idx) => (
+                      <button
+                        key={tid}
+                        onClick={() => {
+                          if (idx !== activeTramo) {
+                            setActiveTramo(idx);
+                            loadFlightDetail(tid);
+                          }
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                          idx === activeTramo
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        Tramo {idx + 1}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="text-[10px] text-slate-400 ml-1">
+                    ({tramoIds.length} registros de motor para este vuelo)
+                  </span>
+                </div>
+              )}
 
               {/* Linked Flight Record Info */}
               {selectedFlight.linkedFlight && (
