@@ -441,7 +441,6 @@ async function autoLinkEngineToFlight(engineFlightId: number, flightDate: Date, 
   dayAfter.setDate(dayAfter.getDate() + 1);
   dayAfter.setHours(23, 59, 59, 999);
 
-  // Find flights in date window that don't already have ALL their engine data linked
   const candidates = await prisma.flight.findMany({
     where: {
       fecha: { gte: dayBefore, lte: dayAfter },
@@ -451,21 +450,48 @@ async function autoLinkEngineToFlight(engineFlightId: number, flightDate: Date, 
 
   if (candidates.length === 0) return;
 
-  // Find best match by duration proximity (considering sum of already-linked engine durations)
+  // Strategy: find best match with two passes
+  // Pass A: exact match — (existing engine hours + this) ≈ diff_hobbs (within 0.5h)
+  // Pass B: partial match — this engine is shorter than diff_hobbs, no existing links yet
+  //         (allows the first tramo of a multi-tramo flight to link)
+
   let best: typeof candidates[0] | null = null;
   let bestDiff = Infinity;
+  let bestPartial: typeof candidates[0] | null = null;
+  let bestPartialDiff = Infinity;
+
   for (const c of candidates) {
     const flightHours = Number(c.diff_hobbs) || 0;
+    if (flightHours <= 0) continue;
     const existingEngineHours = c.EngineMonitorFlights.reduce((s, e) => s + e.durationSec / 3600, 0);
     const totalEngineHours = existingEngineHours + engineHours;
     const diff = Math.abs(flightHours - totalEngineHours);
+
+    // Pass A: total engine time ≈ flight time
     if (diff < bestDiff) { bestDiff = diff; best = c; }
+
+    // Pass B: if no existing engine links AND this engine is a plausible fraction
+    //         (engineHours < flightHours, and engineHours > 20% of flightHours)
+    if (c.EngineMonitorFlights.length === 0 && engineHours < flightHours && engineHours > flightHours * 0.2) {
+      const partialDiff = flightHours - engineHours; // how much is "missing"
+      if (partialDiff < bestPartialDiff) { bestPartialDiff = partialDiff; bestPartial = c; }
+    }
   }
 
+  // Prefer exact match
   if (best && bestDiff <= 0.5) {
     await prisma.engineMonitorFlight.update({
       where: { id: engineFlightId },
       data: { linkedFlightId: best.id },
+    });
+    return;
+  }
+
+  // Fall back to partial match (first tramo of a multi-tramo flight)
+  if (bestPartial && bestPartialDiff <= 2.0) {
+    await prisma.engineMonitorFlight.update({
+      where: { id: engineFlightId },
+      data: { linkedFlightId: bestPartial.id },
     });
   }
 }
