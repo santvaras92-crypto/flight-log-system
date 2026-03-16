@@ -380,7 +380,7 @@ export default function EngineAnalysis({ initialFlightId, onFlightOpened }: { in
     }
 
     return () => { chartInstances.current.forEach(c => c.destroy()); chartInstances.current = []; };
-  }, [selectedFlight]);
+  }, [selectedFlight, loadingDetail]);
 
   // ============ TREND CHARTS (Fleet Overview) ============
   // Sorted flights (memoized for range slider)

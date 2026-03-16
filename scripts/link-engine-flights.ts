@@ -22,6 +22,9 @@
 
 import { prisma } from "../lib/prisma";
 
+// Engine records shorter than this are considered engine starts/taxis, not real tramos
+const MIN_DURATION_SEC = 300; // 5 minutes
+
 // ── Helpers ──────────────────────────────────────────────────────
 
 type EngineRecord = {
@@ -106,6 +109,14 @@ async function main() {
 
   let unlinked = allEngine.filter(ef => !ef.linkedFlightId);
   console.log(`🔍 Unlinked: ${unlinked.length}`);
+
+  // Filter out junk records (engine starts, taxis — too short to be real tramos)
+  const junkCount = unlinked.filter(ef => ef.durationSec < MIN_DURATION_SEC).length;
+  unlinked = unlinked.filter(ef => ef.durationSec >= MIN_DURATION_SEC);
+  if (junkCount > 0) {
+    console.log(`🗑️  Skipping ${junkCount} junk records (< ${MIN_DURATION_SEC / 60} min)`);
+  }
+  console.log(`🔍 Eligible for linking: ${unlinked.length}`);
 
   if (unlinked.length === 0) {
     console.log("✅ All engine flights are already linked!");

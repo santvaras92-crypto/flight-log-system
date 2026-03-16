@@ -429,7 +429,12 @@ async function handleCSVUpload(file: File) {
 }
 
 // ─── Auto-link helper ──────────────────────────────────────────
+const MIN_DURATION_SEC = 300; // 5 min — skip engine starts/taxis
+
 async function autoLinkEngineToFlight(engineFlightId: number, flightDate: Date, durationSec: number) {
+  // Skip junk records (engine starts, taxis — too short to be real tramos)
+  if (durationSec < MIN_DURATION_SEC) return;
+
   const engineHours = durationSec / 3600;
 
   // Search ±1 day window (timezone: Chile UTC-3/4, Flight.fecha stored at noon local)
