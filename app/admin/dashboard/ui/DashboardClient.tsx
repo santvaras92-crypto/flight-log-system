@@ -110,6 +110,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
   const [pilotSubTab, setPilotSubTab] = useState<"accounts" | "directory" | "deposits">("accounts");
   const [financeSubTab, setFinanceSubTab] = useState<"movements" | "costs">("movements");
   const [mxSubTab, setMxSubTab] = useState<"components" | "engine">("components");
+  const [pendingEngineFlightId, setPendingEngineFlightId] = useState<number | null>(null);
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [backupLoading, setBackupLoading] = useState(false);
   const [backupMessage, setBackupMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -1073,6 +1074,11 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             fuelByCode={initialData.fuelByCode}
             fuelDetailsByCode={initialData.fuelDetailsByCode}
             csvPilotNames={csvPilotNames}
+            onNavigateToEngine={(engineFlightId) => {
+              setPendingEngineFlightId(engineFlightId);
+              setTab("maintenance");
+              setMxSubTab("engine");
+            }}
           />
           <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 bg-slate-50 border-2 border-slate-200 rounded-b-2xl mt-2">
             <button
@@ -1237,7 +1243,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             </button>
           </div>
           {mxSubTab === "components" && <MaintenanceTable components={initialData.components} aircraft={initialData.aircraft} aircraftYearlyStats={initialData.aircraftYearlyStats || []} overviewMetrics={overviewMetrics} />}
-          {mxSubTab === "engine" && <EngineAnalysis />}
+          {mxSubTab === "engine" && <EngineAnalysis initialFlightId={pendingEngineFlightId} onFlightOpened={() => setPendingEngineFlightId(null)} />}
         </>
       )}
       {tab === "finance" && (
@@ -2007,7 +2013,7 @@ function FuelForecastChart({
   );
 }
 
-function FlightsTable({ flights, allFlightsComplete, users, editMode = false, clientOptions, depositsByCode, depositsDetailsByCode, fuelByCode, fuelDetailsByCode, csvPilotNames }: {
+function FlightsTable({ flights, allFlightsComplete, users, editMode = false, clientOptions, depositsByCode, depositsDetailsByCode, fuelByCode, fuelDetailsByCode, csvPilotNames, onNavigateToEngine }: {
   flights: any[];
   allFlightsComplete?: any[];
   users: any[];
@@ -2018,6 +2024,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
   fuelByCode?: Record<string, number>;
   fuelDetailsByCode?: Record<string, { fecha: string; litros: number; monto: number }[]>;
   csvPilotNames?: Record<string, string>;
+  onNavigateToEngine?: (engineFlightId: number) => void;
 }) {
   const [drafts, setDrafts] = useState<Record<number, any>>({});
   const [saving, setSaving] = useState(false);
@@ -2423,6 +2430,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
               <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Detalle</th>
               <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Año</th>
               <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Mes</th>
+              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-blue-600 uppercase tracking-wider whitespace-nowrap" title="Engine Monitor Analysis">🔧</th>
               <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-red-600 uppercase tracking-wider whitespace-nowrap">🗑️</th>
             </tr>
           </thead>
@@ -2593,6 +2601,21 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                   {/* Mes */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 text-center">
                     {mes}
+                  </td>
+
+                  {/* Engine Monitor Link */}
+                  <td className="px-2 py-2 whitespace-nowrap text-center">
+                    {f.engineFlightId ? (
+                      <button
+                        onClick={() => onNavigateToEngine?.(f.engineFlightId)}
+                        className="px-2 py-1 text-[10px] sm:text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg font-medium transition-colors"
+                        title="Ver Engine Analysis"
+                      >
+                        🔧
+                      </button>
+                    ) : (
+                      <span className="text-slate-300 text-[10px]">—</span>
+                    )}
                   </td>
 
                   {/* Delete */}

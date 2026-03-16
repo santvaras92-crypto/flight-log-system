@@ -67,6 +67,7 @@ export default async function PilotDashboardPage() {
       pilotoId: true,
       aerodromoSalida: true,
       aerodromoDestino: true,
+      engineFlightId: true,
     }
   });
 

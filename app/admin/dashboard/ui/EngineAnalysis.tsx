@@ -69,6 +69,20 @@ interface FlightDetail {
   engineModel: string;
   engineSerial: string;
   readings: Reading[];
+  linkedFlight?: {
+    id: number;
+    fecha: string;
+    diffHobbs: number | null;
+    diffTach: number | null;
+    costo: number | null;
+    piloto: string | null;
+    copiloto: string | null;
+    cliente: string | null;
+    instructor: string | null;
+    detalle: string | null;
+    aerodromoSalida: string | null;
+    aerodromoDestino: string | null;
+  } | null;
 }
 
 function formatDuration(sec: number) {
@@ -81,7 +95,7 @@ function formatDate(d: string) {
   return new Date(d).toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export default function EngineAnalysis() {
+export default function EngineAnalysis({ initialFlightId, onFlightOpened }: { initialFlightId?: number | null; onFlightOpened?: () => void } = {}) {
   const [flights, setFlights] = useState<FlightSummary[]>([]);
   const [selectedFlight, setSelectedFlight] = useState<FlightDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -123,6 +137,14 @@ export default function EngineAnalysis() {
   }, []);
 
   useEffect(() => { loadFlights(); }, [loadFlights]);
+
+  // Auto-open a specific flight if navigated from FlightsTable
+  useEffect(() => {
+    if (initialFlightId && !loadingDetail) {
+      loadFlightDetail(initialFlightId);
+      onFlightOpened?.();
+    }
+  }, [initialFlightId]);
 
   // Load flight detail
   const loadFlightDetail = useCallback(async (id: number) => {
@@ -862,6 +884,40 @@ export default function EngineAnalysis() {
                   )}
                 </div>
               </div>
+
+              {/* Linked Flight Record Info */}
+              {selectedFlight.linkedFlight && (
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-3">
+                  <div className="flex flex-wrap gap-3 items-center text-xs">
+                    <span className="font-bold text-blue-700 flex items-center gap-1">
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.172 13.828a4 4 0 015.656 0l4-4a4 4 0 00-5.656-5.656l-1.102 1.101" /></svg>
+                      Flight Log #{selectedFlight.linkedFlight.id}
+                    </span>
+                    {selectedFlight.linkedFlight.piloto && (
+                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-700">✈ {selectedFlight.linkedFlight.piloto}</span>
+                    )}
+                    {selectedFlight.linkedFlight.copiloto && (
+                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-600">+{selectedFlight.linkedFlight.copiloto}</span>
+                    )}
+                    {selectedFlight.linkedFlight.diffHobbs != null && (
+                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-700 font-mono">{selectedFlight.linkedFlight.diffHobbs.toFixed(1)}h hobbs</span>
+                    )}
+                    {selectedFlight.linkedFlight.costo != null && (
+                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-green-700 font-mono">${selectedFlight.linkedFlight.costo.toLocaleString('es-CL')}</span>
+                    )}
+                    {(selectedFlight.linkedFlight.aerodromoSalida || selectedFlight.linkedFlight.aerodromoDestino) && (
+                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-600">
+                        {selectedFlight.linkedFlight.aerodromoSalida || '?'} → {selectedFlight.linkedFlight.aerodromoDestino || '?'}
+                      </span>
+                    )}
+                    {selectedFlight.linkedFlight.detalle && (
+                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-500 italic truncate max-w-[200px]" title={selectedFlight.linkedFlight.detalle}>
+                        {selectedFlight.linkedFlight.detalle}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Per-Cylinder Summary Table */}
               {detailStats && (

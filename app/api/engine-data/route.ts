@@ -29,7 +29,16 @@ export async function GET(req: NextRequest) {
       // Return full readings for a specific flight
       const flight = await prisma.engineMonitorFlight.findUnique({
         where: { id: parseInt(flightId) },
-        include: { readings: { orderBy: { elapsedSec: "asc" } } },
+        include: {
+          readings: { orderBy: { elapsedSec: "asc" } },
+          Flight: {
+            select: {
+              id: true, fecha: true, diff_hobbs: true, diff_tach: true,
+              costo: true, piloto_raw: true, copiloto: true, cliente: true,
+              instructor: true, detalle: true, aerodromoSalida: true, aerodromoDestino: true,
+            },
+          },
+        },
       });
       if (!flight) {
         return NextResponse.json({ error: "Flight not found" }, { status: 404 });
@@ -55,7 +64,23 @@ export async function GET(req: NextRequest) {
           gpsAlt: toNum(r.gpsAlt), groundSpd: toNum(r.groundSpd),
         })),
       };
-      return NextResponse.json({ flight: serialized, limits: ENGINE_LIMITS });
+      // Add linked Flight info if available
+      const linkedFlight = flight.Flight ? {
+        id: flight.Flight.id,
+        fecha: flight.Flight.fecha,
+        diffHobbs: toNum(flight.Flight.diff_hobbs),
+        diffTach: toNum(flight.Flight.diff_tach),
+        costo: toNum(flight.Flight.costo),
+        piloto: flight.Flight.piloto_raw,
+        copiloto: flight.Flight.copiloto,
+        cliente: flight.Flight.cliente,
+        instructor: flight.Flight.instructor,
+        detalle: flight.Flight.detalle,
+        aerodromoSalida: flight.Flight.aerodromoSalida,
+        aerodromoDestino: flight.Flight.aerodromoDestino,
+      } : null;
+
+      return NextResponse.json({ flight: { ...serialized, linkedFlight }, limits: ENGINE_LIMITS });
     }
 
     // List all flights (summary only, no readings)
@@ -216,6 +241,13 @@ async function handleJPIUpload(file: File) {
       },
     });
 
+    // Auto-link to Flight record by date + duration proximity
+    try {
+      await autoLinkEngineToFlight(flight.id, df.flightDate, df.durationSec);
+    } catch (e) {
+      // Non-critical — linking can be done later via batch script
+    }
+
     importedCount++;
     results.push({
       flightNumber: df.flightNumber,
@@ -347,6 +379,13 @@ async function handleCSVUpload(file: File) {
     },
   });
 
+  // Auto-link to Flight record by date + duration proximity
+  try {
+    await autoLinkEngineToFlight(flight.id, flightDate, durationSec);
+  } catch (e) {
+    // Non-critical
+  }
+
   return NextResponse.json({
     success: true,
     source: "csv",
@@ -355,6 +394,45 @@ async function handleCSVUpload(file: File) {
     readingsCount: readings.length,
     summary: { maxEGT, maxCHT, maxOilTemp, minOilPress, avgRPM: avgRPM?.toFixed(0), avgFF: avgFF?.toFixed(1) },
   });
+}
+
+// ─── Auto-link helper ──────────────────────────────────────────
+async function autoLinkEngineToFlight(engineFlightId: number, flightDate: Date, durationSec: number) {
+  const engineHours = durationSec / 3600;
+
+  // Search ±1 day window (timezone: Chile UTC-3/4, Flight.fecha stored at noon local)
+  const dayBefore = new Date(flightDate);
+  dayBefore.setDate(dayBefore.getDate() - 1);
+  dayBefore.setHours(0, 0, 0, 0);
+
+  const dayAfter = new Date(flightDate);
+  dayAfter.setDate(dayAfter.getDate() + 1);
+  dayAfter.setHours(23, 59, 59, 999);
+
+  const candidates = await prisma.flight.findMany({
+    where: {
+      fecha: { gte: dayBefore, lte: dayAfter },
+      engineFlightId: null,
+    },
+    select: { id: true, diff_hobbs: true },
+  });
+
+  if (candidates.length === 0) return;
+
+  // Find best match by duration proximity
+  let best: typeof candidates[0] | null = null;
+  let bestDiff = Infinity;
+  for (const c of candidates) {
+    const diff = Math.abs((Number(c.diff_hobbs) || 0) - engineHours);
+    if (diff < bestDiff) { bestDiff = diff; best = c; }
+  }
+
+  if (best && bestDiff <= 0.5) {
+    await prisma.flight.update({
+      where: { id: best.id },
+      data: { engineFlightId: engineFlightId },
+    });
+  }
 }
 
 // DELETE — remove a flight and its readings
