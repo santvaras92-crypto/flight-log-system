@@ -1,7 +1,19 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import PilotEngineDetail from "./PilotEngineDetail";
+import dynamic from "next/dynamic";
+
+const PilotEngineDetail = dynamic(() => import("./PilotEngineDetail"), {
+  ssr: false,
+  loading: () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl p-8 shadow-2xl flex items-center gap-3">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+        <span className="text-slate-600">Cargando análisis del motor...</span>
+      </div>
+    </div>
+  ),
+});
 
 type Flight = {
   id: number;
