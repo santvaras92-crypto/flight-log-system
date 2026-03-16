@@ -95,14 +95,16 @@ function formatDate(d: string) {
 }
 
 export default function PilotEngineDetail({
-  engineFlightId,
+  engineFlightIds,
   onClose,
 }: {
-  engineFlightId: number;
+  engineFlightIds: number[];
   onClose: () => void;
 }) {
   const [flight, setFlight] = useState<FlightDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTramo, setActiveTramo] = useState(0);
+  const multiTramo = engineFlightIds.length > 1;
 
   // Chart refs
   const egtChartRef = useRef<HTMLCanvasElement>(null);
@@ -111,15 +113,17 @@ export default function PilotEngineDetail({
   const powerChartRef = useRef<HTMLCanvasElement>(null);
   const chartInstances = useRef<ChartJS[]>([]);
 
-  // Fetch full flight detail
+  // Fetch full flight detail for active tramo
   useEffect(() => {
+    const currentId = engineFlightIds[activeTramo];
+    if (!currentId) return;
     setLoading(true);
-    fetch(`/api/engine-data?flightId=${engineFlightId}`)
+    fetch(`/api/engine-data?flightId=${currentId}`)
       .then(r => r.json())
       .then(d => setFlight(d.flight))
       .catch(() => setFlight(null))
       .finally(() => setLoading(false));
-  }, [engineFlightId]);
+  }, [engineFlightIds, activeTramo]);
 
   // Close on Escape
   useEffect(() => {
@@ -356,6 +360,7 @@ export default function PilotEngineDetail({
           <div>
             <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
               🔧 Engine Monitor — JPI EDM-830
+              {multiTramo && <span className="text-xs font-normal text-slate-500 bg-blue-100 text-blue-700 rounded-full px-2 py-0.5 ml-1">{engineFlightIds.length} tramos</span>}
             </h2>
             <p className="text-[11px] text-slate-500 mt-0.5">
               Lycoming O-320-D2J · S/N RL-7662-39E · CC-AQI
@@ -371,6 +376,25 @@ export default function PilotEngineDetail({
             </svg>
           </button>
         </div>
+
+        {/* Tramo Tabs */}
+        {multiTramo && (
+          <div className="flex items-center gap-1 px-4 pt-3 pb-1">
+            {engineFlightIds.map((id, idx) => (
+              <button
+                key={id}
+                onClick={() => setActiveTramo(idx)}
+                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  activeTramo === idx
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                Tramo {idx + 1}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Content */}
         <div className="p-4 space-y-4">

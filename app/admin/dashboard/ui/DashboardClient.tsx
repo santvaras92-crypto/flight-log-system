@@ -2605,13 +2605,13 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
 
                   {/* Engine Monitor Link */}
                   <td className="px-2 py-2 whitespace-nowrap text-center">
-                    {f.engineFlightId ? (
+                    {f.engineFlightIds && f.engineFlightIds.length > 0 ? (
                       <button
-                        onClick={() => onNavigateToEngine?.(f.engineFlightId)}
+                        onClick={() => onNavigateToEngine?.(f.engineFlightIds[0])}
                         className="px-2 py-1 text-[10px] sm:text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg font-medium transition-colors"
-                        title="Ver Engine Analysis"
+                        title={`Ver Engine Analysis${f.engineFlightIds.length > 1 ? ` (${f.engineFlightIds.length} tramos)` : ''}`}
                       >
-                        🔧
+                        🔧{f.engineFlightIds.length > 1 ? ` ${f.engineFlightIds.length}` : ''}
                       </button>
                     ) : (
                       <span className="text-slate-300 text-[10px]">—</span>

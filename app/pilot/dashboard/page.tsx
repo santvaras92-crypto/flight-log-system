@@ -67,7 +67,7 @@ export default async function PilotDashboardPage() {
       pilotoId: true,
       aerodromoSalida: true,
       aerodromoDestino: true,
-      engineFlightId: true,
+      EngineMonitorFlights: { select: { id: true } },
     }
   });
 
@@ -439,6 +439,8 @@ export default async function PilotDashboardPage() {
       costo: Number(f.costo),
       tarifa: f.tarifa ? Number(f.tarifa) : null,
       instructor_rate: f.instructor_rate ? Number(f.instructor_rate) : null,
+      engineFlightIds: f.EngineMonitorFlights.map(e => e.id),
+      EngineMonitorFlights: undefined,
     })),
     deposits: {
       db: pilotDeposits.map(d => ({

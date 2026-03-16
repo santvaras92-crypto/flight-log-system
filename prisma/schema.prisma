@@ -78,11 +78,10 @@ model Flight {
   aerodromoDestino String?
   aerodromoSalida  String?
   aprobado         Boolean           @default(false)
-  engineFlightId   Int?              @unique
   Aircraft         Aircraft          @relation(fields: [aircraftId], references: [matricula])
   User             User?             @relation(fields: [pilotoId], references: [id])
   FlightSubmission FlightSubmission? @relation(fields: [submissionId], references: [id])
-  EngineMonitorFlight EngineMonitorFlight? @relation(fields: [engineFlightId], references: [id])
+  EngineMonitorFlights EngineMonitorFlight[]
   Transaction      Transaction?
 }
 
@@ -248,11 +247,13 @@ model EngineMonitorFlight {
   longitude     Decimal?
   sourceFile    String?
   createdAt     DateTime               @default(now())
+  linkedFlightId Int?
   readings      EngineMonitorReading[]
-  Flight        Flight?
+  LinkedFlight  Flight?                @relation(fields: [linkedFlightId], references: [id])
 
   @@unique([flightNumber, flightDate])
   @@index([flightDate])
+  @@index([linkedFlightId])
 }
 
 model EngineMonitorReading {

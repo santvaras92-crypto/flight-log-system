@@ -34,7 +34,7 @@ type Flight = {
   aircraftId: string | null;
   piloto_raw: string | null;
   pilotoId: number | null;
-  engineFlightId: number | null;
+  engineFlightIds: number[];
 };
 
 type PilotData = {
@@ -109,7 +109,7 @@ const defaultCardOrder = ['totalHours', 'totalFlights', 'thisMonth', 'avgFlightT
 export default function PilotDashboardClient({ data }: { data: PilotData }) {
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [showAllFlights, setShowAllFlights] = useState(false);
-  const [expandedEngineId, setExpandedEngineId] = useState<number | null>(null);
+  const [expandedEngineIds, setExpandedEngineIds] = useState<number[] | null>(null);
   const [cardOrder, setCardOrder] = useState<string[]>(defaultCardOrder);
   const [draggedCard, setDraggedCard] = useState<string | null>(null);
   const [isDragEnabled, setIsDragEnabled] = useState(false);
@@ -760,16 +760,16 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
                     {flight.detalle || '-'}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    {flight.engineFlightId ? (
+                    {flight.engineFlightIds.length > 0 ? (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setExpandedEngineId(flight.engineFlightId);
+                          setExpandedEngineIds(flight.engineFlightIds);
                         }}
                         className="px-2 py-1 text-xs rounded-lg font-medium transition-colors bg-blue-100 hover:bg-blue-200 text-blue-700"
-                        title="Ver análisis completo del motor"
+                        title={`Ver análisis completo del motor${flight.engineFlightIds.length > 1 ? ` (${flight.engineFlightIds.length} tramos)` : ''}`}
                       >
-                        🔧
+                        🔧{flight.engineFlightIds.length > 1 ? ` ${flight.engineFlightIds.length}` : ''}
                       </button>
                     ) : (
                       <span className="text-slate-300 text-xs">—</span>
@@ -940,10 +940,10 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
     </div>
 
     {/* Engine Analysis Full Modal */}
-    {expandedEngineId && (
+    {expandedEngineIds && (
       <PilotEngineDetail
-        engineFlightId={expandedEngineId}
-        onClose={() => setExpandedEngineId(null)}
+        engineFlightIds={expandedEngineIds}
+        onClose={() => setExpandedEngineIds(null)}
       />
     )}
     </>

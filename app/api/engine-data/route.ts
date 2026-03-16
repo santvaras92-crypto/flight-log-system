@@ -24,14 +24,46 @@ export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
     const flightId = url.searchParams.get("flightId");
+    const byFlightLogId = url.searchParams.get("byFlightLogId");
+
+    // Return all engine records linked to a Flight.id (1:N)
+    if (byFlightLogId) {
+      const engineFlights = await prisma.engineMonitorFlight.findMany({
+        where: { linkedFlightId: parseInt(byFlightLogId) },
+        orderBy: { flightNumber: "asc" },
+        select: {
+          id: true,
+          flightNumber: true,
+          flightDate: true,
+          durationSec: true,
+          maxEGT: true,
+          maxCHT: true,
+          maxOilTemp: true,
+          minOilPress: true,
+          avgRPM: true,
+          avgFF: true,
+        },
+      });
+      return NextResponse.json({
+        engineFlights: engineFlights.map(f => ({
+          ...f,
+          maxEGT: toNum(f.maxEGT),
+          maxCHT: toNum(f.maxCHT),
+          maxOilTemp: toNum(f.maxOilTemp),
+          minOilPress: toNum(f.minOilPress),
+          avgRPM: toNum(f.avgRPM),
+          avgFF: toNum(f.avgFF),
+        })),
+      });
+    }
 
     if (flightId) {
-      // Return full readings for a specific flight
+      // Return full readings for a specific engine flight
       const flight = await prisma.engineMonitorFlight.findUnique({
         where: { id: parseInt(flightId) },
         include: {
           readings: { orderBy: { elapsedSec: "asc" } },
-          Flight: {
+          LinkedFlight: {
             select: {
               id: true, fecha: true, diff_hobbs: true, diff_tach: true,
               costo: true, piloto_raw: true, copiloto: true, cliente: true,
@@ -65,19 +97,19 @@ export async function GET(req: NextRequest) {
         })),
       };
       // Add linked Flight info if available
-      const linkedFlight = flight.Flight ? {
-        id: flight.Flight.id,
-        fecha: flight.Flight.fecha,
-        diffHobbs: toNum(flight.Flight.diff_hobbs),
-        diffTach: toNum(flight.Flight.diff_tach),
-        costo: toNum(flight.Flight.costo),
-        piloto: flight.Flight.piloto_raw,
-        copiloto: flight.Flight.copiloto,
-        cliente: flight.Flight.cliente,
-        instructor: flight.Flight.instructor,
-        detalle: flight.Flight.detalle,
-        aerodromoSalida: flight.Flight.aerodromoSalida,
-        aerodromoDestino: flight.Flight.aerodromoDestino,
+      const linkedFlight = flight.LinkedFlight ? {
+        id: flight.LinkedFlight.id,
+        fecha: flight.LinkedFlight.fecha,
+        diffHobbs: toNum(flight.LinkedFlight.diff_hobbs),
+        diffTach: toNum(flight.LinkedFlight.diff_tach),
+        costo: toNum(flight.LinkedFlight.costo),
+        piloto: flight.LinkedFlight.piloto_raw,
+        copiloto: flight.LinkedFlight.copiloto,
+        cliente: flight.LinkedFlight.cliente,
+        instructor: flight.LinkedFlight.instructor,
+        detalle: flight.LinkedFlight.detalle,
+        aerodromoSalida: flight.LinkedFlight.aerodromoSalida,
+        aerodromoDestino: flight.LinkedFlight.aerodromoDestino,
       } : null;
 
       return NextResponse.json({ flight: { ...serialized, linkedFlight }, limits: ENGINE_LIMITS });
@@ -409,28 +441,31 @@ async function autoLinkEngineToFlight(engineFlightId: number, flightDate: Date, 
   dayAfter.setDate(dayAfter.getDate() + 1);
   dayAfter.setHours(23, 59, 59, 999);
 
+  // Find flights in date window that don't already have ALL their engine data linked
   const candidates = await prisma.flight.findMany({
     where: {
       fecha: { gte: dayBefore, lte: dayAfter },
-      engineFlightId: null,
     },
-    select: { id: true, diff_hobbs: true },
+    select: { id: true, diff_hobbs: true, EngineMonitorFlights: { select: { id: true, durationSec: true } } },
   });
 
   if (candidates.length === 0) return;
 
-  // Find best match by duration proximity
+  // Find best match by duration proximity (considering sum of already-linked engine durations)
   let best: typeof candidates[0] | null = null;
   let bestDiff = Infinity;
   for (const c of candidates) {
-    const diff = Math.abs((Number(c.diff_hobbs) || 0) - engineHours);
+    const flightHours = Number(c.diff_hobbs) || 0;
+    const existingEngineHours = c.EngineMonitorFlights.reduce((s, e) => s + e.durationSec / 3600, 0);
+    const totalEngineHours = existingEngineHours + engineHours;
+    const diff = Math.abs(flightHours - totalEngineHours);
     if (diff < bestDiff) { bestDiff = diff; best = c; }
   }
 
   if (best && bestDiff <= 0.5) {
-    await prisma.flight.update({
-      where: { id: best.id },
-      data: { engineFlightId: engineFlightId },
+    await prisma.engineMonitorFlight.update({
+      where: { id: engineFlightId },
+      data: { linkedFlightId: best.id },
     });
   }
 }

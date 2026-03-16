@@ -1,13 +1,14 @@
 /**
  * link-engine-flights.ts
  * ======================
- * Batch script to link existing Flight records to EngineMonitorFlight records.
+ * Batch script to link existing EngineMonitorFlight records to Flight records.
+ * Now supports 1:N: multiple engine records can link to the same Flight
+ * (e.g. when a pilot logs 2 legs as 1 flight entry).
  * 
  * Matching strategy:
- * 1. For each EngineMonitorFlight, find Flight records on the same calendar date (±1 day for timezone)
- * 2. If single match → direct link
- * 3. If multiple matches → pick the one with closest duration (diff_hobbs ≈ durationSec/3600)
- * 4. Duration difference must be < 0.5 hours to qualify
+ * 1. For each unlinked EngineMonitorFlight, find Flight records on the same calendar date (±1 day)
+ * 2. For each candidate Flight, compute sum of already-linked engine durations + this one
+ * 3. Pick the Flight where total engine hours best matches diff_hobbs (within 0.5h tolerance)
  * 
  * Usage: npx tsx scripts/link-engine-flights.ts
  */
@@ -15,7 +16,7 @@
 import { prisma } from "../lib/prisma";
 
 async function main() {
-  console.log("🔗 Linking Flight ↔ EngineMonitorFlight records...\n");
+  console.log("🔗 Linking EngineMonitorFlight → Flight records (1:N)...\n");
 
   // Get all engine monitor flights
   const engineFlights = await prisma.engineMonitorFlight.findMany({
@@ -25,14 +26,14 @@ async function main() {
       flightNumber: true,
       flightDate: true,
       durationSec: true,
-      Flight: { select: { id: true } },
+      linkedFlightId: true,
     },
   });
 
   console.log(`📊 Total EngineMonitorFlights: ${engineFlights.length}`);
 
   // Filter out already-linked
-  const unlinked = engineFlights.filter(ef => !ef.Flight);
+  const unlinked = engineFlights.filter(ef => !ef.linkedFlightId);
   console.log(`🔍 Unlinked: ${unlinked.length}`);
 
   if (unlinked.length === 0) {
@@ -42,14 +43,13 @@ async function main() {
 
   let linked = 0;
   let noMatch = 0;
-  let multiMatch = 0;
   let tooFarDuration = 0;
 
   for (const ef of unlinked) {
     const engineDate = new Date(ef.flightDate);
     const engineHours = ef.durationSec / 3600;
 
-    // Search ±1 day window (timezone issues: Chile UTC-3/4, Flight.fecha stored at noon local)
+    // Search ±1 day window
     const dayBefore = new Date(engineDate);
     dayBefore.setDate(dayBefore.getDate() - 1);
     dayBefore.setHours(0, 0, 0, 0);
@@ -58,16 +58,16 @@ async function main() {
     dayAfter.setDate(dayAfter.getDate() + 1);
     dayAfter.setHours(23, 59, 59, 999);
 
-    // Find unlinked Flight records in date window
+    // Find Flight records in date window, including their existing engine links
     const candidates = await prisma.flight.findMany({
       where: {
         fecha: { gte: dayBefore, lte: dayAfter },
-        engineFlightId: null, // Not already linked
       },
       select: {
         id: true,
         fecha: true,
         diff_hobbs: true,
+        EngineMonitorFlights: { select: { id: true, durationSec: true } },
       },
     });
 
@@ -76,13 +76,15 @@ async function main() {
       continue;
     }
 
-    // Find best match by duration proximity
+    // Find best match: flight where (existing engine hours + this engine hours) ≈ diff_hobbs
     let bestCandidate: typeof candidates[0] | null = null;
     let bestDiff = Infinity;
 
     for (const c of candidates) {
       const flightHours = Number(c.diff_hobbs) || 0;
-      const diff = Math.abs(flightHours - engineHours);
+      const existingEngineHours = c.EngineMonitorFlights.reduce((s, e) => s + e.durationSec / 3600, 0);
+      const totalEngineHours = existingEngineHours + engineHours;
+      const diff = Math.abs(flightHours - totalEngineHours);
       if (diff < bestDiff) {
         bestDiff = diff;
         bestCandidate = c;
@@ -91,26 +93,25 @@ async function main() {
 
     if (!bestCandidate || bestDiff > 0.5) {
       tooFarDuration++;
-      if (candidates.length > 1) multiMatch++;
       continue;
     }
 
     // Link it!
     try {
-      await prisma.flight.update({
-        where: { id: bestCandidate.id },
-        data: { engineFlightId: ef.id },
+      await prisma.engineMonitorFlight.update({
+        where: { id: ef.id },
+        data: { linkedFlightId: bestCandidate.id },
       });
       linked++;
 
+      const existingCount = bestCandidate.EngineMonitorFlights.length;
       const flightDate = new Date(bestCandidate.fecha).toISOString().slice(0, 10);
       const engineDateStr = engineDate.toISOString().slice(0, 10);
       console.log(
-        `  ✅ Flight #${bestCandidate.id} (${flightDate}, ${Number(bestCandidate.diff_hobbs).toFixed(1)}h) → Engine #${ef.id} (${engineDateStr}, ${engineHours.toFixed(1)}h) [Δ${bestDiff.toFixed(2)}h]`
+        `  ✅ Engine #${ef.id} (${engineDateStr}, ${engineHours.toFixed(1)}h) → Flight #${bestCandidate.id} (${flightDate}, ${Number(bestCandidate.diff_hobbs).toFixed(1)}h) [Δ${bestDiff.toFixed(2)}h]${existingCount > 0 ? ` (now ${existingCount + 1} engine records)` : ''}`
       );
     } catch (err: any) {
-      // Could fail if engineFlightId unique constraint violated
-      console.log(`  ⚠️ Failed to link Flight #${bestCandidate.id} → Engine #${ef.id}: ${err.message}`);
+      console.log(`  ⚠️ Failed to link Engine #${ef.id} → Flight #${bestCandidate.id}: ${err.message}`);
     }
   }
 
@@ -118,13 +119,20 @@ async function main() {
   console.log(`   ✅ Linked: ${linked}`);
   console.log(`   ❌ No match (no flight on date): ${noMatch}`);
   console.log(`   ⏳ Duration too far (>0.5h): ${tooFarDuration}`);
-  console.log(`   🔄 Multiple candidates: ${multiMatch}`);
 
   // Summary
-  const totalLinked = await prisma.flight.count({ where: { engineFlightId: { not: null } } });
-  const totalFlights = await prisma.flight.count();
+  const totalLinked = await prisma.engineMonitorFlight.count({ where: { linkedFlightId: { not: null } } });
   const totalEngine = await prisma.engineMonitorFlight.count();
-  console.log(`\n🔗 Overall: ${totalLinked}/${totalFlights} flights linked (${totalEngine} engine flights)`);
+  const multiLinked = await prisma.$queryRaw<{count: bigint}[]>`
+    SELECT COUNT(*) as count FROM (
+      SELECT "linkedFlightId" FROM "EngineMonitorFlight" 
+      WHERE "linkedFlightId" IS NOT NULL 
+      GROUP BY "linkedFlightId" 
+      HAVING COUNT(*) > 1
+    ) sub`;
+  const multiCount = Number(multiLinked[0]?.count || 0);
+  console.log(`\n🔗 Overall: ${totalLinked}/${totalEngine} engine flights linked`);
+  console.log(`🔀 Flights with multiple engine records: ${multiCount}`);
 }
 
 main()
