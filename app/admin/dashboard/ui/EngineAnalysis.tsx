@@ -104,6 +104,9 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
   const [uploadMsg, setUploadMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [view, setView] = useState<"list" | "detail">("list");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const kmlInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingKml, setUploadingKml] = useState(false);
+  const [kmlMsg, setKmlMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Multi-tramo state
   const [tramoIds, setTramoIds] = useState<number[]>([]);
@@ -194,6 +197,34 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
     }
     setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // Upload KML for GPS overlay
+  const handleKmlUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedFlight) return;
+    setUploadingKml(true);
+    setKmlMsg(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("engineFlightId", String(selectedFlight.id));
+
+    try {
+      const res = await fetch("/api/engine-data/kml-gps", { method: "POST", body: formData });
+      const data = await res.json();
+      if (res.ok) {
+        setKmlMsg({ type: "success", text: `✅ GPS importado: ${data.updatedCount} readings actualizados de ${data.matchedCount} puntos` });
+        // Reload the flight detail to show the new GPS data
+        loadFlightDetail(selectedFlight.id);
+      } else {
+        setKmlMsg({ type: "error", text: `❌ ${data.error}` });
+      }
+    } catch (err: any) {
+      setKmlMsg({ type: "error", text: `❌ ${err.message}` });
+    }
+    setUploadingKml(false);
+    if (kmlInputRef.current) kmlInputRef.current.value = "";
   };
 
   // Summary stats for fleet overview
@@ -1010,22 +1041,67 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
                 </div>
               </div>
 
-              {/* GPS Flight Track Map */}
-              {selectedFlight && selectedFlight.readings.some(r => r.latitude != null && r.longitude != null) && (
-                <div className="mt-3">
-                  <FlightMap
-                    points={selectedFlight.readings
-                      .filter(r => r.latitude != null && r.longitude != null)
-                      .map(r => ({
-                        lat: r.latitude!,
-                        lng: r.longitude!,
-                        alt: r.gpsAlt ?? undefined,
-                        spd: r.groundSpd ?? undefined,
-                        elapsed: r.elapsedSec,
-                      }))}
-                  />
-                </div>
-              )}
+              {/* GPS Flight Track Map + KML Upload */}
+              {selectedFlight && (() => {
+                const hasGps = selectedFlight.readings.some(r => r.latitude != null && r.longitude != null);
+                const gpsCount = selectedFlight.readings.filter(r => r.latitude != null && r.longitude != null).length;
+                return (
+                  <div className="mt-3">
+                    {hasGps && (
+                      <FlightMap
+                        points={selectedFlight.readings
+                          .filter(r => r.latitude != null && r.longitude != null)
+                          .map(r => ({
+                            lat: r.latitude!,
+                            lng: r.longitude!,
+                            alt: r.gpsAlt ?? undefined,
+                            spd: r.groundSpd ?? undefined,
+                            elapsed: r.elapsedSec,
+                          }))}
+                      />
+                    )}
+                    {/* KML Upload area */}
+                    <div className={`${hasGps ? 'mt-2 flex items-center justify-between' : 'bg-slate-50 rounded-xl border border-dashed border-slate-300 p-6 flex flex-col items-center gap-3'}`}>
+                      {!hasGps && <span className="text-slate-400 text-sm">📍 Sin datos GPS para este vuelo</span>}
+                      <input
+                        ref={kmlInputRef}
+                        type="file"
+                        accept=".kml"
+                        onChange={handleKmlUpload}
+                        className="hidden"
+                      />
+                      <div className="flex items-center gap-2">
+                        {hasGps && <span className="text-xs text-slate-400">{gpsCount} pts GPS</span>}
+                        <button
+                          onClick={() => kmlInputRef.current?.click()}
+                          disabled={uploadingKml}
+                          className={`px-3 py-1.5 text-sm rounded-lg disabled:opacity-50 transition flex items-center gap-2 ${
+                            hasGps
+                              ? 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
+                              : 'bg-blue-600 text-white hover:bg-blue-700 px-4 py-2'
+                          }`}
+                        >
+                          {uploadingKml ? (
+                            <>
+                              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                              Importando...
+                            </>
+                          ) : hasGps ? (
+                            <>🔄 Reemplazar GPS desde KML</>
+                          ) : (
+                            <>📂 Importar GPS desde KML</>
+                          )}
+                        </button>
+                      </div>
+                      {kmlMsg && (
+                        <p className={`text-xs ${kmlMsg.type === "success" ? "text-green-600" : "text-red-600"}`}>
+                          {kmlMsg.text}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </>
           )}
         </>
