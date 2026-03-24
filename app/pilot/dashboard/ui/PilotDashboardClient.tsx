@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import dynamic from "next/dynamic";
+import { formatFecha, parseLocalDate, getDateYear } from "../../../../lib/date-utils";
 
 const PilotEngineDetail = dynamic(() => import("./PilotEngineDetail"), {
   ssr: false,
@@ -199,14 +200,14 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
 
   // Get available years from flights
   const availableYears = useMemo(() => {
-    const years = new Set(data.flights.map(f => new Date(f.fecha).getFullYear()));
+    const years = new Set(data.flights.map(f => getDateYear(f.fecha)));
     return Array.from(years).sort((a, b) => b - a);
   }, [data.flights]);
 
   // Filter flights by year
   const filteredFlights = useMemo(() => {
     if (!selectedYear) return data.flights;
-    return data.flights.filter(f => new Date(f.fecha).getFullYear() === selectedYear);
+    return data.flights.filter(f => getDateYear(f.fecha) === selectedYear);
   }, [data.flights, selectedYear]);
 
   // Recalculate metrics for filtered flights
@@ -227,8 +228,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
   };
 
   const formatDate = (date: Date | string) => {
-    const d = new Date(date);
-    return d.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return formatFecha(date, { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
   // Overview cards definition (same style as admin)
@@ -305,8 +305,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
       
       const formatLastFlightDate = (dateStr: string | null) => {
         if (!dateStr) return '';
-        const d = new Date(dateStr);
-        return d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
+        return formatFecha(dateStr, { day: 'numeric', month: 'short' });
       };
       
       const thisMonthHours = data.metrics.thisMonthHours;
@@ -371,7 +370,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
     })(),
     lastFlight: (() => {
       // Find the most recent flight
-      const sortedFlights = [...data.flights].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+      const sortedFlights = [...data.flights].sort((a, b) => parseLocalDate(b.fecha).getTime() - parseLocalDate(a.fecha).getTime());
       const lastFlight = sortedFlights[0];
       
       if (!lastFlight) {
@@ -389,7 +388,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
         );
       }
       
-      const lastFlightDate = new Date(lastFlight.fecha);
+      const lastFlightDate = parseLocalDate(lastFlight.fecha);
       const today = new Date();
       const daysSince = Math.floor((today.getTime() - lastFlightDate.getTime()) / (1000 * 60 * 60 * 24));
       
@@ -425,7 +424,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
       };
       
       const style = getStatusStyle();
-      const formattedDate = lastFlightDate.toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' });
+      const formattedDate = formatFecha(lastFlight.fecha, { day: 'numeric', month: 'short', year: 'numeric' });
       
       return (
         <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] lg:overflow-y-auto flex flex-col ${style.bg} ${style.ring}`}>
@@ -560,7 +559,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
       const oilPred = calcPrediction(oilRemaining);
       const hundredPred = calcPrediction(hundredRemaining);
       
-      const formatDateShort = (d: Date | null) => d ? d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' }).replace('.', '') : '-';
+      const formatDateShort = (d: Date | null) => d ? formatFecha(d, { day: 'numeric', month: 'short' }).replace('.', '') : '-';
       
       // Progress bar color based on remaining percentage
       const getProgressColor = (remaining: number, total: number) => {

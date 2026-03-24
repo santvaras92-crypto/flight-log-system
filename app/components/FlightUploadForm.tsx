@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { todayLocalString } from "../../lib/date-utils";
 
 interface UploadResponse {
   success: boolean;
@@ -72,7 +73,7 @@ export default function FlightUploadForm({
   // Campos obligatorios
   const [hobbsManual, setHobbsManual] = useState<string>("");
   const [tachManual, setTachManual] = useState<string>("");
-  const [fechaVuelo, setFechaVuelo] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [fechaVuelo, setFechaVuelo] = useState<string>(todayLocalString());
   
   // Nuevos campos
   const [copiloto, setCopiloto] = useState<string>("");

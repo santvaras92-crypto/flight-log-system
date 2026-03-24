@@ -277,7 +277,7 @@ function generateOfflineHTML(data: any) {
                   <td>\${tachImg?.valorExtraido || '-'}</td>
                   <td>\${hobbsImg?.confianza ? hobbsImg.confianza.toFixed(0) + '%' : '-'}</td>
                   <td>\${s.flight ? '$' + s.flight.costo.toLocaleString('es-CL') : '-'}</td>
-                  <td>\${new Date(s.createdAt).toLocaleDateString('es-CL')}</td>
+                  <td>\${(() => { const ds = new Date(s.createdAt).toISOString().slice(0,10); const [y,m,d] = ds.split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString('es-CL'); })()}</td>
                 </tr>
               \`;
             }).join('')}

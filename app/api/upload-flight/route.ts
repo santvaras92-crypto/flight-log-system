@@ -4,6 +4,7 @@ import { join } from "path";
 import { existsSync } from "fs";
 import { prisma } from "@/lib/prisma";
 import { Decimal } from "@prisma/client/runtime/library";
+import { formatFecha } from "@/lib/date-utils";
 
 // Función para enviar correo de notificación
 async function sendNotificationEmail(submission: any, piloto: any) {
@@ -16,7 +17,7 @@ async function sendNotificationEmail(submission: any, piloto: any) {
 
   const emailContent = `
     <h2>Nuevo Reporte de Vuelo - CC-AQI</h2>
-    <p><strong>Fecha:</strong> ${submission.fechaVuelo ? new Date(submission.fechaVuelo).toLocaleDateString('es-CL') : 'No especificada'}</p>
+    <p><strong>Fecha:</strong> ${submission.fechaVuelo ? formatFecha(submission.fechaVuelo) : 'No especificada'}</p>
     <p><strong>Piloto:</strong> ${piloto.nombre} (${piloto.codigo || 'Sin código'})</p>
     <p><strong>Email:</strong> ${piloto.email}</p>
     <hr/>
@@ -43,7 +44,7 @@ async function sendNotificationEmail(submission: any, piloto: any) {
       body: JSON.stringify({
         from: 'CC-AQI Flight Log <onboarding@resend.dev>',
         to: ['santvaras92@gmail.com'],
-        subject: `Nuevo Vuelo - ${piloto.nombre} - ${new Date(submission.fechaVuelo || new Date()).toLocaleDateString('es-CL')}`,
+        subject: `Nuevo Vuelo - ${piloto.nombre} - ${formatFecha(submission.fechaVuelo || new Date())}`,
         html: emailContent,
       }),
     });

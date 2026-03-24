@@ -389,7 +389,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       const dailyHours: number[] = [];
       const flightsByDay = new Map<string, number>();
       for (const f of flights30d) {
-        const dateKey = new Date(f.fecha).toISOString().slice(0, 10);
+        const dateKey = f.fecha instanceof Date ? f.fecha.toISOString().slice(0, 10) : String(f.fecha).slice(0, 10);
         const dt = toNumber(f.diff_tach);
         const ti = toNumber(f.tach_inicio);
         const tf = toNumber(f.tach_fin);

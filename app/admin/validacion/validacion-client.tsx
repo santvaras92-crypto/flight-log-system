@@ -6,6 +6,7 @@ import { approveDeposit, rejectDeposit } from '../../actions/validate-deposit';
 import { approveFlightSubmission } from '../../actions/approve-flight';
 import { cancelFlightSubmission } from '../../actions/cancel-submission';
 import ImagePreviewModal from '../../components/ImagePreviewModal';
+import { formatFecha } from '../../../lib/date-utils';
 
 interface FuelItem {
   id: number;
@@ -278,7 +279,7 @@ export default function ValidacionClient({
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                         <div>
                           <p className="text-xs text-slate-500 uppercase">Fecha Vuelo</p>
-                          <p className="font-medium">{flight.fechaVuelo ? new Date(flight.fechaVuelo).toLocaleDateString('es-CL') : '-'}</p>
+                          <p className="font-medium">{flight.fechaVuelo ? formatFecha(flight.fechaVuelo) : '-'}</p>
                         </div>
                         <div>
                           <p className="text-xs text-slate-500 uppercase">HOBBS (Inicio → Fin)</p>
@@ -444,7 +445,7 @@ export default function ValidacionClient({
                       <div className="grid grid-cols-3 gap-4 mb-4">
                         <div>
                           <p className="text-xs text-slate-500 uppercase">Fecha</p>
-                          <p className="font-medium">{new Date(dep.fecha).toLocaleDateString('es-CL')}</p>
+                          <p className="font-medium">{formatFecha(dep.fecha)}</p>
                         </div>
                         <div>
                           <p className="text-xs text-slate-500 uppercase">Monto</p>
@@ -541,7 +542,7 @@ export default function ValidacionClient({
                       <div className="grid grid-cols-4 gap-4 mb-4">
                         <div>
                           <p className="text-xs text-slate-500 uppercase">Fecha</p>
-                          <p className="font-medium">{new Date(fuel.fecha).toLocaleDateString('es-CL')}</p>
+                          <p className="font-medium">{formatFecha(fuel.fecha)}</p>
                         </div>
                         <div>
                           <p className="text-xs text-slate-500 uppercase">Litros</p>

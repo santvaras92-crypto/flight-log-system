@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
+import { formatFecha } from "../../../../lib/date-utils";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -91,7 +92,7 @@ function formatDuration(sec: number) {
 }
 
 function formatDate(d: string) {
-  return new Date(d).toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "numeric" });
+  return formatFecha(d, { day: "2-digit", month: "short", year: "numeric" });
 }
 
 export default function PilotEngineDetail({

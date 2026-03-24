@@ -3,6 +3,7 @@
 import { useState, useTransition, useEffect } from "react";
 import { approveFlightSubmission } from "@/app/actions/approve-flight";
 import { cancelFlightSubmission } from "@/app/actions/cancel-submission";
+import { formatFecha } from "@/lib/date-utils";
 
 interface DecimalLike {
   toNumber?: () => number;
@@ -196,7 +197,7 @@ export default function AdminSubmissions({ initialData }: { initialData: Submiss
                   <p className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>
                     <span className="font-medium">{s.piloto.codigo ? `${s.piloto.codigo} - ` : ''}{s.piloto.nombre}</span>
                     {' · '}{s.aircraft.matricula}
-                    {' · '}{s.fechaVuelo ? new Date(s.fechaVuelo).toLocaleDateString('es-CL') : 'Sin fecha'}
+                    {' · '}{s.fechaVuelo ? formatFecha(s.fechaVuelo) : 'Sin fecha'}
                   </p>
                 </div>
                 <span className="inline-block px-3 py-1 rounded-full text-xs sm:text-sm font-medium border" style={{ 
@@ -235,7 +236,7 @@ export default function AdminSubmissions({ initialData }: { initialData: Submiss
               {/* Fecha del vuelo visible también como chip */}
               <div className="mb-3">
                 <span className="inline-block text-xs px-2 py-1 rounded border" style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)', borderColor: 'var(--border-primary)' }}>
-                  Fecha volada: {s.fechaVuelo ? new Date(s.fechaVuelo).toLocaleDateString('es-CL') : '—'}
+                  Fecha volada: {s.fechaVuelo ? formatFecha(s.fechaVuelo) : '—'}
                 </span>
               </div>
 

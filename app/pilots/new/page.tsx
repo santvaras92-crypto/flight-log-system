@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { searchExistingPilots, createOrUpdatePilot } from "../../actions/pilot-actions";
+import { toDateString } from "@/lib/date-utils";
 
 type MatchedPilot = {
   id: number;
@@ -91,7 +92,7 @@ export default function NewPilotPublicPage() {
             telefono: result.pilot?.telefono || prev.telefono,
             licencia: result.pilot?.licencia || prev.licencia,
             fecha_nacimiento: result.pilot?.fechaNacimiento
-              ? new Date(result.pilot.fechaNacimiento).toISOString().split('T')[0]
+              ? toDateString(new Date(result.pilot.fechaNacimiento))
               : prev.fecha_nacimiento
           }));
         } else {
@@ -122,7 +123,7 @@ export default function NewPilotPublicPage() {
       licencia: pilot.licencia || prev.licencia,
       documento: pilot.documento || prev.documento,
       fecha_nacimiento: pilot.fechaNacimiento
-        ? new Date(pilot.fechaNacimiento).toISOString().split('T')[0]
+        ? toDateString(new Date(pilot.fechaNacimiento))
         : prev.fecha_nacimiento
     }));
     setShowConfirmNew(false);

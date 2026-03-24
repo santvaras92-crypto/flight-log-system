@@ -3,6 +3,7 @@ import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Chart, LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler, DoughnutController, ArcElement } from "chart.js";
 import { generateAccountStatementPDF } from "../../../../lib/generate-account-pdf";
+import { formatFecha, parseLocalDate, toDateString, getDateYear } from "../../../../lib/date-utils";
 import ImagePreviewModal from "../../../components/ImagePreviewModal";
 import { registerOverhaul } from "../../../actions/register-overhaul";
 import EngineAnalysis from "./EngineAnalysis";
@@ -155,18 +156,18 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       .filter(f => (!filterAircraft || f.aircraftId.toLowerCase().includes(filterAircraft.toLowerCase())))
       .filter(f => {
         if (!yearFilter) return true;
-        const y = new Date(f.fecha).getFullYear().toString();
+        const y = getDateYear(f.fecha).toString();
         return y === yearFilter;
       })
       .filter(f => {
-        const d = new Date(f.fecha).getTime();
-        const after = startDate ? new Date(startDate).getTime() : -Infinity;
-        const before = endDate ? new Date(endDate).getTime() : Infinity;
+        const d = parseLocalDate(f.fecha).getTime();
+        const after = startDate ? parseLocalDate(startDate).getTime() : -Infinity;
+        const before = endDate ? parseLocalDate(endDate).getTime() : Infinity;
         return d >= after && d <= before;
       });
     const sorted = filtered.slice().sort((a, b) => {
-      const da = new Date(a.fecha).getTime();
-      const db = new Date(b.fecha).getTime();
+      const da = parseLocalDate(a.fecha).getTime();
+      const db = parseLocalDate(b.fecha).getTime();
       return sortOrder === 'desc' ? db - da : da - db;
     });
     // Client-side slice when no server pagination is provided; otherwise server already paginated.
@@ -490,8 +491,8 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       const oilPred = calcPrediction(oilRemaining);
       const hundredPred = calcPrediction(hundredRemaining);
 
-      const formatDate = (d: Date | null) => d ? d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' }) : '-';
-      const formatDateShort = (d: Date | null) => d ? d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' }).replace('.', '') : '-';
+      const formatDate = (d: Date | null) => d ? formatFecha(d, { day: 'numeric', month: 'short' }) : '-';
+      const formatDateShort = (d: Date | null) => d ? formatFecha(d, { day: 'numeric', month: 'short' }).replace('.', '') : '-';
 
       // Format days as human-readable: "X,Y a" / "Xm" / "Xd"
       const fmtTime = (days: number): string => {
@@ -1293,7 +1294,7 @@ function Overview({ data, flights, palette, allowedPilotCodes, activeDaysLimit, 
   const hoursByDay = useMemo(() => {
     const map: Record<string, number> = {};
     flights.slice().reverse().forEach(f => {
-      const day = new Date(f.fecha).toISOString().slice(0, 10);
+      const day = toDateString(f.fecha);
       map[day] = (map[day] || 0) + Number(f.diff_hobbs);
     });
     const labels = Object.keys(map).sort();
@@ -1393,7 +1394,7 @@ function Overview({ data, flights, palette, allowedPilotCodes, activeDaysLimit, 
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-blue-600 font-mono">{p.codigo}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">{p.nombre}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                          {lastFlight ? new Date(lastFlight.fecha).toLocaleDateString('es-CL') : '-'}
+                          {lastFlight ? formatFecha(lastFlight.fecha) : '-'}
                         </td>
                       </tr>
                     );
@@ -2439,7 +2440,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
               const code = (f.cliente || '').toUpperCase();
               const u = users.find(u => u.id === (f as any).pilotoId) || users.find(u => (u.codigo || '').toUpperCase() === code);
               const pilotName = f.piloto_raw || u?.nombre || 'N/A';
-              const fecha = new Date(f.fecha);
+              const fecha = parseLocalDate(f.fecha);
               const año = fecha.getFullYear();
               const mesNombres = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
               const mes = mesNombres[fecha.getMonth()];
@@ -2449,9 +2450,9 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                   {/* Fecha */}
                   <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-medium">
                     {editMode ? (
-                      <input type="date" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-full" value={fecha.toISOString().slice(0, 10)} onChange={e => handleChange(f.id, 'fecha', e.target.value)} />
+                      <input type="date" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-full" value={toDateString(f.fecha)} onChange={e => handleChange(f.id, 'fecha', e.target.value)} />
                     ) : (
-                      fecha.toLocaleDateString("es-CL")
+                      formatFecha(f.fecha)
                     )}
                   </td>
 
@@ -2624,7 +2625,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                       onClick={() => handleDeleteFlight(
                         f.id,
                         pilotName,
-                        fecha.toLocaleDateString('es-CL'),
+                        formatFecha(f.fecha),
                         Number(f.costo || 0)
                       )}
                       disabled={deletingId === f.id}
@@ -2869,7 +2870,7 @@ function FuelTable({ logs }: { logs: any[] }) {
               {paginatedLogs.map((l) => (
                 <tr key={l.id} className={`hover:bg-slate-50 transition-colors ${l.source === 'CSV' ? 'bg-slate-50/30' : ''}`}>
                   <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600">
-                    {new Date(l.fecha).toLocaleDateString('es-CL')}
+                    {formatFecha(l.fecha)}
                   </td>
                   <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-medium text-slate-800">
                     {l.pilotName}
@@ -2986,9 +2987,9 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
       name: p.name,
       source: 'CSV',
       email: p.email || '-',
-      createdAt: p.createdAt ? new Date(p.createdAt as any).toLocaleDateString('es-CL') : '-',
-      fechaNacimiento: p.fechaNacimiento ? new Date(p.fechaNacimiento as any).toISOString().split('T')[0] : null,
-      fechaNacimientoDisplay: p.fechaNacimiento ? new Date(p.fechaNacimiento as any).toLocaleDateString('es-CL') : '-',
+      createdAt: p.createdAt ? formatFecha(p.createdAt as any) : '-',
+      fechaNacimiento: p.fechaNacimiento ? toDateString(new Date(p.fechaNacimiento as any)) : null,
+      fechaNacimientoDisplay: p.fechaNacimiento ? formatFecha(p.fechaNacimiento as any) : '-',
       telefono: p.telefono || '',
       numeroLicencia: p.numeroLicencia || '',
       tipoDocumento: p.tipoDocumento || '',
@@ -3000,9 +3001,9 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
       name: p.name,
       source: 'Registered',
       email: p.email || '',
-      createdAt: p.createdAt ? new Date(p.createdAt as any).toLocaleDateString('es-CL') : '-',
-      fechaNacimiento: p.fechaNacimiento ? new Date(p.fechaNacimiento as any).toISOString().split('T')[0] : null,
-      fechaNacimientoDisplay: p.fechaNacimiento ? new Date(p.fechaNacimiento as any).toLocaleDateString('es-CL') : '-',
+      createdAt: p.createdAt ? formatFecha(p.createdAt as any) : '-',
+      fechaNacimiento: p.fechaNacimiento ? toDateString(new Date(p.fechaNacimiento as any)) : null,
+      fechaNacimientoDisplay: p.fechaNacimiento ? formatFecha(p.fechaNacimiento as any) : '-',
       telefono: p.telefono || '',
       numeroLicencia: p.numeroLicencia || '',
       tipoDocumento: p.tipoDocumento || '',
@@ -3328,8 +3329,8 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
     }
   ];
 
-  const formatDate = (d: Date) => d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' });
-  const formatShortDate = (d: Date) => d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
+  const formatDate = (d: Date) => formatFecha(d, { day: 'numeric', month: 'short', year: 'numeric' });
+  const formatShortDate = (d: Date) => formatFecha(d, { day: 'numeric', month: 'short' });
 
   // Format days remaining as human-readable: "X,Y años" / "X meses" / "X días"
   const formatTimeRemaining = (days: number): string => {
@@ -3591,7 +3592,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
                     <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-medium text-slate-800">
                       {c.tipo}
                       {hasOverhaul && (
-                        <span className="ml-1.5 inline-flex items-center px-1.5 py-px rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200" title={`Overhaul @ AF ${c.overhaul_airframe}${c.overhaul_date ? ' - ' + new Date(c.overhaul_date).toLocaleDateString('es-CL') : ''}`}>
+                        <span className="ml-1.5 inline-flex items-center px-1.5 py-px rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200" title={`Overhaul @ AF ${c.overhaul_airframe}${c.overhaul_date ? ' - ' + formatFecha(c.overhaul_date) : ''}`}>
                           OH
                         </span>
                       )}
@@ -3992,8 +3993,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '-';
     try {
-      const d = new Date(dateStr + 'T12:00:00');
-      return d.toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: '2-digit' });
+      return formatFecha(dateStr, { day: '2-digit', month: 'short', year: '2-digit' });
     } catch { return dateStr; }
   };
 
@@ -4479,7 +4479,7 @@ function FinanceCharts({ flights, transactions, palette }: { flights: any[]; tra
   const monthly = useMemo(() => {
     const map: Record<string, { hours: number; revenue: number }> = {};
     flights.forEach(f => {
-      const k = new Date(f.fecha).toISOString().slice(0, 7);
+      const k = toDateString(f.fecha).slice(0, 7);
       map[k] = map[k] || { hours: 0, revenue: 0 };
       map[k].hours += Number(f.diff_hobbs);
       map[k].revenue += Number(f.costo);

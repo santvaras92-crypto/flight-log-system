@@ -3,6 +3,7 @@
 import { useState } from "react";
 import ImagePreviewModal from "../../components/ImagePreviewModal";
 import { deleteFuelLog } from "../../actions/delete-fuel-log";
+import { formatFecha } from "../../../lib/date-utils";
 
 interface FuelLog {
   id: number;
@@ -59,7 +60,7 @@ export default function FuelChargesTable({ logs }: FuelChargesTableProps) {
               return (
                 <tr key={l.id}>
                   <td className="px-3 py-2 border">{l.id}</td>
-                  <td className="px-3 py-2 border">{new Date(l.fecha).toLocaleDateString()}</td>
+                  <td className="px-3 py-2 border">{formatFecha(l.fecha)}</td>
                   <td className="px-3 py-2 border">
                     {l.User ? `${l.User.nombre} (${l.User.codigo || '#' + l.userId})` : `#${l.userId}`}
                   </td>

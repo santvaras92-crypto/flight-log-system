@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
+import { formatFecha, parseLocalDate } from "../../../../lib/date-utils";
 
 const FlightMap = dynamic(() => import("@/app/components/FlightMap"), { ssr: false, loading: () => <div className="h-[350px] bg-slate-50 rounded-xl border border-slate-200 animate-pulse" /> });
 import {
@@ -92,7 +93,7 @@ function formatDuration(sec: number) {
 }
 
 function formatDate(d: string) {
-  return new Date(d).toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "numeric" });
+  return formatFecha(d, { day: "2-digit", month: "short", year: "numeric" });
 }
 
 export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { initialFlightIds?: number[] | null; onFlightOpened?: () => void } = {}) {
@@ -448,7 +449,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
     }
 
     if (cutoff) {
-      const filtered = sortedFlights.filter(f => new Date(f.flightDate) >= cutoff!);
+      const filtered = sortedFlights.filter(f => parseLocalDate(f.flightDate) >= cutoff!);
       return filtered.length >= 2 ? filtered : sortedFlights;
     }
     return sortedFlights;
@@ -457,7 +458,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
   // Date range labels for the slider
   const trendDateRange = useMemo(() => {
     if (trendSlice.length === 0) return { start: '', end: '', count: 0 };
-    const fmt = (d: string) => new Date(d).toLocaleDateString("es-CL", { month: "short", year: "2-digit" });
+    const fmt = (d: string) => formatFecha(d, { month: "short", year: "2-digit" });
     return {
       start: fmt(trendSlice[0].flightDate),
       end: fmt(trendSlice[trendSlice.length - 1].flightDate),
@@ -472,7 +473,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
     if (trendSlice.length < 2) return;
 
     const sorted = trendSlice;
-    const trendLabels = sorted.map(f => new Date(f.flightDate).toLocaleDateString("es-CL", { month: "short", year: "2-digit" }));
+    const trendLabels = sorted.map(f => formatFecha(f.flightDate, { month: "short", year: "2-digit" }));
 
     // ── Smoothing: Exponential Moving Average (EMA) ──
     // Produces a clean trend line from noisy per-flight data
@@ -782,8 +783,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
                     />
                     <span className="text-[11px] text-slate-500 w-16 tabular-nums">
                       {sortedFlights.length > 0
-                        ? new Date(sortedFlights[Math.round((customRangeStart / 100) * (sortedFlights.length - 1))].flightDate)
-                            .toLocaleDateString("es-CL", { month: "short", year: "2-digit" })
+                        ? formatFecha(sortedFlights[Math.round((customRangeStart / 100) * (sortedFlights.length - 1))].flightDate, { month: "short", year: "2-digit" })
                         : ''}
                     </span>
                   </div>
@@ -802,8 +802,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
                     />
                     <span className="text-[11px] text-slate-500 w-16 tabular-nums">
                       {sortedFlights.length > 0
-                        ? new Date(sortedFlights[Math.round((customRangeEnd / 100) * (sortedFlights.length - 1))].flightDate)
-                            .toLocaleDateString("es-CL", { month: "short", year: "2-digit" })
+                        ? formatFecha(sortedFlights[Math.round((customRangeEnd / 100) * (sortedFlights.length - 1))].flightDate, { month: "short", year: "2-digit" })
                         : ''}
                     </span>
                   </div>

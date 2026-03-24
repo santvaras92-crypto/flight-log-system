@@ -9,6 +9,7 @@ import { findOrCreatePilotByCode } from '../../actions/find-or-create-pilot';
 import Link from 'next/link';
 import ImagePreviewModal from '@/app/components/ImagePreviewModal';
 import { generateFlightLogbookPDF, type FlightLogbookData } from '../../../lib/generate-flight-logbook-pdf';
+import { todayLocalString } from '../../../lib/date-utils';
 
 type PilotOpt = { id: string | number; value: string; label: string };
 
@@ -126,7 +127,7 @@ export default function RegisterClient({
   }, [pilots]);
 
   // Flight form fields
-  const [fecha, setFecha] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [fecha, setFecha] = useState<string>(todayLocalString());
   const [hobbsFin, setHobbsFin] = useState<string>('');
   const [tachFin, setTachFin] = useState<string>('');
   const [copiloto, setCopiloto] = useState<string>('');
@@ -1255,7 +1256,7 @@ export default function RegisterClient({
                     setFlightData(null);
                     // Reset form
                     setPilotValue('');
-                    setFecha(new Date().toISOString().split('T')[0]);
+                    setFecha(todayLocalString());
                     setHobbsFin('');
                     setTachFin('');
                     setCopiloto('');

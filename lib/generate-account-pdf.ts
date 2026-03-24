@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { formatFecha } from './date-utils';
 
 interface Flight {
   id: number;
@@ -137,12 +138,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     if (typeof date === 'string' && date.includes('-') && date.length <= 12) {
       return date;
     }
-    const d = new Date(date);
-    const day = d.getDate().toString().padStart(2, '0');
-    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    const month = months[d.getMonth()];
-    const year = d.getFullYear().toString().slice(-2);
-    return `${day}-${month}-${year}`;
+    return formatFecha(date, { day: '2-digit', month: 'short', year: '2-digit' });
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -170,7 +166,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   doc.setFontSize(9);
   const periodText = data.dateRange?.start && data.dateRange?.end 
     ? `Período: ${data.dateRange.start} → ${data.dateRange.end}`
-    : `Generado: ${new Date().toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+    : `Generado: ${formatFecha(new Date(), { day: '2-digit', month: 'short', year: 'numeric' })}`;
   doc.text(periodText, 14, y + 24);
   
   // Logo - Right aligned (50mm x 11mm compact)

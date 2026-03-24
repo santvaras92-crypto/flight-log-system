@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { updateCounters } from "../../actions/update-counters";
+import { formatFecha } from "../../../lib/date-utils";
 
 interface Flight {
   id: number;
@@ -117,7 +118,7 @@ export default function CountersClient({
           <div>
             <span className="font-semibold" style={{ color: 'var(--text-secondary)' }}>Fecha:</span>
             <p className="font-mono" style={{ color: 'var(--text-primary)' }}>
-              {new Date(lastFlight.fecha).toLocaleDateString('es-CL')}
+              {formatFecha(lastFlight.fecha)}
             </p>
           </div>
           <div>
