@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
     // Return all engine records linked to a Flight.id (1:N)
     if (byFlightLogId) {
       const engineFlights = await prisma.engineMonitorFlight.findMany({
-        where: { linkedFlightId: parseInt(byFlightLogId) },
+        where: { linkedFlightId: parseInt(byFlightLogId), isGroundRun: false },
         orderBy: { flightNumber: "asc" },
         select: {
           id: true,
@@ -119,7 +119,7 @@ export async function GET(req: NextRequest) {
     // Exclude flights < 15 min (900 sec) — typically taxi/runup/fuel, not real flights
     const MIN_FLIGHT_DURATION = 900;
     const flights = await prisma.engineMonitorFlight.findMany({
-      where: { durationSec: { gte: MIN_FLIGHT_DURATION } },
+      where: { durationSec: { gte: MIN_FLIGHT_DURATION }, isGroundRun: false },
       orderBy: { flightDate: "desc" },
       select: {
         id: true,
@@ -434,6 +434,26 @@ const MIN_DURATION_SEC = 300; // 5 min — skip engine starts/taxis
 async function autoLinkEngineToFlight(engineFlightId: number, flightDate: Date, durationSec: number) {
   // Skip junk records (engine starts, taxis — too short to be real tramos)
   if (durationSec < MIN_DURATION_SEC) return;
+
+  // Detect ground runs: check if the engine record has no significant altitude change
+  // or ground speed stays near 0 (typical of run-ups / oil change checks)
+  const readings = await prisma.engineMonitorReading.findMany({
+    where: { flightId: engineFlightId },
+    select: { gpsAlt: true, groundSpd: true },
+  });
+  const altitudes = readings.map(r => Number(r.gpsAlt)).filter(v => v > 0);
+  const speeds = readings.map(r => Number(r.groundSpd)).filter(v => !isNaN(v));
+  const altRange = altitudes.length > 2 ? Math.max(...altitudes) - Math.min(...altitudes) : 999;
+  const maxSpeed = speeds.length > 0 ? Math.max(...speeds) : 999;
+
+  // If altitude never varied more than 100ft AND max ground speed < 40 kts → ground run
+  if (altRange < 100 && maxSpeed < 40 && altitudes.length > 5) {
+    await prisma.engineMonitorFlight.update({
+      where: { id: engineFlightId },
+      data: { isGroundRun: true },
+    });
+    return; // Don't link ground runs to flights
+  }
 
   const engineHours = durationSec / 3600;
 

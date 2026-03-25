@@ -246,6 +246,7 @@ model EngineMonitorFlight {
   latitude      Decimal?
   longitude     Decimal?
   sourceFile    String?
+  isGroundRun   Boolean                @default(false)
   createdAt     DateTime               @default(now())
   linkedFlightId Int?
   readings      EngineMonitorReading[]

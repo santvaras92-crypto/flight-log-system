@@ -923,7 +923,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
 
               {/* Tramo Tabs (multi-engine flights) */}
               {tramoIds.length > 1 && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-semibold text-slate-500">Tramos:</span>
                   <div className="flex gap-1">
                     {tramoIds.map((tid, idx) => (
@@ -948,6 +948,37 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
                   <span className="text-[10px] text-slate-400 ml-1">
                     ({tramoIds.length} registros de motor para este vuelo)
                   </span>
+                  {/* Unlink / Mark as Ground Run button */}
+                  <button
+                    onClick={async () => {
+                      const currentId = tramoIds[activeTramo];
+                      if (!confirm(`¿Desvincular Tramo ${activeTramo + 1} de este vuelo y marcarlo como Ground Run?`)) return;
+                      try {
+                        const res = await fetch(`/api/engine-data/${currentId}/unlink`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ markGroundRun: true }),
+                        });
+                        if (res.ok) {
+                          const newIds = tramoIds.filter((_, i) => i !== activeTramo);
+                          setTramoIds(newIds);
+                          if (newIds.length > 0) {
+                            setActiveTramo(0);
+                            loadFlightDetail(newIds[0]);
+                          } else {
+                            setView('list');
+                          }
+                        }
+                      } catch (err) {
+                        console.error('Failed to unlink tramo:', err);
+                      }
+                    }}
+                    className="ml-auto text-[10px] px-2 py-1 rounded bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors flex items-center gap-1"
+                    title="Desvincular este tramo y marcarlo como Ground Run"
+                  >
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                    Ground Run
+                  </button>
                 </div>
               )}
 

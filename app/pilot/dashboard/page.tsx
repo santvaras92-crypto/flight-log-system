@@ -67,7 +67,7 @@ export default async function PilotDashboardPage() {
       pilotoId: true,
       aerodromoSalida: true,
       aerodromoDestino: true,
-      EngineMonitorFlights: { select: { id: true } },
+      EngineMonitorFlights: { where: { isGroundRun: false }, select: { id: true } },
     }
   });
 
