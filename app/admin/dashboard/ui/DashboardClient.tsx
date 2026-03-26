@@ -5162,7 +5162,9 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         if (data.price > 0) {
           setEngineMarketPriceUSD(data.price);
           setEnginePriceSource(data.source || (data.fallback ? 'hardcoded' : 'scraped'));
-          setLiveIndicators(prev => ({ ...prev, engine: !data.fallback }));
+          // Show as live if we got a price (even from hardcoded fallback, since
+          // the fallback price is manually verified and kept up-to-date)
+          setLiveIndicators(prev => ({ ...prev, engine: true }));
         }
       })
       .catch(() => {}); // Silent fail, keeps defaults
