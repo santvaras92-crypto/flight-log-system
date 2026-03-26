@@ -223,11 +223,25 @@ class JPIDecoderImpl {
   private parseBinaryData(): DecodedFlight[] {
     const flights: DecodedFlight[] = [];
 
+    // Track the last valid GPS header position across flights.
+    // When a flight header has corrupted GPS (e.g. due to byte-alignment
+    // anomalies), we substitute the last known-good header GPS so that
+    // the delta-offset accumulators (fields 86/87) produce correct coords.
+    let lastValidLatRaw = 0;
+    let lastValidLonRaw = 0;
+
     for (const { flightNum, dataWords } of this.header.flights) {
       try {
-        const flight = this.parseFlight(flightNum, dataWords);
+        const flight = this.parseFlight(flightNum, dataWords, lastValidLatRaw, lastValidLonRaw);
         if (flight && flight.records.length > 5) {
           flights.push(flight);
+          // Update last valid GPS from the flight's corrected header.
+          // parseFlight already validates/substitutes the header GPS,
+          // so if lat/lon are set, the underlying raw values are good.
+          if (flight.latitude !== null && flight.longitude !== null) {
+            lastValidLatRaw = Math.round(flight.latitude * 6000);
+            lastValidLonRaw = Math.round(flight.longitude * 6000);
+          }
         }
       } catch (e) {
         // Skip corrupted flights
@@ -240,7 +254,9 @@ class JPIDecoderImpl {
 
   private parseFlight(
     expectedFlightNum: number,
-    dataWords: number
+    dataWords: number,
+    fallbackLatRaw: number = 0,
+    fallbackLonRaw: number = 0
   ): DecodedFlight | null {
     const dataBytes = dataWords * 2;
     const flightStartPos = this.pos;
@@ -263,6 +279,21 @@ class JPIDecoderImpl {
         }
       }
 
+      // Validate header GPS — if corrupted (outside South America bounding box),
+      // substitute the last known-good GPS position from a previous flight.
+      // Fields 86/87 are delta-offsets from the header position, so without a
+      // valid base the computed coordinates will be garbage.
+      const hdrLatDeg = fhdr.latRaw / 6000;
+      const hdrLonDeg = fhdr.lonRaw / 6000;
+      const headerGpsOk =
+        (fhdr.latRaw === 0 && fhdr.lonRaw === 0) ||
+        (hdrLatDeg >= -60 && hdrLatDeg <= -10 && hdrLonDeg >= -80 && hdrLonDeg <= -55);
+
+      if (!headerGpsOk && (fallbackLatRaw !== 0 || fallbackLonRaw !== 0)) {
+        fhdr.latRaw = fallbackLatRaw;
+        fhdr.lonRaw = fallbackLonRaw;
+      }
+
       const records = this.parseDataRecords(fhdr);
 
       const durationSec =
@@ -281,6 +312,15 @@ class JPIDecoderImpl {
         if (latDeg >= -60 && latDeg <= -10 && lonDeg >= -80 && lonDeg <= -55) {
           latitude = Math.round(latDeg * 1000000) / 1000000;
           longitude = Math.round(lonDeg * 1000000) / 1000000;
+        }
+      }
+
+      // Fallback: if header GPS is invalid, use the first GPS-valid record
+      if (latitude === null || longitude === null) {
+        const firstGps = records.find(r => r.latitude !== null && r.longitude !== null);
+        if (firstGps) {
+          latitude = firstGps.latitude;
+          longitude = firstGps.longitude;
         }
       }
 
@@ -613,7 +653,10 @@ class JPIDecoderImpl {
     let gpsAltitude: number | null = null;
     let groundSpeed: number | null = null;
 
-    if (recordCount >= 135 && (flightHdr.latRaw !== 0 || flightHdr.lonRaw !== 0)) {
+    if (recordCount >= 135) {
+      // Fields 86/87 are delta-offsets from the header's initial GPS fix.
+      // The header GPS is already validated/corrected upstream in parseFlight(),
+      // so we can use it directly here.
       const latDeg = (flightHdr.latRaw + accum[87]) / 6000;
       const lonDeg = (flightHdr.lonRaw + accum[86]) / 6000;
 
