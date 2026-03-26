@@ -6138,18 +6138,36 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-[10px] font-semibold text-blue-700 uppercase tracking-wider flex items-center gap-1">
                     🌐 Market
-                    {enginePriceSource && (
-                      <span className={`px-1 py-0.5 text-[8px] font-bold rounded-full ${liveIndicators.engine ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                        {liveIndicators.engine ? 'LIVE' : 'fallback'}
-                      </span>
-                    )}
                   </p>
-                  {computed.overhaulSource === 'market' && <span className="px-1.5 py-0.5 text-[8px] font-bold bg-blue-200 text-blue-800 rounded-full">WINNER</span>}
+                  <div className="flex items-center gap-1">
+                    <a
+                      href="https://www.airpowerinc.com/renpl-rt8164"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-1.5 py-0.5 text-[8px] font-medium bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition-colors"
+                      title="Verificar precio en Air Power Inc"
+                    >
+                      Verificar ↗
+                    </a>
+                    {computed.overhaulSource === 'market' && <span className="px-1.5 py-0.5 text-[8px] font-bold bg-blue-200 text-blue-800 rounded-full">WINNER</span>}
+                  </div>
                 </div>
                 <div className="space-y-1 text-[11px]">
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="text-slate-500">Motor FOB</span>
-                    <span className="font-mono text-slate-700">USD ${formatCurrency(engineMarketPriceUSD)}</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-slate-400 text-[10px]">USD</span>
+                      <input
+                        type="text"
+                        value={formatCurrency(engineMarketPriceUSD)}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/[^0-9]/g, '');
+                          if (raw) setEngineMarketPriceUSD(parseInt(raw));
+                        }}
+                        className="w-[80px] text-right font-mono text-slate-700 bg-transparent border-b border-dashed border-slate-300 hover:border-blue-400 focus:border-blue-500 focus:outline-none text-[11px] px-0 py-0"
+                        title="Click para editar precio FOB"
+                      />
+                    </div>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">Internación (×{computed.internacionRatio.toFixed(2)})</span>
