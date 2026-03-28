@@ -189,7 +189,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
     const dx = Math.abs(touch.clientX - touchStartPos.x);
     const dy = Math.abs(touch.clientY - touchStartPos.y);
     
-    if (elapsed > 800 && dx < 25 && dy < 25 && !draggedCard) {
+    if (elapsed > 1000 && dx < 25 && dy < 25 && !draggedCard) {
       setDraggedCard(cardId);
       setIsDragEnabled(true);
     } else {

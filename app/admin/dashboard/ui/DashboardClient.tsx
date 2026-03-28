@@ -351,7 +351,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       handleDragStart(cardId);
       // Haptic feedback
       if (navigator.vibrate) navigator.vibrate(50);
-    }, 400);
+    }, 800);
   };
 
   // Long press touch end — find drop target and commit reorder
