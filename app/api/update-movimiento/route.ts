@@ -2,6 +2,40 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 /**
+ * DELETE /api/update-movimiento
+ * Deletes BankMovement records by correlativo(s).
+ * Body: { correlativos: number[] }
+ */
+export async function DELETE(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { correlativos } = body;
+
+    if (!correlativos || !Array.isArray(correlativos) || correlativos.length === 0) {
+      return NextResponse.json({ ok: false, error: "correlativos (array) es requerido" }, { status: 400 });
+    }
+
+    const nums = correlativos.map(Number).filter(n => !isNaN(n));
+    if (nums.length === 0) {
+      return NextResponse.json({ ok: false, error: "No hay correlativos válidos" }, { status: 400 });
+    }
+
+    const result = await prisma.bankMovement.deleteMany({
+      where: { correlativo: { in: nums } },
+    });
+
+    return NextResponse.json({
+      ok: true,
+      deleted: result.count,
+      message: `${result.count} movimiento(s) eliminado(s)`,
+    });
+  } catch (err: any) {
+    console.error("Error deleting movimientos:", err);
+    return NextResponse.json({ ok: false, error: err.message || "Error interno" }, { status: 500 });
+  }
+}
+
+/**
  * PATCH /api/update-movimiento
  * Updates a single field in BankMovement by correlativo number.
  * Body: { correlativo: number, field: 'tipo' | 'cliente' | 'descripcion', value: string }

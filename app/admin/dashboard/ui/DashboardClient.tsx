@@ -3773,6 +3773,8 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
   const [localEdits, setLocalEdits] = useState<Record<string, string>>({});
   const [expandedDescs, setExpandedDescs] = useState<Set<number>>(new Set());
   const [viewingAttachment, setViewingAttachment] = useState<{ url: string; correlativo: number } | null>(null);
+  const [selectedMovements, setSelectedMovements] = useState<Set<number>>(new Set());
+  const [deleting, setDeleting] = useState(false);
   const pageSize = 50;
 
   const TIPO_OPTIONS = [
@@ -3903,6 +3905,55 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
       alert(`Error de red: ${err.message}`);
     } finally {
       setUploading(false);
+    }
+  };
+
+  const toggleSelect = (correlativo: number) => {
+    setSelectedMovements(prev => {
+      const next = new Set(prev);
+      if (next.has(correlativo)) next.delete(correlativo);
+      else next.add(correlativo);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const pageCorrs = paginated.map(m => m.correlativo);
+    const allSelected = pageCorrs.every(c => selectedMovements.has(c));
+    setSelectedMovements(prev => {
+      const next = new Set(prev);
+      if (allSelected) {
+        pageCorrs.forEach(c => next.delete(c));
+      } else {
+        pageCorrs.forEach(c => next.add(c));
+      }
+      return next;
+    });
+  };
+
+  const handleDeleteMovements = async () => {
+    if (selectedMovements.size === 0) return;
+    const count = selectedMovements.size;
+    if (!confirm(`¿Eliminar ${count} movimiento${count > 1 ? 's' : ''} seleccionado${count > 1 ? 's' : ''}? Esta acción no se puede deshacer.`)) return;
+    setDeleting(true);
+    try {
+      const res = await fetch('/api/update-movimiento', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ correlativos: Array.from(selectedMovements) }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        alert(`✅ ${data.deleted} movimiento(s) eliminado(s)`);
+        setSelectedMovements(new Set());
+        setTimeout(() => location.reload(), 500);
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    } catch (err: any) {
+      alert(`Error de red: ${err.message}`);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -4152,6 +4203,28 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
               <h3 className="text-sm font-semibold text-slate-800">Bank Movements</h3>
             </div>
             <div className="flex items-center gap-2">
+              {selectedMovements.size > 0 && (
+                <button
+                  onClick={handleDeleteMovements}
+                  disabled={deleting}
+                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-xs font-bold transition-colors shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {deleting ? (
+                    <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  ) : (
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  )}
+                  Eliminar ({selectedMovements.size})
+                </button>
+              )}
+              {selectedMovements.size > 0 && (
+                <button
+                  onClick={() => setSelectedMovements(new Set())}
+                  className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-md text-xs font-medium transition-colors border border-slate-200"
+                >
+                  Deseleccionar
+                </button>
+              )}
               <button
                 onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
                 className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-md text-xs font-medium transition-colors border border-slate-200"
@@ -4212,6 +4285,15 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
           <table className="w-full text-[10px] sm:text-sm">
             <thead>
               <tr className="bg-slate-100 border-b-2 border-slate-300">
+                <th className="px-1 sm:px-2 py-2 sm:py-3 text-center w-8">
+                  <input
+                    type="checkbox"
+                    checked={paginated.length > 0 && paginated.every(m => selectedMovements.has(m.correlativo))}
+                    onChange={toggleSelectAll}
+                    className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    title="Seleccionar todos en esta página"
+                  />
+                </th>
                 <th className="px-1 sm:px-3 py-2 sm:py-3 text-left text-[8px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">#</th>
                 <th className="px-1 sm:px-3 py-2 sm:py-3 text-left text-[8px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</th>
                 <th className="px-1 sm:px-3 py-2 sm:py-3 text-left text-[8px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Descripción</th>
@@ -4225,7 +4307,15 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
             </thead>
             <tbody className="divide-y divide-slate-200">
               {paginated.map((m, i) => (
-                <tr key={`${m.correlativo}-${i}`} className="hover:bg-blue-50/50 transition-colors group">
+                <tr key={`${m.correlativo}-${i}`} className={`transition-colors group ${selectedMovements.has(m.correlativo) ? 'bg-red-50/60' : 'hover:bg-blue-50/50'}`}>
+                  <td className="px-1 sm:px-2 py-1.5 sm:py-2.5 text-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedMovements.has(m.correlativo)}
+                      onChange={() => toggleSelect(m.correlativo)}
+                      className="w-3.5 h-3.5 rounded border-slate-300 text-red-600 focus:ring-red-500 cursor-pointer"
+                    />
+                  </td>
                   <td className="px-1 sm:px-3 py-1.5 sm:py-2.5 text-[9px] sm:text-xs text-slate-400 font-mono">{m.correlativo}</td>
                   <td className="px-1 sm:px-3 py-1.5 sm:py-2.5 text-[9px] sm:text-xs font-medium text-slate-700 whitespace-nowrap">{formatDate(m.fecha)}</td>
                   {/* Descripción - editable on double click */}
