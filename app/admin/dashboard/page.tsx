@@ -456,7 +456,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       const fuelCharges = Number(fuelChargesNonStratus._sum.monto || 0);
 
       // Fixed adjustment for pending balance (historical correction)
-      const FIXED_ADJUSTMENT = 20659549;
+      const FIXED_ADJUSTMENT = 20599908;
 
       return {
         totalHours: totalHoursAllTime,
