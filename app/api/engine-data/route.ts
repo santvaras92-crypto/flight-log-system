@@ -470,18 +470,19 @@ async function autoLinkEngineToFlight(engineFlightId: number, flightDate: Date, 
     where: {
       fecha: { gte: dayBefore, lte: dayAfter },
     },
-    select: { id: true, diff_hobbs: true, EngineMonitorFlights: { select: { id: true, durationSec: true } } },
+    select: {
+      id: true,
+      fecha: true,
+      diff_hobbs: true,
+      hobbs_inicio: true,
+      EngineMonitorFlights: { select: { id: true, durationSec: true } },
+    },
   });
 
   if (candidates.length === 0) return;
 
-  // Strategy: find best match with two passes
-  // Pass A: exact match — (existing engine hours + this) ≈ diff_hobbs (within 0.5h)
-  // Pass B: partial match — this engine is shorter than diff_hobbs, no existing links yet
-  //         (allows the first tramo of a multi-tramo flight to link)
-
-  let best: typeof candidates[0] | null = null;
-  let bestDiff = Infinity;
+  // Collect all duration matches (within 0.5h tolerance)
+  let bestMatches: { candidate: typeof candidates[0]; diff: number }[] = [];
   let bestPartial: typeof candidates[0] | null = null;
   let bestPartialDiff = Infinity;
 
@@ -492,27 +493,83 @@ async function autoLinkEngineToFlight(engineFlightId: number, flightDate: Date, 
     const totalEngineHours = existingEngineHours + engineHours;
     const diff = Math.abs(flightHours - totalEngineHours);
 
-    // Pass A: total engine time ≈ flight time
-    if (diff < bestDiff) { bestDiff = diff; best = c; }
+    // Exact match: total engine time ≈ flight time
+    if (diff <= 0.5) {
+      bestMatches.push({ candidate: c, diff });
+    }
 
-    // Pass B: if no existing engine links AND this engine is a plausible fraction
-    //         (engineHours < flightHours, and engineHours > 20% of flightHours)
+    // Partial match: first tramo of a multi-tramo flight
     if (c.EngineMonitorFlights.length === 0 && engineHours < flightHours && engineHours > flightHours * 0.2) {
-      const partialDiff = flightHours - engineHours; // how much is "missing"
+      const partialDiff = flightHours - engineHours;
       if (partialDiff < bestPartialDiff) { bestPartialDiff = partialDiff; bestPartial = c; }
     }
   }
 
-  // Prefer exact match
-  if (best && bestDiff <= 0.5) {
+  // Single exact match → use it
+  if (bestMatches.length === 1) {
     await prisma.engineMonitorFlight.update({
       where: { id: engineFlightId },
-      data: { linkedFlightId: best.id },
+      data: { linkedFlightId: bestMatches[0].candidate.id },
     });
     return;
   }
 
-  // Fall back to partial match (first tramo of a multi-tramo flight)
+  // Multiple candidates with similar duration → use hobbs ordering to disambiguate.
+  // Engine flights have UTC timestamps; Flight.fecha is stored at noon local (no time-of-day).
+  // hobbs_inicio establishes sequential order: lower hobbs = flew earlier in the day.
+  if (bestMatches.length > 1) {
+    // Prefer same-date candidates. Flight.fecha is at noon local, engine flightDate is UTC.
+    // Engine flights in Chile (UTC-3/-4) at e.g. 16:56 UTC = 13:56 CLT on the same date.
+    // For flights after midnight UTC (00:00-03:59 UTC), they could be the previous local day.
+    // Heuristic: compare Flight.fecha date with engine flightDate date (both in ISO).
+    const engineDateStr = flightDate.toISOString().slice(0, 10);
+    const sameDateMatches = bestMatches.filter(m =>
+      m.candidate.fecha.toISOString().slice(0, 10) === engineDateStr
+    );
+
+    // Use same-date matches if available, otherwise fall back to all matches
+    const effectiveMatches = sameDateMatches.length >= 2 ? sameDateMatches : bestMatches;
+
+    // Get engine flights on the SAME UTC date to determine chronological position
+    const sameDateStart = new Date(engineDateStr + 'T00:00:00Z');
+    const sameDateEnd = new Date(engineDateStr + 'T23:59:59.999Z');
+    const sameDayEngineFlights = await prisma.engineMonitorFlight.findMany({
+      where: {
+        flightDate: { gte: sameDateStart, lte: sameDateEnd },
+        isGroundRun: { not: true },
+        durationSec: { gte: MIN_DURATION_SEC },
+      },
+      select: { id: true, flightDate: true },
+      orderBy: { flightDate: 'asc' },
+    });
+
+    // This engine flight's chronological position among same-day engine flights
+    const engineIndex = sameDayEngineFlights.findIndex(ef => ef.id === engineFlightId);
+
+    // Sort candidate Flights by hobbs_inicio ascending (earlier flight = lower hobbs)
+    const sortedCandidates = effectiveMatches
+      .map(m => m.candidate)
+      .sort((a, b) => (Number(a.hobbs_inicio) || 0) - (Number(b.hobbs_inicio) || 0));
+
+    // Match by position: engine flight #0 (earliest) → Flight with lowest hobbs_inicio
+    if (engineIndex >= 0 && engineIndex < sortedCandidates.length) {
+      await prisma.engineMonitorFlight.update({
+        where: { id: engineFlightId },
+        data: { linkedFlightId: sortedCandidates[engineIndex].id },
+      });
+      return;
+    }
+
+    // Fallback: best duration match
+    bestMatches.sort((a, b) => a.diff - b.diff);
+    await prisma.engineMonitorFlight.update({
+      where: { id: engineFlightId },
+      data: { linkedFlightId: bestMatches[0].candidate.id },
+    });
+    return;
+  }
+
+  // No exact match → partial match (first tramo of a multi-tramo flight)
   if (bestPartial && bestPartialDiff <= 2.0) {
     await prisma.engineMonitorFlight.update({
       where: { id: engineFlightId },
