@@ -296,6 +296,27 @@ class JPIDecoderImpl {
 
       const records = this.parseDataRecords(fhdr);
 
+      // ── Detect dead GPS hardware ──────────────────────────────────
+      // When the GPS receiver is offline/broken, the EDM-830 still sends
+      // GPS delta fields but they settle to a fixed offset and never change.
+      // This produces thousands of "GPS points" that are all at the exact
+      // same coordinate. Real GPS tracks have many distinct positions.
+      // We detect this by counting unique lat/lon pairs: a flight with ≥50
+      // GPS-bearing records but ≤ 3 unique positions has a dead GPS.
+      const gpsRecords = records.filter(r => r.latitude !== null && r.longitude !== null);
+      if (gpsRecords.length >= 50) {
+        const uniqueCoords = new Set(gpsRecords.map(r => `${r.latitude},${r.longitude}`));
+        if (uniqueCoords.size <= 3) {
+          // Strip fake GPS from all records
+          for (const r of records) {
+            r.latitude = null;
+            r.longitude = null;
+            r.gpsAltitude = null;
+            r.groundSpeed = null;
+          }
+        }
+      }
+
       const durationSec =
         records.length > 0
           ? Math.max(...records.map((r) => r.elapsedSec))
