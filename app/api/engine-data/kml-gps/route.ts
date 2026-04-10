@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseKml, matchKmlToReadings, metersToFeet } from "@/lib/kml-parser";
+import { computeCalibration, updateCalibration } from "@/lib/gps-calibration";
 
 /**
  * POST /api/engine-data/kml-gps
@@ -98,6 +99,53 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // ─── Learn from JPI vs KML comparison before overwriting ───
+    let calibrationInfo: { avgError: number; correctedError: number; window: number } | null = null;
+    if (existingGpsCount > 10) {
+      try {
+        // Build JPI points array from current (pre-overwrite) readings
+        const jpiPoints = readings
+          .filter(r => r.latitude !== null && r.longitude !== null &&
+            Number(r.latitude) !== 0 && Number(r.longitude) !== 0)
+          .map(r => ({
+            lat: Number(r.latitude),
+            lng: Number(r.longitude),
+            elapsed: r.elapsedSec,
+          }));
+
+        // Build KML points array from the matches
+        const kmlPoints = matches
+          .map(({ readingIndex, point }) => ({
+            lat: point.latitude,
+            lng: point.longitude,
+            elapsed: readings[readingIndex]?.elapsedSec ?? 0,
+          }));
+
+        const cal = computeCalibration(jpiPoints, kmlPoints);
+        if (cal) {
+          await updateCalibration(engineFlight.aircraftId, cal);
+          calibrationInfo = {
+            avgError: Math.round(cal.avgErrorMeters),
+            correctedError: Math.round(cal.avgErrorCorrectedMeters),
+            window: cal.smoothingWindow,
+          };
+          console.log(
+            `GPS Calibration updated for ${engineFlight.aircraftId}: ` +
+            `offset=(${cal.latOffsetDeg.toFixed(6)}, ${cal.lonOffsetDeg.toFixed(6)}), ` +
+            `window=${cal.smoothingWindow}, error=${cal.avgErrorMeters.toFixed(0)}m → ${cal.avgErrorCorrectedMeters.toFixed(0)}m`
+          );
+        }
+      } catch (e) {
+        console.error("GPS calibration learning error (non-critical):", e);
+      }
+    }
+
+    // Mark GPS source as KML
+    await prisma.engineMonitorFlight.update({
+      where: { id: parseInt(engineFlightId) },
+      data: { gpsSource: "kml" },
+    });
+
     // Update readings with GPS data using raw SQL bulk UPDATE for speed
     let updatedCount = 0;
     const BATCH_SIZE = 500;
@@ -134,6 +182,7 @@ export async function POST(req: NextRequest) {
       updatedCount,
       existingGpsOverwritten: existingGpsCount,
       trackDuration: track.durationSec ? `${Math.round(track.durationSec / 60)} min` : "unknown",
+      calibration: calibrationInfo,
     });
   } catch (error: any) {
     console.error("KML GPS import error:", error);

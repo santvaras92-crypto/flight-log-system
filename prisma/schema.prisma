@@ -247,6 +247,7 @@ model EngineMonitorFlight {
   longitude     Decimal?
   sourceFile    String?
   isGroundRun   Boolean                @default(false)
+  gpsSource     String                 @default("jpi")  // "jpi" | "kml" | "none"
   createdAt     DateTime               @default(now())
   linkedFlightId Int?
   readings      EngineMonitorReading[]
@@ -255,6 +256,24 @@ model EngineMonitorFlight {
   @@unique([flightNumber, flightDate])
   @@index([flightDate])
   @@index([linkedFlightId])
+}
+
+// GPS Calibration: learned correction parameters from comparing JPI GPS vs KML GPS
+// Updated each time a KML is uploaded, aggregated across all flights
+model GpsCalibration {
+  id              Int      @id @default(autoincrement())
+  aircraftId      String   @default("CC-AQI")
+  // Offset corrections (systematic bias in JPI GPS)
+  latOffsetDeg    Float    @default(0)    // average lat error: JPI - KML
+  lonOffsetDeg    Float    @default(0)    // average lon error: JPI - KML
+  // Smoothing window (optimal moving average window learned from KML comparisons)
+  smoothingWindow Int      @default(15)   // number of points for moving average
+  // Statistics
+  sampleCount     Int      @default(0)    // number of KML comparisons used
+  avgErrorMeters  Float    @default(0)    // average position error before correction
+  lastUpdated     DateTime @default(now())
+
+  @@unique([aircraftId])
 }
 
 model EngineMonitorReading {

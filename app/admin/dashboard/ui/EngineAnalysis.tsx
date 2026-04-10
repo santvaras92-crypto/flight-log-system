@@ -69,6 +69,7 @@ interface FlightDetail {
   flightDate: string;
   engineModel: string;
   engineSerial: string;
+  gpsSource?: string;
   readings: Reading[];
   linkedFlight?: {
     id: number;
@@ -99,6 +100,12 @@ function formatDate(d: string) {
 export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { initialFlightIds?: number[] | null; onFlightOpened?: () => void } = {}) {
   const [flights, setFlights] = useState<FlightSummary[]>([]);
   const [selectedFlight, setSelectedFlight] = useState<FlightDetail | null>(null);
+  const [gpsCalibration, setGpsCalibration] = useState<{ latOffsetDeg: number; lonOffsetDeg: number; smoothingWindow: number; sampleCount: number } | null>(null);
+
+  // Fetch GPS calibration once on mount
+  useEffect(() => {
+    fetch("/api/gps-calibration").then(r => r.json()).then(setGpsCalibration).catch(() => {});
+  }, []);
   const [loading, setLoading] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -1088,6 +1095,8 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
                             spd: r.groundSpd ?? undefined,
                             elapsed: r.elapsedSec,
                           }))}
+                        gpsSource={(selectedFlight.gpsSource as "jpi" | "kml" | "none") || "jpi"}
+                        calibration={gpsCalibration || undefined}
                       />
                     )}
                     {/* KML Upload area */}

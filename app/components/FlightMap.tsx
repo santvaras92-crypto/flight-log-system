@@ -14,12 +14,23 @@ interface GpsPoint {
 interface FlightMapProps {
   points: GpsPoint[];
   className?: string;
+  gpsSource?: "jpi" | "kml" | "none";  // source of GPS data
+  calibration?: {                        // learned correction parameters
+    latOffsetDeg: number;
+    lonOffsetDeg: number;
+    smoothingWindow: number;
+    sampleCount: number;
+  } | null;
 }
 
-export default function FlightMap({ points, className }: FlightMapProps) {
+export default function FlightMap({ points, className, gpsSource, calibration }: FlightMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
   const [expanded, setExpanded] = useState(false);
+
+  // Determine if we should apply JPI corrections
+  const isJpiGps = gpsSource === "jpi" || (!gpsSource && !calibration);
+  const hasCalibration = calibration && calibration.sampleCount > 0;
 
   // Filter valid points and deduplicate
   const validPoints = points.filter(
@@ -110,8 +121,50 @@ export default function FlightMap({ points, className }: FlightMapProps) {
     }
   }
 
+  // ─── Apply GPS calibration corrections for JPI tracks ───
+  // When GPS source is JPI and we have learned calibration parameters,
+  // apply offset correction and smoothing to improve the track quality.
+  let displayPoints = cleanPoints;
+  if (isJpiGps && hasCalibration && cleanPoints.length > 5) {
+    const window = calibration!.smoothingWindow;
+    const latOff = calibration!.latOffsetDeg;
+    const lonOff = calibration!.lonOffsetDeg;
+    const half = Math.floor(window / 2);
+
+    // Step 1: Subtract systematic offset + Step 2: Moving average smoothing
+    displayPoints = cleanPoints.map((p, i) => {
+      const start = Math.max(0, i - half);
+      const end = Math.min(cleanPoints.length - 1, i + half);
+      const count = end - start + 1;
+      let sumLat = 0, sumLng = 0;
+      for (let j = start; j <= end; j++) {
+        sumLat += cleanPoints[j].lat - latOff;
+        sumLng += cleanPoints[j].lng - lonOff;
+      }
+      return {
+        ...p,
+        lat: sumLat / count,
+        lng: sumLng / count,
+      };
+    });
+  } else if (isJpiGps && !hasCalibration && cleanPoints.length > 5) {
+    // No calibration yet — apply default light smoothing (window=7) for JPI tracks
+    const half = 3;
+    displayPoints = cleanPoints.map((p, i) => {
+      const start = Math.max(0, i - half);
+      const end = Math.min(cleanPoints.length - 1, i + half);
+      const count = end - start + 1;
+      let sumLat = 0, sumLng = 0;
+      for (let j = start; j <= end; j++) {
+        sumLat += cleanPoints[j].lat;
+        sumLng += cleanPoints[j].lng;
+      }
+      return { ...p, lat: sumLat / count, lng: sumLng / count };
+    });
+  }
+
   useEffect(() => {
-    if (!mapRef.current || cleanPoints.length < 2) return;
+    if (!mapRef.current || displayPoints.length < 2) return;
 
     // Destroy previous map if exists
     if (mapInstance.current) {
@@ -133,16 +186,16 @@ export default function FlightMap({ points, className }: FlightMapProps) {
     }).addTo(map);
 
     // Build polyline
-    const latLngs: L.LatLng[] = cleanPoints.map((p) => L.latLng(p.lat, p.lng));
+    const latLngs: L.LatLng[] = displayPoints.map((p) => L.latLng(p.lat, p.lng));
 
     // Color gradient based on altitude
-    const maxAlt = Math.max(...cleanPoints.map((p) => p.alt || 0));
-    const minAlt = Math.min(...cleanPoints.filter(p => (p.alt || 0) > 0).map((p) => p.alt || 0));
+    const maxAlt = Math.max(...displayPoints.map((p) => p.alt || 0));
+    const minAlt = Math.min(...displayPoints.filter(p => (p.alt || 0) > 0).map((p) => p.alt || 0));
 
     // Draw segments with altitude coloring
-    if (maxAlt > minAlt && cleanPoints.some(p => p.alt && p.alt > 0)) {
+    if (maxAlt > minAlt && displayPoints.some(p => p.alt && p.alt > 0)) {
       for (let i = 0; i < latLngs.length - 1; i++) {
-        const alt = cleanPoints[i].alt || minAlt;
+        const alt = displayPoints[i].alt || minAlt;
         const ratio = Math.min(1, Math.max(0, (alt - minAlt) / (maxAlt - minAlt)));
         // Blue (low) → Red (high)
         const r = Math.round(ratio * 220);
@@ -205,7 +258,7 @@ export default function FlightMap({ points, className }: FlightMapProps) {
         mapInstance.current = null;
       }
     };
-  }, [cleanPoints.length, expanded]);
+  }, [displayPoints.length, expanded]);
 
   // Resize map when expanding
   useEffect(() => {
@@ -214,7 +267,7 @@ export default function FlightMap({ points, className }: FlightMapProps) {
     }
   }, [expanded]);
 
-  if (cleanPoints.length < 2) {
+  if (displayPoints.length < 2) {
     return (
       <div className={`bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-center text-slate-400 text-sm ${className || ""}`} style={{ height: 200 }}>
         <span>📍 Sin datos GPS para este vuelo</span>
@@ -223,15 +276,15 @@ export default function FlightMap({ points, className }: FlightMapProps) {
   }
 
   // GPS stats
-  const maxSpd = Math.max(...cleanPoints.filter(p => p.spd).map(p => p.spd || 0));
-  const gpsMaxAlt = Math.max(...cleanPoints.filter(p => p.alt && p.alt > 0).map(p => p.alt || 0));
+  const maxSpd = Math.max(...displayPoints.filter(p => p.spd).map(p => p.spd || 0));
+  const gpsMaxAlt = Math.max(...displayPoints.filter(p => p.alt && p.alt > 0).map(p => p.alt || 0));
 
   return (
     <div className={`relative ${className || ""}`}>
       {/* GPS Stats Bar */}
       <div className="flex items-center gap-4 px-3 py-1.5 bg-slate-800 text-white text-xs rounded-t-xl">
-        <span className="font-semibold text-slate-300">📍 GPS Track</span>
-        <span>{cleanPoints.length} pts</span>
+        <span className="font-semibold text-slate-300">{gpsSource === "kml" ? "📍 GPS desde KML" : hasCalibration ? "📍 GPS JPI (calibrado)" : "📍 GPS Track"}</span>
+        <span>{displayPoints.length} pts</span>
         {gpsMaxAlt > 0 && <span>⬆ {Math.round(gpsMaxAlt * 3.281)} ft</span>}
         {maxSpd > 0 && <span>🏃 {Math.round(maxSpd)} kts</span>}
         <div className="flex-1" />

@@ -62,6 +62,7 @@ interface FlightDetail {
   durationSec: number;
   engineModel: string;
   engineSerial: string;
+  gpsSource?: string;
   maxEGT: number | null;
   maxCHT: number | null;
   maxOilTemp: number | null;
@@ -103,6 +104,12 @@ export default function PilotEngineDetail({
   onClose: () => void;
 }) {
   const [flight, setFlight] = useState<FlightDetail | null>(null);
+  const [gpsCalibration, setGpsCalibration] = useState<{ latOffsetDeg: number; lonOffsetDeg: number; smoothingWindow: number; sampleCount: number } | null>(null);
+
+  // Fetch GPS calibration once on mount
+  useEffect(() => {
+    fetch("/api/gps-calibration").then(r => r.json()).then(setGpsCalibration).catch(() => {});
+  }, []);
   const [loading, setLoading] = useState(true);
   const [activeTramo, setActiveTramo] = useState(0);
   const multiTramo = engineFlightIds.length > 1;
@@ -547,6 +554,8 @@ export default function PilotEngineDetail({
                         spd: r.groundSpd ?? undefined,
                         elapsed: r.elapsedSec,
                       }))}
+                    gpsSource={(flight.gpsSource as "jpi" | "kml" | "none") || "jpi"}
+                    calibration={gpsCalibration || undefined}
                   />
                 </div>
               )}
