@@ -2683,10 +2683,10 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
     codesToShow.forEach(code => {
       const u = userByCode.get(code) || null;
       const fs = flightsByCode.get(code) || [];
-      const csvStats = csvPilotStats?.[code];
-      const flightsCount = csvStats?.flights ?? fs.length;
-      const hours = csvStats?.hours ?? fs.reduce((a, b) => a + Number(b.diff_hobbs || 0), 0);
-      const totalSpent = csvStats?.spent ?? fs.reduce((a, b) => a + Number(b.costo || 0), 0);
+      // Always use DB flights (same source as Flight Log Entries balance)
+      const flightsCount = fs.length;
+      const hours = fs.reduce((a, b) => a + Number(b.diff_hobbs || 0), 0);
+      const totalSpent = Math.round(fs.reduce((a, b) => a + Number(b.costo || 0), 0));
       const rateHr = hours > 0 ? totalSpent / hours : 0;
       const deposits = depositsByCode?.[code] ?? (u ? transactions.filter(t => t.userId === u.id && t.tipo === 'ABONO').reduce((a, b) => a + Number(b.monto), 0) : 0);
       const fuelCredit = (fuelByCode?.[code] || 0);
