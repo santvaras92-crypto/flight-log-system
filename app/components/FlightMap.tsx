@@ -104,6 +104,15 @@ export default function FlightMap({ points, className, gpsSource, calibration }:
     const dLng = (curr.lng - prev.lng) * 111320 * Math.cos(prev.lat * Math.PI / 180);
     const dist = Math.sqrt(dLat * dLat + dLng * dLng);
 
+    // For JPI tracks, preserve maneuver detail (closer to Savvy rendering)
+    // and only drop impossible teleport jumps.
+    if (isJpiGps) {
+      if (dist < 15000) {
+        cleanPoints.push(curr);
+      }
+      continue;
+    }
+
     // Use time-based speed check if elapsed data available
     if (prev.elapsed != null && curr.elapsed != null) {
       const timeDiff = curr.elapsed - prev.elapsed;
@@ -129,7 +138,8 @@ export default function FlightMap({ points, className, gpsSource, calibration }:
     const learnedWindow = calibration!.smoothingWindow;
     // Very large windows (e.g. 31) over-smooth circuit work and hide turns.
     // Clamp for display so we keep maneuver detail while still reducing jitter.
-    const clampedWindow = Math.max(3, Math.min(9, learnedWindow));
+    const maxWindow = cleanPoints.length < 500 ? 5 : 9;
+    const clampedWindow = Math.max(3, Math.min(maxWindow, learnedWindow));
     const window = clampedWindow % 2 === 0 ? clampedWindow - 1 : clampedWindow;
     const latOff = calibration!.latOffsetDeg;
     const lonOff = calibration!.lonOffsetDeg;
