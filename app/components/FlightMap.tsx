@@ -126,7 +126,11 @@ export default function FlightMap({ points, className, gpsSource, calibration }:
   // apply offset correction and smoothing to improve the track quality.
   let displayPoints = cleanPoints;
   if (isJpiGps && hasCalibration && cleanPoints.length > 5) {
-    const window = calibration!.smoothingWindow;
+    const learnedWindow = calibration!.smoothingWindow;
+    // Very large windows (e.g. 31) over-smooth circuit work and hide turns.
+    // Clamp for display so we keep maneuver detail while still reducing jitter.
+    const clampedWindow = Math.max(3, Math.min(9, learnedWindow));
+    const window = clampedWindow % 2 === 0 ? clampedWindow - 1 : clampedWindow;
     const latOff = calibration!.latOffsetDeg;
     const lonOff = calibration!.lonOffsetDeg;
     const half = Math.floor(window / 2);
