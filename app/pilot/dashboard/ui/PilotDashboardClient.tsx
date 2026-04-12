@@ -473,25 +473,25 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
     ),
     deposits: (
       <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] lg:overflow-y-auto flex flex-col`}>
-        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-slate-100 flex items-center justify-center mb-2 sm:mb-4">
-          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-green-100 flex items-center justify-center mb-2 sm:mb-4">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
         <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Depósitos</h3>
-        <div className="text-lg sm:text-3xl font-bold text-slate-700 mb-0.5 sm:mb-1">{formatCurrency(data.metrics.totalDeposits)}</div>
+        <div className="text-lg sm:text-3xl font-bold text-green-600 mb-0.5 sm:mb-1">{formatCurrency(data.metrics.totalDeposits)}</div>
         <p className="text-xs sm:text-sm text-slate-600 font-medium">total abonado</p>
       </div>
     ),
     flightCost: (
       <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] lg:overflow-y-auto flex flex-col`}>
-        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-slate-100 flex items-center justify-center mb-2 sm:mb-4">
-          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-amber-100 flex items-center justify-center mb-2 sm:mb-4">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
         </div>
         <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Costo Vuelos</h3>
-        <div className="text-lg sm:text-3xl font-bold text-slate-700 mb-0.5 sm:mb-1">{formatCurrency(data.metrics.totalCost)}</div>
+        <div className="text-lg sm:text-3xl font-bold text-amber-600 mb-0.5 sm:mb-1">{formatCurrency(data.metrics.totalCost)}</div>
         <p className="text-xs sm:text-sm text-slate-600 font-medium">total consumido</p>
       </div>
     ),
@@ -516,13 +516,13 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
     ),
     fuel: (
       <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] lg:overflow-y-auto flex flex-col`}>
-        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-slate-100 flex items-center justify-center mb-2 sm:mb-4">
-          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-orange-100 flex items-center justify-center mb-2 sm:mb-4">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
           </svg>
         </div>
         <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Combustible</h3>
-        <div className="text-lg sm:text-3xl font-bold text-slate-700 mb-0.5 sm:mb-1">{formatCurrency(data.metrics.totalFuel)}</div>
+        <div className="text-lg sm:text-3xl font-bold text-orange-600 mb-0.5 sm:mb-1">{formatCurrency(data.metrics.totalFuel)}</div>
         <p className="text-xs sm:text-sm text-slate-600 font-medium">total registrado</p>
       </div>
     ),
