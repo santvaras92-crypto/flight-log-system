@@ -240,7 +240,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
   const metrics = [
     { label: 'VUELOS', value: data.totalFlights.toString() },
     { label: 'HORAS', value: data.totalHours.toFixed(1) },
-    { label: 'CARGOS', value: formatCurrency(data.totalSpent), isDebit: true },
+     { label: 'CARGOS', value: formatCurrency(data.totalSpent), isWarning: true },
     { label: 'DEPÓSITOS', value: formatCurrency(data.totalDeposits + data.totalFuel), isCredit: true },
   ];
   
@@ -266,6 +266,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     // Value
     let valueColor = colors.navy;
     if (metric.isDebit) valueColor = colors.debit;
+    if (metric.isWarning) valueColor = colors.warning;
     if (metric.isCredit) valueColor = colors.credit;
     
     doc.setTextColor(...valueColor);
