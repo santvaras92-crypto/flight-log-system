@@ -352,7 +352,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
         1: { cellWidth: 14, halign: 'center', textColor: colors.navy },
         2: { cellWidth: 24, halign: 'right' },
         3: { cellWidth: 24, halign: 'right' },
-        4: { cellWidth: 26, halign: 'right', fontStyle: 'bold', textColor: colors.debit },
+        4: { cellWidth: 26, halign: 'right', fontStyle: 'bold', textColor: colors.grayDark },
         5: { cellWidth: 'auto', halign: 'left', textColor: colors.grayDark, fontSize: 7 },
       },
     });
