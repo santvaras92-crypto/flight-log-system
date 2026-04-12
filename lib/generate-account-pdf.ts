@@ -126,6 +126,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     // Semantic
     credit: [26, 95, 42] as [number, number, number],             // #1a5f2a - Green for credits
     debit: [139, 26, 26] as [number, number, number],             // #8b1a1a - Red for debits
+    warning: [180, 130, 40] as [number, number, number],          // #b48228 - Warm amber for charges
   };
   
   // Helper functions
@@ -352,7 +353,7 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
         1: { cellWidth: 14, halign: 'center', textColor: colors.navy },
         2: { cellWidth: 24, halign: 'right' },
         3: { cellWidth: 24, halign: 'right' },
-        4: { cellWidth: 26, halign: 'right', fontStyle: 'bold', textColor: colors.grayDark },
+        4: { cellWidth: 26, halign: 'right', fontStyle: 'bold', textColor: colors.warning },
         5: { cellWidth: 'auto', halign: 'left', textColor: colors.grayDark, fontSize: 7 },
       },
     });
