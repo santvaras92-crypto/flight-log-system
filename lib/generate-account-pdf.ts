@@ -265,7 +265,6 @@ export async function generateAccountStatementPDF(data: AccountData): Promise<vo
     
     // Value
     let valueColor = colors.navy;
-    if (metric.isDebit) valueColor = colors.debit;
     if (metric.isWarning) valueColor = colors.warning;
     if (metric.isCredit) valueColor = colors.credit;
     
