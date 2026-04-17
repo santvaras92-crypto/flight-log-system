@@ -106,6 +106,7 @@ const palette = {
 };
 
 const defaultCardOrder = ['totalHours', 'totalFlights', 'thisMonth', 'avgFlightTime', 'myActivity', 'lastFlight', 'fuelRate', 'deposits', 'flightCost', 'balance', 'fuel', 'nextInspections'];
+const MOBILE_REORDER_LONG_PRESS_MS = 3000;
 
 export default function PilotDashboardClient({ data }: { data: PilotData }) {
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
@@ -189,7 +190,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
     const dx = Math.abs(touch.clientX - touchStartPos.x);
     const dy = Math.abs(touch.clientY - touchStartPos.y);
     
-    if (elapsed > 1000 && dx < 25 && dy < 25 && !draggedCard) {
+    if (elapsed > MOBILE_REORDER_LONG_PRESS_MS && dx < 25 && dy < 25 && !draggedCard) {
       setDraggedCard(cardId);
       setIsDragEnabled(true);
     } else {

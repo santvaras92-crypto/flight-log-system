@@ -342,6 +342,8 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
     return () => grid.removeEventListener('touchmove', onTouchMove);
   }, [draggedCard]);
 
+  const MOBILE_REORDER_LONG_PRESS_MS = 3000;
+
   // Long press touch start
   const handleTouchStartLongPress = (e: React.TouchEvent, cardId: string) => {
     dragActivatedRef.current = false;
@@ -351,7 +353,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       handleDragStart(cardId);
       // Haptic feedback
       if (navigator.vibrate) navigator.vibrate(50);
-    }, 800);
+    }, MOBILE_REORDER_LONG_PRESS_MS);
   };
 
   // Long press touch end — find drop target and commit reorder
