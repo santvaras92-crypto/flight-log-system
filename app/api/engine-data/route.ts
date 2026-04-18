@@ -457,19 +457,21 @@ async function autoLinkEngineToFlight(engineFlightId: number, flightDate: Date, 
 
   const engineHours = durationSec / 3600;
 
-  // Search ±1 day window (timezone: Chile UTC-3/4, Flight.fecha stored at noon local)
-  const dayBefore = new Date(flightDate);
-  dayBefore.setDate(dayBefore.getDate() - 1);
-  dayBefore.setHours(0, 0, 0, 0);
+  // Anclamos por fecha LOCAL de Chile (no UTC).
+  // Flight.fecha está guardado al mediodía local como ancla del día calendario.
+  // Engine.flightDate es timestamp UTC real → convertimos a yyyy-mm-dd en America/Santiago.
+  const localDateStr = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Santiago",
+    year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(flightDate); // formato "YYYY-MM-DD"
 
-  const dayAfter = new Date(flightDate);
-  dayAfter.setDate(dayAfter.getDate() + 1);
-  dayAfter.setHours(23, 59, 59, 999);
+  // Ventana de Flight.fecha: cualquier instante dentro del día local Chile.
+  // Como Flight.fecha está al mediodía local, basta filtrar por el rango UTC del día local.
+  const dayStart = new Date(`${localDateStr}T00:00:00-04:00`); // peor caso UTC-4
+  const dayEnd = new Date(`${localDateStr}T23:59:59-03:00`);   // peor caso UTC-3
 
   const candidates = await prisma.flight.findMany({
-    where: {
-      fecha: { gte: dayBefore, lte: dayAfter },
-    },
+    where: { fecha: { gte: dayStart, lte: dayEnd } },
     select: {
       id: true,
       fecha: true,
@@ -479,103 +481,92 @@ async function autoLinkEngineToFlight(engineFlightId: number, flightDate: Date, 
     },
   });
 
-  if (candidates.length === 0) return;
+  if (candidates.length === 0) return; // sin Flight ese día → no linkear (mejor que linkear mal)
 
-  // Collect all duration matches (within 0.5h tolerance)
-  let bestMatches: { candidate: typeof candidates[0]; diff: number }[] = [];
-  let bestPartial: typeof candidates[0] | null = null;
-  let bestPartialDiff = Infinity;
+  // Sólo Flights cuya fecha local Chile coincida exactamente con el engine.
+  const sameDayCandidates = candidates.filter(c => {
+    const cLocal = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Santiago",
+      year: "numeric", month: "2-digit", day: "2-digit",
+    }).format(c.fecha);
+    return cLocal === localDateStr;
+  });
 
-  for (const c of candidates) {
+  if (sameDayCandidates.length === 0) return; // sin match en el día local → no linkear
+
+  // Score por duración: menor diff = mejor.
+  type Scored = { candidate: typeof sameDayCandidates[0]; diff: number; isExact: boolean };
+  const scored: Scored[] = [];
+  for (const c of sameDayCandidates) {
     const flightHours = Number(c.diff_hobbs) || 0;
     if (flightHours <= 0) continue;
     const existingEngineHours = c.EngineMonitorFlights.reduce((s, e) => s + e.durationSec / 3600, 0);
     const totalEngineHours = existingEngineHours + engineHours;
     const diff = Math.abs(flightHours - totalEngineHours);
-
-    // Exact match: total engine time ≈ flight time
-    if (diff <= 0.5) {
-      bestMatches.push({ candidate: c, diff });
-    }
-
-    // Partial match: first tramo of a multi-tramo flight
-    if (c.EngineMonitorFlights.length === 0 && engineHours < flightHours && engineHours > flightHours * 0.2) {
-      const partialDiff = flightHours - engineHours;
-      if (partialDiff < bestPartialDiff) { bestPartialDiff = partialDiff; bestPartial = c; }
-    }
+    scored.push({ candidate: c, diff, isExact: diff <= 0.5 });
   }
 
-  // Single exact match → use it
-  if (bestMatches.length === 1) {
+  if (scored.length === 0) return;
+
+  // Si hay match(es) exactos, ordenamos por diff y desempatamos por hobbs.
+  const exactMatches = scored.filter(s => s.isExact);
+
+  if (exactMatches.length === 1) {
     await prisma.engineMonitorFlight.update({
       where: { id: engineFlightId },
-      data: { linkedFlightId: bestMatches[0].candidate.id },
+      data: { linkedFlightId: exactMatches[0].candidate.id },
     });
     return;
   }
 
-  // Multiple candidates with similar duration → use hobbs ordering to disambiguate.
-  // Engine flights have UTC timestamps; Flight.fecha is stored at noon local (no time-of-day).
-  // hobbs_inicio establishes sequential order: lower hobbs = flew earlier in the day.
-  if (bestMatches.length > 1) {
-    // Prefer same-date candidates. Flight.fecha is at noon local, engine flightDate is UTC.
-    // Engine flights in Chile (UTC-3/-4) at e.g. 16:56 UTC = 13:56 CLT on the same date.
-    // For flights after midnight UTC (00:00-03:59 UTC), they could be the previous local day.
-    // Heuristic: compare Flight.fecha date with engine flightDate date (both in ISO).
-    const engineDateStr = flightDate.toISOString().slice(0, 10);
-    const sameDateMatches = bestMatches.filter(m =>
-      m.candidate.fecha.toISOString().slice(0, 10) === engineDateStr
-    );
-
-    // Use same-date matches if available, otherwise fall back to all matches
-    const effectiveMatches = sameDateMatches.length >= 2 ? sameDateMatches : bestMatches;
-
-    // Get engine flights on the SAME UTC date to determine chronological position
-    const sameDateStart = new Date(engineDateStr + 'T00:00:00Z');
-    const sameDateEnd = new Date(engineDateStr + 'T23:59:59.999Z');
+  if (exactMatches.length > 1) {
+    // Desempate posicional: ordenar engine flights del día por hora UTC,
+    // ordenar Flights del día por hobbs_inicio, matchear por índice.
+    const dayUtcStart = new Date(`${localDateStr}T00:00:00-04:00`);
+    const dayUtcEnd = new Date(`${localDateStr}T23:59:59-03:00`);
     const sameDayEngineFlights = await prisma.engineMonitorFlight.findMany({
       where: {
-        flightDate: { gte: sameDateStart, lte: sameDateEnd },
+        flightDate: { gte: dayUtcStart, lte: dayUtcEnd },
         isGroundRun: { not: true },
         durationSec: { gte: MIN_DURATION_SEC },
       },
       select: { id: true, flightDate: true },
-      orderBy: { flightDate: 'asc' },
+      orderBy: { flightDate: "asc" },
     });
-
-    // This engine flight's chronological position among same-day engine flights
     const engineIndex = sameDayEngineFlights.findIndex(ef => ef.id === engineFlightId);
 
-    // Sort candidate Flights by hobbs_inicio ascending (earlier flight = lower hobbs)
-    const sortedCandidates = effectiveMatches
+    const sortedCandidates = exactMatches
       .map(m => m.candidate)
       .sort((a, b) => (Number(a.hobbs_inicio) || 0) - (Number(b.hobbs_inicio) || 0));
 
-    // Match by position: engine flight #0 (earliest) → Flight with lowest hobbs_inicio
-    if (engineIndex >= 0 && engineIndex < sortedCandidates.length) {
-      await prisma.engineMonitorFlight.update({
-        where: { id: engineFlightId },
-        data: { linkedFlightId: sortedCandidates[engineIndex].id },
-      });
-      return;
-    }
+    const chosen = (engineIndex >= 0 && engineIndex < sortedCandidates.length)
+      ? sortedCandidates[engineIndex]
+      : exactMatches.sort((a, b) => a.diff - b.diff)[0].candidate;
 
-    // Fallback: best duration match
-    bestMatches.sort((a, b) => a.diff - b.diff);
     await prisma.engineMonitorFlight.update({
       where: { id: engineFlightId },
-      data: { linkedFlightId: bestMatches[0].candidate.id },
+      data: { linkedFlightId: chosen.id },
     });
     return;
   }
 
-  // No exact match → partial match (first tramo of a multi-tramo flight)
-  if (bestPartial && bestPartialDiff <= 2.0) {
+  // Sin match exacto: tramo parcial de un Flight de múltiples tramos.
+  // Sólo si Flight no tiene engines aún y el engine cubre 20%-100% del Flight.
+  const partial = scored
+    .filter(s => {
+      const fh = Number(s.candidate.diff_hobbs) || 0;
+      return s.candidate.EngineMonitorFlights.length === 0
+        && engineHours < fh && engineHours > fh * 0.2;
+    })
+    .sort((a, b) => a.diff - b.diff)[0];
+
+  if (partial && partial.diff <= 2.0) {
     await prisma.engineMonitorFlight.update({
       where: { id: engineFlightId },
-      data: { linkedFlightId: bestPartial.id },
+      data: { linkedFlightId: partial.candidate.id },
     });
   }
+  // Si no, no linkear. Mejor sin link que con link incorrecto.
 }
 
 // DELETE — remove a flight and its readings
