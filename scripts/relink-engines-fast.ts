@@ -46,6 +46,19 @@ async function main() {
     flightsByDate.get(k)!.push(f);
   }
 
+  // Helper: busca Flights candidatos en día local Chile con fallback ±1 día
+  // (soporta vuelos en husos horarios extranjeros).
+  function getCandidates(dateKey: string): typeof allFlights {
+    const same = flightsByDate.get(dateKey) ?? [];
+    if (same.length > 0) return same;
+    const [yy, mm, dd] = dateKey.split("-").map(Number);
+    const prev = new Date(Date.UTC(yy, mm - 1, dd - 1));
+    const next = new Date(Date.UTC(yy, mm - 1, dd + 1));
+    const prevKey = localDateStr(prev);
+    const nextKey = localDateStr(next);
+    return [...(flightsByDate.get(prevKey) ?? []), ...(flightsByDate.get(nextKey) ?? [])];
+  }
+
   // Indexar engines por fecha local Chile (sólo válidos para link)
   const enginesByDate = new Map<string, typeof allEngines>();
   for (const e of allEngines) {
@@ -63,7 +76,7 @@ async function main() {
   const suggested = new Map<number, number | null>();
 
   for (const [dateKey, dayEngines] of enginesByDate) {
-    const dayFlights = flightsByDate.get(dateKey) ?? [];
+    const dayFlights = getCandidates(dateKey);
     if (dayFlights.length === 0) {
       for (const e of dayEngines) suggested.set(e.id, null);
       continue;

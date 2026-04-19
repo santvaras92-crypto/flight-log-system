@@ -465,13 +465,15 @@ async function autoLinkEngineToFlight(engineFlightId: number, flightDate: Date, 
     year: "numeric", month: "2-digit", day: "2-digit",
   }).format(flightDate); // formato "YYYY-MM-DD"
 
-  // Ventana de Flight.fecha: cualquier instante dentro del día local Chile.
-  // Como Flight.fecha está al mediodía local, basta filtrar por el rango UTC del día local.
-  const dayStart = new Date(`${localDateStr}T00:00:00-04:00`); // peor caso UTC-4
-  const dayEnd = new Date(`${localDateStr}T23:59:59-03:00`);   // peor caso UTC-3
+  // Buscamos en ventana ±1 día (amplia) para soportar vuelos en el extranjero
+  // con husos horarios distintos a Chile. Luego filtramos con preferencia estricta.
+  const [yy, mm, dd] = localDateStr.split("-").map(Number);
+  const anchorUtc = Date.UTC(yy, mm - 1, dd, 12, 0, 0); // mediodía UTC del día local
+  const wideStart = new Date(anchorUtc - 36 * 3600_000); // -36h
+  const wideEnd = new Date(anchorUtc + 36 * 3600_000);   // +36h
 
   const candidates = await prisma.flight.findMany({
-    where: { fecha: { gte: dayStart, lte: dayEnd } },
+    where: { fecha: { gte: wideStart, lte: wideEnd } },
     select: {
       id: true,
       fecha: true,
@@ -481,23 +483,23 @@ async function autoLinkEngineToFlight(engineFlightId: number, flightDate: Date, 
     },
   });
 
-  if (candidates.length === 0) return; // sin Flight ese día → no linkear (mejor que linkear mal)
+  if (candidates.length === 0) return;
 
-  // Sólo Flights cuya fecha local Chile coincida exactamente con el engine.
-  const sameDayCandidates = candidates.filter(c => {
-    const cLocal = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "America/Santiago",
-      year: "numeric", month: "2-digit", day: "2-digit",
-    }).format(c.fecha);
-    return cLocal === localDateStr;
+  // Preferencia: Flights cuya fecha local Chile coincida exactamente con el engine.
+  const fmtChile = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Santiago",
+    year: "numeric", month: "2-digit", day: "2-digit",
   });
+  const sameDayCandidates = candidates.filter(c => fmtChile.format(c.fecha) === localDateStr);
 
-  if (sameDayCandidates.length === 0) return; // sin match en el día local → no linkear
+  // Si no hay ninguno en día local Chile → el avión pudo haber volado en otro huso
+  // horario (ej. USA, Asia). Usamos la ventana amplia ±1 día como fallback.
+  const effectiveCandidates = sameDayCandidates.length > 0 ? sameDayCandidates : candidates;
 
   // Score por duración: menor diff = mejor.
-  type Scored = { candidate: typeof sameDayCandidates[0]; diff: number; isExact: boolean };
+  type Scored = { candidate: typeof effectiveCandidates[0]; diff: number; isExact: boolean };
   const scored: Scored[] = [];
-  for (const c of sameDayCandidates) {
+  for (const c of effectiveCandidates) {
     const flightHours = Number(c.diff_hobbs) || 0;
     if (flightHours <= 0) continue;
     const existingEngineHours = c.EngineMonitorFlights.reduce((s, e) => s + e.durationSec / 3600, 0);
