@@ -1166,69 +1166,53 @@ export default function RegisterClient({
                 </h3>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full border-collapse text-sm">
-                    <tbody>
-                      <tr className="border-b border-slate-200">
-                        <td className="py-3 px-4 font-semibold text-slate-600 bg-slate-50 w-1/3">FECHA</td>
-                        <td className="py-3 px-4 text-slate-800">{(() => { const p = flightData.fecha.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' }); })()}</td>
+                  <table className="w-full text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-700 text-white">
+                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>DATE</th>
+                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>HOBBS</th>
+                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>BLOCK<br />TIME</th>
+                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>TAC</th>
+                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>TACH.<br />TIME</th>
+                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" colSpan={3}>TOTAL TIME IN SERVICE</th>
+                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>PILOT</th>
+                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>INSTRUCTOR/<br />COPILOT</th>
+                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>ROUTE</th>
+                        <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>REMARKS<br />SIGNATURE</th>
                       </tr>
-                      <tr className="border-b border-slate-200">
-                        <td className="py-3 px-4 font-semibold text-slate-600 bg-slate-50">HOBBS</td>
-                        <td className="py-3 px-4">
-                          <span className="font-mono text-slate-800">{flightData.hobbs_inicio.toFixed(1)}</span>
-                          <span className="mx-2 text-slate-400">→</span>
-                          <span className="font-mono text-slate-800">{flightData.hobbs_fin.toFixed(1)}</span>
-                          <span className="ml-3 px-2 py-1 bg-blue-100 text-blue-800 rounded font-bold text-xs">
-                            {flightData.diff_hobbs.toFixed(1)} hrs
-                          </span>
+                      <tr className="bg-slate-700 text-white">
+                        <th className="border border-slate-400 px-2 py-1 text-center text-[10px]">AIRFRAME</th>
+                        <th className="border border-slate-400 px-2 py-1 text-center text-[10px]">ENGINE</th>
+                        <th className="border border-slate-400 px-2 py-1 text-center text-[10px]">PROPELLER</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white">
+                      <tr className="hover:bg-gray-50">
+                        <td className="border border-slate-300 px-2 py-2 text-center font-mono whitespace-nowrap">
+                          {(() => { const [y, m, d] = flightData.fecha.split('-'); return `${d}-${m}-${y.slice(-2)}`; })()}
                         </td>
+                        <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold">{flightData.hobbs_fin.toFixed(1)}</td>
+                        <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold text-blue-600">{flightData.diff_hobbs.toFixed(1)}</td>
+                        <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold">{flightData.tach_fin.toFixed(1)}</td>
+                        <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold text-blue-600">{flightData.diff_tach.toFixed(1)}</td>
+                        <td className="border border-slate-300 px-2 py-2 text-center font-mono">{flightData.airframe.toFixed(1)}</td>
+                        <td className="border border-slate-300 px-2 py-2 text-center font-mono">{flightData.engine.toFixed(1)}</td>
+                        <td className="border border-slate-300 px-2 py-2 text-center font-mono">{flightData.propeller.toFixed(1)}</td>
+                        <td className="border border-slate-300 px-2 py-2 text-center">{flightData.piloto.nombre}</td>
+                        <td className="border border-slate-300 px-2 py-2 text-center">{flightData.copiloto || '—'}</td>
+                        <td className="border border-slate-300 px-2 py-2 text-center font-mono">{flightData.aerodromoSalida}-{flightData.aerodromoDestino}</td>
+                        <td className="border border-slate-300 px-2 py-2 text-center text-[10px]">{flightData.detalle || 'S/Obs'}</td>
                       </tr>
-                      <tr className="border-b border-slate-200">
-                        <td className="py-3 px-4 font-semibold text-slate-600 bg-slate-50">TACH</td>
-                        <td className="py-3 px-4">
-                          <span className="font-mono text-slate-800">{flightData.tach_inicio.toFixed(1)}</span>
-                          <span className="mx-2 text-slate-400">→</span>
-                          <span className="font-mono text-slate-800">{flightData.tach_fin.toFixed(1)}</span>
-                          <span className="ml-3 px-2 py-1 bg-blue-100 text-blue-800 rounded font-bold text-xs">
-                            {flightData.diff_tach.toFixed(1)} hrs
-                          </span>
-                        </td>
-                      </tr>
-                      <tr className="border-b border-slate-200">
-                        <td className="py-3 px-4 font-semibold text-slate-600 bg-slate-50">AIRFRAME</td>
-                        <td className="py-3 px-4 font-mono text-slate-800">{flightData.airframe.toFixed(1)} hrs</td>
-                      </tr>
-                      <tr className="border-b border-slate-200">
-                        <td className="py-3 px-4 font-semibold text-slate-600 bg-slate-50">ENGINE</td>
-                        <td className="py-3 px-4 font-mono text-slate-800">{flightData.engine.toFixed(1)} hrs</td>
-                      </tr>
-                      <tr className="border-b border-slate-200">
-                        <td className="py-3 px-4 font-semibold text-slate-600 bg-slate-50">PROPELLER</td>
-                        <td className="py-3 px-4 font-mono text-slate-800">{flightData.propeller.toFixed(1)} hrs</td>
-                      </tr>
-                      <tr className="border-b border-slate-200">
-                        <td className="py-3 px-4 font-semibold text-slate-600 bg-slate-50">PILOTO</td>
-                        <td className="py-3 px-4 text-slate-800">{flightData.piloto.nombre} ({flightData.piloto.codigo})</td>
-                      </tr>
-                      {flightData.copiloto && (
-                        <tr className="border-b border-slate-200">
-                          <td className="py-3 px-4 font-semibold text-slate-600 bg-slate-50">INSTRUCTOR / COPILOTO</td>
-                          <td className="py-3 px-4 text-slate-800">{flightData.copiloto}</td>
-                        </tr>
-                      )}
-                      <tr className="border-b border-slate-200">
-                        <td className="py-3 px-4 font-semibold text-slate-600 bg-slate-50">RUTA</td>
-                        <td className="py-3 px-4 text-slate-800">{flightData.aerodromoSalida} → {flightData.aerodromoDestino}</td>
-                      </tr>
-                      {flightData.detalle && (
-                        <tr className="border-b border-slate-200">
-                          <td className="py-3 px-4 font-semibold text-slate-600 bg-slate-50">OBSERVACIONES</td>
-                          <td className="py-3 px-4 text-slate-800">{flightData.detalle}</td>
-                        </tr>
-                      )}
                     </tbody>
                   </table>
                 </div>
+                <p className="text-xs text-blue-700 mt-2">
+                  * Los valores mostrados son una vista previa. Se confirmarán al aprobar el vuelo.
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Base A/E/P: {flightData.airframe_inicio?.toFixed(1) ?? 'N/A'} / {flightData.engine_inicio?.toFixed(1) ?? 'N/A'} / {flightData.propeller_inicio?.toFixed(1) ?? 'N/A'}
+                  &nbsp;Δ Tach usado: {flightData.diff_tach.toFixed(1)} &nbsp;Δ Hobbs: {flightData.diff_hobbs.toFixed(1)}
+                </p>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
