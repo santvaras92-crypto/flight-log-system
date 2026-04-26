@@ -212,40 +212,31 @@ export async function generateFlightLogbookPDF(data: FlightLogbookData): Promise
       overflow: 'linebreak',
     },
     columnStyles: {
-      0:  { cellWidth: 18, font: 'courier' },                                          // DATE
+      0:  { cellWidth: 22, font: 'courier', overflow: 'visible', cellPadding: { top: 2.5, bottom: 2.5, left: 1, right: 1 } }, // DATE
       1:  { cellWidth: 18, font: 'courier', fontStyle: 'bold' },                       // HOBBS
       2:  { cellWidth: 16, font: 'courier', fontStyle: 'bold', textColor: colors.blue }, // BLOCK TIME (Δhobbs)
-      3:  { cellWidth: 18, font: 'courier', fontStyle: 'bold' },                       // TAC
+      3:  { cellWidth: 16, font: 'courier', fontStyle: 'bold' },                       // TAC
       4:  { cellWidth: 16, font: 'courier', fontStyle: 'bold', textColor: colors.blue }, // TACH. TIME (Δtach)
       5:  { cellWidth: 20, font: 'courier' },                                          // AIRFRAME
       6:  { cellWidth: 18, font: 'courier' },                                          // ENGINE
       7:  { cellWidth: 20, font: 'courier' },                                          // PROPELLER
-      8:  { cellWidth: 30, halign: 'left' },                                           // PILOT
-      9:  { cellWidth: 35, halign: 'left' },                                           // INSTRUCTOR/COPILOT
+      8:  { cellWidth: 28, halign: 'left' },                                           // PILOT
+      9:  { cellWidth: 33, halign: 'left' },                                           // INSTRUCTOR/COPILOT
       10: { cellWidth: 22, font: 'courier' },                                          // ROUTE
-      11: { cellWidth: 38, halign: 'left', fontSize: 8 },                              // REMARKS
+      11: { cellWidth: 40, halign: 'left', fontSize: 8 },                              // REMARKS
     },
   });
 
   const finalY = (doc as any).lastAutoTable.finalY;
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // LEYENDA + LÍNEA BASE A/E/P (igual a la vista previa)
+  // LÍNEA BASE A/E/P
   // ═══════════════════════════════════════════════════════════════════════════
   let y = finalY + 6;
 
-  doc.setTextColor(...colors.blue);
-  doc.setFontSize(8);
-  doc.setFont('AvenirNext', 'normal');
-  doc.text(
-    '* Los valores mostrados son una vista previa. Se confirmarán al aprobar el vuelo.',
-    14,
-    y,
-  );
-
-  y += 5;
   doc.setTextColor(...colors.silver);
   doc.setFontSize(7.5);
+  doc.setFont('AvenirNext', 'normal');
   const baseAfp = `Base A/E/P: ${data.airframe_inicio != null ? data.airframe_inicio.toFixed(1) : 'N/A'} / ${data.engine_inicio != null ? data.engine_inicio.toFixed(1) : 'N/A'} / ${data.propeller_inicio != null ? data.propeller_inicio.toFixed(1) : 'N/A'}    Δ Tach usado: ${data.diff_tach.toFixed(1)}    Δ Hobbs: ${data.diff_hobbs.toFixed(1)}`;
   doc.text(baseAfp, 14, y);
 
