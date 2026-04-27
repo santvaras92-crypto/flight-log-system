@@ -3853,6 +3853,44 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
     }
   };
 
+  const handleDeleteLastCartola = async () => {
+    setUploadResult(null);
+    try {
+      // 1) Preview
+      const previewRes = await fetch('/api/delete-last-cartola');
+      const preview = await previewRes.json();
+      if (!preview.ok) {
+        alert(`Error obteniendo preview: ${preview.error}`);
+        return;
+      }
+      if (preview.count === 0) {
+        alert('No hay movimientos recientes para borrar.');
+        return;
+      }
+
+      const uploadedAt = preview.uploadedAt ? new Date(preview.uploadedAt).toLocaleString('es-CL') : '—';
+      const msg =
+        `Se borrarán ${preview.count} movimientos del último batch:\n\n` +
+        `Correlativos: #${preview.firstCorrelativo} – #${preview.lastCorrelativo}\n` +
+        `Subidos: ${uploadedAt}\n\n` +
+        `Esta acción NO se puede deshacer. ¿Continuar?`;
+      if (!confirm(msg)) return;
+
+      // 2) Delete
+      setUploading(true);
+      const res = await fetch('/api/delete-last-cartola?confirm=true', { method: 'DELETE' });
+      const data = await res.json();
+      setUploadResult(data);
+      if (data.ok) {
+        setTimeout(() => location.reload(), 1500);
+      }
+    } catch (err: any) {
+      setUploadResult({ ok: false, error: err.message || 'Error de red' });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleAttachFile = async (correlativo: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -4061,20 +4099,32 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
             <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Subir Cartola Bancaria</h4>
             <p className="text-xs text-slate-500 mt-1">Sube el archivo Excel de &quot;últimos movimientos&quot; del banco para agregar automáticamente los nuevos movimientos</p>
           </div>
-          <label className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm cursor-pointer transition-all ${uploading ? 'bg-slate-200 text-slate-500 cursor-wait' : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl'}`}>
-            {uploading ? (
-              <>
-                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                Procesando...
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                Subir Cartola (.xlsx)
-              </>
-            )}
-            <input type="file" accept=".xlsx,.xls" onChange={handleCartolaUpload} className="hidden" disabled={uploading} />
-          </label>
+          <div className="flex items-center gap-2 flex-wrap">
+            <label className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm cursor-pointer transition-all ${uploading ? 'bg-slate-200 text-slate-500 cursor-wait' : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl'}`}>
+              {uploading ? (
+                <>
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  Procesando...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                  Subir Cartola (.xlsx)
+                </>
+              )}
+              <input type="file" accept=".xlsx,.xls" onChange={handleCartolaUpload} className="hidden" disabled={uploading} />
+            </label>
+            <button
+              type="button"
+              onClick={handleDeleteLastCartola}
+              disabled={uploading}
+              title="Borra todos los movimientos del último batch subido (últimos 5 minutos de createdAt)"
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all ${uploading ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : 'bg-red-600 text-white hover:bg-red-700 shadow-lg hover:shadow-xl'}`}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2" /></svg>
+              Deshacer última carga
+            </button>
+          </div>
         </div>
 
         {/* Upload Result */}

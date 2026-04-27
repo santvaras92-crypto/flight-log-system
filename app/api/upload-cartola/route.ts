@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
+import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 
 // Known pilot name patterns from bank transfer descriptions → [friendly name, pilot code]
@@ -258,6 +259,7 @@ export async function POST(req: NextRequest) {
     }
 
     let currentCorrelativo = lastCorrelativo;
+    const uploadBatchId = randomUUID(); // identifica este upload para poder deshacerlo después
 
     // ── SMART MATCHING: Cross-reference with DB deposits (ingresos) ──
     const dbDeposits = await prisma.deposit.findMany({
@@ -397,6 +399,7 @@ export async function POST(req: NextRequest) {
           saldo,
           tipo,
           cliente,
+          uploadBatchId,
         },
       });
 
@@ -421,6 +424,7 @@ export async function POST(req: NextRequest) {
       skipped: skipped.length,
       lastCorrelativo: currentCorrelativo,
       lastSaldo: Math.round(lastAddedSaldo),
+      uploadBatchId,
       message: `Se agregaron ${newEntries.length} movimientos nuevos.${skipped.length > 0 ? ` ${skipped.length} ya existían.` : ""}`,
       entries: addedEntries,
       skippedDetails: skipped.slice(0, 10),

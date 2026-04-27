@@ -225,8 +225,11 @@ model BankMovement {
   tipo           String   @default("Sin clasificar")
   cliente        String?
   attachmentUrl  String?
+  uploadBatchId  String?  // UUID del upload de cartola que creó este movimiento
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+
+  @@index([uploadBatchId])
 }
 
 model EngineMonitorFlight {
