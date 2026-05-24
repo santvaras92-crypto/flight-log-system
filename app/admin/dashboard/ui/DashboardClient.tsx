@@ -4729,12 +4729,12 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   const [seguroUSD, setSeguroUSD] = useState(stored?.seguroUSD ?? 4710.02);
   const [cambioAceiteCLP, setCambioAceiteCLP] = useState(stored?.cambioAceiteCLP ?? 281090);
   const [revision100CLP, setRevision100CLP] = useState(stored?.revision100CLP ?? 3577930);
-  // Overhaul cost model: real Aug 2022 invoices, all paid in CLP
-  // Eagle Copters INV22-00211 (04-Ago-2022): CLP $47,926,129 (motor O-320-D2J + freight + import + IVA)
-  // Labor (installation): CLP $8,000,000
-  // Total: CLP $55,926,129 — single-currency, only Chilean IPC inflation applies
-  const [overhaulMotorCLP, setOverhaulMotorCLP] = useState(stored?.overhaulMotorCLP ?? 47926129);
-  const [overhaulLaborCLP, setOverhaulLaborCLP] = useState(stored?.overhaulLaborCLP ?? 8000000);
+  // Overhaul cost model: real 2022 invoices, all paid in CLP
+  // Eagle Copters F.6941 (28-sep-2022): CLP $40,160,432 (motor EXCH O-320-D2J CIF Chile + IVA 19%)
+  // Aeromundo Nº964    (09-nov-2022): CLP  $7,667,196 (MO instalación + repuestos + materiales + IVA)
+  // Total overhaul 2022:                CLP $47,827,628 — single-currency, only Chilean IPC inflation applies
+  const [overhaulMotorCLP, setOverhaulMotorCLP] = useState(stored?.overhaulMotorCLP ?? 40160432);
+  const [overhaulLaborCLP, setOverhaulLaborCLP] = useState(stored?.overhaulLaborCLP ?? 7667196);
   const [clInflationPct, setClInflationPct] = useState(16.35); // Always starts at fallback, overwritten by live /api/ipc-chile fetch
   // Hours/year: defaults to LIVE rolling 365-day hobbs, but user can override
   const liveHorasAnuales = Math.round(overviewMetrics?.annualStats?.hobbsThisYear ?? 220);
@@ -5343,10 +5343,11 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       ? (Math.pow(engineMarketPriceUSD / originalMotorUSD, 1 / yearsSinceOverhaul) - 1) * 100
       : 0;
 
-    // ===== EFFECTIVE OVERHAUL COST: max(IPC-adjusted, market replacement) =====
+    // ===== EFFECTIVE OVERHAUL COST: promedio de ambos métodos =====
+    // Con baseline real (facturas Eagle + Aeromundo 2022) ambos convergen ~5%, no hay "ganador"
     const ipcOverhaulCLP = overhaulCLP; // historic cost + IPC Chile
-    const effectiveOverhaulCLP = Math.max(ipcOverhaulCLP, marketReplacementCLP);
-    const overhaulSource = marketReplacementCLP > ipcOverhaulCLP ? 'market' : 'ipc';
+    const effectiveOverhaulCLP = Math.round((ipcOverhaulCLP + marketReplacementCLP) / 2);
+    const overhaulSource = 'avg' as const;
 
     // Years to overhaul: use annual tach rate for consistency
     // When user overrides horasAnuales, derive tachPerYear from the override
@@ -5836,7 +5837,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                   <div className="flex items-center justify-between py-1.5">
                     <span className="text-[11px] text-slate-600">IPC model</span>
                     <div className="flex items-center gap-1">
-                      <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded ${computed.overhaulSource === 'ipc' ? 'text-amber-700 bg-amber-50 ring-1 ring-amber-300' : 'text-slate-500 bg-slate-50'}`}>${formatCurrency(overhaulCLP)}</span>
+                      <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded text-amber-700 bg-amber-50">${formatCurrency(overhaulCLP)}</span>
                       <span className="text-[9px] text-slate-400">CLP</span>
                     </div>
                   </div>
@@ -5844,17 +5845,15 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                   <div className="flex items-center justify-between py-1.5">
                     <span className="text-[11px] text-slate-600 flex items-center gap-1">Market{liveIndicators.engine && <span className="px-1 py-0.5 text-[8px] font-bold bg-emerald-100 text-emerald-700 rounded-full">LIVE</span>}</span>
                     <div className="flex items-center gap-1">
-                      <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded ${computed.overhaulSource === 'market' ? 'text-blue-700 bg-blue-50 ring-1 ring-blue-300' : 'text-slate-500 bg-slate-50'}`}>${formatCurrency(computed.marketReplacementCLP)}</span>
+                      <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded text-blue-700 bg-blue-50">${formatCurrency(computed.marketReplacementCLP)}</span>
                       <span className="text-[9px] text-slate-400">CLP</span>
                     </div>
                   </div>
-                  {/* Effective cost used — the max */}
+                  {/* Effective cost used — average of both methods */}
                   <div className="flex items-center justify-between py-1.5 bg-slate-50 -mx-1 px-1 rounded">
                     <span className="text-[11px] font-semibold text-slate-700 flex items-center gap-1">
                       Used in calcs
-                      <span className={`px-1 py-0.5 text-[8px] font-bold rounded-full ${computed.overhaulSource === 'market' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
-                        {computed.overhaulSource === 'market' ? 'MARKET' : 'IPC'}
-                      </span>
+                      <span className="px-1 py-0.5 text-[8px] font-bold rounded-full bg-slate-200 text-slate-700">PROMEDIO</span>
                     </span>
                     <div className="flex items-center gap-1">
                       <span className="text-[11px] font-mono font-bold text-slate-800 bg-white px-2 py-0.5 rounded ring-1 ring-slate-300">${formatCurrency(computed.effectiveOverhaulCLP)}</span>
@@ -6169,8 +6168,8 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 </p>
               </div>
             </div>
-            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${computed.overhaulSource === 'market' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
-              {computed.overhaulSource === 'market' ? '✦ MARKET' : '✦ IPC'}
+            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-200 text-slate-700">
+              ✨ PROMEDIO IPC+MARKET
             </span>
           </div>
         </div>
@@ -6181,7 +6180,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
             <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
               <p className="text-[9px] text-slate-400 uppercase tracking-wider mb-1">Total Cost</p>
               <p className="text-lg font-bold text-slate-900 font-mono">${formatCurrency(Math.round(computed.effectiveOverhaulCLP))}</p>
-              <p className="text-[9px] text-slate-400">{computed.overhaulSource === 'market' ? 'FOB + internación + labor' : 'IPC Chile adjusted'}</p>
+              <p className="text-[9px] text-slate-400">Promedio IPC + Market</p>
             </div>
             <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-100">
               <p className="text-[9px] text-emerald-600 uppercase tracking-wider mb-1">Funded</p>
@@ -6253,10 +6252,9 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
           {showCostModel && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-in fade-in duration-200">
               {/* IPC Model */}
-              <div className={`rounded-lg p-3 border ${computed.overhaulSource === 'ipc' ? 'bg-amber-50 border-amber-200 ring-1 ring-amber-300' : 'bg-slate-50 border-slate-200'}`}>
+              <div className="rounded-lg p-3 border bg-amber-50 border-amber-200">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider">📋 IPC Chile (+{clInflationPct}%)</p>
-                  {computed.overhaulSource === 'ipc' && <span className="px-1.5 py-0.5 text-[8px] font-bold bg-amber-200 text-amber-800 rounded-full">WINNER</span>}
                 </div>
                 <div className="space-y-1 text-[11px]">
                   <div className="flex justify-between">
@@ -6276,23 +6274,20 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               </div>
 
               {/* Market Model */}
-              <div className={`rounded-lg p-3 border ${computed.overhaulSource === 'market' ? 'bg-blue-50 border-blue-200 ring-1 ring-blue-300' : 'bg-slate-50 border-slate-200'}`}>
+              <div className="rounded-lg p-3 border bg-blue-50 border-blue-200">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-[10px] font-semibold text-blue-700 uppercase tracking-wider flex items-center gap-1">
                     🌐 Market
                   </p>
-                  <div className="flex items-center gap-1">
-                    <a
-                      href="https://www.airpowerinc.com/renpl-rt8164"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-1.5 py-0.5 text-[8px] font-medium bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition-colors"
-                      title="Verificar precio en Air Power Inc"
-                    >
-                      Verificar ↗
-                    </a>
-                    {computed.overhaulSource === 'market' && <span className="px-1.5 py-0.5 text-[8px] font-bold bg-blue-200 text-blue-800 rounded-full">WINNER</span>}
-                  </div>
+                  <a
+                    href="https://www.airpowerinc.com/renpl-rt8164"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-1.5 py-0.5 text-[8px] font-medium bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition-colors"
+                    title="Verificar precio en Air Power Inc"
+                  >
+                    Verificar ↗
+                  </a>
                 </div>
                 <div className="space-y-1 text-[11px]">
                   <div className="flex justify-between items-center">
@@ -6312,7 +6307,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                     </div>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Internación (×{computed.internacionRatio.toFixed(2)})</span>
+                    <span className="text-slate-500">Internación (+{((computed.internacionRatio - 1) * 100).toFixed(1)}% sobre FOB)</span>
                     <span className="font-mono text-slate-700">${formatCurrency(computed.internacionCostCLP)}</span>
                   </div>
                   <div className="flex justify-between">
