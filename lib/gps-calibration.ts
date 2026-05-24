@@ -140,6 +140,20 @@ export async function updateCalibration(
   aircraftId: string,
   newCal: CalibrationResult,
 ): Promise<void> {
+  // Sanity check: real GPS bias on JPI EDM is typically <200m (datum/antenna drift).
+  // Anything >500m means JPI GPS was corrupt this flight (misconfigured datum,
+  // init artifact, cached fix from previous location, etc). Skip the update to
+  // avoid polluting the global EMA-blended calibration with a huge outlier.
+  const offsetMeters = haversineMeters(0, 0, newCal.latOffsetDeg, newCal.lonOffsetDeg);
+  if (offsetMeters > 500) {
+    console.warn(
+      `[gps-calibration] Skipping outlier sample for ${aircraftId}: ` +
+      `offset ${offsetMeters.toFixed(0)}m exceeds 500m sanity threshold ` +
+      `(likely corrupt JPI GPS — flight track repaired via KML but calibration preserved)`,
+    );
+    return;
+  }
+
   const existing = await prisma.gpsCalibration.findUnique({
     where: { aircraftId },
   });
