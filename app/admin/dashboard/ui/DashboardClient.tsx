@@ -4736,6 +4736,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   const [overhaulMotorCLP, setOverhaulMotorCLP] = useState(stored?.overhaulMotorCLP ?? 40160432);
   const [overhaulLaborCLP, setOverhaulLaborCLP] = useState(stored?.overhaulLaborCLP ?? 7667196);
   const [clInflationPct, setClInflationPct] = useState(16.35); // Always starts at fallback, overwritten by live /api/ipc-chile fetch
+  const [usCpiCumulPct, setUsCpiCumulPct] = useState(11.0); // CPI USA acumulado desde Sep 2022 (fallback ~3.5 años × ~2.8%/yr), overwritten by live /api/cpi-usa
   // Hours/year: defaults to LIVE rolling 365-day hobbs, but user can override
   const liveHorasAnuales = Math.round(overviewMetrics?.annualStats?.hobbsThisYear ?? 220);
   const [horasAnuales, setHorasAnuales] = useState(stored?.horasAnuales ?? liveHorasAnuales);
@@ -4772,7 +4773,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     source: string;
   } | null>(null);
   // Live indicators state
-  const [liveIndicators, setLiveIndicators] = useState<{ uf: boolean; usd: boolean; fuel: boolean; engine: boolean; ipc: boolean; brent: boolean }>({ uf: false, usd: false, fuel: false, engine: false, ipc: false, brent: false });
+  const [liveIndicators, setLiveIndicators] = useState<{ uf: boolean; usd: boolean; fuel: boolean; engine: boolean; ipc: boolean; cpi: boolean; brent: boolean }>({ uf: false, usd: false, fuel: false, engine: false, ipc: false, cpi: false, brent: false });
 
   // Save all params to localStorage whenever any changes
   useEffect(() => {
@@ -4785,6 +4786,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         recaudado, valorHora, valorHoraUnit, interestRate, clForwardInflation, fuelTrendRate,
         engineMarketPriceUSD,
         // clInflationPct excluded — always fetched live from /api/ipc-chile
+        // usCpiCumulPct excluded — always fetched live from /api/cpi-usa
       }));
     } catch {}
   }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD,
@@ -5294,6 +5296,20 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       .catch(() => {}); // Silent fail, keeps default 16.35%
   }, []);
 
+  // Auto-populate CPI USA cumulative inflation from BLS (Sep 2022 → present), used for COMEX
+  useEffect(() => {
+    fetch('/api/cpi-usa?baseYear=2022&baseMonth=9')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (!data) return;
+        if (data.cumulativePct > 0 && !data.fallback) {
+          setUsCpiCumulPct(data.cumulativePct);
+          setLiveIndicators(prev => ({ ...prev, cpi: true }));
+        }
+      })
+      .catch(() => {}); // Silent fail, keeps default 11.0%
+  }, []);
+
   // Auto-populate engine market price from airpowerinc.com (RENPL-RT8164 O-320-D2J)
   const [enginePriceSource, setEnginePriceSource] = useState<string | null>(null);
   useEffect(() => {
@@ -5326,15 +5342,41 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const motorTodayCLP = Math.round(overhaulMotorCLP * (1 + clInflationPct / 100));
     const laborTodayCLP = Math.round(overhaulLaborCLP * (1 + clInflationPct / 100));
 
+    // ===== Desglose Eagle F.6941 para panel IPC =====
+    // La factura Eagle viene bundled (CIF + IVA). Descomponemos usando proporciones
+    // de la cotización Eagle Copters Nº1475-2021 (FOB 87.47% / COMEX 12.53% del CIF):
+    const ipcMotorCifCLP    = Math.round(overhaulMotorCLP / 1.19);                  // CIF = total / 1.19
+    const ipcMotorIvaBaseCLP = overhaulMotorCLP - ipcMotorCifCLP;                    // IVA real factura
+    const ipcMotorFobBaseCLP   = Math.round(ipcMotorCifCLP * (33903.36 / 38760.20)); // 87.47% del CIF
+    const ipcMotorComexBaseCLP = ipcMotorCifCLP - ipcMotorFobBaseCLP;                // 12.53% del CIF
+    // Inflados por IPC Chile
+    const ipcInflator = 1 + clInflationPct / 100;
+    const ipcMotorFobTodayCLP   = Math.round(ipcMotorFobBaseCLP   * ipcInflator);
+    const ipcMotorComexTodayCLP = Math.round(ipcMotorComexBaseCLP * ipcInflator);
+    const ipcMotorIvaTodayCLP   = Math.round(ipcMotorIvaBaseCLP   * ipcInflator);
+
     // ===== MARKET REPLACEMENT COST (live from airpowerinc.com) =====
+    // Modelo por componentes — estructura de internación real Chile:
+    //   FOB:   live de Air Power (engineMarketPriceUSD, P/N RENPL-RT8164)
+    //   COMEX: monto USD fijo (flete + seguro + aduana, no escala con precio motor)
+    //   IVA:   19% sobre CIF (FOB + COMEX) — estructura tributaria CL
+    // Baseline 2022: cotización Eagle Copters Nº1475-2021 (cliente: Santiago Moreno),
+    //   Opción I "otro modelo" O-320-D2J — FOB lista USD 37,556.00 (sin descuento).
     const motorFobCLP = Math.round(engineMarketPriceUSD * usdRate);
-    const originalMotorUSD = 30895.92;
+    const comexUSDBase = 4856.84;                                 // de cotización Eagle Copters Nº1475-2021
+    const comexUSD = comexUSDBase * (1 + usCpiCumulPct / 100);    // inflado por CPI USA
+    const ivaRate = 0.19;
+    const comexCLP = Math.round(comexUSD * usdRate);
+    const cifCLP = motorFobCLP + comexCLP;
+    const ivaCLP = Math.round(cifCLP * ivaRate);
+    const motorInternacionCLP = cifCLP + ivaCLP;
+    const internacionCostCLP = comexCLP + ivaCLP;               // todo lo que no es FOB
+    const internacionRatio = motorFobCLP > 0 ? motorInternacionCLP / motorFobCLP : 1; // info
+    const marketReplacementCLP = motorInternacionCLP + laborTodayCLP;
+    // Baseline 2022 (FOB lista, sin descuento Eagle)
+    const originalMotorUSD = 37556.00;
     const originalUsdRate = 920;
     const originalFobCLP = Math.round(originalMotorUSD * originalUsdRate);
-    const internacionRatio = overhaulMotorCLP / originalFobCLP;
-    const motorInternacionCLP = Math.round(motorFobCLP * internacionRatio);
-    const internacionCostCLP = motorInternacionCLP - motorFobCLP;
-    const marketReplacementCLP = motorInternacionCLP + laborTodayCLP;
     const yearsSinceOverhaul = 3.67;
     const motorPriceInflationPct = engineMarketPriceUSD > 0
       ? ((engineMarketPriceUSD / originalMotorUSD) - 1) * 100
@@ -5466,8 +5508,9 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       inflatedOverhaulCost, inflationIncrease, projectedGap, projectedMonthlyTarget,
       fvAnnuity, monthsToOverhaul, totalAtTBO,
       motorTodayCLP, laborTodayCLP,
+      ipcMotorFobTodayCLP, ipcMotorComexTodayCLP, ipcMotorIvaTodayCLP,
       // Market replacement (live engine price + internación)
-      motorFobCLP, internacionRatio, motorInternacionCLP, internacionCostCLP, marketReplacementCLP,
+      motorFobCLP, comexCLP, ivaCLP, cifCLP, internacionRatio, motorInternacionCLP, internacionCostCLP, marketReplacementCLP,
       motorPriceInflationPct, motorAnnualInflation,
       // Fuel projections
       projectedAvgasPrice, avgProjectedAvgasPrice, projectedCombustibleHr,
@@ -5635,9 +5678,9 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 <h3 className="text-sm font-semibold text-slate-800">Cost Analysis — C-172 CC-AQI</h3>
                 <p className="text-xs text-slate-500 flex items-center gap-1.5 flex-wrap">
                   <span>Operating cost model · {horasAnuales} hobbs hrs/yr{!horasIsLive && ' ✏️'}</span>
-                  {(liveIndicators.uf || liveIndicators.usd || liveIndicators.fuel || liveIndicators.engine || liveIndicators.ipc || liveIndicators.brent) && (
+                  {(liveIndicators.uf || liveIndicators.usd || liveIndicators.fuel || liveIndicators.engine || liveIndicators.ipc || liveIndicators.cpi || liveIndicators.brent) && (
                     <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">
-                      LIVE {[liveIndicators.uf && 'UF', liveIndicators.usd && 'USD', liveIndicators.fuel && 'AVGAS', liveIndicators.engine && 'ENGINE', liveIndicators.ipc && 'IPC', liveIndicators.brent && 'BRENT'].filter(Boolean).join('+')}
+                      LIVE {[liveIndicators.uf && 'UF', liveIndicators.usd && 'USD', liveIndicators.fuel && 'AVGAS', liveIndicators.engine && 'ENGINE', liveIndicators.ipc && 'IPC', liveIndicators.cpi && 'CPI', liveIndicators.brent && 'BRENT'].filter(Boolean).join('+')}
                     </span>
                   )}
                 </p>
@@ -6258,11 +6301,19 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 </div>
                 <div className="space-y-1 text-[11px]">
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Motor (Eagle Copters)</span>
-                    <span className="font-mono text-slate-700">${formatCurrency(computed.motorTodayCLP)}</span>
+                    <span className="text-slate-500" title="Eagle Copters F.6941 (87.47% del CIF) × IPC">Motor FOB (Eagle)</span>
+                    <span className="font-mono text-slate-700">${formatCurrency(computed.ipcMotorFobTodayCLP)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Labor</span>
+                    <span className="text-slate-500" title="Flete + seguro + aduana (12.53% del CIF Eagle) × IPC">COMEX</span>
+                    <span className="font-mono text-slate-700">${formatCurrency(computed.ipcMotorComexTodayCLP)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500" title="IVA 19% factura Eagle × IPC">IVA 19%</span>
+                    <span className="font-mono text-slate-700">${formatCurrency(computed.ipcMotorIvaTodayCLP)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500" title="Aeromundo Nº964: MO + repuestos + materiales + IVA">Labor (Aeromundo)</span>
                     <span className="font-mono text-slate-700">${formatCurrency(computed.laborTodayCLP)}</span>
                   </div>
                   <div className="flex justify-between pt-1 border-t border-amber-200">
@@ -6307,8 +6358,12 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                     </div>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Internación (+{((computed.internacionRatio - 1) * 100).toFixed(1)}% sobre FOB)</span>
-                    <span className="font-mono text-slate-700">${formatCurrency(computed.internacionCostCLP)}</span>
+                    <span className="text-slate-500" title={`Flete + seguro + aduana (cotización Eagle Copters Nº1475-2021: USD 4.857 base + CPI USA acumulado ${usCpiCumulPct.toFixed(1)}%)`}>COMEX (USD {Math.round(4856.84 * (1 + usCpiCumulPct / 100)).toLocaleString()})</span>
+                    <span className="font-mono text-slate-700">${formatCurrency(computed.comexCLP)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500" title="IVA 19% sobre CIF (FOB + COMEX)">IVA 19% s/CIF</span>
+                    <span className="font-mono text-slate-700">${formatCurrency(computed.ivaCLP)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">Labor (IPC)</span>
