@@ -133,7 +133,19 @@ export default function FlightMap({ points, className, gpsSource, calibration }:
   // ─── Apply GPS calibration corrections for JPI tracks ───
   // When GPS source is JPI and we have learned calibration parameters,
   // apply offset correction and smoothing to improve the track quality.
+  //
+  // SAFETY CAP: if the learned offset translates to >300 m on the ground,
+  // the calibration is likely contaminated by outlier flights. Don't apply
+  // the offset (still apply smoothing). Real JPI EDM bias is typically <200 m.
   let displayPoints = cleanPoints;
+  const MAX_APPLIED_OFFSET_METERS = 300;
+  const rawLatOff = calibration?.latOffsetDeg ?? 0;
+  const rawLonOff = calibration?.lonOffsetDeg ?? 0;
+  // Approx offset magnitude at mid-Chile latitude (-33°): 1° lat ≈ 111 km, 1° lon ≈ 93 km
+  const offsetMeters = Math.sqrt(
+    (rawLatOff * 111320) ** 2 + (rawLonOff * 93000) ** 2,
+  );
+  const offsetIsSane = offsetMeters <= MAX_APPLIED_OFFSET_METERS;
   if (isJpiGps && hasCalibration && cleanPoints.length > 5) {
     const learnedWindow = calibration!.smoothingWindow;
     // Very large windows (e.g. 31) over-smooth circuit work and hide turns.
@@ -141,8 +153,14 @@ export default function FlightMap({ points, className, gpsSource, calibration }:
     const maxWindow = cleanPoints.length < 500 ? 5 : 9;
     const clampedWindow = Math.max(3, Math.min(maxWindow, learnedWindow));
     const window = clampedWindow % 2 === 0 ? clampedWindow - 1 : clampedWindow;
-    const latOff = calibration!.latOffsetDeg;
-    const lonOff = calibration!.lonOffsetDeg;
+    // Only apply offset if sane (<300 m). Otherwise zero it out and rely on smoothing only.
+    const latOff = offsetIsSane ? rawLatOff : 0;
+    const lonOff = offsetIsSane ? rawLonOff : 0;
+    if (!offsetIsSane && typeof window !== "undefined") {
+      console.warn(
+        `[FlightMap] Ignoring contaminated calibration offset: ${offsetMeters.toFixed(0)}m exceeds ${MAX_APPLIED_OFFSET_METERS}m cap. Smoothing only.`,
+      );
+    }
     const half = Math.floor(window / 2);
 
     // Step 1: Subtract systematic offset + Step 2: Moving average smoothing

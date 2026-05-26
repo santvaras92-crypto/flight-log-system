@@ -141,14 +141,15 @@ export async function updateCalibration(
   newCal: CalibrationResult,
 ): Promise<void> {
   // Sanity check: real GPS bias on JPI EDM is typically <200m (datum/antenna drift).
-  // Anything >500m means JPI GPS was corrupt this flight (misconfigured datum,
+  // Anything >200m means JPI GPS was corrupt this flight (misconfigured datum,
   // init artifact, cached fix from previous location, etc). Skip the update to
-  // avoid polluting the global EMA-blended calibration with a huge outlier.
+  // avoid polluting the global EMA-blended calibration with a biased sample.
+  // (Threshold lowered from 500m → 200m after observing accumulated drift.)
   const offsetMeters = haversineMeters(0, 0, newCal.latOffsetDeg, newCal.lonOffsetDeg);
-  if (offsetMeters > 500) {
+  if (offsetMeters > 200) {
     console.warn(
       `[gps-calibration] Skipping outlier sample for ${aircraftId}: ` +
-      `offset ${offsetMeters.toFixed(0)}m exceeds 500m sanity threshold ` +
+      `offset ${offsetMeters.toFixed(0)}m exceeds 200m sanity threshold ` +
       `(likely corrupt JPI GPS — flight track repaired via KML but calibration preserved)`,
     );
     return;
