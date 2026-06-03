@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parse } from "csv-parse/sync";
 import { decodeJPI } from "@/lib/jpi-decoder";
+import {
+  computeDayAssignments,
+  localChileDate,
+  type EngineLeg,
+  type FlightLog,
+} from "@/lib/engine-flight-matcher";
 
 // Engine limits for Lycoming O-320-D2J
 const ENGINE_LIMITS = {
@@ -522,8 +528,11 @@ async function autoLinkEngineToFlight(engineFlightId: number, flightDate: Date, 
   }
 
   if (exactMatches.length > 1) {
-    // Desempate posicional: ordenar engine flights del día por hora UTC,
-    // ordenar Flights del día por hobbs_inicio, matchear por índice.
+    // Ambiguous: multiple same-day flights match this engine's duration.
+    // Delegate to the shared deterministic day matcher, which assigns every
+    // engine leg of the day to a flight log in strict chronological order
+    // (engine takeoff time ↔ hobbs meter order). This prevents crossing two
+    // pilots' flights that happen to have similar durations on the same day.
     const dayUtcStart = new Date(`${localDateStr}T00:00:00-04:00`);
     const dayUtcEnd = new Date(`${localDateStr}T23:59:59-03:00`);
     const sameDayEngineFlights = await prisma.engineMonitorFlight.findMany({
@@ -532,22 +541,35 @@ async function autoLinkEngineToFlight(engineFlightId: number, flightDate: Date, 
         isGroundRun: { not: true },
         durationSec: { gte: MIN_DURATION_SEC },
       },
-      select: { id: true, flightDate: true },
+      select: { id: true, flightDate: true, durationSec: true },
       orderBy: { flightDate: "asc" },
     });
-    const engineIndex = sameDayEngineFlights.findIndex(ef => ef.id === engineFlightId);
 
-    const sortedCandidates = exactMatches
-      .map(m => m.candidate)
-      .sort((a, b) => (Number(a.hobbs_inicio) || 0) - (Number(b.hobbs_inicio) || 0));
+    const engineLegs: EngineLeg[] = sameDayEngineFlights.map((ef) => ({
+      id: ef.id,
+      flightDate: ef.flightDate,
+      durationSec: ef.durationSec,
+    }));
 
-    const chosen = (engineIndex >= 0 && engineIndex < sortedCandidates.length)
-      ? sortedCandidates[engineIndex]
-      : exactMatches.sort((a, b) => a.diff - b.diff)[0].candidate;
+    // Build the flight-log side from this day's candidates (local Chile date).
+    const flightLogs: FlightLog[] = effectiveCandidates
+      .filter((c) => localChileDate(c.fecha) === localDateStr)
+      .map((c) => ({
+        id: c.id,
+        hobbsInicio: c.hobbs_inicio != null ? Number(c.hobbs_inicio) : null,
+        diffHobbs: c.diff_hobbs != null ? Number(c.diff_hobbs) : null,
+      }));
+
+    const assignments = computeDayAssignments(engineLegs, flightLogs);
+    const mine = assignments.find((a) => a.engineId === engineFlightId);
+    const chosenId =
+      mine?.proposedFlightId ??
+      // Fallback: best duration match if the matcher left this one unassigned.
+      exactMatches.sort((a, b) => a.diff - b.diff)[0].candidate.id;
 
     await prisma.engineMonitorFlight.update({
       where: { id: engineFlightId },
-      data: { linkedFlightId: chosen.id },
+      data: { linkedFlightId: chosenId },
     });
     return;
   }
