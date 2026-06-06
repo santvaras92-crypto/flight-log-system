@@ -374,8 +374,9 @@ export async function POST(req: NextRequest) {
       let tipo: string;
 
       if (fuelMatch) {
-        // Fuel match takes priority for egresos
-        const litrosStr = Math.round(fuelMatch.litros);
+        // Fuel match takes priority for egresos.
+        // Keep decimals (e.g. 84.7 L), only dropping a trailing ".0" for whole numbers.
+        const litrosStr = Number(fuelMatch.litros.toFixed(2)).toString();
         descripcion = `${litrosStr} litros avgas Stratus`;
         cliente = null;
         tipo = "Combustible";
