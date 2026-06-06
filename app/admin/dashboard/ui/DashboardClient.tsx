@@ -2762,6 +2762,8 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
 function FuelTable({ logs }: { logs: any[] }) {
   const [filterPilot, setFilterPilot] = useState('');
   const [filterSource, setFilterSource] = useState<'ALL' | 'CSV' | 'DB'>('ALL');
+  const [filterYear, setFilterYear] = useState('');
+  const [filterMonth, setFilterMonth] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [fuelImageModalUrl, setFuelImageModalUrl] = useState<string | null>(null);
   const pageSize = 50;
@@ -2777,6 +2779,18 @@ function FuelTable({ logs }: { logs: any[] }) {
     return Array.from(unique.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [logs]);
 
+  // Unique years present in the data (descending), timezone-safe
+  const years = useMemo(() => {
+    const set = new Set<string>();
+    logs.forEach(l => {
+      const ds = toDateString(l.fecha); // YYYY-MM-DD
+      if (ds) set.add(ds.slice(0, 4));
+    });
+    return Array.from(set).sort((a, b) => b.localeCompare(a));
+  }, [logs]);
+
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
   // Filter and paginate
   const filteredLogs = useMemo(() => {
     let result = logs;
@@ -2786,8 +2800,14 @@ function FuelTable({ logs }: { logs: any[] }) {
     if (filterSource !== 'ALL') {
       result = result.filter(l => l.source === filterSource);
     }
+    if (filterYear) {
+      result = result.filter(l => toDateString(l.fecha).slice(0, 4) === filterYear);
+    }
+    if (filterMonth) {
+      result = result.filter(l => toDateString(l.fecha).slice(5, 7) === filterMonth);
+    }
     return result;
-  }, [logs, filterPilot, filterSource]);
+  }, [logs, filterPilot, filterSource, filterYear, filterMonth]);
 
   const totalPages = Math.ceil(filteredLogs.length / pageSize);
   const paginatedLogs = filteredLogs.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -2824,6 +2844,32 @@ function FuelTable({ logs }: { logs: any[] }) {
               <option value="ALL">All</option>
               <option value="CSV">Historic (CSV)</option>
               <option value="DB">App (DB)</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-medium text-slate-500">Year:</label>
+            <select
+              value={filterYear}
+              onChange={e => { setFilterYear(e.target.value); setCurrentPage(1); }}
+              className="px-3 py-1.5 border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-1 focus:ring-slate-300 focus:border-slate-400"
+            >
+              <option value="">All</option>
+              {years.map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-medium text-slate-500">Month:</label>
+            <select
+              value={filterMonth}
+              onChange={e => { setFilterMonth(e.target.value); setCurrentPage(1); }}
+              className="px-3 py-1.5 border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-1 focus:ring-slate-300 focus:border-slate-400"
+            >
+              <option value="">All</option>
+              {MONTHS.map((m, i) => (
+                <option key={i} value={String(i + 1).padStart(2, '0')}>{m}</option>
+              ))}
             </select>
           </div>
           <div className="ml-auto flex gap-2 text-xs">
