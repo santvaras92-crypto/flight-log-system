@@ -1,13 +1,12 @@
 import { prisma } from '@/lib/prisma';
 import ValidacionClient from './validacion-client';
-import { getUFValue, calculateUFRate } from '@/lib/uf-service';
+import { getUFValueForDate, calculateUFRate } from '@/lib/uf-service';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ValidacionPage() {
-  // Fetch UF value and all pending items in parallel
-  const [ufData, pendingFuel, pendingDeposits, pendingFlights] = await Promise.all([
-    getUFValue(),
+  // Fetch all pending items in parallel
+  const [pendingFuel, pendingDeposits, pendingFlights] = await Promise.all([
     // Pending Fuel
     prisma.fuelLog.findMany({
       where: { estado: 'PENDIENTE' },
@@ -74,6 +73,13 @@ export default async function ValidacionPage() {
       lastTach = (lastFlight?.tach_fin ?? s.Aircraft.tach_actual).toString();
     }
 
+    // UF of the FLIGHT date (not the approval date), so the rate is the one
+    // that was valid the day the flight actually happened.
+    const flightDate = s.Flight?.fecha ?? s.fechaVuelo ?? new Date();
+    const uf = await getUFValueForDate(flightDate);
+    const defaultRate = calculateUFRate(4.5, uf.valor);
+    const defaultInstructorRate = calculateUFRate(1.3, uf.valor);
+
     return {
       id: s.id,
       estado: s.estado,
@@ -112,6 +118,9 @@ export default async function ValidacionPage() {
         diff_tach: s.Flight.diff_tach?.toString() || null,
         costo: s.Flight.costo?.toString() || null,
       } : null,
+      ufValor: uf.valor,
+      defaultRate,
+      defaultInstructorRate,
     };
   }));
 
@@ -141,14 +150,6 @@ export default async function ValidacionPage() {
 
   const totalPending = fuelData.length + depositData.length + flightsDto.length;
 
-  // Calculate UF-based default rate (4.5 UF per hour)
-  const ufInfo = {
-    valor: ufData.valor,
-    fecha: ufData.fecha,
-    defaultRate: calculateUFRate(4.5, ufData.valor),
-    defaultInstructorRate: calculateUFRate(1.3, ufData.valor),
-  };
-
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-6">
@@ -172,7 +173,6 @@ export default async function ValidacionPage() {
         fuelData={fuelData}
         depositData={depositData}
         flightsData={flightsDto}
-        ufInfo={ufInfo}
       />
     </div>
   );

@@ -75,6 +75,65 @@ export async function getUFValue(): Promise<{ valor: number; fecha: string }> {
   }
 }
 
+// Cache UF values per specific calendar date (key "DD-MM-YYYY").
+// A past date's UF never changes, so this cache is safe to keep for the
+// lifetime of the server process.
+const dateCache = new Map<string, { valor: number; fecha: string }>();
+
+/**
+ * Fetch the UF value for a SPECIFIC calendar date from mindicador.cl.
+ *
+ * Why: a flight must be charged with the UF of the day it was FLOWN, not the
+ * day it happens to be approved. Using the latest UF (getUFValue) caused two
+ * flights from different days to be billed with the same UF.
+ *
+ * @param date - The flight date (Date or ISO / YYYY-MM-DD string).
+ * @returns The UF value for that date. If the date has no published value
+ *          (weekend, holiday, or a future date), falls back to the latest UF.
+ */
+export async function getUFValueForDate(
+  date: Date | string,
+): Promise<{ valor: number; fecha: string }> {
+  // Extract the calendar date. Flights are anchored at noon, and the app
+  // formats dates from their UTC parts (see lib/date-utils.ts), so we do the
+  // same here to stay consistent regardless of server timezone.
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return getUFValue();
+
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const yyyy = d.getUTCFullYear();
+  const key = `${dd}-${mm}-${yyyy}`;
+
+  const cached = dateCache.get(key);
+  if (cached) return cached;
+
+  try {
+    const response = await fetch(`https://mindicador.cl/api/uf/${key}`, {
+      next: { revalidate: 86400 }, // 1 day — past UF values are immutable
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch UF for ${key}: ${response.status}`);
+    }
+
+    const data: MindicadorResponse = await response.json();
+
+    // No value published for that exact date → use the latest available UF.
+    if (!data.serie || data.serie.length === 0) {
+      return getUFValue();
+    }
+
+    const uf = { valor: data.serie[0].valor, fecha: data.serie[0].fecha };
+    dateCache.set(key, uf);
+    return uf;
+  } catch (error) {
+    console.error(`Error fetching UF for ${key}:`, error);
+    // Fall back to the latest UF so approval never blocks.
+    return getUFValue();
+  }
+}
+
 /**
  * Calculate flight cost based on UF
  * @param ufMultiplier - Number of UF per hour (default 4.5)
