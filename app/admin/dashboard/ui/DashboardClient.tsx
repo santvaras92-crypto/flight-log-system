@@ -1598,6 +1598,7 @@ function FuelForecastChart({
 
     // Forecast extension (dashed) — anchored to last real AVGAS price
     const forecastData: Record<string, number> = {};
+    const forecastBand: Record<string, number> = {}; // ±CLP (95% CI) per month
     if (brentAvgasCorrelation) {
       // Find the last month with actual AVGAS data as anchor
       const sortedAvgas = [...avgasMonthly].sort((a: any, b: any) => a.month.localeCompare(b.month));
@@ -1605,8 +1606,9 @@ function FuelForecastChart({
       const lastAvgasMonth = lastEntry?.month || nowMonth;
       const lastAvgasPrice = lastEntry?.ppl || 0;
 
-      // Anchor forecast at the last real data point
+      // Anchor forecast at the last real data point (no uncertainty at the anchor)
       forecastData[lastAvgasMonth] = lastAvgasPrice;
+      forecastBand[lastAvgasMonth] = 0;
 
       // 3m and 6m forecast targets from WLS model (from now, not from last data)
       const m3 = new Date(now); m3.setMonth(m3.getMonth() + 3);
@@ -1620,6 +1622,9 @@ function FuelForecastChart({
       const anchor = lastAvgasPrice;
       const f3 = brentAvgasCorrelation.forecast3m || anchor;
       const f6 = brentAvgasCorrelation.forecast6m || f3;
+      // Confidence band targets (±CLP) — grows from 0 at the anchor to band3m/band6m
+      const b3 = brentAvgasCorrelation.band3m || 0;
+      const b6 = brentAvgasCorrelation.band6m || 0;
 
       // Calculate month spans from last actual data to forecast targets
       const [ly, lm] = lastAvgasMonth.split('-').map(Number);
@@ -1629,12 +1634,12 @@ function FuelForecastChart({
       for (let i = 1; i <= totalMonths; i++) {
         const d = new Date(ly, lm - 1 + i, 1);
         const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        if (!forecastData[k]) {
-          if (midMonths > 0 && i <= midMonths) {
-            forecastData[k] = Math.round(anchor + (f3 - anchor) * (i / midMonths));
-          } else if (totalMonths > midMonths) {
-            forecastData[k] = Math.round(f3 + (f6 - f3) * ((i - midMonths) / (totalMonths - midMonths)));
-          }
+        if (midMonths > 0 && i <= midMonths) {
+          if (!forecastData[k]) forecastData[k] = Math.round(anchor + (f3 - anchor) * (i / midMonths));
+          forecastBand[k] = Math.round((b3) * (i / midMonths));
+        } else if (totalMonths > midMonths) {
+          if (!forecastData[k]) forecastData[k] = Math.round(f3 + (f6 - f3) * ((i - midMonths) / (totalMonths - midMonths)));
+          forecastBand[k] = Math.round(b3 + (b6 - b3) * ((i - midMonths) / (totalMonths - midMonths)));
         }
       }
     }
@@ -1733,6 +1738,42 @@ function FuelForecastChart({
 
     // 6. Forecast (dashed amber)
     if (visibleSeries.forecast && Object.keys(forecastData).length > 0) {
+      // 6a. Confidence band (95% CI) — shaded region behind the forecast line.
+      //     Two datasets: lower (invisible) + upper (fills down to lower).
+      const hasBand = Object.values(forecastBand).some(v => v > 0);
+      if (hasBand) {
+        const lower = visibleMonths.map(m =>
+          (forecastData[m] != null && forecastBand[m] != null)
+            ? Math.max(0, forecastData[m] - forecastBand[m]) : null);
+        const upper = visibleMonths.map(m =>
+          (forecastData[m] != null && forecastBand[m] != null)
+            ? forecastData[m] + forecastBand[m] : null);
+        datasets.push({
+          label: 'CI lower',
+          data: lower,
+          borderColor: 'transparent',
+          backgroundColor: 'transparent',
+          pointRadius: 0,
+          tension: 0.3,
+          yAxisID: 'yAvgas',
+          spanGaps: true,
+          order: 0,
+          _hideInTooltip: true,
+        });
+        datasets.push({
+          label: 'CI 95%',
+          data: upper,
+          borderColor: 'transparent',
+          backgroundColor: '#ef444422',
+          pointRadius: 0,
+          tension: 0.3,
+          fill: '-1', // fill down to the previous dataset (CI lower)
+          yAxisID: 'yAvgas',
+          spanGaps: true,
+          order: 0,
+          _hideInTooltip: true,
+        });
+      }
       datasets.push({
         label: 'Forecast WLS',
         data: visibleMonths.map(m => forecastData[m] ?? null),
@@ -1743,10 +1784,11 @@ function FuelForecastChart({
         pointRadius: visibleMonths.map(m => forecastData[m] != null ? 3 : 0),
         pointBackgroundColor: '#ef4444',
         tension: 0.3,
-        fill: true,
+        fill: false,
         yAxisID: 'yAvgas',
         spanGaps: true,
         order: 1,
+        _band: visibleMonths.map(m => forecastBand[m] ?? null),
       });
     }
 
@@ -1826,8 +1868,17 @@ function FuelForecastChart({
                   return `${label}: US$${val.toFixed(1)}${isPartial ? ' (provisional)' : ''}`;
                 }
                 if (label.includes('USD/CLP')) return `${label}: $${Math.round(val).toLocaleString('es-CL')}`;
+                if (label.includes('Forecast')) {
+                  const band = context.dataset._band?.[context.dataIndex];
+                  const ci = band ? ` ± ${Math.round(band).toLocaleString('es-CL')} (95%)` : '';
+                  return `${label}: $${Math.round(val).toLocaleString('es-CL')}${ci}`;
+                }
                 return `${label}: $${Math.round(val).toLocaleString('es-CL')}`;
               },
+            },
+            filter: function(item: any) {
+              // Hide the invisible CI band datasets from the tooltip
+              return !item.dataset?._hideInTooltip;
             },
           },
         },
@@ -4969,27 +5020,6 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     }
 
-    function runOLS(pairs: { x: number; y: number }[]): { slope: number; intercept: number; r2: number; residualStdDev: number } {
-      const n = pairs.length;
-      if (n < 3) return { slope: 0, intercept: 0, r2: 0, residualStdDev: 0 };
-      const sumX = pairs.reduce((s, p) => s + p.x, 0);
-      const sumY = pairs.reduce((s, p) => s + p.y, 0);
-      const sumXY = pairs.reduce((s, p) => s + p.x * p.y, 0);
-      const sumX2 = pairs.reduce((s, p) => s + p.x * p.x, 0);
-      const meanX = sumX / n;
-      const meanY = sumY / n;
-      const denom = sumX2 - n * meanX * meanX;
-      if (Math.abs(denom) < 1e-10) return { slope: 0, intercept: meanY, r2: 0, residualStdDev: 0 };
-      const slope = (sumXY - n * meanX * meanY) / denom;
-      const intercept = meanY - slope * meanX;
-      // R²
-      const ssRes = pairs.reduce((s, p) => s + Math.pow(p.y - (slope * p.x + intercept), 2), 0);
-      const ssTot = pairs.reduce((s, p) => s + Math.pow(p.y - meanY, 2), 0);
-      const r2 = ssTot > 0 ? 1 - ssRes / ssTot : 0;
-      const residualStdDev = n > 2 ? Math.sqrt(ssRes / (n - 2)) : 0;
-      return { slope, intercept, r2: Math.max(0, r2), residualStdDev };
-    }
-
     // ── WLS: Weighted Least Squares with exponential recency weighting ──
     // λ = 0.03 → half-life ≈ 23 months (ln(2)/0.03 ≈ 23.1)
     // Recent data dominates the regression, naturally adapting to inflation,
@@ -5179,28 +5209,32 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       }
     }
 
-    // ── FORECASTING ──
-    // Extrapolate Brent forward using linear trend of last 6 months of weekly data
-    let brentTrend = 0; // USD/bbl per month
-    if (brentWeekly.length >= 12) {
-      const last26w = brentWeekly.slice(-26); // ~6 months
-      // Linear regression: Brent vs time (weeks as x)
-      const tPairs = last26w.map((w, i) => ({ x: i, y: w.brentUSD }));
-      const tOLS = runOLS(tPairs);
-      brentTrend = tOLS.slope * 4.33; // Convert weekly slope to monthly
-    }
-
-    // Projected Brent at 3 and 6 months
-    const brent3m = Math.max(30, currentBrent + brentTrend * 3);
-    const brent6m = Math.max(30, currentBrent + brentTrend * 6);
+    // ── FORECASTING: Brent projection via random-walk with soft mean reversion ──
+    // Oil prices at a 3–6 month horizon are best modeled as a random walk / martingale:
+    // the current spot is the optimal unbiased forecast (Alquist & Kilian, 2010).
+    // Linear trend extrapolation is unstable and regime-dependent — a 26-week window
+    // projects Brent UP even while it is crashing, because it still "remembers" an
+    // old rally. Instead we anchor on the current spot and apply a mild
+    // Ornstein–Uhlenbeck pull toward the long-run (12-month) mean, so the projection
+    // reflects the price level NOW rather than an extrapolated trend.
+    const longRunMeanBrent = brentWeekly.length > 0
+      ? brentWeekly.slice(-52).reduce((s, w) => s + w.brentUSD, 0) / Math.min(52, brentWeekly.length)
+      : currentBrent;
+    const THETA = 0.10; // monthly reversion speed toward the long-run mean
+    const projectBrent = (horizonMonths: number): number => {
+      let x = currentBrent;
+      for (let i = 0; i < horizonMonths; i++) x += THETA * (longRunMeanBrent - x);
+      return Math.max(20, x);
+    };
+    const brent3m = projectBrent(3);
+    const brent6m = projectBrent(6);
+    // Implied monthly drift of the projection (telemetry / display only)
+    const brentTrend = (brent6m - currentBrent) / 6;
 
     // Apply regression to get AVGAS USD/L, then convert to CLP
     const impliedNowUSD = effectiveSlope * currentBrent + effectiveIntercept;
     const implied3mUSD = effectiveSlope * brent3m + effectiveIntercept;
     const implied6mUSD = effectiveSlope * brent6m + effectiveIntercept;
-
-    // Apply volatility adjustment (multiplicative)
-    const volMultiplier = 1 + volatilityAdj;
 
     // Apply FX adjustment for current deviation from mean
     const historicalMeanFX = brentMonthly.length > 0
@@ -5209,10 +5243,30 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const fxDeviation = currentFX - historicalMeanFX;
     const fxAdjCLP = fxBeta * fxDeviation; // Additional CLP/L from FX deviation
 
-    // Final forecasts in CLP/L
-    const impliedNowCLP = Math.round(Math.max(0, impliedNowUSD * volMultiplier * currentFX + fxAdjCLP));
-    const forecast3m = Math.round(Math.max(0, implied3mUSD * volMultiplier * currentFX + fxAdjCLP));
-    const forecast6m = Math.round(Math.max(0, implied6mUSD * volMultiplier * currentFX + fxAdjCLP));
+    // ── Central forecasts in CLP/L (UNBIASED) ──
+    // Volatility no longer shifts the central estimate — it is symmetric and has no
+    // direction, so inflating the center by volatility was a bias: it pushed the
+    // forecast UP precisely when a price crash spiked volatility. Volatility (and
+    // model error) now feed the confidence band below instead.
+    const impliedNowCLP = Math.round(Math.max(0, impliedNowUSD * currentFX + fxAdjCLP));
+    const forecast3m = Math.round(Math.max(0, implied3mUSD * currentFX + fxAdjCLP));
+    const forecast6m = Math.round(Math.max(0, implied6mUSD * currentFX + fxAdjCLP));
+
+    // ── CONFIDENCE BAND (95%, ±1.96σ) ──
+    // Grounded in the model's own historical prediction error (WLS residual σ in
+    // USD/L → CLP/L), widened gently with the forecast horizon (more Brent
+    // uncertainty further out) and capped at ±25% so an extreme-volatility regime
+    // can't render an uninformative band.
+    const residualCLP = bestLag.residualStdDev * currentFX; // σ of AVGAS in CLP/L
+    const bandCLP = (centerCLP: number, horizonMonths: number): number => {
+      const horizonInflation = Math.sqrt(1 + horizonMonths / 3); // 0m→1x, 3m→1.41x, 6m→1.73x
+      const raw = 1.96 * residualCLP * horizonInflation;
+      const cap = 0.25 * centerCLP; // sanity cap: band never exceeds ±25% of center
+      return Math.round(Math.min(raw, cap));
+    };
+    const bandNow = bandCLP(impliedNowCLP, 0);
+    const band3m = bandCLP(forecast3m, 3);
+    const band6m = bandCLP(forecast6m, 6);
 
     // Confidence score (0-100) based on weighted R², effective N, and data span
     const effectiveNScore = Math.min(bestLag.effectiveN / 20, 1); // 20 effective months = 100%
@@ -5237,6 +5291,10 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       impliedNowCLP,
       forecast3m,
       forecast6m,
+      // Confidence band (±1.96σ, 95%) in CLP/L
+      bandNow,
+      band3m,
+      band6m,
       brentTrend: Math.round(brentTrend * 100) / 100,
       brent3m: Math.round(brent3m * 10) / 10,
       brent6m: Math.round(brent6m * 10) / 10,
@@ -6561,7 +6619,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                     <div className="text-center p-2.5 bg-white/60 rounded-lg">
                       <p className="text-sm font-bold font-mono text-slate-700">US${brentAvgasCorrelation.brent3m.toFixed(1)}</p>
                       <p className="text-[9px] text-slate-500">Brent 3m forecast</p>
-                      <p className="text-[8px] text-slate-400">trend: {brentAvgasCorrelation.brentTrend > 0 ? '↑' : '↓'}{Math.abs(brentAvgasCorrelation.brentTrend).toFixed(2)}/wk</p>
+                      <p className="text-[8px] text-slate-400">6m: US${brentAvgasCorrelation.brent6m.toFixed(1)} · revert {brentAvgasCorrelation.brentTrend >= 0 ? '↑' : '↓'}{Math.abs(brentAvgasCorrelation.brentTrend).toFixed(1)}/mo</p>
                     </div>
                   </div>
 
@@ -6608,9 +6666,9 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                           <span className="font-mono font-bold">${brentAvgasCorrelation.brentVolatility8w.toFixed(2)}/bbl</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-500">Vol. adjustment</span>
-                          <span className={`font-mono font-bold ${brentAvgasCorrelation.volatilityAdj > 0 ? 'text-red-600' : 'text-slate-500'}`}>
-                            {brentAvgasCorrelation.volatilityAdj > 0 ? '+' : ''}{brentAvgasCorrelation.volatilityAdj.toFixed(2)}%
+                          <span className="text-slate-500">95% CI (±6m)</span>
+                          <span className="font-mono font-bold text-indigo-600">
+                            ±${formatCurrency(Math.round(brentAvgasCorrelation.band6m))}
                           </span>
                         </div>
                       </div>
