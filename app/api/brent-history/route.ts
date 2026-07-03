@@ -1,15 +1,25 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 // ──────────────────────────────────────────────────────────────
 // Brent Crude Oil WEEKLY historical data + USD/CLP from online sources
-// • EIA API: weekly Brent spot prices since Sep 2020 (~288 weeks)
+// • EIA weekly: Brent spot prices since Sep 2020 (~288 weeks)
+// • EIA daily:  month-to-date (MTD) average for the CURRENT month, because the
+//               weekly series lags ~1 week and the latest month is often missing
 // • Mindicador.cl: daily USD/CLP for each year 2020–present
 // • Consolidates into weekly {week, brentUSD, usdCLP} array
 // • Also aggregates to monthly for AVGAS correlation
-// • 24-hour in-memory cache (weekly data changes once/week)
+// • Layered cache: in-memory (24h) + persistent DB (survives redeploys)
+// • Uses EIA_API_KEY env if set, else falls back to the shared DEMO_KEY
 // ──────────────────────────────────────────────────────────────
 
 export const dynamic = "force-dynamic";
+
+// EIA API key. The shared DEMO_KEY is rate-limited to ~30 req/hour PER IP and is
+// shared across everyone who uses it (on Railway that means a shared egress IP),
+// so it frequently returns HTTP 429. Register a free key at
+// https://www.eia.gov/opendata/register.php and set EIA_API_KEY to avoid this.
+const EIA_KEY = process.env.EIA_API_KEY || "DEMO_KEY";
 
 // ── Types ──
 interface WeeklyRow {
@@ -22,6 +32,7 @@ interface MonthlyRow {
   brentUSD: number;  // Average of weekly values in that month
   usdCLP: number;    // Average of weekly values in that month
   weeks: number;     // Number of weekly data points
+  partial?: boolean; // true = current-month estimate (MTD/spot), not a closed avg
 }
 interface BrentHistoryResponse {
   currentBrentUSD: number;
@@ -33,10 +44,49 @@ interface BrentHistoryResponse {
   fromCache: boolean;
 }
 
-// ── In-memory cache ──
+// ── In-memory cache (fast, per-instance; wiped on every restart/redeploy) ──
 let cached: Omit<BrentHistoryResponse, "fromCache"> | null = null;
-let cachedAt = 0;
-const CACHE_MS = 24 * 60 * 60 * 1000; // 24 hours
+let cachedAt = 0;                       // epoch ms when `cached` was fetched
+let lastAttemptAt = 0;                   // epoch ms of the last upstream refetch
+let lastAttemptOk = true;                // did the last upstream attempt succeed?
+const CACHE_MS = 24 * 60 * 60 * 1000;    // data considered fresh for 24h
+const FAIL_BACKOFF_MS = 30 * 60 * 1000;  // after a failed refetch, wait 30min before retrying
+const PERSIST_KEY = "brent-history-v1";  // AppCache row key for the persistent copy
+
+// ── Persistent cache (DB, survives redeploys) — best-effort, never throws ──
+// The in-memory cache above is lost on every Railway restart, so right after a
+// redeploy the very first request must refetch — exactly when a DEMO_KEY 429 is
+// most damaging. Persisting the last-good payload keeps the chart populated.
+async function loadPersistentCache(): Promise<
+  { data: Omit<BrentHistoryResponse, "fromCache">; fetchedAt: number } | null
+> {
+  try {
+    const row = await prisma.appCache.findUnique({ where: { key: PERSIST_KEY } });
+    if (!row) return null;
+    const data = JSON.parse(row.value) as Omit<BrentHistoryResponse, "fromCache">;
+    const fetchedAt = data?.fetchedAt
+      ? new Date(data.fetchedAt).getTime()
+      : row.updatedAt.getTime();
+    return { data, fetchedAt };
+  } catch {
+    return null; // table missing (first deploy) or bad JSON → ignore gracefully
+  }
+}
+
+async function savePersistentCache(
+  data: Omit<BrentHistoryResponse, "fromCache">
+): Promise<void> {
+  try {
+    const value = JSON.stringify(data);
+    await prisma.appCache.upsert({
+      where: { key: PERSIST_KEY },
+      create: { key: PERSIST_KEY, value },
+      update: { value },
+    });
+  } catch {
+    // best-effort — persistent cache is optional, ignore write failures
+  }
+}
 
 // ── EIA Weekly Brent Fetcher ──
 // Uses DEMO_KEY (rate-limited but free). Fetches ALL weekly data since Sep 2020.
@@ -49,7 +99,7 @@ async function fetchEIAWeeklyBrent(): Promise<{ period: string; value: number }[
     "&start=2020-09-01" +
     "&sort[0][column]=period&sort[0][direction]=asc" +
     "&offset=0&length=5000" +
-    "&api_key=DEMO_KEY";
+    `&api_key=${EIA_KEY}`;
 
   const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
   if (!res.ok) throw new Error(`EIA API ${res.status}`);
@@ -63,6 +113,36 @@ async function fetchEIAWeeklyBrent(): Promise<{ period: string; value: number }[
       value: parseFloat(row.value),
     }))
     .filter((r: { period: string; value: number }) => r.value > 10 && r.period >= "2020-09-01");
+}
+
+// ── EIA Daily Brent Fetcher (recent window) ──
+// Provides a month-to-date average for the current month, which the weekly
+// series can't yet (it lags ~1 week). Best-effort: returns [] on any failure so
+// the weekly aggregation — the authoritative base — keeps working regardless.
+async function fetchEIADailyBrent(): Promise<{ period: string; value: number }[]> {
+  const start = new Date();
+  start.setDate(start.getDate() - 75); // ~2.5 months back comfortably covers the current month
+  const startStr = start.toISOString().slice(0, 10);
+  const url =
+    "https://api.eia.gov/v2/petroleum/pri/spt/data/" +
+    "?frequency=daily&data[0]=value" +
+    "&facets[series][]=RBRTE" +
+    `&start=${startStr}` +
+    "&sort[0][column]=period&sort[0][direction]=desc" +
+    "&offset=0&length=120" +
+    `&api_key=${EIA_KEY}`;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
+    if (!res.ok) return [];
+    const json = await res.json();
+    const data = json?.response?.data;
+    if (!Array.isArray(data)) return [];
+    return data
+      .map((row: any) => ({ period: String(row.period), value: parseFloat(row.value) }))
+      .filter((r: { period: string; value: number }) => r.value > 10);
+  } catch {
+    return [];
+  }
 }
 
 // ── Mindicador.cl USD/CLP Daily Fetcher ──
@@ -145,7 +225,7 @@ async function fetchLiveBrentSpot(): Promise<number | null> {
   // Source 1: EIA daily (most recent)
   try {
     const url =
-      "https://api.eia.gov/v2/petroleum/pri/spt/data/?frequency=daily&data[0]=value&facets[series][]=RBRTE&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=5&api_key=DEMO_KEY";
+      `https://api.eia.gov/v2/petroleum/pri/spt/data/?frequency=daily&data[0]=value&facets[series][]=RBRTE&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=5&api_key=${EIA_KEY}`;
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
     if (res.ok) {
       const json = await res.json();
@@ -194,67 +274,148 @@ async function fetchLiveBrentSpot(): Promise<number | null> {
   return null;
 }
 
+// ── Build the full Brent history payload from all upstream sources ──
+async function buildBrentHistory(): Promise<Omit<BrentHistoryResponse, "fromCache">> {
+  // Determine which years to fetch USD/CLP for
+  const currentYear = new Date().getFullYear();
+  const years: number[] = [];
+  for (let y = 2020; y <= currentYear; y++) years.push(y);
+
+  // Fetch EIA weekly Brent + EIA daily (recent) + all years of USD/CLP in parallel
+  const [eiaWeekly, eiaDaily, ...yearMaps] = await Promise.all([
+    fetchEIAWeeklyBrent(),
+    fetchEIADailyBrent(),
+    ...years.map((y) => fetchMindicadorYear(y)),
+  ]);
+
+  // Merge all year maps into one big daily USD/CLP map
+  const dailyUSDCLP = new Map<string, number>();
+  yearMaps.forEach((m) => m.forEach((v, k) => dailyUSDCLP.set(k, v)));
+
+  // Build weekly array by pairing each EIA week with closest USD/CLP
+  const weekly: WeeklyRow[] = [];
+  for (const row of eiaWeekly) {
+    const usdCLP = findClosestUSDCLP(row.period, dailyUSDCLP);
+    if (usdCLP <= 0) continue; // Skip if no FX data available
+    weekly.push({
+      week: row.period,
+      brentUSD: Math.round(row.value * 100) / 100,
+      usdCLP: Math.round(usdCLP),
+    });
+  }
+  weekly.sort((a, b) => a.week.localeCompare(b.week));
+
+  // Aggregate to monthly (closed months = average of that month's weeks)
+  const monthly = aggregateToMonthly(weekly);
+  const monthlyMap = new Map<string, MonthlyRow>(monthly.map((m) => [m.month, m]));
+
+  // ── Current-month fill (fixes the "missing latest month" from EIA weekly lag) ──
+  // EIA weekly data lags ~1 week, so the current month is often missing or thin.
+  // Use EIA *daily* data to compute a month-to-date (MTD) average, which
+  // converges to the final monthly average as the month progresses. This is far
+  // more accurate than a single spot price (a spot can be ±US$15/bbl off the
+  // monthly average). Only the CURRENT month is overridden — past months keep
+  // their authoritative weekly average.
+  const nowD = new Date();
+  const curMonth = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, "0")}`;
+
+  const curMonthDaily = eiaDaily.filter((d) => d.period.slice(0, 7) === curMonth);
+  const fxForCur =
+    findClosestUSDCLP(`${curMonth}-15`, dailyUSDCLP) ||
+    (weekly.length > 0 ? weekly[weekly.length - 1].usdCLP : 0);
+
+  if (curMonthDaily.length > 0 && fxForCur > 0) {
+    const avg = curMonthDaily.reduce((s, d) => s + d.value, 0) / curMonthDaily.length;
+    monthlyMap.set(curMonth, {
+      month: curMonth,
+      brentUSD: Math.round(avg * 100) / 100,
+      usdCLP: Math.round(fxForCur),
+      weeks: monthlyMap.get(curMonth)?.weeks ?? 0,
+      partial: true, // MTD estimate — not a closed monthly average
+    });
+  }
+
+  // Live spot price (also the headline currentBrentUSD)
+  const liveSpot = await fetchLiveBrentSpot();
+
+  // Last-resort: if the current month is STILL missing (no weekly, no daily),
+  // seed it with the live spot so the chart never drops the latest month.
+  if (!monthlyMap.has(curMonth) && liveSpot && fxForCur > 0) {
+    monthlyMap.set(curMonth, {
+      month: curMonth,
+      brentUSD: Math.round(liveSpot * 100) / 100,
+      usdCLP: Math.round(fxForCur),
+      weeks: 0,
+      partial: true,
+    });
+  }
+
+  // The current month is never "closed" — always flag it provisional so the
+  // chart can render it distinctly (dashed segment + hollow point).
+  const curRow = monthlyMap.get(curMonth);
+  if (curRow) curRow.partial = true;
+
+  const finalMonthly = Array.from(monthlyMap.values()).sort((a, b) =>
+    a.month.localeCompare(b.month)
+  );
+
+  const currentBrentUSD =
+    liveSpot ?? (weekly.length > 0 ? weekly[weekly.length - 1].brentUSD : 70);
+
+  const sourceInfo =
+    `EIA weekly (${weekly.length}w) + daily MTD + mindicador.cl (${years.length}y)` +
+    (EIA_KEY === "DEMO_KEY" ? " [DEMO_KEY]" : "");
+
+  return {
+    currentBrentUSD,
+    weekly,
+    monthly: finalMonthly,
+    totalWeeks: weekly.length,
+    source: sourceInfo,
+    fetchedAt: new Date().toISOString(),
+  };
+}
+
 export async function GET() {
   const now = Date.now();
+
+  // 1. Fresh in-memory cache → serve immediately
   if (cached && now - cachedAt < CACHE_MS) {
     return NextResponse.json({ ...cached, fromCache: true });
   }
 
-  try {
-    // Determine which years to fetch USD/CLP for
-    const currentYear = new Date().getFullYear();
-    const years = [];
-    for (let y = 2020; y <= currentYear; y++) years.push(y);
-
-    // Fetch EIA weekly Brent + all years of USD/CLP in parallel
-    const [eiaData, ...yearMaps] = await Promise.all([
-      fetchEIAWeeklyBrent(),
-      ...years.map((y) => fetchMindicadorYear(y)),
-    ]);
-
-    // Merge all year maps into one big daily USD/CLP map
-    const dailyUSDCLP = new Map<string, number>();
-    yearMaps.forEach((m) => m.forEach((v, k) => dailyUSDCLP.set(k, v)));
-
-    // Build weekly array by pairing each EIA week with closest USD/CLP
-    const weekly: WeeklyRow[] = [];
-    for (const row of eiaData) {
-      const usdCLP = findClosestUSDCLP(row.period, dailyUSDCLP);
-      if (usdCLP <= 0) continue; // Skip if no FX data available
-      weekly.push({
-        week: row.period,
-        brentUSD: Math.round(row.value * 100) / 100,
-        usdCLP: Math.round(usdCLP),
-      });
+  // 2. Cold start (memory empty, e.g. right after a redeploy): hydrate from the
+  //    persistent DB cache so we have a last-good copy before touching upstream.
+  if (!cached) {
+    const persisted = await loadPersistentCache();
+    if (persisted) {
+      cached = persisted.data;
+      cachedAt = persisted.fetchedAt;
+      if (now - cachedAt < CACHE_MS) {
+        return NextResponse.json({ ...cached, fromCache: true });
+      }
     }
+  }
 
-    // Sort chronologically
-    weekly.sort((a, b) => a.week.localeCompare(b.week));
+  // 3. Backoff: if the last upstream refetch failed recently, don't hammer the
+  //    API (that only burns more quota → more 429s). Serve stale cache instead.
+  if (cached && !lastAttemptOk && now - lastAttemptAt < FAIL_BACKOFF_MS) {
+    return NextResponse.json({ ...cached, fromCache: true, stale: true });
+  }
 
-    // Aggregate to monthly
-    const monthly = aggregateToMonthly(weekly);
-
-    // Get live spot price
-    const liveSpot = await fetchLiveBrentSpot();
-    const currentBrentUSD =
-      liveSpot ?? (weekly.length > 0 ? weekly[weekly.length - 1].brentUSD : 70);
-
-    const sourceInfo = `EIA weekly (${weekly.length} weeks) + mindicador.cl (${years.length} years)`;
-
-    cached = {
-      currentBrentUSD,
-      weekly,
-      monthly,
-      totalWeeks: weekly.length,
-      source: sourceInfo,
-      fetchedAt: new Date().toISOString(),
-    };
+  // 4. Refetch from upstream
+  lastAttemptAt = now;
+  try {
+    const fresh = await buildBrentHistory();
+    cached = fresh;
     cachedAt = now;
-
-    return NextResponse.json({ ...cached, fromCache: false });
+    lastAttemptOk = true;
+    await savePersistentCache(fresh); // best-effort persist for future cold starts
+    return NextResponse.json({ ...fresh, fromCache: false });
   } catch (error: any) {
+    lastAttemptOk = false;
     console.error("[brent-history] Error:", error?.message || error);
-    // If we have stale cache, return it
+    // Serve stale cache (in-memory or DB-hydrated) if we have any
     if (cached) {
       return NextResponse.json({ ...cached, fromCache: true, stale: true });
     }

@@ -312,3 +312,12 @@ model EngineMonitorReading {
 
   @@index([flightId])
 }
+
+// Generic key/value cache that survives redeploys (in-memory cache is wiped on
+// every Railway restart). Used e.g. to persist the last-good Brent history
+// payload so the chart never goes blank when the upstream EIA API is rate-limited.
+model AppCache {
+  key       String   @id
+  value     String   // JSON blob
+  updatedAt DateTime @default(now()) @updatedAt
+}

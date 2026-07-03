@@ -1557,8 +1557,8 @@ function FuelForecastChart({
     const avgasMap: Record<string, number> = {};
     avgasMonthly.forEach((m: any) => { avgasMap[m.month] = m.ppl; });
 
-    const brentMap: Record<string, { brentUSD: number; usdCLP: number }> = {};
-    brentMonthly.forEach((b: any) => { brentMap[b.month] = { brentUSD: b.brentUSD, usdCLP: b.usdCLP }; });
+    const brentMap: Record<string, { brentUSD: number; usdCLP: number; partial?: boolean }> = {};
+    brentMonthly.forEach((b: any) => { brentMap[b.month] = { brentUSD: b.brentUSD, usdCLP: b.usdCLP, partial: b.partial }; });
 
     // Compute WLS implied AVGAS for each historical month
     const impliedMap: Record<string, number> = {};
@@ -1752,18 +1752,31 @@ function FuelForecastChart({
 
     // 7. Brent USD/bbl (secondary Y)
     if (visibleSeries.brent) {
+      // Flag which visible months are provisional (current-month MTD/spot estimate)
+      const brentPartial = visibleMonths.map(m => !!brentMap[m]?.partial);
       datasets.push({
         label: 'Brent US$/bbl',
         data: visibleMonths.map(m => brentMap[m]?.brentUSD ?? null),
         borderColor: '#1e293b',
         backgroundColor: 'transparent',
         borderWidth: 1.5,
-        pointRadius: 0,
+        // Provisional months get a hollow white circle; closed months stay flat
+        pointRadius: brentPartial.map(p => p ? 3.5 : 0),
+        pointStyle: 'circle',
+        pointBackgroundColor: brentPartial.map(p => p ? '#ffffff' : '#1e293b'),
+        pointBorderColor: '#1e293b',
+        pointBorderWidth: brentPartial.map(p => p ? 2 : 0),
         tension: 0.3,
         yAxisID: 'yBrent',
         spanGaps: true,
         order: 7,
-      });
+        // Dash the segment that leads INTO a provisional month
+        segment: {
+          borderDash: (ctx: any) => (brentPartial[ctx.p1DataIndex] ? [4, 3] : undefined),
+        },
+        // Custom flag read by the tooltip to append "(provisional)"
+        _partial: brentPartial,
+      } as any);
     }
 
     // 8. USD/CLP (secondary Y right)
@@ -1808,7 +1821,10 @@ function FuelForecastChart({
                 const label = context.dataset.label || '';
                 const val = context.parsed.y;
                 if (val == null) return '';
-                if (label.includes('Brent')) return `${label}: US$${val.toFixed(1)}`;
+                if (label.includes('Brent')) {
+                  const isPartial = context.dataset._partial?.[context.dataIndex];
+                  return `${label}: US$${val.toFixed(1)}${isPartial ? ' (provisional)' : ''}`;
+                }
                 if (label.includes('USD/CLP')) return `${label}: $${Math.round(val).toLocaleString('es-CL')}`;
                 return `${label}: $${Math.round(val).toLocaleString('es-CL')}`;
               },
