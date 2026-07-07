@@ -205,9 +205,19 @@ async function handleJPIUpload(file: File) {
   let importedCount = 0;
 
   for (const df of decodedFlights) {
-    // Check for duplicate
+    // Check for duplicate: search for flights with same flightNumber within
+    // a small time window (±3 minutes) instead of exact equality. Exact
+    // timestamp equality is fragile across servers/timezones and can cause
+    // false positives/negatives. A small window tolerates minor clock/parse
+    // differences while avoiding importing the same flight twice.
+    const windowMs = 3 * 60 * 1000; // 3 minutes
+    const start = new Date(df.flightDate.getTime() - windowMs);
+    const end = new Date(df.flightDate.getTime() + windowMs);
     const existing = await prisma.engineMonitorFlight.findFirst({
-      where: { flightNumber: df.flightNumber, flightDate: df.flightDate },
+      where: {
+        flightNumber: df.flightNumber,
+        flightDate: { gte: start, lte: end },
+      },
     });
 
     if (existing) {
@@ -345,14 +355,21 @@ async function handleCSVUpload(file: File) {
     flightNumber = Math.abs(filename.split('').reduce((a: number, b: string) => ((a << 5) - a) + b.charCodeAt(0), 0)) % 100000;
   }
 
-  // Check for duplicate
-  const existing = await prisma.engineMonitorFlight.findFirst({
-    where: { flightNumber, flightDate },
+  // Check for duplicate using a small time window (±3 minutes) to tolerate
+  // minor timestamp parsing/clock differences between the uploader and the
+  // server. This avoids rejecting legitimate distinct flights due to
+  // millisecond/tz offsets while still preventing re-imports of the same
+  // flight.
+  const csvWindowMs = 3 * 60 * 1000;
+  const csvStart = new Date(flightDate.getTime() - csvWindowMs);
+  const csvEnd = new Date(flightDate.getTime() + csvWindowMs);
+  const existingCsv = await prisma.engineMonitorFlight.findFirst({
+    where: { flightNumber, flightDate: { gte: csvStart, lte: csvEnd } },
   });
 
-  if (existing) {
+  if (existingCsv) {
     return NextResponse.json(
-      { error: `Flight #${flightNumber} on ${flightDate.toISOString().slice(0, 10)} already exists`, existingId: existing.id },
+      { error: `Flight #${flightNumber} on ${flightDate.toISOString().slice(0, 10)} already exists`, existingId: existingCsv.id },
       { status: 409 }
     );
   }

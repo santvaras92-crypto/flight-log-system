@@ -408,7 +408,11 @@ class JPIDecoderImpl {
       const hrs = (timeRaw >> 11) & 0x1f;
 
       try {
-        hdr.date = new Date(year, month - 1, day, hrs, mins, secs);
+        // Use UTC construction to avoid server-local timezone shifts when
+        // interpreting the header date. The JPI header contains local wall
+        // clock fields (Y/M/D H:M:S) — constructing with Date.UTC makes
+        // the resulting timestamp deterministic across servers.
+        hdr.date = new Date(Date.UTC(year, month - 1, day, hrs, mins, secs));
       } catch {
         hdr.date = null;
       }
@@ -437,7 +441,10 @@ class JPIDecoderImpl {
       const hrs = (timeRaw >> 11) & 0x1f;
 
       try {
-        hdr.date = new Date(year, month - 1, day, hrs, mins, secs);
+        // See note above: construct as UTC so parsing is not affected by the
+        // environment's local timezone. This keeps flightDate values stable
+        // and comparable when uploaded from different machines/servers.
+        hdr.date = new Date(Date.UTC(year, month - 1, day, hrs, mins, secs));
       } catch {
         hdr.date = null;
       }
