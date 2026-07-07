@@ -125,6 +125,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
   const chtChartRef = useRef<HTMLCanvasElement>(null);
   const oilChartRef = useRef<HTMLCanvasElement>(null);
   const powerChartRef = useRef<HTMLCanvasElement>(null);
+  const chartsGridRef = useRef<HTMLDivElement>(null);
   const chartInstances = useRef<ChartJS[]>([]);
 
   // Trend chart refs (fleet overview)
@@ -424,7 +425,26 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
       chartInstances.current.push(chart);
     }
 
-    return () => { chartInstances.current.forEach(c => c.destroy()); chartInstances.current = []; };
+    // Charts can be instantiated while their container is momentarily zero-sized
+    // — e.g. when the Engine Monitor tab is opened directly from a flight's engine
+    // link (a fresh component mount + async detail load where the layout isn't
+    // settled on first paint). In that case Chart.js sizes the canvas to 0×0 and
+    // the chart stays blank. Forcing a resize on the next animation frame and
+    // whenever the grid changes size makes them paint at the correct dimensions.
+    const resizeAll = () => chartInstances.current.forEach(c => c.resize());
+    const raf = requestAnimationFrame(resizeAll);
+    let ro: ResizeObserver | null = null;
+    if (chartsGridRef.current && typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(resizeAll);
+      ro.observe(chartsGridRef.current);
+    }
+
+    return () => {
+      cancelAnimationFrame(raf);
+      ro?.disconnect();
+      chartInstances.current.forEach(c => c.destroy());
+      chartInstances.current = [];
+    };
   }, [selectedFlight, loadingDetail]);
 
   // ============ TREND CHARTS (Fleet Overview) ============
@@ -1066,7 +1086,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
               )}
 
               {/* 4 Charts Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <div ref={chartsGridRef} className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300 }}>
                   <canvas ref={egtChartRef}></canvas>
                 </div>

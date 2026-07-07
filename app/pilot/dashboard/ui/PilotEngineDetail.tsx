@@ -119,6 +119,7 @@ export default function PilotEngineDetail({
   const chtChartRef = useRef<HTMLCanvasElement>(null);
   const oilChartRef = useRef<HTMLCanvasElement>(null);
   const powerChartRef = useRef<HTMLCanvasElement>(null);
+  const chartsGridRef = useRef<HTMLDivElement>(null);
   const chartInstances = useRef<ChartJS[]>([]);
 
   // Fetch full flight detail for active tramo
@@ -357,7 +358,24 @@ export default function PilotEngineDetail({
       chartInstances.current.push(chart);
     }
 
-    return () => { chartInstances.current.forEach(c => c.destroy()); chartInstances.current = []; };
+    // Charts can be instantiated while their container is momentarily zero-sized
+    // (this panel mounts/expands over a flight row, so the layout isn't settled
+    // on first paint). Chart.js then sizes the canvas to 0×0 and it stays blank.
+    // Force a resize on the next frame and whenever the grid resizes.
+    const resizeAll = () => chartInstances.current.forEach(c => c.resize());
+    const raf = requestAnimationFrame(resizeAll);
+    let ro: ResizeObserver | null = null;
+    if (chartsGridRef.current && typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(resizeAll);
+      ro.observe(chartsGridRef.current);
+    }
+
+    return () => {
+      cancelAnimationFrame(raf);
+      ro?.disconnect();
+      chartInstances.current.forEach(c => c.destroy());
+      chartInstances.current = [];
+    };
   }, [flight]);
 
   return (
@@ -529,7 +547,7 @@ export default function PilotEngineDetail({
               )}
 
               {/* 4 Charts Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <div ref={chartsGridRef} className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300 }}>
                   <canvas ref={egtChartRef}></canvas>
                 </div>
