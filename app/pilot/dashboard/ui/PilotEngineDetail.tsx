@@ -461,10 +461,13 @@ export default function PilotEngineDetail({
                       Flight Log #{flight.linkedFlight.id}
                     </span>
                     {flight.linkedFlight.piloto && (
-                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-700">✈ {flight.linkedFlight.piloto}</span>
+                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-700" title="Piloto">✈ {flight.linkedFlight.piloto}</span>
                     )}
                     {flight.linkedFlight.copiloto && (
-                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-600">+{flight.linkedFlight.copiloto}</span>
+                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-600" title="Copiloto">+{flight.linkedFlight.copiloto}</span>
+                    )}
+                    {flight.linkedFlight.instructor && (
+                      <span className="bg-amber-50 rounded-md px-2 py-0.5 text-amber-700 border border-amber-200" title="Instructor">🎓 {flight.linkedFlight.instructor}</span>
                     )}
                     {flight.linkedFlight.diffHobbs != null && (
                       <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-700 font-mono">{flight.linkedFlight.diffHobbs.toFixed(1)}h hobbs</span>

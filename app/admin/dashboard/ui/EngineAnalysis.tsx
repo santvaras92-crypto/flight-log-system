@@ -998,10 +998,13 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
                       Flight Log #{selectedFlight.linkedFlight.id}
                     </span>
                     {selectedFlight.linkedFlight.piloto && (
-                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-700">✈ {selectedFlight.linkedFlight.piloto}</span>
+                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-700" title="Piloto">✈ {selectedFlight.linkedFlight.piloto}</span>
                     )}
                     {selectedFlight.linkedFlight.copiloto && (
-                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-600">+{selectedFlight.linkedFlight.copiloto}</span>
+                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-600" title="Copiloto">+{selectedFlight.linkedFlight.copiloto}</span>
+                    )}
+                    {selectedFlight.linkedFlight.instructor && (
+                      <span className="bg-amber-50 rounded-md px-2 py-0.5 text-amber-700 border border-amber-200" title="Instructor">🎓 {selectedFlight.linkedFlight.instructor}</span>
                     )}
                     {selectedFlight.linkedFlight.diffHobbs != null && (
                       <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-700 font-mono">{selectedFlight.linkedFlight.diffHobbs.toFixed(1)}h hobbs</span>

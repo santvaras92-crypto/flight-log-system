@@ -98,6 +98,10 @@ export async function GET(req: NextRequest) {
               id: true, fecha: true, diff_hobbs: true, diff_tach: true,
               costo: true, piloto_raw: true, copiloto: true, cliente: true,
               instructor: true, detalle: true, aerodromoSalida: true, aerodromoDestino: true,
+              // Linked pilot account — the authoritative pilot name. `piloto_raw`
+              // is only populated for CSV-imported flights, so app submissions
+              // (which set `pilotoId`) need the User relation to show the pilot.
+              User: { select: { nombre: true } },
             },
           },
         },
@@ -133,7 +137,8 @@ export async function GET(req: NextRequest) {
         diffHobbs: toNum(flight.LinkedFlight.diff_hobbs),
         diffTach: toNum(flight.LinkedFlight.diff_tach),
         costo: toNum(flight.LinkedFlight.costo),
-        piloto: flight.LinkedFlight.piloto_raw,
+        // Prefer the linked User account name; fall back to the raw import field.
+        piloto: flight.LinkedFlight.User?.nombre || flight.LinkedFlight.piloto_raw,
         copiloto: flight.LinkedFlight.copiloto,
         cliente: flight.LinkedFlight.cliente,
         instructor: flight.LinkedFlight.instructor,
