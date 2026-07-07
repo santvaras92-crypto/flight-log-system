@@ -51,7 +51,10 @@ let lastAttemptAt = 0;                   // epoch ms of the last upstream refetc
 let lastAttemptOk = true;                // did the last upstream attempt succeed?
 const CACHE_MS = 24 * 60 * 60 * 1000;    // data considered fresh for 24h
 const FAIL_BACKOFF_MS = 30 * 60 * 1000;  // after a failed refetch, wait 30min before retrying
-const PERSIST_KEY = "brent-history-v1";  // AppCache row key for the persistent copy
+// AppCache row key for the persistent copy. Bumped to v2 to invalidate the old
+// cached payload that had whole years (2022, 2025) of Brent missing — see the
+// FX-decoupling fix in buildBrentHistory(). The old v1 row is simply ignored.
+const PERSIST_KEY = "brent-history-v2";
 
 // ── Persistent cache (DB, survives redeploys) — best-effort, never throws ──
 // The in-memory cache above is lost on every Railway restart, so right after a
@@ -147,28 +150,37 @@ async function fetchEIADailyBrent(): Promise<{ period: string; value: number }[]
 
 // ── Mindicador.cl USD/CLP Daily Fetcher ──
 // Fetches daily dólar observado for a given year. Returns map: "YYYY-MM-DD" → CLP value.
+// Retries a few times: a transient failure here used to return an empty year-map,
+// which (combined with the FX filter below) erased that ENTIRE year of Brent from
+// the chart — showing up as a long straight line across the missing months.
 async function fetchMindicadorYear(year: number): Promise<Map<string, number>> {
-  const map = new Map<string, number>();
-  try {
-    const res = await fetch(`https://mindicador.cl/api/dolar/${year}`, {
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!res.ok) return map;
-    const json = await res.json();
-    const serie = json?.serie;
-    if (!Array.isArray(serie)) return map;
-    for (const entry of serie) {
-      const val = parseFloat(entry.valor);
-      if (!val || val < 100) continue;
-      // fecha is ISO string like "2024-01-02T03:00:00.000Z"
-      const d = new Date(entry.fecha);
-      const key = d.toISOString().slice(0, 10); // "YYYY-MM-DD"
-      map.set(key, val);
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const map = new Map<string, number>();
+    try {
+      const res = await fetch(`https://mindicador.cl/api/dolar/${year}`, {
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) throw new Error(`mindicador ${year} HTTP ${res.status}`);
+      const json = await res.json();
+      const serie = json?.serie;
+      if (!Array.isArray(serie) || serie.length === 0) throw new Error(`mindicador ${year} empty`);
+      for (const entry of serie) {
+        const val = parseFloat(entry.valor);
+        if (!val || val < 100) continue;
+        // fecha is ISO string like "2024-01-02T03:00:00.000Z"
+        const d = new Date(entry.fecha);
+        const key = d.toISOString().slice(0, 10); // "YYYY-MM-DD"
+        map.set(key, val);
+      }
+      return map; // success
+    } catch {
+      if (attempt < 3) {
+        await new Promise((r) => setTimeout(r, 400 * attempt)); // 0.4s, 0.8s backoff
+        continue;
+      }
     }
-  } catch {
-    // Silent fail for individual years
   }
-  return map;
+  return new Map<string, number>(); // give up after retries
 }
 
 // Find the closest USD/CLP value to a given date from the daily map
@@ -292,18 +304,40 @@ async function buildBrentHistory(): Promise<Omit<BrentHistoryResponse, "fromCach
   const dailyUSDCLP = new Map<string, number>();
   yearMaps.forEach((m) => m.forEach((v, k) => dailyUSDCLP.set(k, v)));
 
-  // Build weekly array by pairing each EIA week with closest USD/CLP
-  const weekly: WeeklyRow[] = [];
-  for (const row of eiaWeekly) {
-    const usdCLP = findClosestUSDCLP(row.period, dailyUSDCLP);
-    if (usdCLP <= 0) continue; // Skip if no FX data available
-    weekly.push({
+  // Build weekly array pairing each EIA week with the closest USD/CLP.
+  // IMPORTANT: Brent (USD/bbl) is the authoritative series and must NEVER be
+  // dropped just because the CLP FX for that week is momentarily unavailable.
+  // Previously a transient mindicador.cl failure for a year (empty FX map) made
+  // findClosestUSDCLP return 0 for every week of that year, and `continue`
+  // deleted the whole year of Brent — the chart then drew a straight line across
+  // the gap (spanGaps). We now keep every Brent row and fill missing FX by
+  // carrying the nearest known value forward, then backward.
+  const weekly: WeeklyRow[] = eiaWeekly
+    .slice()
+    .sort((a, b) => a.period.localeCompare(b.period))
+    .map((row) => ({
       week: row.period,
       brentUSD: Math.round(row.value * 100) / 100,
-      usdCLP: Math.round(usdCLP),
-    });
+      usdCLP: Math.round(findClosestUSDCLP(row.period, dailyUSDCLP)), // 0 if missing
+    }));
+
+  // Forward-fill missing FX (0) with the last known value…
+  let lastFx = 0;
+  for (const w of weekly) {
+    if (w.usdCLP > 0) lastFx = w.usdCLP;
+    else if (lastFx > 0) w.usdCLP = lastFx;
   }
-  weekly.sort((a, b) => a.week.localeCompare(b.week));
+  // …then backward-fill any leading weeks that had no prior FX yet.
+  let nextFx = 0;
+  for (let i = weekly.length - 1; i >= 0; i--) {
+    if (weekly[i].usdCLP > 0) nextFx = weekly[i].usdCLP;
+    else if (nextFx > 0) weekly[i].usdCLP = nextFx;
+  }
+  // Drop only weeks that STILL have no FX (i.e. FX totally unavailable for the
+  // entire history — extremely unlikely). This keeps usdCLP averages sane.
+  const weeklyFiltered = weekly.filter((w) => w.usdCLP > 0);
+  weekly.length = 0;
+  weekly.push(...weeklyFiltered);
 
   // Aggregate to monthly (closed months = average of that month's weeks)
   const monthly = aggregateToMonthly(weekly);
