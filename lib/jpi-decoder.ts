@@ -260,20 +260,36 @@ class JPIDecoderImpl {
   ): DecodedFlight | null {
     const dataBytes = dataWords * 2;
     const flightStartPos = this.pos;
+    // The corrected start of this flight's block. parseDataRecords can stop a
+    // few bytes before/after the true boundary, so consecutive flights drift
+    // by ±1 byte. We scan a small window to realign the header and remember
+    // where the block actually began so we can snap to the next boundary.
+    let actualStartPos = flightStartPos;
 
     try {
       let fhdr = this.parseFlightHeader();
 
       if (fhdr.flightNumber !== expectedFlightNum) {
-        // Try offset -1
-        this.pos = flightStartPos - 1;
-        try {
-          fhdr = this.parseFlightHeader();
-          if (fhdr.flightNumber !== expectedFlightNum) {
-            this.pos = flightStartPos + dataBytes;
-            return null;
+        // Scan a small window around the expected position to absorb the
+        // ±1 byte inter-flight drift (and slightly larger jitter). Try the
+        // closest offsets first.
+        let realigned = false;
+        for (const off of [-1, 1, -2, 2, -3, 3, -4, 4]) {
+          this.pos = flightStartPos + off;
+          if (this.pos < 0 || this.pos + 30 > this.data.length) continue;
+          try {
+            const h = this.parseFlightHeader();
+            if (h.flightNumber === expectedFlightNum) {
+              fhdr = h;
+              actualStartPos = flightStartPos + off;
+              realigned = true;
+              break;
+            }
+          } catch {
+            /* keep scanning */
           }
-        } catch {
+        }
+        if (!realigned) {
           this.pos = flightStartPos + dataBytes;
           return null;
         }
@@ -344,6 +360,17 @@ class JPIDecoderImpl {
           longitude = firstGps.longitude;
         }
       }
+
+      // ── Resync to the authoritative flight boundary ───────────────
+      // parseDataRecords may stop early (e.g. on a false end-of-flight when
+      // two consecutive words happen to differ mid-flight). If we trusted its
+      // stopping position, the read head would be stranded inside this flight
+      // and EVERY subsequent flight would fail to align — silently dropping
+      // the newest flights at the end of the file. The header's declared
+      // dataWords is a reliable per-flight size, so we snap to the next
+      // block's start. The next parseFlight() call absorbs the ±1 jitter via
+      // its window scan.
+      this.pos = actualStartPos + dataBytes;
 
       return {
         flightNumber: fhdr.flightNumber,
