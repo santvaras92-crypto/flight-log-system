@@ -9,6 +9,12 @@ import {
   type FlightLog,
 } from "@/lib/engine-flight-matcher";
 
+// Give the upload handler generous headroom: a multi-flight JPI file can carry
+// tens of thousands of readings to persist. Next.js/Railway may otherwise cut
+// the request short, surfacing to the client as a plain-text "upstream error".
+export const maxDuration = 300; // seconds
+export const dynamic = "force-dynamic";
+
 // Engine limits for Lycoming O-320-D2J
 const ENGINE_LIMITS = {
   egt_max: 1500,
@@ -24,6 +30,24 @@ const ENGINE_LIMITS = {
 
 // Convert Prisma Decimal to plain number
 const toNum = (v: any): number | null => (v != null ? Number(v) : null);
+
+// Bulk-insert engine readings in chunks. Prisma's nested `create` emits one
+// INSERT per row; over a remote DB that means thousands of round-trips and, for
+// large multi-flight JPI uploads, a request that exceeds the platform timeout
+// (the client then sees a plain-text "upstream error", not our JSON). createMany
+// emits a single multi-row INSERT per chunk. Postgres caps a statement at 65535
+// bind parameters and each reading has ~26 columns, so we stay well under that.
+const READINGS_BATCH = 1000;
+
+async function insertReadingsBatched(
+  flightId: number,
+  readings: any[]
+): Promise<void> {
+  for (let i = 0; i < readings.length; i += READINGS_BATCH) {
+    const chunk = readings.slice(i, i + READINGS_BATCH).map((r) => ({ ...r, flightId }));
+    await prisma.engineMonitorReading.createMany({ data: chunk });
+  }
+}
 
 // GET — list all flights with summary stats
 export async function GET(req: NextRequest) {
@@ -270,28 +294,43 @@ async function handleJPIUpload(file: File) {
     const avgRPM = rpms.length > 0 ? rpms.reduce((a, b) => a + b, 0) / rpms.length : null;
     const avgFF = ffs.length > 0 ? ffs.reduce((a, b) => a + b, 0) / ffs.length : null;
 
-    // Create flight + readings
-    const flight = await prisma.engineMonitorFlight.create({
-      data: {
-        flightNumber: df.flightNumber,
-        flightDate: df.flightDate,
-        durationSec: df.durationSec,
-        maxEGT,
-        maxCHT,
-        maxOilTemp,
-        minOilPress,
-        avgRPM,
-        avgFF,
-        latitude: df.latitude,
-        longitude: df.longitude,
-        sourceFile: file.name,
-        readings: { create: readings },
-      },
-    });
+    // Create the flight row first, then bulk-insert its readings in batches.
+    // A single large file can hold tens of thousands of readings; per-row
+    // inserts would exceed the request timeout ("upstream error").
+    let flightRow: { id: number } | null = null;
+    try {
+      flightRow = await prisma.engineMonitorFlight.create({
+        data: {
+          flightNumber: df.flightNumber,
+          flightDate: df.flightDate,
+          durationSec: df.durationSec,
+          maxEGT,
+          maxCHT,
+          maxOilTemp,
+          minOilPress,
+          avgRPM,
+          avgFF,
+          latitude: df.latitude,
+          longitude: df.longitude,
+          sourceFile: file.name,
+        },
+      });
+      await insertReadingsBatched(flightRow.id, readings);
+    } catch (e) {
+      // Roll back a half-created flight so it doesn't linger without readings,
+      // and skip to the next flight instead of failing the whole upload.
+      if (flightRow?.id) {
+        await prisma.engineMonitorFlight
+          .delete({ where: { id: flightRow.id } })
+          .catch(() => {});
+      }
+      results.push({ flightNumber: df.flightNumber, readingsCount: 0, status: "error" });
+      continue;
+    }
 
     // Auto-link to Flight record by date + duration proximity
     try {
-      await autoLinkEngineToFlight(flight.id, df.flightDate, df.durationSec);
+      await autoLinkEngineToFlight(flightRow.id, df.flightDate, df.durationSec);
     } catch (e) {
       // Non-critical — linking can be done later via batch script
     }
@@ -415,7 +454,8 @@ async function handleCSVUpload(file: File) {
   const avgFF = ffs.length > 0 ? ffs.reduce((a: number, b: number) => a + b, 0) / ffs.length : null;
   const durationSec = readings.length > 0 ? Math.max(...readings.map((r: any) => r.elapsedSec)) : 0;
 
-  // Create flight with nested readings
+  // Create the flight row, then bulk-insert readings in batches (see
+  // insertReadingsBatched — avoids per-row INSERT round-trips that time out).
   const flight = await prisma.engineMonitorFlight.create({
     data: {
       flightNumber,
@@ -428,11 +468,15 @@ async function handleCSVUpload(file: File) {
       avgRPM,
       avgFF,
       sourceFile: filename,
-      readings: {
-        create: readings,
-      },
     },
   });
+  try {
+    await insertReadingsBatched(flight.id, readings);
+  } catch (e) {
+    // Roll back the orphan flight (no readings) before surfacing the error.
+    await prisma.engineMonitorFlight.delete({ where: { id: flight.id } }).catch(() => {});
+    throw e;
+  }
 
   // Auto-link to Flight record by date + duration proximity
   try {
