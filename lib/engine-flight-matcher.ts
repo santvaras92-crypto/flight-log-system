@@ -80,65 +80,84 @@ export function computeDayAssignments(
     return ha - hb;
   });
 
-  const assignments: Assignment[] = [];
-  let e = 0; // pointer into sortedEngines
+  // ── Optimal assignment via dynamic programming ────────────────────────
+  // Both sides are chronologically ordered (engine legs by takeoff time, flight
+  // logs by monotonic hobbs). So each flight owns a CONTIGUOUS block of legs and
+  // the blocks are in order. We partition all legs into `m` ordered blocks
+  // (one per usable flight) to MINIMIZE the total mismatch between each block's
+  // summed engine-hours and that flight's hobbs delta.
+  //
+  // A greedy pass can't do this: it closes a group as soon as it's "within
+  // tolerance", so it (a) lets an early flight swallow legs a later pilot needs,
+  // or (b) orphans a trailing short leg that actually belongs to the last
+  // flight as a second tramo (e.g. a JPI recording interrupted mid-flight —
+  // pulled circuit breaker). DP over the sequence is exact and cheap (a day has
+  // only a handful of legs/flights), and it naturally groups split legs.
+  const usableFlights = sortedFlights.filter((f) => (f.diffHobbs ?? 0) > 0);
+  const n = sortedEngines.length;
+  const m = usableFlights.length;
 
-  for (const f of sortedFlights) {
-    const target = f.diffHobbs ?? 0;
-    if (target <= 0) {
-      // Flight has no usable duration — don't consume any engine for it.
-      continue;
-    }
-    if (e >= sortedEngines.length) break; // no engines left
+  // No flight logs to match against — every leg is left unassigned.
+  if (m === 0) {
+    return sortedEngines.map((e) => ({
+      engineId: e.id,
+      proposedFlightId: null,
+      reason: "no Flight log on this day to match",
+    }));
+  }
 
-    // Greedily accumulate consecutive engine legs until their summed
-    // duration is within tolerance of this flight's hobbs delta.
-    const group: EngineLeg[] = [];
-    let sumH = 0;
-    while (e < sortedEngines.length) {
-      const legH = sortedEngines[e].durationSec / 3600;
-      const nextSum = sumH + legH;
+  const legHours = sortedEngines.map((e) => e.durationSec / 3600);
+  const prefix = [0];
+  for (let i = 0; i < n; i++) prefix.push(prefix[i] + legHours[i]);
+  const rangeHours = (a: number, b: number) => prefix[b] - prefix[a]; // legs [a, b)
+  const target = usableFlights.map((f) => f.diffHobbs ?? 0);
 
-      // If we already have a close-enough group and adding this leg would
-      // overshoot, stop — this leg belongs to the next flight.
-      if (
-        group.length > 0 &&
-        Math.abs(sumH - target) <= DURATION_TOLERANCE_H &&
-        nextSum - target > DURATION_TOLERANCE_H
-      ) {
-        break;
+  // dp[i][j] = min total mismatch assigning the first i legs to the first j
+  // flights (each flight a contiguous block; all i legs covered).
+  // cut[i][j] = the k where flight j-1's block starts (legs [k, i)).
+  const INF = Number.POSITIVE_INFINITY;
+  const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(INF));
+  const cut: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(-1));
+  dp[0][0] = 0;
+  for (let j = 1; j <= m; j++) {
+    for (let i = 0; i <= n; i++) {
+      for (let k = 0; k <= i; k++) {
+        const prev = dp[k][j - 1];
+        if (prev === INF) continue;
+        const cost = Math.abs(rangeHours(k, i) - target[j - 1]);
+        if (prev + cost < dp[i][j]) {
+          dp[i][j] = prev + cost;
+          cut[i][j] = k;
+        }
       }
-
-      group.push(sortedEngines[e]);
-      sumH = nextSum;
-      e++;
-
-      // Matched within tolerance — close this group.
-      if (Math.abs(sumH - target) <= DURATION_TOLERANCE_H) break;
-      // Overshot even with the just-added leg — accept as best effort and stop.
-      if (sumH - target > DURATION_TOLERANCE_H) break;
-    }
-
-    const matchedWell = Math.abs(sumH - target) <= DURATION_TOLERANCE_H;
-    const tramoNote = group.length > 1 ? ` (multi-tramo ×${group.length})` : "";
-    for (const g of group) {
-      assignments.push({
-        engineId: g.id,
-        proposedFlightId: f.id,
-        reason: matchedWell
-          ? `chronological #${assignments.length + 1} → Flight #${f.id}, Σ${sumH.toFixed(2)}h ≈ hobbs ${target.toFixed(2)}h${tramoNote}`
-          : `best-effort → Flight #${f.id}, Σ${sumH.toFixed(2)}h vs hobbs ${target.toFixed(2)}h (Δ${Math.abs(sumH - target).toFixed(2)}h)${tramoNote}`,
-      });
     }
   }
 
-  // Any engine legs left over couldn't be matched to a flight that day.
-  for (; e < sortedEngines.length; e++) {
-    assignments.push({
-      engineId: sortedEngines[e].id,
-      proposedFlightId: null,
-      reason: "no remaining Flight log on this day to match",
-    });
+  // Backtrack: recover each flight's contiguous block of leg indices.
+  const blockOfFlight: number[][] = Array.from({ length: m }, () => []);
+  let i = n;
+  for (let j = m; j >= 1; j--) {
+    const k = cut[i][j];
+    for (let idx = k; idx < i; idx++) blockOfFlight[j - 1].push(idx);
+    i = k;
+  }
+
+  const assignments: Assignment[] = [];
+  for (let j = 0; j < m; j++) {
+    const legIdxs = blockOfFlight[j];
+    if (legIdxs.length === 0) continue; // flight got no leg (more flights than legs)
+    const sumH = legIdxs.reduce((s, idx) => s + legHours[idx], 0);
+    const matchedWell = Math.abs(sumH - target[j]) <= DURATION_TOLERANCE_H;
+    const tramoNote = legIdxs.length > 1 ? ` (multi-tramo ×${legIdxs.length})` : "";
+    for (const idx of legIdxs) {
+      assignments.push({
+        engineId: sortedEngines[idx].id,
+        proposedFlightId: usableFlights[j].id,
+        reason: matchedWell
+          ? `chronological → Flight #${usableFlights[j].id}, Σ${sumH.toFixed(2)}h ≈ hobbs ${target[j].toFixed(2)}h${tramoNote}`
+          : `best-effort → Flight #${usableFlights[j].id}, Σ${sumH.toFixed(2)}h vs hobbs ${target[j].toFixed(2)}h (Δ${Math.abs(sumH - target[j]).toFixed(2)}h)${tramoNote}`,
+      });
+    }
   }
 
   return assignments;

@@ -522,136 +522,79 @@ async function autoLinkEngineToFlight(engineFlightId: number, flightDate: Date, 
     return; // Don't link ground runs to flights
   }
 
-  const engineHours = durationSec / 3600;
+  // ── Whole-day chronological (re)linking ───────────────────────────────
+  // Instead of matching this single engine leg in isolation (which is what
+  // crossed two pilots' flights before), recompute the ENTIRE day's
+  // assignments with the shared deterministic matcher and apply them all.
+  // This self-heals: when a pilot's flight was split into several engine legs
+  // (e.g. the JPI recording was interrupted mid-flight — pulled circuit
+  // breaker), a later leg arriving re-groups all of that pilot's legs and
+  // fixes any earlier mis-links on the same day.
 
-  // Anclamos por fecha LOCAL de Chile (no UTC).
-  // Flight.fecha está guardado al mediodía local como ancla del día calendario.
-  // Engine.flightDate es timestamp UTC real → convertimos a yyyy-mm-dd en America/Santiago.
+  // Anclamos por fecha LOCAL de Chile (no UTC). Flight.fecha se guarda al
+  // mediodía local como ancla del día calendario; Engine.flightDate es UTC real.
   const localDateStr = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Santiago",
     year: "numeric", month: "2-digit", day: "2-digit",
-  }).format(flightDate); // formato "YYYY-MM-DD"
+  }).format(flightDate); // "YYYY-MM-DD"
 
-  // Buscamos en ventana ±1 día (amplia) para soportar vuelos en el extranjero
-  // con husos horarios distintos a Chile. Luego filtramos con preferencia estricta.
+  // Ventana ±36h para soportar vuelos en husos horarios extranjeros; luego
+  // filtramos por fecha local Chile con fallback a la ventana amplia.
   const [yy, mm, dd] = localDateStr.split("-").map(Number);
-  const anchorUtc = Date.UTC(yy, mm - 1, dd, 12, 0, 0); // mediodía UTC del día local
-  const wideStart = new Date(anchorUtc - 36 * 3600_000); // -36h
-  const wideEnd = new Date(anchorUtc + 36 * 3600_000);   // +36h
+  const anchorUtc = Date.UTC(yy, mm - 1, dd, 12, 0, 0);
+  const wideStart = new Date(anchorUtc - 36 * 3600_000);
+  const wideEnd = new Date(anchorUtc + 36 * 3600_000);
 
   const candidates = await prisma.flight.findMany({
     where: { fecha: { gte: wideStart, lte: wideEnd } },
-    select: {
-      id: true,
-      fecha: true,
-      diff_hobbs: true,
-      hobbs_inicio: true,
-      EngineMonitorFlights: { select: { id: true, durationSec: true } },
-    },
+    select: { id: true, fecha: true, diff_hobbs: true, hobbs_inicio: true },
   });
-
   if (candidates.length === 0) return;
 
-  // Preferencia: Flights cuya fecha local Chile coincida exactamente con el engine.
-  const fmtChile = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Santiago",
-    year: "numeric", month: "2-digit", day: "2-digit",
-  });
-  const sameDayCandidates = candidates.filter(c => fmtChile.format(c.fecha) === localDateStr);
-
-  // Si no hay ninguno en día local Chile → el avión pudo haber volado en otro huso
-  // horario (ej. USA, Asia). Usamos la ventana amplia ±1 día como fallback.
+  const sameDayCandidates = candidates.filter(c => localChileDate(c.fecha) === localDateStr);
   const effectiveCandidates = sameDayCandidates.length > 0 ? sameDayCandidates : candidates;
 
-  // Score por duración: menor diff = mejor.
-  type Scored = { candidate: typeof effectiveCandidates[0]; diff: number; isExact: boolean };
-  const scored: Scored[] = [];
-  for (const c of effectiveCandidates) {
-    const flightHours = Number(c.diff_hobbs) || 0;
-    if (flightHours <= 0) continue;
-    const existingEngineHours = c.EngineMonitorFlights.reduce((s, e) => s + e.durationSec / 3600, 0);
-    const totalEngineHours = existingEngineHours + engineHours;
-    const diff = Math.abs(flightHours - totalEngineHours);
-    scored.push({ candidate: c, diff, isExact: diff <= 0.5 });
-  }
+  // All flyable engine legs that share this Chile day (wide UTC window + filter).
+  const dayEnginesRaw = await prisma.engineMonitorFlight.findMany({
+    where: {
+      flightDate: { gte: wideStart, lte: wideEnd },
+      isGroundRun: { not: true },
+      durationSec: { gte: MIN_DURATION_SEC },
+    },
+    select: { id: true, flightDate: true, durationSec: true, linkedFlightId: true },
+    orderBy: { flightDate: "asc" },
+  });
+  const dayEngines = dayEnginesRaw.filter(e => localChileDate(e.flightDate) === localDateStr);
 
-  if (scored.length === 0) return;
-
-  // Si hay match(es) exactos, ordenamos por diff y desempatamos por hobbs.
-  const exactMatches = scored.filter(s => s.isExact);
-
-  if (exactMatches.length === 1) {
-    await prisma.engineMonitorFlight.update({
-      where: { id: engineFlightId },
-      data: { linkedFlightId: exactMatches[0].candidate.id },
-    });
-    return;
-  }
-
-  if (exactMatches.length > 1) {
-    // Ambiguous: multiple same-day flights match this engine's duration.
-    // Delegate to the shared deterministic day matcher, which assigns every
-    // engine leg of the day to a flight log in strict chronological order
-    // (engine takeoff time ↔ hobbs meter order). This prevents crossing two
-    // pilots' flights that happen to have similar durations on the same day.
-    const dayUtcStart = new Date(`${localDateStr}T00:00:00-04:00`);
-    const dayUtcEnd = new Date(`${localDateStr}T23:59:59-03:00`);
-    const sameDayEngineFlights = await prisma.engineMonitorFlight.findMany({
-      where: {
-        flightDate: { gte: dayUtcStart, lte: dayUtcEnd },
-        isGroundRun: { not: true },
-        durationSec: { gte: MIN_DURATION_SEC },
-      },
-      select: { id: true, flightDate: true, durationSec: true },
-      orderBy: { flightDate: "asc" },
-    });
-
-    const engineLegs: EngineLeg[] = sameDayEngineFlights.map((ef) => ({
-      id: ef.id,
-      flightDate: ef.flightDate,
-      durationSec: ef.durationSec,
+  const engineLegs: EngineLeg[] = dayEngines.map((ef) => ({
+    id: ef.id,
+    flightDate: ef.flightDate,
+    durationSec: ef.durationSec,
+  }));
+  const flightLogs: FlightLog[] = effectiveCandidates
+    .filter((c) => localChileDate(c.fecha) === localDateStr)
+    .map((c) => ({
+      id: c.id,
+      hobbsInicio: c.hobbs_inicio != null ? Number(c.hobbs_inicio) : null,
+      diffHobbs: c.diff_hobbs != null ? Number(c.diff_hobbs) : null,
     }));
 
-    // Build the flight-log side from this day's candidates (local Chile date).
-    const flightLogs: FlightLog[] = effectiveCandidates
-      .filter((c) => localChileDate(c.fecha) === localDateStr)
-      .map((c) => ({
-        id: c.id,
-        hobbsInicio: c.hobbs_inicio != null ? Number(c.hobbs_inicio) : null,
-        diffHobbs: c.diff_hobbs != null ? Number(c.diff_hobbs) : null,
-      }));
+  if (flightLogs.length === 0) return;
 
-    const assignments = computeDayAssignments(engineLegs, flightLogs);
-    const mine = assignments.find((a) => a.engineId === engineFlightId);
-    const chosenId =
-      mine?.proposedFlightId ??
-      // Fallback: best duration match if the matcher left this one unassigned.
-      exactMatches.sort((a, b) => a.diff - b.diff)[0].candidate.id;
+  const assignments = computeDayAssignments(engineLegs, flightLogs);
 
-    await prisma.engineMonitorFlight.update({
-      where: { id: engineFlightId },
-      data: { linkedFlightId: chosenId },
-    });
-    return;
-  }
-
-  // Sin match exacto: tramo parcial de un Flight de múltiples tramos.
-  // Sólo si Flight no tiene engines aún y el engine cubre 20%-100% del Flight.
-  const partial = scored
-    .filter(s => {
-      const fh = Number(s.candidate.diff_hobbs) || 0;
-      return s.candidate.EngineMonitorFlights.length === 0
-        && engineHours < fh && engineHours > fh * 0.2;
-    })
-    .sort((a, b) => a.diff - b.diff)[0];
-
-  if (partial && partial.diff <= 2.0) {
-    await prisma.engineMonitorFlight.update({
-      where: { id: engineFlightId },
-      data: { linkedFlightId: partial.candidate.id },
-    });
-  }
-  // Si no, no linkear. Mejor sin link que con link incorrecto.
+  // Apply every changed assignment for the day (self-healing). Only write the
+  // rows that actually change to keep the update set minimal.
+  const currentById = new Map(dayEngines.map(e => [e.id, e.linkedFlightId ?? null]));
+  const updates = assignments.filter(a => currentById.get(a.engineId) !== (a.proposedFlightId ?? null));
+  await Promise.all(
+    updates.map(a =>
+      prisma.engineMonitorFlight.update({
+        where: { id: a.engineId },
+        data: { linkedFlightId: a.proposedFlightId },
+      })
+    )
+  );
 }
 
 // DELETE — remove a flight and its readings

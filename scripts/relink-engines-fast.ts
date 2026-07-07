@@ -10,6 +10,12 @@
  */
 
 import { prisma } from "../lib/prisma";
+import {
+  computeDayAssignments,
+  localChileDate,
+  type EngineLeg,
+  type FlightLog,
+} from "../lib/engine-flight-matcher";
 
 const MIN_DURATION_SEC = 300;
 const DRY_RUN = process.argv.includes("--dry-run");
@@ -72,7 +78,10 @@ async function main() {
     list.sort((a, b) => a.flightDate.getTime() - b.flightDate.getTime());
   }
 
-  // Resolver: mapa engineId → linkedFlightId sugerido
+  // Resolver: mapa engineId → linkedFlightId sugerido.
+  // Usamos el matcher compartido (computeDayAssignments) como ÚNICA fuente de
+  // verdad: asigna cronológicamente (hora de despegue del motor ↔ orden del
+  // hobbs) y agrupa multi-tramo cuando el JPI se cortó a mitad de vuelo.
   const suggested = new Map<number, number | null>();
 
   for (const [dateKey, dayEngines] of enginesByDate) {
@@ -82,60 +91,31 @@ async function main() {
       continue;
     }
 
-    // Sumas de horas por flight (engines del día asignados, evitando self)
-    // Para mantener semántica original: existingEngineHours = otros engines ya linkeados a ese flight (excluyendo el actual)
-    const linkedHoursByFlight = new Map<number, number>();
-    for (const e of allEngines) {
-      if (e.linkedFlightId == null) continue;
-      linkedHoursByFlight.set(
-        e.linkedFlightId,
-        (linkedHoursByFlight.get(e.linkedFlightId) ?? 0) + e.durationSec / 3600,
-      );
-    }
+    const engineLegs: EngineLeg[] = dayEngines.map((e) => ({
+      id: e.id,
+      flightDate: e.flightDate,
+      durationSec: e.durationSec,
+    }));
+    const flightLogs: FlightLog[] = dayFlights
+      .filter((c) => localChileDate(c.fecha) === dateKey)
+      .map((c) => ({
+        id: c.id,
+        hobbsInicio: c.hobbs_inicio != null ? Number(c.hobbs_inicio) : null,
+        diffHobbs: c.diff_hobbs != null ? Number(c.diff_hobbs) : null,
+      }));
 
-    for (const e of dayEngines) {
-      const engineHours = e.durationSec / 3600;
-      type Scored = { c: typeof dayFlights[0]; diff: number; isExact: boolean };
-      const scored: Scored[] = [];
-      for (const c of dayFlights) {
-        const fh = Number(c.diff_hobbs) || 0;
-        if (fh <= 0) continue;
-        // existing = otros engines linkeados a c, excluyendo el actual
-        const selfContribution = e.linkedFlightId === c.id ? engineHours : 0;
-        const existingH = (linkedHoursByFlight.get(c.id) ?? 0) - selfContribution;
-        const diff = Math.abs(fh - (existingH + engineHours));
-        scored.push({ c, diff, isExact: diff <= 0.5 });
-      }
-      if (scored.length === 0) { suggested.set(e.id, null); continue; }
+    // Fallback: si no hay flights en el día local exacto (vuelo en huso
+    // extranjero), usamos todos los candidatos de la ventana ±1 día.
+    const effectiveLogs: FlightLog[] = flightLogs.length > 0
+      ? flightLogs
+      : dayFlights.map((c) => ({
+          id: c.id,
+          hobbsInicio: c.hobbs_inicio != null ? Number(c.hobbs_inicio) : null,
+          diffHobbs: c.diff_hobbs != null ? Number(c.diff_hobbs) : null,
+        }));
 
-      const exact = scored.filter(s => s.isExact);
-
-      if (exact.length === 1) { suggested.set(e.id, exact[0].c.id); continue; }
-
-      if (exact.length > 1) {
-        const idx = dayEngines.findIndex(x => x.id === e.id);
-        const sortedCands = exact
-          .map(m => m.c)
-          .sort((a, b) => (Number(a.hobbs_inicio) || 0) - (Number(b.hobbs_inicio) || 0));
-        if (idx >= 0 && idx < sortedCands.length) {
-          suggested.set(e.id, sortedCands[idx].id);
-        } else {
-          suggested.set(e.id, exact.sort((a, b) => a.diff - b.diff)[0].c.id);
-        }
-        continue;
-      }
-
-      // partial: flight sin engines previos, engine cubre 20%-100%
-      const partial = scored
-        .filter(s => {
-          const fh = Number(s.c.diff_hobbs) || 0;
-          const existing = (linkedHoursByFlight.get(s.c.id) ?? 0)
-            - (e.linkedFlightId === s.c.id ? engineHours : 0);
-          return existing === 0 && engineHours < fh && engineHours > fh * 0.2;
-        })
-        .sort((a, b) => a.diff - b.diff)[0];
-      suggested.set(e.id, partial && partial.diff <= 2.0 ? partial.c.id : null);
-    }
+    const assignments = computeDayAssignments(engineLegs, effectiveLogs);
+    for (const a of assignments) suggested.set(a.engineId, a.proposedFlightId);
   }
 
   // Engines descartados (ground runs / muy cortos): suggested = lo que ya tienen (no tocar)
