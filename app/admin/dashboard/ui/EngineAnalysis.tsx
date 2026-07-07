@@ -108,6 +108,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
   }, []);
   const [loading, setLoading] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [chartError, setChartError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [view, setView] = useState<"list" | "detail">("list");
@@ -268,6 +269,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
     // Cleanup old charts
     chartInstances.current.forEach(c => c.destroy());
     chartInstances.current = [];
+    setChartError(null);
 
     if (!selectedFlight || selectedFlight.readings.length === 0) return;
 
@@ -297,6 +299,13 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
       },
       elements: { point: { radius: 0 }, line: { borderWidth: 1.5 } },
     };
+
+    // Build all four charts in a function so we can (a) defer building until the
+    // container has a real, non-zero width and (b) try/catch so a single failing
+    // chart can never blank the whole grid.
+    const buildCharts = () => {
+      if (chartInstances.current.length > 0) return; // already built
+      try {
 
     // --- EGT Chart ---
     if (egtChartRef.current) {
@@ -425,14 +434,35 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
       chartInstances.current.push(chart);
     }
 
-    // Charts can be instantiated while their container is momentarily zero-sized
-    // — e.g. when the Engine Monitor tab is opened directly from a flight's engine
-    // link (a fresh component mount + async detail load where the layout isn't
-    // settled on first paint). In that case Chart.js sizes the canvas to 0×0 and
-    // the chart stays blank. Forcing a resize on the next animation frame and
-    // whenever the grid changes size makes them paint at the correct dimensions.
-    const resizeAll = () => chartInstances.current.forEach(c => c.resize());
-    const raf = requestAnimationFrame(resizeAll);
+      } catch (err: any) {
+        setChartError(err?.message || String(err));
+      }
+    };
+
+    // Size-gated driver. Chart.js sizes a canvas to 0×0 when its container has no
+    // width yet — exactly what happens when this view mounts FRESH from a flight's
+    // engine link (tab switch + async detail load, layout not settled on first
+    // paint) → the charts render permanently blank. So wait via rAF until the grid
+    // actually has a width, THEN build the charts at their correct size.
+    let cancelled = false;
+    let rafId = 0;
+    const drive = (tries: number) => {
+      if (cancelled) return;
+      const w = chartsGridRef.current?.offsetWidth ?? 0;
+      if (w === 0 && tries < 120) {
+        rafId = requestAnimationFrame(() => drive(tries + 1));
+        return;
+      }
+      buildCharts();
+      chartInstances.current.forEach(c => c.resize());
+    };
+    drive(0);
+
+    // Belt-and-suspenders: re-resize shortly after (fonts/layout settle) and on
+    // any later container size change.
+    const resizeAll = () => { if (!cancelled) chartInstances.current.forEach(c => c.resize()); };
+    const t1 = setTimeout(resizeAll, 200);
+    const t2 = setTimeout(resizeAll, 600);
     let ro: ResizeObserver | null = null;
     if (chartsGridRef.current && typeof ResizeObserver !== "undefined") {
       ro = new ResizeObserver(resizeAll);
@@ -440,7 +470,10 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
     }
 
     return () => {
-      cancelAnimationFrame(raf);
+      cancelled = true;
+      cancelAnimationFrame(rafId);
+      clearTimeout(t1);
+      clearTimeout(t2);
       ro?.disconnect();
       chartInstances.current.forEach(c => c.destroy());
       chartInstances.current = [];
@@ -1086,17 +1119,22 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
               )}
 
               {/* 4 Charts Grid */}
+              {chartError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2 text-xs">
+                  ⚠️ No se pudieron dibujar los gráficos: {chartError}
+                </div>
+              )}
               <div ref={chartsGridRef} className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300 }}>
+                <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300, position: "relative" }}>
                   <canvas ref={egtChartRef}></canvas>
                 </div>
-                <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300 }}>
+                <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300, position: "relative" }}>
                   <canvas ref={chtChartRef}></canvas>
                 </div>
-                <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300 }}>
+                <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300, position: "relative" }}>
                   <canvas ref={oilChartRef}></canvas>
                 </div>
-                <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300 }}>
+                <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300, position: "relative" }}>
                   <canvas ref={powerChartRef}></canvas>
                 </div>
               </div>

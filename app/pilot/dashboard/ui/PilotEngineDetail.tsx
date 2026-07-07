@@ -111,6 +111,7 @@ export default function PilotEngineDetail({
     fetch("/api/gps-calibration").then(r => r.json()).then(setGpsCalibration).catch(() => {});
   }, []);
   const [loading, setLoading] = useState(true);
+  const [chartError, setChartError] = useState<string | null>(null);
   const [activeTramo, setActiveTramo] = useState(0);
   const multiTramo = engineFlightIds.length > 1;
 
@@ -202,6 +203,7 @@ export default function PilotEngineDetail({
   useEffect(() => {
     chartInstances.current.forEach(c => c.destroy());
     chartInstances.current = [];
+    setChartError(null);
 
     if (!flight || flight.readings.length === 0) return;
 
@@ -230,6 +232,13 @@ export default function PilotEngineDetail({
       },
       elements: { point: { radius: 0 }, line: { borderWidth: 1.5 } },
     };
+
+    // Build all four charts in a function so we can (a) defer building until the
+    // container has a real, non-zero width and (b) try/catch so a single failing
+    // chart can never blank the whole grid.
+    const buildCharts = () => {
+      if (chartInstances.current.length > 0) return; // already built
+      try {
 
     // --- EGT Chart ---
     if (egtChartRef.current) {
@@ -358,12 +367,33 @@ export default function PilotEngineDetail({
       chartInstances.current.push(chart);
     }
 
-    // Charts can be instantiated while their container is momentarily zero-sized
-    // (this panel mounts/expands over a flight row, so the layout isn't settled
-    // on first paint). Chart.js then sizes the canvas to 0×0 and it stays blank.
-    // Force a resize on the next frame and whenever the grid resizes.
-    const resizeAll = () => chartInstances.current.forEach(c => c.resize());
-    const raf = requestAnimationFrame(resizeAll);
+      } catch (err: any) {
+        setChartError(err?.message || String(err));
+      }
+    };
+
+    // Size-gated driver. Chart.js sizes a canvas to 0×0 when its container has no
+    // width yet — exactly what happens when this modal mounts fresh over a flight
+    // row and the detail loads asynchronously (layout not settled on first paint)
+    // → the charts render permanently blank. So wait via rAF until the grid has a
+    // real width, THEN build the charts at their correct size.
+    let cancelled = false;
+    let rafId = 0;
+    const drive = (tries: number) => {
+      if (cancelled) return;
+      const w = chartsGridRef.current?.offsetWidth ?? 0;
+      if (w === 0 && tries < 120) {
+        rafId = requestAnimationFrame(() => drive(tries + 1));
+        return;
+      }
+      buildCharts();
+      chartInstances.current.forEach(c => c.resize());
+    };
+    drive(0);
+
+    const resizeAll = () => { if (!cancelled) chartInstances.current.forEach(c => c.resize()); };
+    const t1 = setTimeout(resizeAll, 200);
+    const t2 = setTimeout(resizeAll, 600);
     let ro: ResizeObserver | null = null;
     if (chartsGridRef.current && typeof ResizeObserver !== "undefined") {
       ro = new ResizeObserver(resizeAll);
@@ -371,7 +401,10 @@ export default function PilotEngineDetail({
     }
 
     return () => {
-      cancelAnimationFrame(raf);
+      cancelled = true;
+      cancelAnimationFrame(rafId);
+      clearTimeout(t1);
+      clearTimeout(t2);
       ro?.disconnect();
       chartInstances.current.forEach(c => c.destroy());
       chartInstances.current = [];
@@ -547,17 +580,22 @@ export default function PilotEngineDetail({
               )}
 
               {/* 4 Charts Grid */}
+              {chartError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2 text-xs">
+                  ⚠️ No se pudieron dibujar los gráficos: {chartError}
+                </div>
+              )}
               <div ref={chartsGridRef} className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300 }}>
+                <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300, position: "relative" }}>
                   <canvas ref={egtChartRef}></canvas>
                 </div>
-                <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300 }}>
+                <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300, position: "relative" }}>
                   <canvas ref={chtChartRef}></canvas>
                 </div>
-                <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300 }}>
+                <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300, position: "relative" }}>
                   <canvas ref={oilChartRef}></canvas>
                 </div>
-                <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300 }}>
+                <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300, position: "relative" }}>
                   <canvas ref={powerChartRef}></canvas>
                 </div>
               </div>
