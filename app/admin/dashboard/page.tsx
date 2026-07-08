@@ -699,6 +699,113 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
   );
   const computedComponents = maintenanceComponents.flat();
 
+  // ── Plan de Reemplazo: dynamic monitoring ──
+  // Each replacement part is recomputed live against its domain's hour meter
+  // (AIRFRAME / ENGINE-TSMOH / PROPELLER) and the calendar, so the remaining
+  // life is always current (the source spreadsheet's "remanente" is maintained
+  // by hand and is inconsistent). Projected due dates use the same weighted
+  // usage rate (hrs/day) the Next-Inspections predictor uses.
+  const replacementPartsRaw = await prisma.replacementPart.findMany({
+    orderBy: [{ dominio: "asc" }, { orden: "asc" }],
+    include: { eventos: { orderBy: { fecha: "desc" }, take: 1 } },
+  });
+
+  // Live domain-hours map from the computed components (per aircraft).
+  const domainHoursByAircraft: Record<string, { AIRFRAME: number; ENGINE: number; PROPELLER: number }> = {};
+  for (const c of computedComponents) {
+    const m = (domainHoursByAircraft[c.aircraftId] ||= { AIRFRAME: 0, ENGINE: 0, PROPELLER: 0 });
+    if (c.tipo === "AIRFRAME") m.AIRFRAME = Number(c.horas_acumuladas);
+    else if (c.tipo === "ENGINE") m.ENGINE = Number(c.horas_acumuladas);
+    else if (c.tipo === "PROPELLER") m.PROPELLER = Number(c.horas_acumuladas);
+  }
+
+  const usageRatePerDay = Number(overviewMetrics?.nextInspections?.usageStats?.weightedRate) || 0;
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const nowMaint = new Date();
+  const addMonths = (d: Date, months: number) => {
+    const r = new Date(d);
+    r.setMonth(r.getMonth() + Math.round(months));
+    return r;
+  };
+
+  const replacementParts = replacementPartsRaw.map((p) => {
+    const dom = (p.dominio as "AIRFRAME" | "ENGINE" | "PROPELLER");
+    const domainHours = domainHoursByAircraft[p.aircraftId]?.[dom] ?? 0;
+    const limitHoras = p.vidaHoras != null ? Number(p.vidaHoras) : p.tboHoras != null ? Number(p.tboHoras) : null;
+    const limitMeses = p.vidaMeses != null ? p.vidaMeses : p.tboMeses != null ? p.tboMeses : null;
+    const installHoras = p.installHoras != null ? Number(p.installHoras) : null;
+    const installDate = p.installDate ? new Date(p.installDate) : null;
+
+    // Hours remaining against the live domain meter.
+    let remanenteHoras: number | null = null;
+    if (limitHoras != null && installHoras != null) {
+      remanenteHoras = Number((installHoras + limitHoras - domainHours).toFixed(1));
+    }
+
+    // Calendar remaining against install date + limit months.
+    let fechaLimite: Date | null = null;
+    let remanenteDias: number | null = null;
+    if (limitMeses != null && installDate) {
+      fechaLimite = addMonths(installDate, limitMeses);
+      remanenteDias = Math.round((fechaLimite.getTime() - nowMaint.getTime()) / DAY_MS);
+    }
+
+    // Projected due date from the hours countdown (today + remaining/rate).
+    let fechaProyeccionHoras: Date | null = null;
+    if (remanenteHoras != null && usageRatePerDay > 0) {
+      fechaProyeccionHoras = new Date(nowMaint.getTime() + (remanenteHoras / usageRatePerDay) * DAY_MS);
+    }
+
+    // Effective due date = whichever comes first (hours projection vs calendar).
+    const candidates = [fechaProyeccionHoras, fechaLimite].filter((d): d is Date => d != null);
+    const fechaEfectiva = candidates.length ? new Date(Math.min(...candidates.map((d) => d.getTime()))) : null;
+    const diasEfectivos = fechaEfectiva ? Math.round((fechaEfectiva.getTime() - nowMaint.getTime()) / DAY_MS) : null;
+
+    // RAG status = worst of the hours and calendar dimensions.
+    const hoursOverdue = remanenteHoras != null && remanenteHoras <= 0;
+    const hoursSoon = remanenteHoras != null && limitHoras != null && remanenteHoras > 0 && remanenteHoras <= Math.max(limitHoras * 0.1, 25);
+    const calOverdue = remanenteDias != null && remanenteDias <= 0;
+    const calSoon = remanenteDias != null && remanenteDias > 0 && remanenteDias <= 90;
+    const estado: "VENCIDO" | "PROXIMO" | "OK" | "SIN_LIMITE" =
+      limitHoras == null && limitMeses == null
+        ? "SIN_LIMITE"
+        : hoursOverdue || calOverdue
+        ? "VENCIDO"
+        : hoursSoon || calSoon
+        ? "PROXIMO"
+        : "OK";
+
+    return {
+      id: p.id,
+      dominio: p.dominio,
+      descripcion: p.descripcion,
+      marca: p.marca,
+      partNumber: p.partNumber,
+      serial: p.serial,
+      tboMeses: p.tboMeses,
+      tboHoras: p.tboHoras != null ? Number(p.tboHoras) : null,
+      vidaMeses: p.vidaMeses,
+      vidaHoras: p.vidaHoras != null ? Number(p.vidaHoras) : null,
+      limitHoras,
+      limitMeses,
+      installDate: installDate ? installDate.toISOString() : null,
+      installHoras,
+      domainHours,
+      remanenteHoras,
+      remanenteDias,
+      remanenteMeses: remanenteDias != null ? Number((remanenteDias / 30.44).toFixed(1)) : null,
+      fechaLimite: fechaLimite ? fechaLimite.toISOString() : null,
+      fechaProyeccionHoras: fechaProyeccionHoras ? fechaProyeccionHoras.toISOString() : null,
+      fechaEfectiva: fechaEfectiva ? fechaEfectiva.toISOString() : null,
+      diasEfectivos,
+      estado,
+      ultimoEvento: p.eventos[0]
+        ? { fecha: p.eventos[0].fecha.toISOString(), horas: p.eventos[0].horas != null ? Number(p.eventos[0].horas) : null }
+        : null,
+      orden: p.orden,
+    };
+  });
+
   const data = {
     users: users.map(u => ({ ...u, saldo_cuenta: Number(u.saldo_cuenta), tarifa_hora: Number(u.tarifa_hora) })),
     aircraft: aircraft.map(a => ({ ...a, hobbs_actual: Number(a.hobbs_actual), tach_actual: Number(a.tach_actual) })),
@@ -707,6 +814,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     allFlightsComplete: allFlightsComplete.map((f: any) => ({ ...f, hobbs_inicio: Number(f.hobbs_inicio), hobbs_fin: Number(f.hobbs_fin), tach_inicio: Number(f.tach_inicio), tach_fin: Number(f.tach_fin), diff_hobbs: Number(f.diff_hobbs), diff_tach: Number(f.diff_tach), costo: Number(f.costo), tarifa: f.tarifa ? Number(f.tarifa) : null, piloto_raw: f.piloto_raw || null, engineFlightIds: f.EngineMonitorFlights.map((e: any) => e.id), EngineMonitorFlights: undefined })), // Complete data for FlightsTable client filter
     submissions: submissions.map(s => ({ ...s, imageLogs: s.ImageLog.map(img => ({ ...img, valorExtraido: img.valorExtraido ? Number(img.valorExtraido) : null, confianza: img.confianza ? Number(img.confianza) : null })), flight: s.Flight ? { ...s.Flight, diff_hobbs: Number(s.Flight.diff_hobbs), diff_tach: Number(s.Flight.diff_tach), costo: Number(s.Flight.costo) } : null })),
     components: computedComponents.map(c => ({ ...c, horas_acumuladas: Number(c.horas_acumuladas), limite_tbo: Number(c.limite_tbo), dbId: c.dbId || null, overhaul_airframe: c.overhaul_airframe || null, overhaul_date: c.overhaul_date || null, overhaul_notes: c.overhaul_notes || null })),
+    replacementParts,
     aircraftYearlyStats,
     transactions: transactions.map(t => ({ ...t, monto: Number(t.monto) })),
     fuelByCode: (() => {

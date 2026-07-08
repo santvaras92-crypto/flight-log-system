@@ -35,6 +35,7 @@ model Aircraft {
   Component        Component[]
   Flight           Flight[]
   FlightSubmission FlightSubmission[]
+  ReplacementPart  ReplacementPart[]
 }
 
 model Component {
@@ -51,38 +52,89 @@ model Component {
   Aircraft               Aircraft  @relation(fields: [aircraftId], references: [matricula])
 }
 
+// ── Plan de Reemplazo (life-limited parts / replacement plan) ──
+// Each row of the DGAC "REGISTRO DEL PLAN DE REEMPLAZO" sheets. The remaining
+// life is NOT stored here — it is recomputed live against the domain's hour
+// meter (AIRFRAME / ENGINE-TSMOH / PROPELLER) and the calendar, so the status
+// is always current (the source spreadsheet's "remanente" column is maintained
+// inconsistently by hand, which is exactly why we compute it dynamically).
+model ReplacementPart {
+  id           Int                @id @default(autoincrement())
+  aircraftId   String
+  dominio      String // "AIRFRAME" | "ENGINE" | "PROPELLER" (which hour meter it tracks)
+  descripcion  String // e.g. "Magneto LH", "Carburador", "Filtro aceite motor"
+  marca        String?
+  partNumber   String?
+  serial       String?
+  // Limits — either/both may apply (null = N/A). TBO = overhaul interval,
+  // Vida Limite = hard life limit. Effective limit = coalesce(vida, tbo).
+  tboMeses     Int?
+  tboHoras     Decimal?
+  vidaMeses    Int?
+  vidaHoras    Decimal?
+  // Installation reference — the "zero" point for the dynamic countdown.
+  installDate  DateTime?
+  installHoras Decimal? // domain-hour meter reading at install
+  // Sheet's own computed next-due (reference/fallback only).
+  proximaFecha DateTime?
+  proximaHoras Decimal?
+  notas        String?
+  orden        Int                @default(0) // preserve source-sheet ordering
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  Aircraft     Aircraft           @relation(fields: [aircraftId], references: [matricula])
+  eventos      ReplacementEvent[]
+
+  @@index([aircraftId, dominio])
+}
+
+// History of physical component changes/overhauls for a ReplacementPart. Each
+// event resets the part's countdown (updates installDate/installHoras/serial).
+model ReplacementEvent {
+  id          Int             @id @default(autoincrement())
+  partId      Int
+  fecha       DateTime // date of the change
+  horas       Decimal? // domain-hour meter reading at the change
+  serialNuevo String? // new serial installed (if it changed)
+  notas       String?
+  createdAt   DateTime        @default(now())
+  Part        ReplacementPart @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@index([partId])
+}
+
 model Flight {
-  id               Int               @id @default(autoincrement())
-  submissionId     Int?              @unique
-  fecha            DateTime          @default(now())
-  hobbs_inicio     Decimal?
-  hobbs_fin        Decimal?
-  tach_inicio      Decimal?
-  tach_fin         Decimal?
-  diff_hobbs       Decimal?
-  diff_tach        Decimal?
-  costo            Decimal?
-  pilotoId         Int?
-  aircraftId       String
-  copiloto         String?
-  cliente          String?
-  instructor       String?
-  detalle          String?
-  createdAt        DateTime          @default(now())
-  airframe_hours   Decimal?
-  engine_hours     Decimal?
-  propeller_hours  Decimal?
-  instructor_rate  Decimal?
-  piloto_raw       String?
-  tarifa           Decimal?
-  aerodromoDestino String?
-  aerodromoSalida  String?
-  aprobado         Boolean           @default(false)
-  Aircraft         Aircraft          @relation(fields: [aircraftId], references: [matricula])
-  User             User?             @relation(fields: [pilotoId], references: [id])
-  FlightSubmission FlightSubmission? @relation(fields: [submissionId], references: [id])
+  id                   Int                   @id @default(autoincrement())
+  submissionId         Int?                  @unique
+  fecha                DateTime              @default(now())
+  hobbs_inicio         Decimal?
+  hobbs_fin            Decimal?
+  tach_inicio          Decimal?
+  tach_fin             Decimal?
+  diff_hobbs           Decimal?
+  diff_tach            Decimal?
+  costo                Decimal?
+  pilotoId             Int?
+  aircraftId           String
+  copiloto             String?
+  cliente              String?
+  instructor           String?
+  detalle              String?
+  createdAt            DateTime              @default(now())
+  airframe_hours       Decimal?
+  engine_hours         Decimal?
+  propeller_hours      Decimal?
+  instructor_rate      Decimal?
+  piloto_raw           String?
+  tarifa               Decimal?
+  aerodromoDestino     String?
+  aerodromoSalida      String?
+  aprobado             Boolean               @default(false)
+  Aircraft             Aircraft              @relation(fields: [aircraftId], references: [matricula])
+  User                 User?                 @relation(fields: [pilotoId], references: [id])
+  FlightSubmission     FlightSubmission?     @relation(fields: [submissionId], references: [id])
   EngineMonitorFlights EngineMonitorFlight[]
-  Transaction      Transaction?
+  Transaction          Transaction?
 }
 
 model FlightSubmission {
@@ -215,46 +267,46 @@ model DeviceToken {
 }
 
 model BankMovement {
-  id             Int      @id @default(autoincrement())
-  correlativo    Int      @unique
-  fecha          DateTime
-  descripcion    String
-  egreso         Decimal?
-  ingreso        Decimal?
-  saldo          Decimal
-  tipo           String   @default("Sin clasificar")
-  cliente        String?
-  attachmentUrl  String?
-  uploadBatchId  String?  // UUID del upload de cartola que creó este movimiento
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            Int      @id @default(autoincrement())
+  correlativo   Int      @unique
+  fecha         DateTime
+  descripcion   String
+  egreso        Decimal?
+  ingreso       Decimal?
+  saldo         Decimal
+  tipo          String   @default("Sin clasificar")
+  cliente       String?
+  attachmentUrl String?
+  uploadBatchId String? // UUID del upload de cartola que creó este movimiento
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([uploadBatchId])
 }
 
 model EngineMonitorFlight {
-  id            Int                    @id @default(autoincrement())
-  flightNumber  Int
-  flightDate    DateTime
-  aircraftId    String                 @default("CC-AQI")
-  engineModel   String                 @default("O-320-D2J")
-  engineSerial  String                 @default("RL-7662-39E")
-  durationSec   Int                    @default(0)
-  maxEGT        Decimal?
-  maxCHT        Decimal?
-  maxOilTemp    Decimal?
-  minOilPress   Decimal?
-  avgRPM        Decimal?
-  avgFF         Decimal?
-  latitude      Decimal?
-  longitude     Decimal?
-  sourceFile    String?
-  isGroundRun   Boolean                @default(false)
-  gpsSource     String                 @default("jpi")  // "jpi" | "kml" | "none"
-  createdAt     DateTime               @default(now())
+  id             Int                    @id @default(autoincrement())
+  flightNumber   Int
+  flightDate     DateTime
+  aircraftId     String                 @default("CC-AQI")
+  engineModel    String                 @default("O-320-D2J")
+  engineSerial   String                 @default("RL-7662-39E")
+  durationSec    Int                    @default(0)
+  maxEGT         Decimal?
+  maxCHT         Decimal?
+  maxOilTemp     Decimal?
+  minOilPress    Decimal?
+  avgRPM         Decimal?
+  avgFF          Decimal?
+  latitude       Decimal?
+  longitude      Decimal?
+  sourceFile     String?
+  isGroundRun    Boolean                @default(false)
+  gpsSource      String                 @default("jpi") // "jpi" | "kml" | "none"
+  createdAt      DateTime               @default(now())
   linkedFlightId Int?
-  readings      EngineMonitorReading[]
-  LinkedFlight  Flight?                @relation(fields: [linkedFlightId], references: [id])
+  readings       EngineMonitorReading[]
+  LinkedFlight   Flight?                @relation(fields: [linkedFlightId], references: [id])
 
   @@unique([flightNumber, flightDate])
   @@index([flightDate])
@@ -267,20 +319,20 @@ model GpsCalibration {
   id              Int      @id @default(autoincrement())
   aircraftId      String   @default("CC-AQI")
   // Offset corrections (systematic bias in JPI GPS)
-  latOffsetDeg    Float    @default(0)    // average lat error: JPI - KML
-  lonOffsetDeg    Float    @default(0)    // average lon error: JPI - KML
+  latOffsetDeg    Float    @default(0) // average lat error: JPI - KML
+  lonOffsetDeg    Float    @default(0) // average lon error: JPI - KML
   // Smoothing window (optimal moving average window learned from KML comparisons)
-  smoothingWindow Int      @default(15)   // number of points for moving average
+  smoothingWindow Int      @default(15) // number of points for moving average
   // Statistics
-  sampleCount     Int      @default(0)    // number of KML comparisons used
-  avgErrorMeters  Float    @default(0)    // average position error before correction
+  sampleCount     Int      @default(0) // number of KML comparisons used
+  avgErrorMeters  Float    @default(0) // average position error before correction
   lastUpdated     DateTime @default(now())
 
   @@unique([aircraftId])
 }
 
 model EngineMonitorReading {
-  id         Int                @id @default(autoincrement())
+  id         Int      @id @default(autoincrement())
   flightId   Int
   elapsedSec Int
   timestamp  DateTime
@@ -308,7 +360,7 @@ model EngineMonitorReading {
   gpsAlt     Decimal?
   groundSpd  Decimal?
 
-  flight     EngineMonitorFlight @relation(fields: [flightId], references: [id], onDelete: Cascade)
+  flight EngineMonitorFlight @relation(fields: [flightId], references: [id], onDelete: Cascade)
 
   @@index([flightId])
 }
@@ -318,6 +370,6 @@ model EngineMonitorReading {
 // payload so the chart never goes blank when the upstream EIA API is rate-limited.
 model AppCache {
   key       String   @id
-  value     String   // JSON blob
+  value     String // JSON blob
   updatedAt DateTime @default(now()) @updatedAt
 }

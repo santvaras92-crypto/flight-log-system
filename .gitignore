@@ -35,6 +35,9 @@ prisma/dev.db-journal
 # Engine monitor raw data (CSVs and JPI binaries — already imported to DB)
 Engine Analisis/
 
+# Maintenance source data (DGAC spreadsheets, POH, parts catalogs — already imported to DB)
+Mantenimiento/
+
 # IDE
 .vscode/
 .idea/

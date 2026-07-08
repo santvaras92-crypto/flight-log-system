@@ -6,6 +6,7 @@ import { generateAccountStatementPDF } from "../../../../lib/generate-account-pd
 import { formatFecha, parseLocalDate, toDateString, getDateYear } from "../../../../lib/date-utils";
 import ImagePreviewModal from "../../../components/ImagePreviewModal";
 import { registerOverhaul } from "../../../actions/register-overhaul";
+import { registrarCambioComponente } from "../../../actions/registrar-cambio-componente";
 import EngineAnalysis from "./EngineAnalysis";
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler, DoughnutController, ArcElement);
@@ -23,6 +24,7 @@ type InitialData = {
   allFlightsComplete?: any[];
   submissions: any[];
   components: any[];
+  replacementParts?: any[];
   transactions: any[];
   fuelLogs?: any[];
   fuelByCode?: Record<string, number>;
@@ -110,7 +112,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
   const [tab, setTab] = useState("overview");
   const [pilotSubTab, setPilotSubTab] = useState<"accounts" | "directory" | "deposits">("accounts");
   const [financeSubTab, setFinanceSubTab] = useState<"movements" | "costs">("movements");
-  const [mxSubTab, setMxSubTab] = useState<"components" | "engine">("components");
+  const [mxSubTab, setMxSubTab] = useState<"components" | "reemplazo" | "engine">("components");
   const [pendingEngineFlightIds, setPendingEngineFlightIds] = useState<number[] | null>(null);
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [backupLoading, setBackupLoading] = useState(false);
@@ -1236,6 +1238,15 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               🔩 Components
             </button>
             <button
+              onClick={() => setMxSubTab("reemplazo")}
+              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${mxSubTab === "reemplazo"
+                ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                }`}
+            >
+              🗓️ Plan de Reemplazo
+            </button>
+            <button
               onClick={() => setMxSubTab("engine")}
               className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${mxSubTab === "engine"
                 ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
@@ -1246,6 +1257,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             </button>
           </div>
           {mxSubTab === "components" && <MaintenanceTable components={initialData.components} aircraft={initialData.aircraft} aircraftYearlyStats={initialData.aircraftYearlyStats || []} overviewMetrics={overviewMetrics} />}
+          {mxSubTab === "reemplazo" && <ReplacementPlanTable parts={initialData.replacementParts || []} usageStats={overviewMetrics?.nextInspections?.usageStats} />}
           {mxSubTab === "engine" && <EngineAnalysis initialFlightIds={pendingEngineFlightIds} onFlightOpened={() => setPendingEngineFlightIds(null)} />}
         </>
       )}
@@ -3865,6 +3877,303 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
                   {overhaulSubmitting ? 'Saving...' : 'Save Overhaul'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Plan de Reemplazo (life-limited parts) — dynamic monitoring
+// ─────────────────────────────────────────────────────────────
+const RAG_STYLE: Record<string, { badge: string; dot: string; label: string; row: string }> = {
+  VENCIDO: { badge: 'bg-red-100 text-red-700 border-red-200', dot: 'bg-red-500', label: 'Vencido', row: 'bg-red-50/60 border-l-4 border-red-500' },
+  PROXIMO: { badge: 'bg-amber-100 text-amber-700 border-amber-200', dot: 'bg-amber-500', label: 'Próximo', row: 'bg-amber-50/50 border-l-4 border-amber-400' },
+  OK: { badge: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500', label: 'OK', row: 'hover:bg-slate-50' },
+  SIN_LIMITE: { badge: 'bg-slate-100 text-slate-500 border-slate-200', dot: 'bg-slate-400', label: 'Sin límite', row: 'hover:bg-slate-50' },
+};
+const DOMAIN_META: Record<string, { label: string; icon: string }> = {
+  AIRFRAME: { label: 'Célula · Airframe', icon: '✈️' },
+  ENGINE: { label: 'Motor · Engine', icon: '⚙️' },
+  PROPELLER: { label: 'Hélice · Propeller', icon: '🌀' },
+};
+
+function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?: { weightedRate: number; rateAnnual: number } }) {
+  const router = useRouter();
+  const rate = (usageStats?.rateAnnual && usageStats.rateAnnual > 0 ? usageStats.rateAnnual : usageStats?.weightedRate) || 0; // hrs/day
+
+  const [modal, setModal] = useState<{ open: boolean; part: any | null }>({ open: false, part: null });
+  const [form, setForm] = useState({ fecha: '', horas: '', serial: '', notas: '' });
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
+
+  const fmtH = (h: number | null | undefined) =>
+    h == null ? '—' : `${Number(h).toLocaleString('es-CL', { maximumFractionDigits: 1 })} h`;
+  const fmtDate = (iso: string | null | undefined) =>
+    iso ? formatFecha(new Date(iso), { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+  const fmtDays = (days: number | null | undefined): string => {
+    if (days == null) return '—';
+    if (days <= 0) return 'Vencido';
+    if (days < 30) return `${days} días`;
+    if (days < 365) { const m = Math.floor(days / 30); return `${m} ${m === 1 ? 'mes' : 'meses'}`; }
+    return `${(days / 365).toFixed(1)} años`;
+  };
+
+  // Summary counters.
+  const summary = useMemo(() => {
+    const s = { total: parts.length, vencido: 0, proximo: 0, ok: 0 };
+    for (const p of parts) {
+      if (p.estado === 'VENCIDO') s.vencido++;
+      else if (p.estado === 'PROXIMO') s.proximo++;
+      else if (p.estado === 'OK') s.ok++;
+    }
+    return s;
+  }, [parts]);
+
+  // Group by domain, then sort each group by urgency (effective days asc, nulls last).
+  const grouped = useMemo(() => {
+    const order = ['AIRFRAME', 'ENGINE', 'PROPELLER'];
+    const byDom: Record<string, any[]> = {};
+    for (const p of parts) (byDom[p.dominio] ||= []).push(p);
+    const rank = (e: string) => (e === 'VENCIDO' ? 0 : e === 'PROXIMO' ? 1 : e === 'OK' ? 2 : 3);
+    for (const k of Object.keys(byDom)) {
+      byDom[k].sort((a, b) => {
+        if (rank(a.estado) !== rank(b.estado)) return rank(a.estado) - rank(b.estado);
+        const da = a.diasEfectivos == null ? Infinity : a.diasEfectivos;
+        const db = b.diasEfectivos == null ? Infinity : b.diasEfectivos;
+        if (da !== db) return da - db;
+        return (a.orden ?? 0) - (b.orden ?? 0);
+      });
+    }
+    return order.filter((d) => byDom[d]?.length).map((d) => ({ dominio: d, items: byDom[d] }));
+  }, [parts]);
+
+  const openModal = (part: any) => {
+    setModal({ open: true, part });
+    setForm({
+      fecha: new Date().toISOString().split('T')[0],
+      horas: part.domainHours != null ? String(Number(part.domainHours).toFixed(1)) : '',
+      serial: '',
+      notas: '',
+    });
+    setResult(null);
+  };
+
+  const handleSubmit = async () => {
+    if (!modal.part) return;
+    if (!form.fecha) { setResult({ success: false, error: 'La fecha es requerida' }); return; }
+    setSubmitting(true);
+    setResult(null);
+    try {
+      const res = await registrarCambioComponente({
+        partId: modal.part.id,
+        fecha: form.fecha,
+        horas: form.horas ? parseFloat(form.horas) : null,
+        serialNuevo: form.serial || undefined,
+        notas: form.notas || undefined,
+      });
+      setResult(res);
+      if (res.success) {
+        setTimeout(() => { router.refresh(); setModal({ open: false, part: null }); }, 1400);
+      }
+    } catch (e: any) {
+      setResult({ success: false, error: e.message || 'Error desconocido' });
+    }
+    setSubmitting(false);
+  };
+
+  if (!parts.length) {
+    return (
+      <div className="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-500 shadow-sm">
+        <div className="text-3xl mb-2">🗓️</div>
+        <p className="font-medium text-slate-700">Sin plan de reemplazo cargado</p>
+        <p className="text-sm mt-1">No hay componentes de vida limitada registrados para esta aeronave.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* Summary + methodology */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Componentes', value: summary.total, cls: 'text-slate-800', dot: 'bg-slate-400' },
+          { label: 'Vencidos', value: summary.vencido, cls: 'text-red-600', dot: 'bg-red-500' },
+          { label: 'Próximos', value: summary.proximo, cls: 'text-amber-600', dot: 'bg-amber-500' },
+          { label: 'En regla', value: summary.ok, cls: 'text-emerald-600', dot: 'bg-emerald-500' },
+        ].map((c) => (
+          <div key={c.label} className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm">
+            <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-slate-400 font-semibold">
+              <span className={`w-2 h-2 rounded-full ${c.dot}`} /> {c.label}
+            </div>
+            <div className={`text-2xl font-bold mt-1 ${c.cls}`}>{c.value}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="text-xs text-slate-500 bg-blue-50/60 border border-blue-100 rounded-lg px-3 py-2">
+        Monitoreo dinámico: el remanente se recalcula en vivo contra el horómetro de cada dominio
+        (Célula / Motor TSMOH / Hélice) y contra el calendario. La <strong>fecha proyectada</strong> usa
+        la tasa de uso actual ({rate > 0 ? `${rate.toFixed(2)} h/día` : 's/d'}) y toma lo que ocurra primero
+        (horas o calendario).
+      </div>
+
+      {/* Domain groups */}
+      {grouped.map(({ dominio, items }) => (
+        <div key={dominio} className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-200">
+            <span className="text-base">{DOMAIN_META[dominio]?.icon}</span>
+            <span className="font-semibold text-slate-700 text-sm">{DOMAIN_META[dominio]?.label || dominio}</span>
+            <span className="text-xs text-slate-400">({items.length})</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[11px] uppercase tracking-wide text-slate-400 border-b border-slate-100">
+                  <th className="px-3 py-2 font-semibold">Estado</th>
+                  <th className="px-3 py-2 font-semibold">Componente</th>
+                  <th className="px-3 py-2 font-semibold">P/N · S/N</th>
+                  <th className="px-3 py-2 font-semibold text-right">Límite</th>
+                  <th className="px-3 py-2 font-semibold text-right">Instalado</th>
+                  <th className="px-3 py-2 font-semibold text-right">Remanente</th>
+                  <th className="px-3 py-2 font-semibold">Fecha proyectada</th>
+                  <th className="px-3 py-2 font-semibold text-center">Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((p) => {
+                  const rag = RAG_STYLE[p.estado] || RAG_STYLE.SIN_LIMITE;
+                  const horasNeg = p.remanenteHoras != null && p.remanenteHoras <= 0;
+                  const diasNeg = p.remanenteDias != null && p.remanenteDias <= 0;
+                  return (
+                    <tr key={p.id} className={`border-b border-slate-50 transition-colors ${rag.row}`}>
+                      <td className="px-3 py-2.5">
+                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[11px] font-semibold ${rag.badge}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${rag.dot}`} /> {rag.label}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <div className="font-medium text-slate-800">{p.descripcion}</div>
+                        {p.marca && <div className="text-xs text-slate-400">{p.marca}</div>}
+                      </td>
+                      <td className="px-3 py-2.5 text-xs text-slate-500">
+                        <div>{p.partNumber || '—'}</div>
+                        <div className="text-slate-400">{p.serial || '—'}</div>
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-slate-600 whitespace-nowrap">
+                        {p.limitHoras != null && <div>{fmtH(p.limitHoras)}</div>}
+                        {p.limitMeses != null && <div className="text-xs text-slate-400">{p.limitMeses} meses</div>}
+                        {p.limitHoras == null && p.limitMeses == null && <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-slate-600 whitespace-nowrap">
+                        <div>{fmtDate(p.installDate)}</div>
+                        {p.installHoras != null && <div className="text-xs text-slate-400">{fmtH(p.installHoras)}</div>}
+                      </td>
+                      <td className="px-3 py-2.5 text-right whitespace-nowrap">
+                        {p.remanenteHoras != null && (
+                          <div className={`font-semibold ${horasNeg ? 'text-red-600' : p.estado === 'PROXIMO' ? 'text-amber-600' : 'text-slate-700'}`}>
+                            {horasNeg ? `−${fmtH(Math.abs(p.remanenteHoras))}` : fmtH(p.remanenteHoras)}
+                          </div>
+                        )}
+                        {p.remanenteDias != null && (
+                          <div className={`text-xs ${diasNeg ? 'text-red-500' : 'text-slate-400'}`}>{fmtDays(p.remanenteDias)}</div>
+                        )}
+                        {p.remanenteHoras == null && p.remanenteDias == null && <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        {p.fechaEfectiva ? (
+                          <div>
+                            <div className={`font-medium ${p.estado === 'VENCIDO' ? 'text-red-600' : 'text-slate-700'}`}>{fmtDate(p.fechaEfectiva)}</div>
+                            <div className="text-xs text-slate-400">{p.diasEfectivos != null && p.diasEfectivos > 0 ? `en ${fmtDays(p.diasEfectivos)}` : 'ahora'}</div>
+                          </div>
+                        ) : (
+                          <span className="text-slate-300">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        <button
+                          onClick={() => openModal(p)}
+                          className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-800 text-white hover:bg-slate-700 transition-colors whitespace-nowrap"
+                        >
+                          Registrar cambio
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+
+      {/* Registrar cambio modal */}
+      {modal.open && modal.part && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !submitting && setModal({ open: false, part: null })}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">Registrar cambio</h3>
+                <p className="text-sm text-slate-500 mt-0.5">{modal.part.descripcion}</p>
+              </div>
+              <button onClick={() => !submitting && setModal({ open: false, part: null })} className="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Fecha del cambio</label>
+                <input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">
+                  Horas del {DOMAIN_META[modal.part.dominio]?.label.split(' · ')[0] || 'dominio'} al instalar
+                </label>
+                <input type="number" step="0.1" value={form.horas} onChange={(e) => setForm({ ...form, horas: e.target.value })}
+                  placeholder={modal.part.domainHours != null ? `Actual: ${Number(modal.part.domainHours).toFixed(1)} h` : ''}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                <p className="text-[11px] text-slate-400 mt-1">Reinicia el conteo de vida útil desde este punto.</p>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Nuevo serial (opcional)</label>
+                <input type="text" value={form.serial} onChange={(e) => setForm({ ...form, serial: e.target.value })}
+                  placeholder={modal.part.serial || 'S/N del componente instalado'}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Notas (opcional)</label>
+                <textarea value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} rows={2}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 resize-none" />
+              </div>
+
+              {/* Preview */}
+              {form.horas && modal.part.limitHoras != null && (
+                <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 text-xs text-emerald-700">
+                  Nuevo remanente ≈ <strong>{fmtH(modal.part.limitHoras)}</strong>
+                  {modal.part.limitMeses != null && form.fecha && (
+                    <> · próxima fecha límite <strong>{fmtDate(new Date(new Date(form.fecha).setMonth(new Date(form.fecha).getMonth() + modal.part.limitMeses)).toISOString())}</strong></>
+                  )}
+                </div>
+              )}
+
+              {result && (
+                <div className={`rounded-lg px-3 py-2 text-sm ${result.success ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                  {result.success ? result.message : result.error}
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => !submitting && setModal({ open: false, part: null })} disabled={submitting}
+                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+                Cancelar
+              </button>
+              <button onClick={handleSubmit} disabled={submitting}
+                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50">
+                {submitting ? 'Guardando…' : 'Confirmar cambio'}
+              </button>
             </div>
           </div>
         </div>
