@@ -5,6 +5,7 @@ import { Chart, LineController, LineElement, PointElement, LinearScale, Title, C
 import { generateAccountStatementPDF } from "../../../../lib/generate-account-pdf";
 import { formatFecha, parseLocalDate, toDateString, getDateYear } from "../../../../lib/date-utils";
 import ImagePreviewModal from "../../../components/ImagePreviewModal";
+import { Icon, type IconName } from "../../../components/Icon";
 import { registerOverhaul } from "../../../actions/register-overhaul";
 import { registrarCambioComponente } from "../../../actions/registrar-cambio-componente";
 import { registrarCumplimiento } from "../../../actions/registrar-cumplimiento";
@@ -274,11 +275,11 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
 
-        setBackupMessage({ type: 'success', text: '✓ Backup descargado exitosamente' });
+        setBackupMessage({ type: 'success', text: 'Backup descargado exitosamente' });
       } else {
         // Email sent
         const result = await response.json();
-        setBackupMessage({ type: 'success', text: `✓ Backup enviado a santvaras92@gmail.com` });
+        setBackupMessage({ type: 'success', text: `Backup enviado a santvaras92@gmail.com` });
       }
 
       setTimeout(() => {
@@ -289,7 +290,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       console.error('Error generating backup:', error);
       setBackupMessage({
         type: 'error',
-        text: `⚠ Error: ${error instanceof Error ? error.message : 'Error desconocido'}`
+        text: `Error: ${error instanceof Error ? error.message : 'Error desconocido'}`
       });
     } finally {
       setBackupLoading(false);
@@ -546,13 +547,13 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               </div>
               <h3 className="text-slate-900 text-xs sm:text-sm font-bold uppercase tracking-wide">Inspecciones</h3>
             </div>
-            <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[9px] sm:text-xs font-bold rounded-full">🔮 SMART</span>
+            <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[9px] sm:text-xs font-bold rounded-full inline-flex items-center gap-1"><Icon name="smart" className="w-3 h-3" /> SMART</span>
           </div>
 
           {/* Oil Change Section */}
           <div className="mb-2 sm:mb-3">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] sm:text-xs font-bold text-slate-700">🛢️ ACEITE</span>
+              <span className="text-[10px] sm:text-xs font-bold text-slate-700 inline-flex items-center gap-1"><Icon name="oil" className="w-3.5 h-3.5" /> ACEITE</span>
               <span className="text-[10px] sm:text-xs font-mono text-slate-600">{oilPct.toFixed(0)}%</span>
             </div>
             <div className={`w-full h-2 sm:h-2.5 rounded-full ${getProgressBg(oilRemaining, OIL_INTERVAL)} overflow-hidden`}>
@@ -567,7 +568,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               </div>
               {weightedRate > 0 && (
                 <div className="text-[9px] sm:text-[11px] text-slate-900 font-bold flex items-center gap-1">
-                  ⏱️ ~{fmtTime(oilPred.days)} <span className="hidden sm:inline text-slate-500">({fmtTime(oilPred.minDays)}-{fmtTime(oilPred.maxDays)})</span>
+                  <Icon name="timer" className="w-3 h-3" /> ~{fmtTime(oilPred.days)} <span className="hidden sm:inline text-slate-500">({fmtTime(oilPred.minDays)}-{fmtTime(oilPred.maxDays)})</span>
                 </div>
               )}
             </div>
@@ -576,7 +577,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           {/* 100hr Inspection Section */}
           <div className="mb-2 sm:mb-3">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] sm:text-xs font-bold text-slate-700">⚙️ 100 HORAS</span>
+              <span className="text-[10px] sm:text-xs font-bold text-slate-700 inline-flex items-center gap-1"><Icon name="wrench" className="w-3.5 h-3.5" /> 100 HORAS</span>
               <span className="text-[10px] sm:text-xs font-mono text-slate-600">{hundredPct.toFixed(0)}%</span>
             </div>
             <div className={`w-full h-2 sm:h-2.5 rounded-full ${getProgressBg(hundredRemaining, HUNDRED_HR_INTERVAL)} overflow-hidden`}>
@@ -591,7 +592,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               </div>
               {weightedRate > 0 && (
                 <div className="text-[9px] sm:text-[11px] text-slate-900 font-bold flex items-center gap-1">
-                  ⏱️ ~{fmtTime(hundredPred.days)} <span className="hidden sm:inline text-slate-500">({fmtTime(hundredPred.minDays)}-{fmtTime(hundredPred.maxDays)})</span>
+                  <Icon name="timer" className="w-3 h-3" /> ~{fmtTime(hundredPred.days)} <span className="hidden sm:inline text-slate-500">({fmtTime(hundredPred.minDays)}-{fmtTime(hundredPred.maxDays)})</span>
                 </div>
               )}
             </div>
@@ -926,11 +927,12 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       {showBackupModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
-            <h3 className="text-2xl font-bold text-slate-900 mb-4">💾 Generar Backup Completo</h3>
+            <h3 className="text-2xl font-bold text-slate-900 mb-4 flex items-center gap-2"><Icon name="save" className="w-6 h-6 text-slate-500" /> Generar Backup Completo</h3>
 
             {backupMessage && (
-              <div className={`mb-4 p-3 rounded-lg ${backupMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                {backupMessage.text}
+              <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${backupMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                <Icon name={backupMessage.type === 'success' ? 'checkCircle' : 'warning'} className="w-4 h-4 flex-shrink-0" />
+                <span>{backupMessage.text}</span>
               </div>
             )}
 
@@ -939,12 +941,12 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             </p>
 
             <ul className="text-sm text-slate-600 space-y-2 mb-6">
-              <li>✈️ Todos los vuelos registrados</li>
-              <li>💰 Depósitos completos (DB + CSV)</li>
-              <li>⛽ Combustible histórico</li>
-              <li>👥 Pilotos con balances</li>
-              <li>🛩️ Aeronaves y mantenimiento</li>
-              <li>📝 Transacciones y pendientes</li>
+              <li className="flex items-center gap-2"><Icon name="airframe" className="w-4 h-4 text-slate-400" /> Todos los vuelos registrados</li>
+              <li className="flex items-center gap-2"><Icon name="money" className="w-4 h-4 text-slate-400" /> Depósitos completos (DB + CSV)</li>
+              <li className="flex items-center gap-2"><Icon name="fuel" className="w-4 h-4 text-slate-400" /> Combustible histórico</li>
+              <li className="flex items-center gap-2"><Icon name="people" className="w-4 h-4 text-slate-400" /> Pilotos con balances</li>
+              <li className="flex items-center gap-2"><Icon name="wrench" className="w-4 h-4 text-slate-400" /> Aeronaves y mantenimiento</li>
+              <li className="flex items-center gap-2"><Icon name="document" className="w-4 h-4 text-slate-400" /> Transacciones y pendientes</li>
             </ul>
 
             <div className="space-y-3">
@@ -1060,7 +1062,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                 : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
                 }`}
             >
-              {editMode ? '✏️ Modo Edición ON' : '✏️ Editar Celdas'}
+              {editMode ? <span className="inline-flex items-center gap-2"><Icon name="edit" className="w-4 h-4" /> Modo Edición ON</span> : <span className="inline-flex items-center gap-2"><Icon name="edit" className="w-4 h-4" /> Editar Celdas</span>}
             </button>
           </div>
           <FlightsTable
@@ -1232,7 +1234,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       {tab === "fuel" && <FuelTable logs={initialData.fuelLogs || []} />}
       {tab === "maintenance" && (
         <>
-          <div className="flex gap-1 bg-slate-100/80 p-1 rounded-lg mb-4 max-w-sm">
+          <div className="flex gap-1 bg-slate-100/80 p-1 rounded-lg mb-4 max-w-2xl">
             <button
               onClick={() => setMxSubTab("components")}
               className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${mxSubTab === "components"
@@ -1240,7 +1242,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                 : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                 }`}
             >
-              🔩 Components
+              Components
             </button>
             <button
               onClick={() => setMxSubTab("reemplazo")}
@@ -1249,7 +1251,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                 : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                 }`}
             >
-              🗓️ Plan de Reemplazo
+              <span className="hidden sm:inline">Plan de </span>Reemplazo
             </button>
             <button
               onClick={() => setMxSubTab("adda")}
@@ -1258,7 +1260,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                 : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                 }`}
             >
-              📜 AD/DA
+              AD/DA
             </button>
             <button
               onClick={() => setMxSubTab("engine")}
@@ -1267,7 +1269,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                 : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
                 }`}
             >
-              🔧 Engine Monitor
+              Engine<span className="hidden sm:inline"> Monitor</span>
             </button>
           </div>
           {mxSubTab === "components" && <MaintenanceTable components={initialData.components} aircraft={initialData.aircraft} aircraftYearlyStats={initialData.aircraftYearlyStats || []} overviewMetrics={overviewMetrics} />}
@@ -1312,7 +1314,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
           </svg>
-          <span>💾 Generar Backup Completo</span>
+          <span>Generar Backup Completo</span>
         </button>
       </div>
     </div>
@@ -2527,8 +2529,8 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
               <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Detalle</th>
               <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Año</th>
               <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Mes</th>
-              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-blue-600 uppercase tracking-wider whitespace-nowrap" title="Engine Monitor Analysis">🔧</th>
-              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-red-600 uppercase tracking-wider whitespace-nowrap">🗑️</th>
+              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-blue-600 uppercase tracking-wider whitespace-nowrap" title="Engine Monitor Analysis"><span className="inline-flex justify-center w-full"><Icon name="engine" className="w-4 h-4 text-blue-600" title="Engine Monitor Analysis" /></span></th>
+              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-red-600 uppercase tracking-wider whitespace-nowrap"><span className="inline-flex justify-center w-full"><Icon name="trash" className="w-4 h-4 text-red-600" title="Eliminar" /></span></th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-slate-100">
@@ -2708,7 +2710,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                         className="px-2 py-1 text-[10px] sm:text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg font-medium transition-colors"
                         title={`Ver Engine Analysis${f.engineFlightIds.length > 1 ? ` (${f.engineFlightIds.length} tramos)` : ''}`}
                       >
-                        🔧{f.engineFlightIds.length > 1 ? ` ${f.engineFlightIds.length}` : ''}
+                        <span className="inline-flex items-center gap-1"><Icon name="engine" className="w-3.5 h-3.5" />{f.engineFlightIds.length > 1 ? ` ${f.engineFlightIds.length}` : ''}</span>
                       </button>
                     ) : (
                       <span className="text-slate-300 text-[10px]">—</span>
@@ -2728,7 +2730,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                       className="px-2 py-1 text-[10px] sm:text-xs bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-medium transition-colors disabled:opacity-50"
                       title="Eliminar vuelo y revertir saldo/contadores"
                     >
-                      {deletingId === f.id ? '...' : '✕'}
+                      {deletingId === f.id ? '...' : <Icon name="trash" className="w-3.5 h-3.5" />}
                     </button>
                   </td>
                 </tr>
@@ -3255,8 +3257,8 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {message && (
-              <span className={`text-xs px-2.5 py-1 rounded-md ${message.startsWith('✓') ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
-                {message}
+              <span className={`text-xs px-2.5 py-1 rounded-md inline-flex items-center gap-1 ${message.startsWith('✓') ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+                <Icon name={message.startsWith('✓') ? 'checkCircle' : 'warning'} className="w-3.5 h-3.5" /> {message.replace(/^[✓⚠]\s*/, '')}
               </span>
             )}
             {editMode && Object.keys(editedRows).length > 0 && (
@@ -3460,14 +3462,14 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
       name: 'Cambio de Aceite',
       interval: 50,
       remaining: overviewMetrics?.nextInspections?.oilChangeRemaining ?? 0,
-      icon: '🛢️'
+      icon: 'oil' as IconName
     },
     {
       id: '100-hour',
       name: 'Inspección 100 Horas',
       interval: 100,
       remaining: overviewMetrics?.nextInspections?.hundredHourRemaining ?? 0,
-      icon: '🔧'
+      icon: 'wrench' as IconName
     }
   ];
 
@@ -3648,7 +3650,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
               <div key={item.id} className={`rounded-lg border p-3 sm:p-4 transition-all ${urgency.row}`}>
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">{item.icon}</span>
+                    <Icon name={item.icon} className="w-5 h-5 text-slate-500" />
                     <div>
                       <h4 className="text-sm font-semibold text-slate-800">{item.name}</h4>
                       <p className="text-[10px] text-slate-500">Interval: {item.interval} hrs</p>
@@ -3909,10 +3911,10 @@ const RAG_STYLE: Record<string, { badge: string; dot: string; label: string; row
   OK: { badge: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500', label: 'OK', row: 'hover:bg-slate-50' },
   SIN_LIMITE: { badge: 'bg-slate-100 text-slate-500 border-slate-200', dot: 'bg-slate-400', label: 'Sin límite', row: 'hover:bg-slate-50' },
 };
-const DOMAIN_META: Record<string, { label: string; icon: string }> = {
-  AIRFRAME: { label: 'Célula · Airframe', icon: '✈️' },
-  ENGINE: { label: 'Motor · Engine', icon: '⚙️' },
-  PROPELLER: { label: 'Hélice · Propeller', icon: '🌀' },
+const DOMAIN_META: Record<string, { label: string; icon: IconName }> = {
+  AIRFRAME: { label: 'Célula · Airframe', icon: 'airframe' },
+  ENGINE: { label: 'Motor · Engine', icon: 'engine' },
+  PROPELLER: { label: 'Hélice · Propeller', icon: 'propeller' },
 };
 
 function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?: { weightedRate: number; rateAnnual: number } }) {
@@ -4080,7 +4082,7 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
   if (!parts.length) {
     return (
       <div className="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-500 shadow-sm">
-        <div className="text-3xl mb-2">🗓️</div>
+        <div className="flex justify-center mb-3"><Icon name="plan" className="w-8 h-8 text-slate-300" /></div>
         <p className="font-medium text-slate-700">Sin plan de reemplazo cargado</p>
         <p className="text-sm mt-1 mb-4">No hay componentes de vida limitada registrados para esta aeronave.</p>
         <button onClick={() => openEditModal(null)} className="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-white hover:bg-slate-700">
@@ -4250,7 +4252,7 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
       {grouped.map(({ dominio, items }) => (
         <div key={dominio} className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-200">
-            <span className="text-base">{DOMAIN_META[dominio]?.icon}</span>
+            <Icon name={DOMAIN_META[dominio]?.icon ?? 'gear'} className="w-4 h-4 text-slate-500" />
             <span className="font-semibold text-slate-700 text-sm">{DOMAIN_META[dominio]?.label || dominio}</span>
             <span className="text-xs text-slate-400">({items.length})</span>
           </div>
@@ -4284,7 +4286,7 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
                         <div className="font-medium text-slate-800 flex items-center gap-1.5">
                           {p.descripcion}
                           {p.datosInconsistentes && (
-                            <span title="Horas de instalación fuera del marco actual del dominio (probablemente en horas de célula previas a un overhaul). Se monitorea solo por calendario; registre el cambio para corregir." className="text-amber-500 cursor-help text-xs">⚠</span>
+                            <span title="Horas de instalación fuera del marco actual del dominio (probablemente en horas de célula previas a un overhaul). Se monitorea solo por calendario; registre el cambio para corregir." className="text-amber-500 cursor-help inline-flex"><Icon name="warning" className="w-3.5 h-3.5" /></span>
                           )}
                         </div>
                         {p.marca && <div className="text-xs text-slate-400">{p.marca}</div>}
@@ -4651,7 +4653,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
   if (!directives.length) {
     return (
       <div className="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-500 shadow-sm">
-        <div className="text-3xl mb-2">📜</div>
+        <div className="flex justify-center mb-3"><Icon name="compliance" className="w-8 h-8 text-slate-300" /></div>
         <p className="font-medium text-slate-700">Sin directivas AD/DA cargadas</p>
         <p className="text-sm mt-1 mb-4">No hay directivas de aeronavegabilidad registradas para esta aeronave.</p>
         <button onClick={() => openEditModal(null)} className="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-white hover:bg-slate-700">
@@ -4732,7 +4734,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
                 <input type="checkbox" checked={editForm.alEvento} onChange={(e) => set({ alEvento: e.target.checked })} className="rounded border-slate-300" /> Al evento
               </label>
               <label className="flex items-center gap-1.5 text-sm text-slate-600 cursor-pointer select-none">
-                <input type="checkbox" checked={editForm.esEmergencia} onChange={(e) => set({ esEmergencia: e.target.checked })} className="rounded border-slate-300" /> 🚨 Emergency AD
+                <input type="checkbox" checked={editForm.esEmergencia} onChange={(e) => set({ esEmergencia: e.target.checked })} className="rounded border-slate-300" /> <Icon name="emergency" className="w-4 h-4 text-red-500" /> Emergency AD
               </label>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -4834,7 +4836,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
 
       {summary.emergencia > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700 font-medium flex items-center gap-2">
-          <span>🚨</span> {summary.emergencia} Emergency AD activa(s) — requieren atención inmediata.
+          <Icon name="emergency" className="w-4 h-4 flex-shrink-0" /> {summary.emergencia} Emergency AD activa(s) — requieren atención inmediata.
         </div>
       )}
 
@@ -4858,7 +4860,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
           {auditing ? (
             <><svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" /></svg> Auditando…</>
           ) : (
-            <>🔎 Auditar ahora</>
+            <><Icon name="search" className="w-3.5 h-3.5" /> Auditar ahora</>
           )}
         </button>
         <button onClick={() => openEditModal(null)}
@@ -4871,7 +4873,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
       {auditReport && (
         <div className={`rounded-xl border p-4 shadow-sm ${auditReport.error ? 'bg-red-50 border-red-200' : 'bg-slate-50 border-slate-200'}`}>
           {auditReport.error ? (
-            <p className="text-sm text-red-700">⚠️ {auditReport.error}</p>
+            <p className="text-sm text-red-700 flex items-center gap-1.5"><Icon name="warning" className="w-4 h-4 flex-shrink-0" /> {auditReport.error}</p>
           ) : (
             <>
               <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
@@ -4889,7 +4891,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
                       ? '—'
                       : (auditReport.dgac?.added ?? 0) > 0
                         ? auditReport.dgac.added
-                        : <span className="text-emerald-600" title="Cubierta vía estado de diseño (FAA)">✓ Estado de diseño</span>}
+                        : <span className="text-emerald-600 inline-flex items-center gap-1" title="Cubierta vía estado de diseño (FAA)"><Icon name="check" className="w-4 h-4" /> Estado de diseño</span>}
                   </div>
                 </div>
               </div>
@@ -4898,7 +4900,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
                   <div className="text-xs font-semibold text-slate-500">Directivas agregadas:</div>
                   {auditReport.added.map((a: any, i: number) => (
                     <div key={i} className="text-xs text-slate-600 flex items-center gap-1.5">
-                      {a.esEmergencia && <span title="Emergency AD">🚨</span>}
+                      {a.esEmergencia && <span title="Emergency AD" className="text-red-500 inline-flex"><Icon name="emergency" className="w-3.5 h-3.5" /></span>}
                       <span className="font-medium">{a.tipo} {a.numero}</span> — {a.descripcion}
                       {a.url && <a href={a.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline ml-1">ver</a>}
                     </div>
@@ -4906,7 +4908,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
                 </div>
               )}
               {(!auditReport.added || auditReport.added.length === 0) && (
-                <p className="text-xs text-slate-500">✓ Sin directivas nuevas aplicables. Todo al día respecto a las fuentes consultadas.</p>
+                <p className="text-xs text-slate-500 flex items-center gap-1.5"><Icon name="check" className="w-3.5 h-3.5 text-emerald-600" /> Sin directivas nuevas aplicables. Todo al día respecto a las fuentes consultadas.</p>
               )}
               {Array.isArray(auditReport.notes) && auditReport.notes.length > 0 && (
                 <div className="text-[11px] text-slate-400 mt-2 border-t border-slate-200 pt-2">{auditReport.notes.join(' · ')}</div>
@@ -4920,7 +4922,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
       {grouped.map(({ tipo, items }) => (
         <div key={tipo} className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-200">
-            <span className="text-base">{tipo === 'AD' ? '🇺🇸' : '🇨🇱'}</span>
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${tipo === 'AD' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-red-50 text-red-700 border-red-200'}`}>{tipo === 'AD' ? 'FAA' : 'DGAC'}</span>
             <span className="font-semibold text-slate-700 text-sm">{tipo === 'AD' ? 'Airworthiness Directives (FAA)' : 'Directivas de Aeronavegabilidad (DGAC)'}</span>
             <span className="text-xs text-slate-400">({items.length})</span>
           </div>
@@ -4950,7 +4952,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
                         <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[11px] font-semibold ${rag.badge}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${rag.dot}`} /> {rag.label}
                         </span>
-                        {d.esEmergencia && <span className="ml-1 text-red-500" title="Emergency AD">🚨</span>}
+                        {d.esEmergencia && <span className="ml-1 text-red-500 inline-flex align-middle" title="Emergency AD"><Icon name="emergency" className="w-3.5 h-3.5" /></span>}
                       </td>
                       <td className="px-3 py-2.5 whitespace-nowrap">
                         <div className="font-medium text-slate-800">
@@ -5310,7 +5312,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
       });
       const data = await res.json();
       if (data.ok) {
-        alert(`✅ ${data.deleted} movimiento(s) eliminado(s)`);
+        alert(`${data.deleted} movimiento(s) eliminado(s)`);
         setSelectedMovements(new Set());
         setTimeout(() => location.reload(), 500);
       } else {
@@ -5468,8 +5470,8 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                 </p>
                 {uploadResult.ok && uploadResult.added > 0 && (
                   <div className="mt-2 space-y-1">
-                    <p className="text-xs text-emerald-700">
-                      ✅ {uploadResult.added} nuevos movimientos agregados • {uploadResult.skipped} omitidos (duplicados)
+                    <p className="text-xs text-emerald-700 flex items-center gap-1">
+                      <Icon name="checkCircle" className="w-3.5 h-3.5 flex-shrink-0" /> {uploadResult.added} nuevos movimientos agregados • {uploadResult.skipped} omitidos (duplicados)
                     </p>
                     <p className="text-xs text-emerald-700">
                       Último correlativo: #{uploadResult.lastCorrelativo} • Saldo final: ${formatCurrency(uploadResult.lastSaldo)}
@@ -7011,7 +7013,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               <div>
                 <h3 className="text-sm font-semibold text-slate-800">Cost Analysis — C-172 CC-AQI</h3>
                 <p className="text-xs text-slate-500 flex items-center gap-1.5 flex-wrap">
-                  <span>Operating cost model · {horasAnuales} hobbs hrs/yr{!horasIsLive && ' ✏️'}</span>
+                  <span>Operating cost model · {horasAnuales} hobbs hrs/yr{!horasIsLive && <Icon name="edit" className="inline w-3 h-3 text-amber-500 ml-0.5 align-text-bottom" />}</span>
                   {(liveIndicators.uf || liveIndicators.usd || liveIndicators.fuel || liveIndicators.engine || liveIndicators.ipc || liveIndicators.cpi || liveIndicators.brent) && (
                     <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">
                       LIVE {[liveIndicators.uf && 'UF', liveIndicators.usd && 'USD', liveIndicators.fuel && 'AVGAS', liveIndicators.engine && 'ENGINE', liveIndicators.ipc && 'IPC', liveIndicators.cpi && 'CPI', liveIndicators.brent && 'BRENT'].filter(Boolean).join('+')}
@@ -7422,7 +7424,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                   </div>
                   <div>
                     <h4 className="text-xs font-semibold text-slate-700">Engine Overhaul Timeline</h4>
-                    <p className="text-[10px] text-slate-400">{usingOverride ? '✏️ User projection' : 'Live data'} · TBO {tbo} hrs · SMOH {smoh.toFixed(1)} hrs · H/T Ratio {htRatio.toFixed(3)}{usingOverride && <span className="ml-1 text-amber-600 font-semibold">@ {horasAnuales} hobbs/yr</span>}</p>
+                    <p className="text-[10px] text-slate-400">{usingOverride ? <span className="inline-flex items-center gap-1"><Icon name="edit" className="w-3 h-3" /> User projection</span> : 'Live data'} · TBO {tbo} hrs · SMOH {smoh.toFixed(1)} hrs · H/T Ratio {htRatio.toFixed(3)}{usingOverride && <span className="ml-1 text-amber-600 font-semibold">@ {horasAnuales} hobbs/yr</span>}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -7541,12 +7543,12 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 <h4 className="text-xs font-semibold text-slate-700">Overhaul Funding Tracker</h4>
                 <p className="text-[10px] text-slate-400">
                   {formatCurrency(overhaulCycleHrs)} tach hrs · {computed.yearsToOverhaul.toFixed(1)} yrs @ {Math.round(computed.tachPerYear)} tach/yr ({horasAnuales} hobbs/yr)
-                  {!horasIsLive && <span className="ml-1 text-amber-600 font-semibold">✏️</span>}
+                  {!horasIsLive && <span className="ml-1 text-amber-600 font-semibold inline-flex align-middle"><Icon name="edit" className="w-3 h-3" /></span>}
                 </p>
               </div>
             </div>
-            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-200 text-slate-700">
-              ✨ MAX · {computed.overhaulSource === 'market' ? 'MARKET' : 'IPC'}
+            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-200 text-slate-700 inline-flex items-center gap-1">
+              <Icon name="smart" className="w-3 h-3" /> MAX · {computed.overhaulSource === 'market' ? 'MARKET' : 'IPC'}
             </span>
           </div>
         </div>
@@ -7606,7 +7608,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               </div>
               <div className="text-center bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-2 border border-blue-200">
                 <p className="text-lg font-extrabold text-blue-700 font-mono">${formatCurrency(Math.round(computed.projectedMonthlyTarget))}</p>
-                <p className="text-[9px] text-blue-600 font-bold">💰 Monthly Target</p>
+                <p className="text-[9px] text-blue-600 font-bold flex items-center justify-center gap-1"><Icon name="money" className="w-3 h-3" /> Monthly Target</p>
                 <p className="text-[8px] text-blue-400 font-mono">{Math.round(computed.monthsToOverhaul)} payments</p>
               </div>
             </div>
@@ -7631,7 +7633,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               {/* IPC Model */}
               <div className={`rounded-lg p-3 border bg-amber-50 border-amber-200 ${computed.overhaulSource === 'ipc' ? 'ring-2 ring-amber-400' : ''}`}>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider">📋 IPC Chile (+{clInflationPct}%)</p>
+                  <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider flex items-center gap-1"><Icon name="clipboard" className="w-3 h-3" /> IPC Chile (+{clInflationPct}%)</p>
                   {computed.overhaulSource === 'ipc' && <span className="px-1.5 py-0.5 text-[8px] font-bold bg-amber-200 text-amber-800 rounded-full">USADO</span>}
                 </div>
                 <div className="space-y-1 text-[11px]">
@@ -7663,7 +7665,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               <div className={`rounded-lg p-3 border bg-blue-50 border-blue-200 ${computed.overhaulSource === 'market' ? 'ring-2 ring-blue-400' : ''}`}>
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-[10px] font-semibold text-blue-700 uppercase tracking-wider flex items-center gap-1">
-                    🌐 Market
+                    <Icon name="globe" className="w-3 h-3" /> Market
                     {computed.overhaulSource === 'market' && <span className="px-1.5 py-0.5 text-[8px] font-bold bg-blue-200 text-blue-800 rounded-full">USADO</span>}
                   </p>
                   <a
@@ -7784,7 +7786,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
             {/* Brent spot indicator (if available) */}
             {brentData && (
               <div className="mb-5 flex items-center gap-3 px-3 py-2 bg-orange-50 rounded-lg border border-orange-200">
-                <span className="text-lg">🛢️</span>
+                <Icon name="oil" className="w-5 h-5 text-orange-600" />
                 <div className="text-xs text-slate-700">
                   <span className="font-semibold">Brent Spot:</span>{' '}
                   <span className="font-mono font-bold text-orange-700">US${brentData.currentBrentUSD.toFixed(1)}/bbl</span>
@@ -7798,7 +7800,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               <div className="mb-5 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-200 overflow-hidden">
                 <div className="px-4 py-3 border-b border-indigo-200/50 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-base">🧠</span>
+                    <Icon name="brain" className="w-4 h-4 text-indigo-600" />
                     <div>
                       <h5 className="text-xs font-bold text-indigo-800">Brent → AVGAS Predictive Intelligence</h5>
                       <p className="text-[9px] text-indigo-500">WLS (λ={brentAvgasCorrelation.lambda}, t½={brentAvgasCorrelation.halfLife}m) · {brentAvgasCorrelation.totalWeeks} weeks · Lag {brentAvgasCorrelation.bestLag}m · R²={brentAvgasCorrelation.bestR2.toFixed(3)}</p>
@@ -7872,7 +7874,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {/* Volatility */}
                     <div className="p-2.5 bg-white/50 rounded-lg border border-slate-200/50">
-                      <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-1">📊 Volatility</p>
+                      <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1"><Icon name="chart" className="w-3 h-3" /> Volatility</p>
                       <div className="space-y-1 text-[10px]">
                         <div className="flex justify-between">
                           <span className="text-slate-500">8w σ (Brent)</span>
@@ -7888,7 +7890,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                     </div>
                     {/* FX Sensitivity */}
                     <div className="p-2.5 bg-white/50 rounded-lg border border-slate-200/50">
-                      <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-1">💱 FX Sensitivity</p>
+                      <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1"><Icon name="money" className="w-3 h-3" /> FX Sensitivity</p>
                       <div className="space-y-1 text-[10px]">
                         <div className="flex justify-between">
                           <span className="text-slate-500">FX β (residual)</span>
@@ -7904,12 +7906,12 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                     </div>
                     {/* Structural Break */}
                     <div className="p-2.5 bg-white/50 rounded-lg border border-slate-200/50">
-                      <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-1">🔬 Regime / Break</p>
+                      <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1"><Icon name="lab" className="w-3 h-3" /> Regime / Break</p>
                       <div className="space-y-1 text-[10px]">
                         <div className="flex justify-between">
                           <span className="text-slate-500">Hard break</span>
                           <span className={`font-mono font-bold ${brentAvgasCorrelation.structuralBreak?.detected ? 'text-orange-600' : 'text-emerald-600'}`}>
-                            {brentAvgasCorrelation.structuralBreak?.detected ? '⚠️ YES' : '✓ Stable'}
+                            {brentAvgasCorrelation.structuralBreak?.detected ? <span className="inline-flex items-center gap-1"><Icon name="warning" className="w-3 h-3" /> YES</span> : <span className="inline-flex items-center gap-1"><Icon name="check" className="w-3 h-3" /> Stable</span>}
                           </span>
                         </div>
                         <div className="flex justify-between">
@@ -7954,7 +7956,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                               : 'bg-slate-100 text-slate-500'
                           }`}>
                             {b.label}: ${formatCurrency(b.price)}
-                            {b.isWinner && ' ✓'}
+                            {b.isWinner && <Icon name="check" className="inline w-3 h-3 ml-0.5 align-text-bottom" />}
                           </span>
                         ))}
                       </div>

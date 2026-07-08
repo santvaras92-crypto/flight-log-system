@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { todayLocalString } from "../../lib/date-utils";
+import { Icon } from "./Icon";
 
 interface UploadResponse {
   success: boolean;
@@ -399,7 +400,7 @@ export default function FlightUploadForm({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                     <div>
-                      <p className="font-bold text-sm sm:text-base" style={{ color: 'var(--accent-warning)' }}>⚠️ Verificar Contadores</p>
+                      <p className="font-bold text-sm sm:text-base" style={{ color: 'var(--accent-warning)' }}>Verificar Contadores</p>
                       <p className="text-xs sm:text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
                         {ratioWarning.message}. Ratio actual: <span className="font-mono font-bold">{ratioWarning.ratio}</span>{' '}
                         (esperado: {ratioWarning.expected} para {ratioWarning.bucket}h)
@@ -480,7 +481,7 @@ export default function FlightUploadForm({
                   />
                   {hobbsImage && (
                     <div className="mt-3 p-3 rounded-lg border" style={{ background: 'rgba(16, 185, 129, 0.1)', borderColor: 'var(--accent-success)' }}>
-                      <p className="text-xs font-semibold" style={{ color: 'var(--accent-success)' }}>✓ {hobbsImage.name}</p>
+                      <p className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--accent-success)' }}><Icon name="check" className="w-3.5 h-3.5" /> {hobbsImage.name}</p>
                       <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{(hobbsImage.size / 1024).toFixed(0)} KB</p>
                     </div>
                   )}
@@ -504,7 +505,7 @@ export default function FlightUploadForm({
                   />
                   {tachImage && (
                     <div className="mt-3 p-3 rounded-lg border" style={{ background: 'rgba(16, 185, 129, 0.1)', borderColor: 'var(--accent-success)' }}>
-                      <p className="text-xs font-semibold" style={{ color: 'var(--accent-success)' }}>✓ {tachImage.name}</p>
+                      <p className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--accent-success)' }}><Icon name="check" className="w-3.5 h-3.5" /> {tachImage.name}</p>
                       <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{(tachImage.size / 1024).toFixed(0)} KB</p>
                     </div>
                   )}

@@ -10,6 +10,7 @@ import Link from 'next/link';
 import ImagePreviewModal from '@/app/components/ImagePreviewModal';
 import { generateFlightLogbookPDF, type FlightLogbookData } from '../../../lib/generate-flight-logbook-pdf';
 import { todayLocalString } from '../../../lib/date-utils';
+import { Icon } from '../../components/Icon';
 
 type PilotOpt = { id: string | number; value: string; label: string };
 
@@ -734,7 +735,7 @@ export default function RegisterClient({
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
                         <div className="flex-1">
-                          <h4 className="text-sm font-bold text-red-900 mb-1">⚠️ RATIO HOBBS/TACH FUERA DE RANGO</h4>
+                          <h4 className="text-sm font-bold text-red-900 mb-1">RATIO HOBBS/TACH FUERA DE RANGO</h4>
                           <p className="text-sm text-red-800 mb-2">
                             El ratio calculado es <strong className="font-mono">{ratioWarning.ratio.toFixed(2)}x</strong>
                             {' '}(Δ HOBBS: {deltaHobbs?.toFixed(1)} hrs ÷ Δ TACH: {deltaTach?.toFixed(1)} hrs)
@@ -886,7 +887,7 @@ export default function RegisterClient({
                 {precioLitro !== null && (
                   <div className="rounded-lg p-3 bg-emerald-50 border border-emerald-200">
                     <p className="text-sm text-emerald-800 font-medium">
-                      ⛽ Precio AVGAS: <span className="text-lg font-bold">${precioLitro.toLocaleString('es-CL')}</span> /litro
+                      <Icon name="fuel" className="inline w-4 h-4 mr-1 align-text-bottom" /> Precio AVGAS: <span className="text-lg font-bold">${precioLitro.toLocaleString('es-CL')}</span> /litro
                     </p>
                   </div>
                 )}
@@ -965,13 +966,13 @@ export default function RegisterClient({
 
             {/* Success/Error messages near the submit button */}
             {formError && (
-              <div className="rounded-lg p-3 border border-red-400 bg-red-50 text-sm text-red-800 font-medium">
-                ⚠️ {formError}
+              <div className="rounded-lg p-3 border border-red-400 bg-red-50 text-sm text-red-800 font-medium flex items-center gap-2">
+                <Icon name="warning" className="w-4 h-4 flex-shrink-0" /> {formError}
               </div>
             )}
             {formSuccess && (
-              <div className="rounded-lg p-3 border border-green-500 bg-green-50 text-sm text-green-800 font-medium">
-                ✅ {formSuccess}
+              <div className="rounded-lg p-3 border border-green-500 bg-green-50 text-sm text-green-800 font-medium flex items-center gap-2">
+                <Icon name="checkCircle" className="w-4 h-4 flex-shrink-0" /> {formSuccess}
               </div>
             )}
 
@@ -990,7 +991,7 @@ export default function RegisterClient({
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
                 )}
-                {submitting ? '⏳ Procesando...' : '✓ Enviar a validación'}
+                {submitting ? 'Procesando...' : <span className="inline-flex items-center gap-2"><Icon name="check" className="w-5 h-5" /> Enviar a validación</span>}
               </button>
             </div>
           </form>
@@ -1076,7 +1077,7 @@ export default function RegisterClient({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                     <div className="flex-1">
-                      <h4 className="text-sm font-bold text-red-900 mb-1">⚠️ RATIO HOBBS/TACH FUERA DE RANGO</h4>
+                      <h4 className="text-sm font-bold text-red-900 mb-1">RATIO HOBBS/TACH FUERA DE RANGO</h4>
                       <p className="text-sm text-red-800">
                         Ratio: <strong className="font-mono">{ratioWarning.ratio.toFixed(2)}x</strong>{' '}
                         (esperado: {ratioWarning.expected.toFixed(2)}x para {ratioWarning.bucket}h, N={ratioWarning.sampleSize})
@@ -1129,7 +1130,7 @@ export default function RegisterClient({
                       Enviando...
                     </>
                   ) : (
-                    <>✓ Confirmar y Enviar</>
+                    <><Icon name="check" className="w-5 h-5" /> Confirmar y Enviar</>
                   )}
                 </button>
               </div>
@@ -1231,7 +1232,7 @@ export default function RegisterClient({
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  💾 Guardar PDF
+                  Guardar PDF
                 </button>
                 <button
                   type="button"

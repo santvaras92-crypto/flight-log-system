@@ -7,6 +7,7 @@ import { approveFlightSubmission } from '../../actions/approve-flight';
 import { cancelFlightSubmission } from '../../actions/cancel-submission';
 import ImagePreviewModal from '../../components/ImagePreviewModal';
 import { formatFecha } from '../../../lib/date-utils';
+import { Icon, type IconName } from '../../components/Icon';
 
 interface FuelItem {
   id: number;
@@ -131,9 +132,9 @@ export default function ValidacionClient({
   };
 
   const tabs = [
-    { id: 'flights' as Tab, label: 'Vuelos', icon: '✈️', count: flightsData.length, color: 'blue' },
-    { id: 'deposits' as Tab, label: 'Depósitos', icon: '💰', count: depositData.length, color: 'emerald' },
-    { id: 'fuel' as Tab, label: 'Combustible', icon: '⛽', count: fuelData.length, color: 'amber' },
+    { id: 'flights' as Tab, label: 'Vuelos', icon: 'airframe' as IconName, count: flightsData.length, color: 'blue' },
+    { id: 'deposits' as Tab, label: 'Depósitos', icon: 'money' as IconName, count: depositData.length, color: 'emerald' },
+    { id: 'fuel' as Tab, label: 'Combustible', icon: 'fuel' as IconName, count: fuelData.length, color: 'amber' },
   ];
 
   const handleApproveFlightSubmission = async (flight: FlightItem) => {
@@ -172,8 +173,9 @@ export default function ValidacionClient({
     <div className="space-y-6">
       {/* Message */}
       {message && (
-        <div className={`p-4 rounded-lg ${message.startsWith('✓') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-          {message}
+        <div className={`p-4 rounded-lg flex items-center gap-2 ${message.startsWith('✓') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          <Icon name={message.startsWith('✓') ? 'checkCircle' : 'warning'} className="w-5 h-5 flex-shrink-0" />
+          <span>{message.replace(/^✓\s*/, '')}</span>
         </div>
       )}
 
@@ -192,7 +194,7 @@ export default function ValidacionClient({
               backgroundColor: tab.color === 'blue' ? '#2563eb' : tab.color === 'emerald' ? '#059669' : '#d97706'
             } : {}}
           >
-            <span>{tab.icon}</span>
+            <Icon name={tab.icon} className="w-4 h-4" />
             <span className="hidden xs:inline sm:inline">{tab.label}</span>
             {tab.count > 0 && (
               <span className={`px-1.5 sm:px-2 py-0.5 text-xs rounded-full ${
@@ -212,7 +214,7 @@ export default function ValidacionClient({
           <div className="space-y-4">
             {flightsData.length === 0 ? (
               <div className="text-center py-12 text-slate-500">
-                <span className="text-4xl block mb-2">✈️</span>
+                <div className="flex justify-center mb-3"><Icon name="airframe" className="w-8 h-8 text-slate-300" /></div>
                 No hay vuelos pendientes de aprobación
               </div>
             ) : (
@@ -305,7 +307,7 @@ export default function ValidacionClient({
                         {/* UF Info Badge */}
                         <div className="flex items-center gap-3 mb-4 pb-3 border-b border-slate-200">
                           <div className="flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1.5 rounded-full">
-                            <span className="text-sm">📊</span>
+                            <Icon name="chart" className="w-4 h-4" />
                             <span className="text-sm font-medium">UF del vuelo: ${formatUFDisplay(flight.ufValor)}</span>
                           </div>
                           <div className="text-xs text-slate-500">
@@ -390,7 +392,7 @@ export default function ValidacionClient({
           <div className="space-y-4">
             {depositData.length === 0 ? (
               <div className="text-center py-12 text-slate-500">
-                <span className="text-4xl block mb-2">💰</span>
+                <div className="flex justify-center mb-3"><Icon name="money" className="w-8 h-8 text-slate-300" /></div>
                 No hay depósitos pendientes de aprobación
               </div>
             ) : (
@@ -487,7 +489,7 @@ export default function ValidacionClient({
           <div className="space-y-4">
             {fuelData.length === 0 ? (
               <div className="text-center py-12 text-slate-500">
-                <span className="text-4xl block mb-2">⛽</span>
+                <div className="flex justify-center mb-3"><Icon name="fuel" className="w-8 h-8 text-slate-300" /></div>
                 No hay registros de combustible pendientes
               </div>
             ) : (

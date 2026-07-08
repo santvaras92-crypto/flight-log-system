@@ -2,6 +2,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { Icon } from "../components/Icon";
 
 function ResetPasswordContent() {
   const searchParams = useSearchParams();
@@ -118,7 +119,7 @@ function ResetPasswordContent() {
             <img src="/logo.png" alt="CC-AQI" className="h-[8.162rem] w-auto" />
           </div>
           <div className="bg-white shadow rounded p-6 space-y-4 text-center">
-            <div className="text-green-500 text-5xl mb-2">✓</div>
+            <div className="flex justify-center mb-2"><Icon name="checkCircle" className="w-16 h-16 text-green-500" /></div>
             <h1 className="text-xl font-semibold text-green-600">¡Contraseña Actualizada!</h1>
             <p className="text-sm text-gray-600">{message.text}</p>
             <Link 

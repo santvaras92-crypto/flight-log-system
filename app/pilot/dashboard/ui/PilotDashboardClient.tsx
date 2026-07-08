@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { formatFecha, parseLocalDate, getDateYear } from "../../../../lib/date-utils";
+import { Icon } from "../../../components/Icon";
 
 const PilotEngineDetail = dynamic(() => import("./PilotEngineDetail"), {
   ssr: false,
@@ -323,7 +324,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
               </div>
               <h3 className="text-slate-900 text-[10px] sm:text-xs font-bold uppercase tracking-wide">Tu Actividad</h3>
             </div>
-            <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[8px] sm:text-[10px] font-bold rounded-full">📊</span>
+            <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[8px] sm:text-[10px] font-bold rounded-full inline-flex items-center"><Icon name="chart" className="w-3 h-3" /></span>
           </div>
           
           {/* Main number - inline con label */}
@@ -363,8 +364,8 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
           </div>
           
           {/* Info año - solo desktop */}
-          <div className="hidden sm:block text-[9px] text-slate-500">
-            📆 {stats.flightsThisYear} este año
+          <div className="hidden sm:flex items-center gap-1 text-[9px] text-slate-500">
+            <Icon name="calendar" className="w-3 h-3" /> {stats.flightsThisYear} este año
           </div>
         </div>
       );
@@ -401,7 +402,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
           iconText: 'text-red-600',
           textColor: 'text-red-600',
           badge: 'bg-red-100 text-red-700',
-          badgeText: '⚠️ INACTIVO',
+          badgeText: <span className="inline-flex items-center gap-1"><Icon name="warning" className="w-3 h-3" /> INACTIVO</span>,
           ring: 'ring-2 ring-red-400'
         };
         if (daysSince >= 30) return {
@@ -410,7 +411,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
           iconText: 'text-yellow-600',
           textColor: 'text-yellow-600',
           badge: 'bg-yellow-100 text-yellow-700',
-          badgeText: '⚠️',
+          badgeText: <Icon name="warning" className="w-3 h-3" />,
           ring: ''
         };
         return {
@@ -419,7 +420,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
           iconText: 'text-green-600',
           textColor: 'text-green-600',
           badge: 'bg-green-100 text-green-700',
-          badgeText: '✅',
+          badgeText: <Icon name="checkCircle" className="w-3 h-3" />,
           ring: ''
         };
       };
@@ -445,7 +446,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
           </div>
           <p className="text-xs sm:text-sm text-slate-600 font-medium">{formattedDate}</p>
           <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">
-            {daysSince >= 60 ? '⚠️ Más de 60 días sin volar' : daysSince >= 30 ? 'Más de 30 días sin volar' : 'Actividad reciente'}
+            {daysSince >= 60 ? <span className="inline-flex items-center gap-1"><Icon name="warning" className="w-3 h-3" /> Más de 60 días sin volar</span> : daysSince >= 30 ? 'Más de 30 días sin volar' : 'Actividad reciente'}
           </p>
         </div>
       );
@@ -597,13 +598,13 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
               </div>
               <h3 className="text-slate-900 text-xs sm:text-sm font-bold uppercase tracking-wide">Estado Avión</h3>
             </div>
-            <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[8px] sm:text-[10px] font-bold rounded-full">🔮 SMART</span>
+            <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[8px] sm:text-[10px] font-bold rounded-full inline-flex items-center gap-1"><Icon name="smart" className="w-3 h-3" /> SMART</span>
           </div>
           
           {/* Oil Change Section */}
           <div className="mb-3 sm:mb-4">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] sm:text-xs font-bold text-slate-700">🛢️ CAMBIO ACEITE</span>
+              <span className="text-[10px] sm:text-xs font-bold text-slate-700 inline-flex items-center gap-1"><Icon name="oil" className="w-3.5 h-3.5" /> CAMBIO ACEITE</span>
               <span className="text-[10px] sm:text-xs font-mono text-slate-600">{oilPct.toFixed(0)}%</span>
             </div>
             <div className={`w-full h-2.5 sm:h-3 rounded-full ${getProgressBg(oilRemaining, OIL_INTERVAL)} overflow-hidden`}>
@@ -618,7 +619,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
               </div>
               {weightedRate > 0 && (
                 <div className="text-[10px] sm:text-xs text-slate-900 font-bold flex items-center gap-1">
-                  📅 {formatDateShort(oilPred.date)} <span className="text-slate-600 font-semibold">{oilPred.days}d</span>
+                  <Icon name="calendar" className="w-3 h-3" /> {formatDateShort(oilPred.date)} <span className="text-slate-600 font-semibold">{oilPred.days}d</span>
                 </div>
               )}
             </div>
@@ -627,7 +628,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
           {/* 100hr Inspection Section */}
           <div className="mb-3 sm:mb-4">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] sm:text-xs font-bold text-slate-700">⚙️ INSPECCIÓN 100 HRS</span>
+              <span className="text-[10px] sm:text-xs font-bold text-slate-700 inline-flex items-center gap-1"><Icon name="wrench" className="w-3.5 h-3.5" /> INSPECCIÓN 100 HRS</span>
               <span className="text-[10px] sm:text-xs font-mono text-slate-600">{hundredPct.toFixed(0)}%</span>
             </div>
             <div className={`w-full h-2.5 sm:h-3 rounded-full ${getProgressBg(hundredRemaining, HUNDRED_HR_INTERVAL)} overflow-hidden`}>
@@ -642,7 +643,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
               </div>
               {weightedRate > 0 && (
                 <div className="text-[10px] sm:text-xs text-slate-900 font-bold flex items-center gap-1">
-                  📅 {formatDateShort(hundredPred.date)} <span className="text-slate-600 font-semibold">{hundredPred.days}d</span>
+                  <Icon name="calendar" className="w-3 h-3" /> {formatDateShort(hundredPred.date)} <span className="text-slate-600 font-semibold">{hundredPred.days}d</span>
                 </div>
               )}
             </div>
@@ -737,7 +738,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
                 <th className="px-4 py-3 text-right font-medium text-slate-600">Costo</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-600">Instructor</th>
                 <th className="px-4 py-3 text-left font-medium text-slate-600">Detalle</th>
-                <th className="px-4 py-3 text-center font-medium text-slate-600" title="Engine Monitor">🔧</th>
+                <th className="px-4 py-3 text-center font-medium text-slate-600" title="Engine Monitor"><span className="inline-flex justify-center w-full"><Icon name="engine" className="w-4 h-4" title="Engine Monitor" /></span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -769,7 +770,7 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
                         className="px-2 py-1 text-xs rounded-lg font-medium transition-colors bg-blue-100 hover:bg-blue-200 text-blue-700"
                         title={`Ver análisis completo del motor${flight.engineFlightIds.length > 1 ? ` (${flight.engineFlightIds.length} tramos)` : ''}`}
                       >
-                        🔧{flight.engineFlightIds.length > 1 ? ` ${flight.engineFlightIds.length}` : ''}
+                        <span className="inline-flex items-center gap-1"><Icon name="engine" className="w-3.5 h-3.5" />{flight.engineFlightIds.length > 1 ? ` ${flight.engineFlightIds.length}` : ''}</span>
                       </button>
                     ) : (
                       <span className="text-slate-300 text-xs">—</span>

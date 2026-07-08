@@ -4,6 +4,7 @@ import { useState, useTransition, useEffect } from "react";
 import { approveFlightSubmission } from "@/app/actions/approve-flight";
 import { cancelFlightSubmission } from "@/app/actions/cancel-submission";
 import { formatFecha } from "@/lib/date-utils";
+import { Icon } from "@/app/components/Icon";
 
 interface DecimalLike {
   toNumber?: () => number;
@@ -165,12 +166,13 @@ export default function AdminSubmissions({ initialData }: { initialData: Submiss
             <option value="CANCELADO">Cancelados</option>
           </select>
           {message && (
-            <div className="text-xs sm:text-sm px-4 py-2 rounded-lg border flex-1" style={{ 
+            <div className="text-xs sm:text-sm px-4 py-2 rounded-lg border flex-1 flex items-center gap-2" style={{ 
               background: message.startsWith('✓') ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
               borderColor: message.startsWith('✓') ? 'var(--accent-success)' : 'var(--accent-danger)',
               color: message.startsWith('✓') ? 'var(--accent-success)' : 'var(--accent-danger)'
             }}>
-              {message}
+              <Icon name={message.startsWith('✓') ? 'checkCircle' : 'warning'} className="w-4 h-4 flex-shrink-0" />
+              <span>{message.replace(/^[✓✗]\s*/, '')}</span>
             </div>
           )}
         </div>
@@ -309,7 +311,7 @@ export default function AdminSubmissions({ initialData }: { initialData: Submiss
                       onClick={() => handleApprove(s.id)}
                       className="btn-executive btn-executive-primary w-full sm:w-auto"
                     >
-                      {isPending && pendingId === s.id ? "Procesando..." : "✓ Aprobar y Registrar Vuelo"}
+                      {isPending && pendingId === s.id ? "Procesando..." : <span className="inline-flex items-center gap-1.5"><Icon name="check" className="w-4 h-4" /> Aprobar y Registrar Vuelo</span>}
                     </button>
                     <button
                       disabled={isPending && pendingId === s.id}
@@ -325,7 +327,7 @@ export default function AdminSubmissions({ initialData }: { initialData: Submiss
               {s.estado === "COMPLETADO" && s.flight && (
                 <div className="rounded-lg p-3 border" style={{ background: 'rgba(16, 185, 129, 0.15)', borderColor: 'var(--accent-success)' }}>
                   <p className="text-sm" style={{ color: 'var(--accent-success)' }}>
-                    <span className="font-bold">✓ Vuelo registrado</span>
+                    <span className="font-bold inline-flex items-center gap-1"><Icon name="check" className="w-4 h-4" /> Vuelo registrado</span>
                     {' · '}Δ Hobbs: {safeNum(s.flight.diff_hobbs)?.toFixed(1)}
                     {' · '}Costo: ${safeNum(s.flight.costo)?.toLocaleString('es-CL')}
                   </p>

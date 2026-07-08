@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { formatFecha, parseLocalDate } from "../../../../lib/date-utils";
+import { Icon, type IconName } from "../../../components/Icon";
 
 const FlightMap = dynamic(() => import("@/app/components/FlightMap"), { ssr: false, loading: () => <div className="h-[350px] bg-slate-50 rounded-xl border border-slate-200 animate-pulse" /> });
 import {
@@ -194,16 +195,16 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
       const data = await res.json();
       if (res.ok) {
         if (data.source === "jpi") {
-          setUploadMsg({ type: "success", text: `✅ JPI: ${data.imported} flight(s) imported, ${data.totalReadings} readings${data.duplicates > 0 ? `, ${data.duplicates} duplicate(s) skipped` : ""}` });
+          setUploadMsg({ type: "success", text: `JPI: ${data.imported} flight(s) imported, ${data.totalReadings} readings${data.duplicates > 0 ? `, ${data.duplicates} duplicate(s) skipped` : ""}` });
         } else {
-          setUploadMsg({ type: "success", text: `✅ Flight #${data.flightNumber} imported — ${data.readingsCount} readings` });
+          setUploadMsg({ type: "success", text: `Flight #${data.flightNumber} imported — ${data.readingsCount} readings` });
         }
         loadFlights();
       } else {
-        setUploadMsg({ type: "error", text: `❌ ${data.error}` });
+        setUploadMsg({ type: "error", text: `${data.error}` });
       }
     } catch (err: any) {
-      setUploadMsg({ type: "error", text: `❌ ${err.message}` });
+      setUploadMsg({ type: "error", text: `${err.message}` });
     }
     setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -224,14 +225,14 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
       const res = await fetch("/api/engine-data/kml-gps", { method: "POST", body: formData });
       const data = await res.json();
       if (res.ok) {
-        setKmlMsg({ type: "success", text: `✅ GPS importado: ${data.updatedCount} readings actualizados de ${data.matchedCount} puntos` });
+        setKmlMsg({ type: "success", text: `GPS importado: ${data.updatedCount} readings actualizados de ${data.matchedCount} puntos` });
         // Reload the flight detail to show the new GPS data
         loadFlightDetail(selectedFlight.id);
       } else {
-        setKmlMsg({ type: "error", text: `❌ ${data.error}` });
+        setKmlMsg({ type: "error", text: `${data.error}` });
       }
     } catch (err: any) {
-      setKmlMsg({ type: "error", text: `❌ ${err.message}` });
+      setKmlMsg({ type: "error", text: `${err.message}` });
     }
     setUploadingKml(false);
     if (kmlInputRef.current) kmlInputRef.current.value = "";
@@ -712,7 +713,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-            🔧 Engine Monitor — JPI EDM-830
+            <Icon name="engine" className="w-5 h-5 text-slate-500" /> Engine Monitor — JPI EDM-830
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
             Lycoming O-320-D2J · S/N RL-7662-39E · CC-AQI
@@ -738,9 +739,9 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
             />
             <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${uploading ? "bg-slate-200 text-slate-400" : "bg-blue-600 hover:bg-blue-700 text-white"}`}>
               {uploading ? (
-                <><span className="animate-spin">⏳</span> Uploading...</>
+                <><Icon name="refresh" className="w-3.5 h-3.5 animate-spin" /> Uploading...</>
               ) : (
-                <>📤 Upload CSV/JPI</>
+                <><Icon name="upload" className="w-3.5 h-3.5" /> Upload CSV/JPI</>
               )}
             </span>
           </label>
@@ -749,8 +750,9 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
 
       {/* Upload message */}
       {uploadMsg && (
-        <div className={`px-3 py-2 rounded-lg text-xs font-medium ${uploadMsg.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
-          {uploadMsg.text}
+        <div className={`px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-2 ${uploadMsg.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+          <Icon name={uploadMsg.type === "success" ? "checkCircle" : "warning"} className="w-4 h-4 flex-shrink-0" />
+          <span>{uploadMsg.text}</span>
         </div>
       )}
 
@@ -761,15 +763,15 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
           {fleetStats && (
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
               {[
-                { label: "Total Flights", value: fleetStats.totalFlights, icon: "✈️" },
-                { label: "Monitor Hours", value: `${fleetStats.totalHours}h`, icon: "⏱️" },
-                { label: "Avg Max CHT", value: `${fleetStats.avgMaxCHT}°F`, icon: "🌡️", warn: Number(fleetStats.avgMaxCHT) >= ENGINE_LIMITS.cht_caution },
-                { label: "Peak EGT", value: `${fleetStats.peakEGT}°F`, icon: "🔥" },
-                { label: "Avg Oil Temp", value: `${fleetStats.avgOilTemp}°F`, icon: "🛢️" },
-                { label: "CHT Exceedances", value: fleetStats.chtExceedances, icon: "⚠️", warn: fleetStats.chtExceedances > 0 },
+                { label: "Total Flights", value: fleetStats.totalFlights, icon: "airframe" as IconName },
+                { label: "Monitor Hours", value: `${fleetStats.totalHours}h`, icon: "timer" as IconName },
+                { label: "Avg Max CHT", value: `${fleetStats.avgMaxCHT}°F`, icon: "temperature" as IconName, warn: Number(fleetStats.avgMaxCHT) >= ENGINE_LIMITS.cht_caution },
+                { label: "Peak EGT", value: `${fleetStats.peakEGT}°F`, icon: "fire" as IconName },
+                { label: "Avg Oil Temp", value: `${fleetStats.avgOilTemp}°F`, icon: "oil" as IconName },
+                { label: "CHT Exceedances", value: fleetStats.chtExceedances, icon: "warning" as IconName, warn: fleetStats.chtExceedances > 0 },
               ].map((s, i) => (
                 <div key={i} className={`rounded-xl p-3 border ${s.warn ? "bg-red-50 border-red-200" : "bg-white border-slate-200"}`}>
-                  <div className="text-xs text-slate-500">{s.icon} {s.label}</div>
+                  <div className="text-xs text-slate-500 flex items-center gap-1"><Icon name={s.icon} className="w-3.5 h-3.5" /> {s.label}</div>
                   <div className={`text-lg font-bold mt-0.5 ${s.warn ? "text-red-600" : "text-slate-800"}`}>{s.value}</div>
                 </div>
               ))}
@@ -930,7 +932,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
 
           {flights.length === 0 && (
             <div className="text-center py-12 text-slate-400">
-              <div className="text-4xl mb-2">📊</div>
+              <div className="flex justify-center mb-3"><Icon name="chart" className="w-8 h-8 text-slate-300" /></div>
               <p>No engine data yet. Upload a JPI EDM-830 CSV file to get started.</p>
             </div>
           )}
@@ -1051,13 +1053,13 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
                       Flight Log #{selectedFlight.linkedFlight.id}
                     </span>
                     {selectedFlight.linkedFlight.piloto && (
-                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-700" title="Piloto">✈ {selectedFlight.linkedFlight.piloto}</span>
+                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-700 inline-flex items-center gap-1" title="Piloto"><Icon name="pilot" className="w-3 h-3" /> {selectedFlight.linkedFlight.piloto}</span>
                     )}
                     {selectedFlight.linkedFlight.copiloto && (
                       <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-600" title="Copiloto">+{selectedFlight.linkedFlight.copiloto}</span>
                     )}
                     {selectedFlight.linkedFlight.instructor && (
-                      <span className="bg-amber-50 rounded-md px-2 py-0.5 text-amber-700 border border-amber-200" title="Instructor">🎓 {selectedFlight.linkedFlight.instructor}</span>
+                      <span className="bg-amber-50 rounded-md px-2 py-0.5 text-amber-700 border border-amber-200 inline-flex items-center gap-1" title="Instructor"><Icon name="graduation" className="w-3 h-3" /> {selectedFlight.linkedFlight.instructor}</span>
                     )}
                     {selectedFlight.linkedFlight.diffHobbs != null && (
                       <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-700 font-mono">{selectedFlight.linkedFlight.diffHobbs.toFixed(1)}h hobbs</span>
@@ -1120,8 +1122,8 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
 
               {/* 4 Charts Grid */}
               {chartError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2 text-xs">
-                  ⚠️ No se pudieron dibujar los gráficos: {chartError}
+                <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2 text-xs flex items-center gap-1.5">
+                  <Icon name="warning" className="w-4 h-4 flex-shrink-0" /> No se pudieron dibujar los gráficos: {chartError}
                 </div>
               )}
               <div ref={chartsGridRef} className="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -1162,7 +1164,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
                     )}
                     {/* KML Upload area */}
                     <div className={`${hasGps ? 'mt-2 flex items-center justify-between' : 'bg-slate-50 rounded-xl border border-dashed border-slate-300 p-6 flex flex-col items-center gap-3'}`}>
-                      {!hasGps && <span className="text-slate-400 text-sm">📍 Sin datos GPS para este vuelo</span>}
+                      {!hasGps && <span className="text-slate-400 text-sm inline-flex items-center gap-1"><Icon name="location" className="w-4 h-4" /> Sin datos GPS para este vuelo</span>}
                       <input
                         ref={kmlInputRef}
                         type="file"
@@ -1187,15 +1189,15 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
                               Importando...
                             </>
                           ) : hasGps ? (
-                            <>🔄 Reemplazar GPS desde KML</>
+                            <><Icon name="refresh" className="w-4 h-4" /> Reemplazar GPS desde KML</>
                           ) : (
-                            <>📂 Importar GPS desde KML</>
+                            <><Icon name="folder" className="w-4 h-4" /> Importar GPS desde KML</>
                           )}
                         </button>
                       </div>
                       {kmlMsg && (
-                        <p className={`text-xs ${kmlMsg.type === "success" ? "text-green-600" : "text-red-600"}`}>
-                          {kmlMsg.text}
+                        <p className={`text-xs flex items-center gap-1 ${kmlMsg.type === "success" ? "text-green-600" : "text-red-600"}`}>
+                          <Icon name={kmlMsg.type === "success" ? "checkCircle" : "warning"} className="w-3.5 h-3.5 flex-shrink-0" /> {kmlMsg.text}
                         </p>
                       )}
                     </div>

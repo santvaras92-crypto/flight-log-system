@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { updateCounters } from "../../actions/update-counters";
 import { formatFecha } from "../../../lib/date-utils";
+import { Icon } from "../../components/Icon";
 
 interface Flight {
   id: number;
@@ -81,16 +82,16 @@ export default function CountersClient({
       });
 
       if (result.success) {
-        setMessage({ type: 'success', text: '✓ Contadores actualizados correctamente' });
+        setMessage({ type: 'success', text: 'Contadores actualizados correctamente' });
         // Recargar la página después de 2 segundos
         setTimeout(() => {
           window.location.reload();
         }, 2000);
       } else {
-        setMessage({ type: 'error', text: `✗ Error: ${result.error}` });
+        setMessage({ type: 'error', text: `Error: ${result.error}` });
       }
     } catch (error: any) {
-      setMessage({ type: 'error', text: `✗ Error: ${error.message}` });
+      setMessage({ type: 'error', text: `Error: ${error.message}` });
     } finally {
       setSaving(false);
     }
@@ -103,8 +104,9 @@ export default function CountersClient({
         <div 
           className={`rounded-xl p-4 ${message.type === 'success' ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500'} border-2`}
         >
-          <p className={`text-sm font-medium ${message.type === 'success' ? 'text-green-900' : 'text-red-900'}`}>
-            {message.text}
+          <p className={`text-sm font-medium flex items-center gap-2 ${message.type === 'success' ? 'text-green-900' : 'text-red-900'}`}>
+            <Icon name={message.type === 'success' ? 'checkCircle' : 'warning'} className="w-4 h-4 flex-shrink-0" />
+            <span>{message.text}</span>
           </p>
         </div>
       )}
@@ -222,7 +224,7 @@ export default function CountersClient({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           {/* Airplane Rate (Tarifa) */}
           <div className="space-y-4 p-4 rounded-lg bg-purple-50 border border-purple-200">
-            <h3 className="text-sm font-bold uppercase text-purple-900">💰 Tarifa Avión</h3>
+            <h3 className="text-sm font-bold uppercase text-purple-900 flex items-center gap-1.5"><Icon name="money" className="w-4 h-4" /> Tarifa Avión</h3>
             
             <div>
               <label className="block text-xs font-semibold mb-2 text-slate-700">
@@ -250,7 +252,7 @@ export default function CountersClient({
 
           {/* Instructor Rate */}
           <div className="space-y-4 p-4 rounded-lg bg-orange-50 border border-orange-200">
-            <h3 className="text-sm font-bold uppercase text-orange-900">👨‍✈️ Instructor/SP Rate</h3>
+            <h3 className="text-sm font-bold uppercase text-orange-900 flex items-center gap-1.5"><Icon name="pilot" className="w-4 h-4" /> Instructor/SP Rate</h3>
             
             <div>
               <label className="block text-xs font-semibold mb-2 text-slate-700">
@@ -282,7 +284,7 @@ export default function CountersClient({
           <div className="mb-6 p-4 rounded-lg bg-yellow-50 border-2 border-yellow-400">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold text-yellow-700 mb-1">💵 Costo Estimado del Vuelo</p>
+                <p className="text-xs font-bold text-yellow-700 mb-1 flex items-center gap-1.5"><Icon name="cash" className="w-4 h-4" /> Costo Estimado del Vuelo</p>
                 <p className="text-xs text-yellow-600">
                   ({deltaHobbs} hrs × ${((parseFloat(tarifa) || 0) + (parseFloat(instructorRate) || 0)).toLocaleString('es-CL')}/hr)
                 </p>
@@ -337,7 +339,7 @@ export default function CountersClient({
             background: saving ? 'var(--text-muted)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
           }}
         >
-          {saving ? 'Guardando...' : '💾 Guardar Cambios'}
+          {saving ? 'Guardando...' : <span className="inline-flex items-center gap-2"><Icon name="save" className="w-5 h-5" /> Guardar Cambios</span>}
         </button>
       </div>
 

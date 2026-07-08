@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { Icon } from "./Icon";
 
 interface GpsPoint {
   lat: number;
@@ -268,11 +269,11 @@ export default function FlightMap({ points, className, gpsSource, calibration }:
 
     L.marker(latLngs[0], { icon: startIcon })
       .addTo(map)
-      .bindPopup("🟢 Inicio");
+      .bindPopup('<span style="color:#16a34a">●</span> Inicio');
 
     L.marker(latLngs[latLngs.length - 1], { icon: endIcon })
       .addTo(map)
-      .bindPopup("🔴 Fin");
+      .bindPopup('<span style="color:#dc2626">●</span> Fin');
 
     // Fit bounds with padding
     const bounds = L.latLngBounds(latLngs);
@@ -302,7 +303,7 @@ export default function FlightMap({ points, className, gpsSource, calibration }:
   if (displayPoints.length < 2) {
     return (
       <div className={`bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-center text-slate-400 text-sm ${className || ""}`} style={{ height: 200 }}>
-        <span>📍 Sin datos GPS para este vuelo</span>
+        <span className="inline-flex items-center gap-1"><Icon name="location" className="w-4 h-4" /> Sin datos GPS para este vuelo</span>
       </div>
     );
   }
@@ -315,10 +316,10 @@ export default function FlightMap({ points, className, gpsSource, calibration }:
     <div className={`relative ${className || ""}`}>
       {/* GPS Stats Bar */}
       <div className="flex items-center gap-4 px-3 py-1.5 bg-slate-800 text-white text-xs rounded-t-xl">
-        <span className="font-semibold text-slate-300">{gpsSource === "kml" ? "📍 GPS desde KML" : hasCalibration ? "📍 GPS JPI (calibrado)" : "📍 GPS Track"}</span>
+        <span className="font-semibold text-slate-300 inline-flex items-center gap-1"><Icon name="location" className="w-3.5 h-3.5" /> {gpsSource === "kml" ? "GPS desde KML" : hasCalibration ? "GPS JPI (calibrado)" : "GPS Track"}</span>
         <span>{displayPoints.length} pts</span>
-        {gpsMaxAlt > 0 && <span>⬆ {Math.round(gpsMaxAlt * 3.281)} ft</span>}
-        {maxSpd > 0 && <span>🏃 {Math.round(maxSpd)} kts</span>}
+        {gpsMaxAlt > 0 && <span>↑ {Math.round(gpsMaxAlt * 3.281)} ft</span>}
+        {maxSpd > 0 && <span className="inline-flex items-center gap-1"><Icon name="gauge" className="w-3.5 h-3.5" /> {Math.round(maxSpd)} kts</span>}
         <div className="flex-1" />
         <button
           onClick={() => setExpanded(!expanded)}

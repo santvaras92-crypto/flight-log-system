@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { searchExistingPilots, createOrUpdatePilot } from "../../actions/pilot-actions";
 import { toDateString } from "@/lib/date-utils";
+import { Icon } from "../../components/Icon";
 
 type MatchedPilot = {
   id: number;
@@ -232,8 +233,8 @@ export default function NewPilotPublicPage() {
               background: 'rgba(59, 130, 246, 0.15)',
               border: '1px solid rgba(59, 130, 246, 0.5)'
             }}>
-              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                ✓ Encontramos tu perfil: <span className="font-bold">{duplicateCheck.pilot.nombre}</span> (Código: {duplicateCheck.pilot.codigo})
+              <p className="text-sm font-semibold flex items-center gap-1" style={{ color: 'var(--text-primary)' }}>
+                <Icon name="check" className="w-4 h-4 flex-shrink-0" /> Encontramos tu perfil: <span className="font-bold">{duplicateCheck.pilot.nombre}</span> (Código: {duplicateCheck.pilot.codigo})
               </p>
               <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
                 Tus datos se actualizarán al enviar el formulario

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import Head from "next/head";
+import { Icon } from "../components/Icon";
 
 const DEVICE_TOKEN_KEY = "aqi_device_token";
 
@@ -115,23 +116,23 @@ export default function PilotLayout({ children }: { children: React.ReactNode })
                 className="bg-white/10 hover:bg-white/20 px-2 sm:px-3 py-2 rounded-lg text-sm font-medium transition-colors text-white"
                 title="Registro"
               >
-                <span className="sm:hidden">📝</span>
-                <span className="hidden sm:inline">📝 Registro</span>
+                <span className="sm:hidden"><Icon name="document" className="w-4 h-4" title="Registro" /></span>
+                <span className="hidden sm:inline-flex items-center gap-1"><Icon name="document" className="w-4 h-4" /> Registro</span>
               </a>
               <button
                 onClick={() => setShowPasswordModal(true)}
                 className="bg-white/10 hover:bg-white/20 px-2 sm:px-3 py-2 rounded-lg text-sm font-medium transition-colors text-white"
                 title="Cambiar Contraseña"
               >
-                <span className="sm:hidden">🔒</span>
-                <span className="hidden sm:inline">🔒 Contraseña</span>
+                <span className="sm:hidden"><Icon name="lock" className="w-4 h-4" title="Contraseña" /></span>
+                <span className="hidden sm:inline-flex items-center gap-1"><Icon name="lock" className="w-4 h-4" /> Contraseña</span>
               </button>
               <button
                 onClick={handleLogout}
                 className="bg-white/10 hover:bg-white/20 px-2 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors text-white"
                 title="Cerrar Sesión"
               >
-                <span className="sm:hidden">🚪</span>
+                <span className="sm:hidden"><Icon name="logout" className="w-4 h-4" title="Salir" /></span>
                 <span className="hidden sm:inline">Salir</span>
               </button>
             </div>
@@ -164,7 +165,7 @@ export default function PilotLayout({ children }: { children: React.ReactNode })
                   }}
                   className="text-gray-400 hover:text-gray-600"
                 >
-                  ✕
+                  <Icon name="close" className="w-5 h-5" title="Cerrar" />
                 </button>
               </div>
               <form onSubmit={handleChangePassword} className="space-y-4">

@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { formatFecha } from "../../../../lib/date-utils";
+import { Icon } from "../../../components/Icon";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -418,7 +419,7 @@ export default function PilotEngineDetail({
         <div className="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
           <div>
             <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
-              🔧 Engine Monitor — JPI EDM-830
+              <Icon name="engine" className="w-5 h-5 text-slate-500" /> Engine Monitor — JPI EDM-830
               {multiTramo && <span className="text-xs font-normal text-slate-500 bg-blue-100 text-blue-700 rounded-full px-2 py-0.5 ml-1">{engineFlightIds.length} tramos</span>}
             </h2>
             <p className="text-[11px] text-slate-500 mt-0.5">
@@ -464,7 +465,7 @@ export default function PilotEngineDetail({
             </div>
           ) : !flight ? (
             <div className="text-center py-12 text-slate-400">
-              <div className="text-4xl mb-2">⚠️</div>
+              <div className="flex justify-center mb-3"><Icon name="warning" className="w-8 h-8 text-slate-300" /></div>
               <p>No se pudieron cargar los datos del motor.</p>
             </div>
           ) : (
@@ -512,13 +513,13 @@ export default function PilotEngineDetail({
                       Flight Log #{flight.linkedFlight.id}
                     </span>
                     {flight.linkedFlight.piloto && (
-                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-700" title="Piloto">✈ {flight.linkedFlight.piloto}</span>
+                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-700 inline-flex items-center gap-1" title="Piloto"><Icon name="pilot" className="w-3 h-3" /> {flight.linkedFlight.piloto}</span>
                     )}
                     {flight.linkedFlight.copiloto && (
                       <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-600" title="Copiloto">+{flight.linkedFlight.copiloto}</span>
                     )}
                     {flight.linkedFlight.instructor && (
-                      <span className="bg-amber-50 rounded-md px-2 py-0.5 text-amber-700 border border-amber-200" title="Instructor">🎓 {flight.linkedFlight.instructor}</span>
+                      <span className="bg-amber-50 rounded-md px-2 py-0.5 text-amber-700 border border-amber-200 inline-flex items-center gap-1" title="Instructor"><Icon name="graduation" className="w-3 h-3" /> {flight.linkedFlight.instructor}</span>
                     )}
                     {flight.linkedFlight.diffHobbs != null && (
                       <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-700 font-mono">{flight.linkedFlight.diffHobbs.toFixed(1)}h hobbs</span>
@@ -581,8 +582,8 @@ export default function PilotEngineDetail({
 
               {/* 4 Charts Grid */}
               {chartError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2 text-xs">
-                  ⚠️ No se pudieron dibujar los gráficos: {chartError}
+                <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2 text-xs flex items-center gap-1.5">
+                  <Icon name="warning" className="w-4 h-4 flex-shrink-0" /> No se pudieron dibujar los gráficos: {chartError}
                 </div>
               )}
               <div ref={chartsGridRef} className="grid grid-cols-1 lg:grid-cols-2 gap-3">
