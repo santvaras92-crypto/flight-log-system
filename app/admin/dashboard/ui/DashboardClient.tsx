@@ -3925,7 +3925,7 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
   const [result, setResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
 
   // Edit/create modal.
-  const emptyEdit = { dominio: 'AIRFRAME', descripcion: '', marca: '', partNumber: '', serial: '', tboHoras: '', tboMeses: '', vidaHoras: '', vidaMeses: '', installDate: '', installHoras: '', notas: '' };
+  const emptyEdit = { dominio: 'AIRFRAME', descripcion: '', marca: '', partNumber: '', serial: '', tboHoras: '', tboMeses: '', vidaHoras: '', vidaMeses: '', installDate: '', installHoras: '', proximaFecha: '', notas: '' };
   const [editModal, setEditModal] = useState<{ open: boolean; id: number | null; isNew: boolean }>({ open: false, id: null, isNew: false });
   const [editForm, setEditForm] = useState<Record<string, string>>(emptyEdit);
   const [editSubmitting, setEditSubmitting] = useState(false);
@@ -4022,6 +4022,7 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
         vidaMeses: part.vidaMeses != null ? String(part.vidaMeses) : '',
         installDate: part.installDate ? new Date(part.installDate).toISOString().split('T')[0] : '',
         installHoras: part.installHoras != null ? String(part.installHoras) : '',
+        proximaFecha: part.proximaFecha ? new Date(part.proximaFecha).toISOString().split('T')[0] : '',
         notas: part.notas || '',
       });
     } else {
@@ -4050,6 +4051,7 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
         vidaMeses: num(editForm.vidaMeses),
         installDate: editForm.installDate || null,
         installHoras: num(editForm.installHoras),
+        proximaFecha: editForm.proximaFecha || null,
         notas: editForm.notas || null,
       });
       setEditResult(res);
@@ -4168,6 +4170,12 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
                 <input type="number" step="0.1" value={editForm.installHoras} onChange={(e) => setEditForm({ ...editForm, installHoras: e.target.value })}
                   className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
               </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Vencimiento del documento (opcional)</label>
+              <input type="date" value={editForm.proximaFecha} onChange={(e) => setEditForm({ ...editForm, proximaFecha: e.target.value })}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+              <p className="text-[11px] text-slate-400 mt-1">Fecha de reemplazo estampada/certificada (p. ej. batería ELT). Si se define y es posterior a la instalación, tiene prioridad sobre el cálculo instalación + meses. Se limpia al registrar un cambio.</p>
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-500 mb-1">Notas</label>

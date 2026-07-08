@@ -51,6 +51,10 @@ export async function registrarCambioComponente(input: RegistrarCambioInput) {
       data: {
         installDate: fechaCambio,
         installHoras: horasInstall,
+        // The document's explicit replace-by date belonged to the previous part;
+        // clear it so the countdown recomputes from the fresh install + interval.
+        proximaFecha: null,
+        proximaHoras: null,
         // Only overwrite serial when a new one is provided.
         ...(serialNuevo && serialNuevo.trim() ? { serial: serialNuevo.trim() } : {}),
       },

@@ -750,11 +750,24 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       remanenteHoras = Number((installHoras + limitHoras - domainHours).toFixed(1));
     }
 
-    // Calendar remaining against install date + limit months.
+    // Calendar remaining. Prefer the document's explicit replace-by date
+    // (proximaFecha) when present and posterior to the install: some components
+    // carry a manufacturer-stamped expiry that differs from the naive
+    // installDate + interval arithmetic (e.g. the ELT battery is stamped
+    // 30-09-2030, not install + 56 months = 10-10-2030). The `> install` guard
+    // discards stale/garbage dates (e.g. a leftover 2009 value on a 2026 part)
+    // and any pre-reset value — a registered change clears proximaFecha, so it
+    // then falls back to the fresh install + interval.
+    const proximaFecha = p.proximaFecha ? new Date(p.proximaFecha) : null;
+    const proximaFechaUsable = proximaFecha && (!installDate || proximaFecha.getTime() > installDate.getTime());
     let fechaLimite: Date | null = null;
     let remanenteDias: number | null = null;
-    if (limitMeses != null && installDate) {
+    if (proximaFechaUsable) {
+      fechaLimite = proximaFecha;
+    } else if (limitMeses != null && installDate) {
       fechaLimite = addMonths(installDate, limitMeses);
+    }
+    if (fechaLimite) {
       remanenteDias = Math.round((fechaLimite.getTime() - nowMaint.getTime()) / DAY_MS);
     }
 
@@ -803,6 +816,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       remanenteDias,
       remanenteMeses: remanenteDias != null ? Number((remanenteDias / 30.44).toFixed(1)) : null,
       fechaLimite: fechaLimite ? fechaLimite.toISOString() : null,
+      proximaFecha: p.proximaFecha ? new Date(p.proximaFecha).toISOString() : null,
       fechaProyeccionHoras: fechaProyeccionHoras ? fechaProyeccionHoras.toISOString() : null,
       fechaEfectiva: fechaEfectiva ? fechaEfectiva.toISOString() : null,
       diasEfectivos,

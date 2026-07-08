@@ -27,6 +27,7 @@ export interface ComponenteInput {
   vidaHoras?: number | null;
   installDate?: string | null;     // ISO date
   installHoras?: number | null;
+  proximaFecha?: string | null;    // ISO date — explicit document replace-by date (override)
   notas?: string | null;
 }
 
@@ -71,6 +72,7 @@ export async function guardarComponente(input: ComponenteInput) {
       vidaHoras: normNum(input.vidaHoras),
       installDate: normDate(input.installDate),
       installHoras: normNum(input.installHoras),
+      proximaFecha: normDate(input.proximaFecha),
       notas: input.notas?.trim() || null,
     };
 
