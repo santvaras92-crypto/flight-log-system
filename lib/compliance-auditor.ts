@@ -145,9 +145,14 @@ CRITERIOS:
   }
 }
 
-// Normalize an AD number for dedup comparison.
+// Normalize an AD/DA number for dedup comparison. Strips a leading directive
+// token (AD / DAN / DA — DAN before DA) and all whitespace/hyphens so that
+// "DA 75-07", "DA75-07" and "75 07" collapse to the same key.
 function normNum(s: string): string {
-  return s.replace(/^AD\s*/i, "").replace(/\s+/g, "").toUpperCase();
+  return s
+    .replace(/^\s*(AD|DAN|DA)\b/i, "")
+    .replace(/[\s-]+/g, "")
+    .toUpperCase();
 }
 
 // The Federal Register exposes the canonical AD number and amendment in
@@ -258,18 +263,25 @@ async function auditDGAC(report: AuditReport) {
       report.notes.push(`DGAC: la fuente respondió ${res.status}. Omitida.`);
       return;
     }
-    // For now we only handle text/HTML sources; PDF parsing can be layered in
-    // later. The GPT step extracts any DA/DAN entries relevant to our fleet.
-    const text = (await res.text()).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 12000);
+    // The DGAC page wraps the DA table in ~28k chars of site chrome, so a blind
+    // head-slice would miss every directive. Anchor to the "DA vigentes" table
+    // and drop the "DEROGADAS" (repealed) section that follows — that focused
+    // window (~2k chars) contains exactly the in-force national DAs.
+    let text = (await res.text()).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+    const startAnchor = text.search(/DA\s+vigentes|Nombre\s+Norma\s+Aplicaci[oó]n/i);
+    if (startAnchor > -1) text = text.slice(startAnchor);
+    const derogadasIdx = text.search(/DEROGAD/i);
+    if (derogadasIdx > 400) text = text.slice(0, derogadasIdx);
+    text = text.slice(0, 18000);
     report.dgac.scanned = 1;
     const resp = await openai.chat.completions.create({
       model: MODEL,
       temperature: 0.1,
-      max_tokens: 800,
+      max_tokens: 1200,
       response_format: { type: "json_object" },
       messages: [{
         role: "user",
-        content: `Extrae Directivas de Aeronavegabilidad chilenas (DA/DAN) aplicables a esta flota desde el texto. Responde JSON {"items":[{"numero","descripcion","dominio","recurrente","intervaloHoras","intervaloMeses"}]}.\n\nFLOTA:\n${profileForPrompt()}\n\nTEXTO:\n${text}`,
+        content: `Eres un inspector de aeronavegabilidad. Del siguiente listado oficial de Directivas de Aeronavegabilidad (DA) NACIONALES vigentes de la DGAC de Chile, extrae SOLO las que apliquen a esta aeronave/flota específica según su columna "Aplicación".\n\nFLOTA (CC-AQI):\n${profileForPrompt()}\n\nREGLAS:\n- Incluye una DA solo si su "Aplicación" nombra un fabricante/modelo de la flota (Cessna 172, Lycoming O-320, McCauley, magnetos Slick) o dice "TODA AERONAVE".\n- EXCLUYE explícitamente DAs de otros productos (helicópteros, Piper, Boeing, Beechcraft, planeadores, Czech Sport, etc.).\n- Conserva el número EXACTO con su prefijo, ej. "DA 78-02".\n- "descripcion": la tabla solo trae el fabricante; redacta una frase corta tipo "DA nacional DGAC aplicable a motores Lycoming" (el detalle real está en el PDF).\n- Responde SOLO JSON (sin markdown): {"items":[{"numero","descripcion","dominio":"AIRFRAME|ENGINE|PROPELLER","aplica":true|false,"vigencia":"texto de fecha/norma tal cual","recurrente":true|false,"intervaloHoras":número|null,"intervaloMeses":número|null,"razon":"1 frase: por qué aplica a la flota"}]}\n\nLISTADO:\n${text}`,
       }],
     });
     const parsed = JSON.parse(resp.choices[0]?.message?.content || "{}") as { items?: any[] };
@@ -277,22 +289,30 @@ async function auditDGAC(report: AuditReport) {
     const existing = await prisma.complianceDirective.findMany({ where: { aircraftId: MATRICULA, tipo: "DA" }, select: { numero: true } });
     const known = new Set(existing.map((e) => normNum(e.numero)));
     for (const it of items) {
-      if (!it?.numero || known.has(normNum(String(it.numero)))) { report.dgac.skipped++; continue; }
+      if (!it?.numero || it.aplica === false) { report.dgac.skipped++; continue; }
+      if (known.has(normNum(String(it.numero)))) { report.dgac.skipped++; continue; }
       known.add(normNum(String(it.numero)));
       report.dgac.applicable++;
       const dominio = ["AIRFRAME", "ENGINE", "PROPELLER"].includes(it.dominio) ? it.dominio : "AIRFRAME";
+      const vigencia = it.vigencia ? String(it.vigencia).trim() : "";
+      const razon = it.razon ? String(it.razon).trim() : "";
+      const observacion = ["[Auditor DGAC]", razon, vigencia ? `Vigencia: ${vigencia}` : ""].filter(Boolean).join(" · ");
       const maxOrden = await prisma.complianceDirective.aggregate({ where: { aircraftId: MATRICULA, tipo: "DA", dominio }, _max: { orden: true } });
       await prisma.complianceDirective.create({
         data: {
-          aircraftId: MATRICULA, dominio, tipo: "DA", numero: String(it.numero),
-          descripcion: String(it.descripcion || it.numero), aplicabilidad: "APLICA",
+          aircraftId: MATRICULA, dominio, tipo: "DA", numero: String(it.numero).trim(),
+          descripcion: String(it.descripcion || it.numero).trim(), aplicabilidad: "APLICA",
+          periodicidadRaw: it.recurrente ? [it.intervaloHoras ? `Cada ${it.intervaloHoras} Horas` : "", it.intervaloMeses ? `${it.intervaloMeses} Meses` : ""].filter(Boolean).join(" ") || "Recurrente" : null,
           recurrente: !!it.recurrente, intervaloMeses: it.intervaloMeses ?? null, intervaloHoras: it.intervaloHoras ?? null,
-          fuente: "DGAC_WEB", urlReferencia: url, observacion: "[Auditor DGAC]",
+          fuente: "DGAC_WEB", urlReferencia: url, observacion,
           orden: (maxOrden._max.orden ?? 0) + 1,
         },
       });
       report.dgac.added++;
-      report.added.push({ tipo: "DA", numero: String(it.numero), descripcion: String(it.descripcion || it.numero), esEmergencia: false, url });
+      report.added.push({ tipo: "DA", numero: String(it.numero).trim(), descripcion: String(it.descripcion || it.numero).trim(), esEmergencia: false, url });
+    }
+    if (report.dgac.added === 0) {
+      report.notes.push("DGAC (Chile): fuente nacional revisada; sin DA vigentes nuevas aplicables a la flota (las ya registradas se mantienen).");
     }
   } catch (e: any) {
     report.notes.push(`DGAC: error ${e?.message || e}. Omitida.`);
