@@ -815,6 +815,99 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     };
   });
 
+  // ── Cumplimiento AD/DA: dynamic monitoring ──
+  // Only APLICA directives are tracked. Recurring ones (interval in hours and/or
+  // months) get a live next-due = last compliance + interval, checked against
+  // the domain's hour meter and the calendar; "Al Evento" and one-time complied
+  // directives are informational. Projected exhaustion uses the same usage rate.
+  const complianceRaw = await prisma.complianceDirective.findMany({
+    orderBy: [{ tipo: "asc" }, { dominio: "asc" }, { orden: "asc" }],
+    include: { eventos: { orderBy: { fecha: "desc" }, take: 1 } },
+  });
+
+  const complianceDirectives = complianceRaw.map((d) => {
+    const dom = (d.dominio as "AIRFRAME" | "ENGINE" | "PROPELLER");
+    const domainHours = domainHoursByAircraft[d.aircraftId]?.[dom] ?? 0;
+    const aplica = d.aplicabilidad === "APLICA";
+    const intervaloHoras = d.intervaloHoras != null ? Number(d.intervaloHoras) : null;
+    const intervaloMeses = d.intervaloMeses != null ? d.intervaloMeses : null;
+    const cumplHoras = d.cumplimientoHoras != null ? Number(d.cumplimientoHoras) : null;
+    const cumplFecha = d.cumplimientoFecha ? new Date(d.cumplimientoFecha) : null;
+
+    // Next-due by hours (last compliance + interval) vs live meter.
+    let proximaHoras: number | null = null;
+    let remanenteHoras: number | null = null;
+    if (aplica && d.recurrente && intervaloHoras != null && cumplHoras != null) {
+      proximaHoras = Number((cumplHoras + intervaloHoras).toFixed(1));
+      remanenteHoras = Number((proximaHoras - domainHours).toFixed(1));
+    }
+
+    // Next-due by calendar (last compliance + interval months) vs now.
+    let proximaFecha: Date | null = null;
+    let remanenteDias: number | null = null;
+    if (aplica && d.recurrente && intervaloMeses != null && cumplFecha) {
+      proximaFecha = addMonths(cumplFecha, intervaloMeses);
+      remanenteDias = Math.round((proximaFecha.getTime() - nowMaint.getTime()) / DAY_MS);
+    }
+
+    // Projected exhaustion date from the hours countdown.
+    let fechaProyeccionHoras: Date | null = null;
+    if (remanenteHoras != null && usageRatePerDay > 0) {
+      fechaProyeccionHoras = new Date(nowMaint.getTime() + (remanenteHoras / usageRatePerDay) * DAY_MS);
+    }
+
+    const candidates = [fechaProyeccionHoras, proximaFecha].filter((x): x is Date => x != null);
+    const fechaEfectiva = candidates.length ? new Date(Math.min(...candidates.map((x) => x.getTime()))) : null;
+    const diasEfectivos = fechaEfectiva ? Math.round((fechaEfectiva.getTime() - nowMaint.getTime()) / DAY_MS) : null;
+
+    // RAG status.
+    const hoursOverdue = remanenteHoras != null && remanenteHoras <= 0;
+    const hoursSoon = remanenteHoras != null && intervaloHoras != null && remanenteHoras > 0 && remanenteHoras <= Math.max(intervaloHoras * 0.1, 25);
+    const calOverdue = remanenteDias != null && remanenteDias <= 0;
+    const calSoon = remanenteDias != null && remanenteDias > 0 && remanenteDias <= 90;
+    let estado: "VENCIDO" | "PROXIMO" | "OK" | "NO_APLICA" | "AL_EVENTO" | "CUMPLIDO";
+    if (!aplica) estado = "NO_APLICA";
+    else if (d.alEvento) estado = "AL_EVENTO";
+    else if (!d.recurrente) estado = "CUMPLIDO"; // one-time; already recorded
+    else if (hoursOverdue || calOverdue) estado = "VENCIDO";
+    else if (hoursSoon || calSoon) estado = "PROXIMO";
+    else estado = "OK";
+
+    return {
+      id: d.id,
+      tipo: d.tipo,
+      dominio: d.dominio,
+      numero: d.numero,
+      enmienda: d.enmienda,
+      descripcion: d.descripcion,
+      aplicabilidad: d.aplicabilidad,
+      periodicidadRaw: d.periodicidadRaw,
+      recurrente: d.recurrente,
+      alEvento: d.alEvento,
+      intervaloHoras,
+      intervaloMeses,
+      cumplimientoFecha: cumplFecha ? cumplFecha.toISOString() : null,
+      cumplimientoHoras: cumplHoras,
+      domainHours,
+      proximaHoras,
+      proximaFecha: proximaFecha ? proximaFecha.toISOString() : null,
+      remanenteHoras,
+      remanenteDias,
+      fechaProyeccionHoras: fechaProyeccionHoras ? fechaProyeccionHoras.toISOString() : null,
+      fechaEfectiva: fechaEfectiva ? fechaEfectiva.toISOString() : null,
+      diasEfectivos,
+      estado,
+      esEmergencia: d.esEmergencia,
+      urlReferencia: d.urlReferencia,
+      observacion: d.observacion,
+      fuente: d.fuente,
+      ultimoEvento: d.eventos[0]
+        ? { fecha: d.eventos[0].fecha.toISOString(), horas: d.eventos[0].horas != null ? Number(d.eventos[0].horas) : null }
+        : null,
+      orden: d.orden,
+    };
+  });
+
   const data = {
     users: users.map(u => ({ ...u, saldo_cuenta: Number(u.saldo_cuenta), tarifa_hora: Number(u.tarifa_hora) })),
     aircraft: aircraft.map(a => ({ ...a, hobbs_actual: Number(a.hobbs_actual), tach_actual: Number(a.tach_actual) })),
@@ -824,6 +917,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     submissions: submissions.map(s => ({ ...s, imageLogs: s.ImageLog.map(img => ({ ...img, valorExtraido: img.valorExtraido ? Number(img.valorExtraido) : null, confianza: img.confianza ? Number(img.confianza) : null })), flight: s.Flight ? { ...s.Flight, diff_hobbs: Number(s.Flight.diff_hobbs), diff_tach: Number(s.Flight.diff_tach), costo: Number(s.Flight.costo) } : null })),
     components: computedComponents.map(c => ({ ...c, horas_acumuladas: Number(c.horas_acumuladas), limite_tbo: Number(c.limite_tbo), dbId: c.dbId || null, overhaul_airframe: c.overhaul_airframe || null, overhaul_date: c.overhaul_date || null, overhaul_notes: c.overhaul_notes || null })),
     replacementParts,
+    complianceDirectives,
     aircraftYearlyStats,
     transactions: transactions.map(t => ({ ...t, monto: Number(t.monto) })),
     fuelByCode: (() => {

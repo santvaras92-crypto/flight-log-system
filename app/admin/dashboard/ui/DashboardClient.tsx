@@ -7,6 +7,7 @@ import { formatFecha, parseLocalDate, toDateString, getDateYear } from "../../..
 import ImagePreviewModal from "../../../components/ImagePreviewModal";
 import { registerOverhaul } from "../../../actions/register-overhaul";
 import { registrarCambioComponente } from "../../../actions/registrar-cambio-componente";
+import { registrarCumplimiento } from "../../../actions/registrar-cumplimiento";
 import EngineAnalysis from "./EngineAnalysis";
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler, DoughnutController, ArcElement);
@@ -25,6 +26,7 @@ type InitialData = {
   submissions: any[];
   components: any[];
   replacementParts?: any[];
+  complianceDirectives?: any[];
   transactions: any[];
   fuelLogs?: any[];
   fuelByCode?: Record<string, number>;
@@ -112,7 +114,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
   const [tab, setTab] = useState("overview");
   const [pilotSubTab, setPilotSubTab] = useState<"accounts" | "directory" | "deposits">("accounts");
   const [financeSubTab, setFinanceSubTab] = useState<"movements" | "costs">("movements");
-  const [mxSubTab, setMxSubTab] = useState<"components" | "reemplazo" | "engine">("components");
+  const [mxSubTab, setMxSubTab] = useState<"components" | "reemplazo" | "adda" | "engine">("components");
   const [pendingEngineFlightIds, setPendingEngineFlightIds] = useState<number[] | null>(null);
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [backupLoading, setBackupLoading] = useState(false);
@@ -1247,6 +1249,15 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               🗓️ Plan de Reemplazo
             </button>
             <button
+              onClick={() => setMxSubTab("adda")}
+              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${mxSubTab === "adda"
+                ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                }`}
+            >
+              📜 AD/DA
+            </button>
+            <button
               onClick={() => setMxSubTab("engine")}
               className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${mxSubTab === "engine"
                 ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
@@ -1258,6 +1269,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           </div>
           {mxSubTab === "components" && <MaintenanceTable components={initialData.components} aircraft={initialData.aircraft} aircraftYearlyStats={initialData.aircraftYearlyStats || []} overviewMetrics={overviewMetrics} />}
           {mxSubTab === "reemplazo" && <ReplacementPlanTable parts={initialData.replacementParts || []} usageStats={overviewMetrics?.nextInspections?.usageStats} />}
+          {mxSubTab === "adda" && <ComplianceTable directives={initialData.complianceDirectives || []} usageStats={overviewMetrics?.nextInspections?.usageStats} />}
           {mxSubTab === "engine" && <EngineAnalysis initialFlightIds={pendingEngineFlightIds} onFlightOpened={() => setPendingEngineFlightIds(null)} />}
         </>
       )}
@@ -4178,6 +4190,320 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
               <button onClick={handleSubmit} disabled={submitting}
                 className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50">
                 {submitting ? 'Guardando…' : 'Confirmar cambio'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Cumplimiento AD/DA (airworthiness directives) — dynamic monitoring
+// ─────────────────────────────────────────────────────────────
+const CMP_STYLE: Record<string, { badge: string; dot: string; label: string; row: string }> = {
+  VENCIDO: { badge: 'bg-red-100 text-red-700 border-red-200', dot: 'bg-red-500', label: 'Vencido', row: 'bg-red-50/60 border-l-4 border-red-500' },
+  PROXIMO: { badge: 'bg-amber-100 text-amber-700 border-amber-200', dot: 'bg-amber-500', label: 'Próximo', row: 'bg-amber-50/50 border-l-4 border-amber-400' },
+  OK: { badge: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500', label: 'Vigente', row: 'hover:bg-slate-50' },
+  AL_EVENTO: { badge: 'bg-sky-100 text-sky-700 border-sky-200', dot: 'bg-sky-500', label: 'Al evento', row: 'hover:bg-slate-50' },
+  CUMPLIDO: { badge: 'bg-slate-100 text-slate-600 border-slate-200', dot: 'bg-slate-400', label: 'Cumplido', row: 'hover:bg-slate-50' },
+  NO_APLICA: { badge: 'bg-slate-50 text-slate-400 border-slate-200', dot: 'bg-slate-300', label: 'No aplica', row: 'opacity-60 hover:bg-slate-50' },
+};
+
+function ComplianceTable({ directives, usageStats }: { directives: any[]; usageStats?: { weightedRate: number; rateAnnual: number } }) {
+  const router = useRouter();
+  const rate = (usageStats?.rateAnnual && usageStats.rateAnnual > 0 ? usageStats.rateAnnual : usageStats?.weightedRate) || 0;
+
+  const [tipoFilter, setTipoFilter] = useState<'ALL' | 'AD' | 'DA'>('ALL');
+  const [soloAplican, setSoloAplican] = useState(true);
+  const [modal, setModal] = useState<{ open: boolean; dir: any | null }>({ open: false, dir: null });
+  const [form, setForm] = useState({ fecha: '', horas: '', ot: '', notas: '' });
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
+
+  const fmtH = (h: number | null | undefined) => (h == null ? '—' : `${Number(h).toLocaleString('es-CL', { maximumFractionDigits: 1 })} h`);
+  const fmtDate = (iso: string | null | undefined) => (iso ? formatFecha(new Date(iso), { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
+  const fmtDays = (days: number | null | undefined): string => {
+    if (days == null) return '—';
+    if (days <= 0) return 'Vencido';
+    if (days < 30) return `${days} días`;
+    if (days < 365) { const m = Math.floor(days / 30); return `${m} ${m === 1 ? 'mes' : 'meses'}`; }
+    return `${(days / 365).toFixed(1)} años`;
+  };
+
+  const summary = useMemo(() => {
+    const s = { total: directives.length, aplican: 0, vencido: 0, proximo: 0, emergencia: 0 };
+    for (const d of directives) {
+      if (d.aplicabilidad === 'APLICA') s.aplican++;
+      if (d.estado === 'VENCIDO') s.vencido++;
+      else if (d.estado === 'PROXIMO') s.proximo++;
+      if (d.esEmergencia) s.emergencia++;
+    }
+    return s;
+  }, [directives]);
+
+  const grouped = useMemo(() => {
+    const rank = (e: string) => (e === 'VENCIDO' ? 0 : e === 'PROXIMO' ? 1 : e === 'OK' ? 2 : e === 'AL_EVENTO' ? 3 : e === 'CUMPLIDO' ? 4 : 5);
+    const filtered = directives.filter((d) => {
+      if (tipoFilter !== 'ALL' && d.tipo !== tipoFilter) return false;
+      if (soloAplican && d.aplicabilidad !== 'APLICA') return false;
+      return true;
+    });
+    const byTipo: Record<string, any[]> = {};
+    for (const d of filtered) (byTipo[d.tipo] ||= []).push(d);
+    for (const k of Object.keys(byTipo)) {
+      byTipo[k].sort((a, b) => {
+        // Emergency ADs float to the very top.
+        if (!!a.esEmergencia !== !!b.esEmergencia) return a.esEmergencia ? -1 : 1;
+        if (rank(a.estado) !== rank(b.estado)) return rank(a.estado) - rank(b.estado);
+        const da = a.diasEfectivos == null ? Infinity : a.diasEfectivos;
+        const db = b.diasEfectivos == null ? Infinity : b.diasEfectivos;
+        if (da !== db) return da - db;
+        return (a.orden ?? 0) - (b.orden ?? 0);
+      });
+    }
+    return ['AD', 'DA'].filter((t) => byTipo[t]?.length).map((t) => ({ tipo: t, items: byTipo[t] }));
+  }, [directives, tipoFilter, soloAplican]);
+
+  const openModal = (dir: any) => {
+    setModal({ open: true, dir });
+    setForm({
+      fecha: new Date().toISOString().split('T')[0],
+      horas: dir.domainHours != null ? String(Number(dir.domainHours).toFixed(1)) : '',
+      ot: '',
+      notas: '',
+    });
+    setResult(null);
+  };
+
+  const handleSubmit = async () => {
+    if (!modal.dir) return;
+    if (!form.fecha) { setResult({ success: false, error: 'La fecha es requerida' }); return; }
+    setSubmitting(true);
+    setResult(null);
+    try {
+      const res = await registrarCumplimiento({
+        directiveId: modal.dir.id,
+        fecha: form.fecha,
+        horas: form.horas ? parseFloat(form.horas) : null,
+        ordenTrabajo: form.ot || undefined,
+        notas: form.notas || undefined,
+      });
+      setResult(res);
+      if (res.success) setTimeout(() => { router.refresh(); setModal({ open: false, dir: null }); }, 1400);
+    } catch (e: any) {
+      setResult({ success: false, error: e.message || 'Error desconocido' });
+    }
+    setSubmitting(false);
+  };
+
+  if (!directives.length) {
+    return (
+      <div className="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-500 shadow-sm">
+        <div className="text-3xl mb-2">📜</div>
+        <p className="font-medium text-slate-700">Sin directivas AD/DA cargadas</p>
+        <p className="text-sm mt-1">No hay directivas de aeronavegabilidad registradas para esta aeronave.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* Summary */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Aplicables', value: summary.aplican, cls: 'text-slate-800', dot: 'bg-slate-400' },
+          { label: 'Vencidas', value: summary.vencido, cls: 'text-red-600', dot: 'bg-red-500' },
+          { label: 'Próximas', value: summary.proximo, cls: 'text-amber-600', dot: 'bg-amber-500' },
+          { label: 'Total', value: summary.total, cls: 'text-slate-800', dot: 'bg-slate-400' },
+        ].map((c) => (
+          <div key={c.label} className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm">
+            <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-slate-400 font-semibold">
+              <span className={`w-2 h-2 rounded-full ${c.dot}`} /> {c.label}
+            </div>
+            <div className={`text-2xl font-bold mt-1 ${c.cls}`}>{c.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {summary.emergencia > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700 font-medium flex items-center gap-2">
+          <span>🚨</span> {summary.emergencia} Emergency AD activa(s) — requieren atención inmediata.
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex gap-1 bg-slate-100/80 p-1 rounded-lg">
+          {(['ALL', 'AD', 'DA'] as const).map((t) => (
+            <button key={t} onClick={() => setTipoFilter(t)}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${tipoFilter === t ? 'bg-white text-slate-800 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
+              {t === 'ALL' ? 'Todas' : t === 'AD' ? 'AD (FAA)' : 'DA (DGAC)'}
+            </button>
+          ))}
+        </div>
+        <label className="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer select-none ml-1">
+          <input type="checkbox" checked={soloAplican} onChange={(e) => setSoloAplican(e.target.checked)} className="rounded border-slate-300" />
+          Solo aplicables
+        </label>
+        <div className="text-xs text-slate-400 ml-auto">Tasa de uso: {rate > 0 ? `${rate.toFixed(2)} h/día` : 's/d'}</div>
+      </div>
+
+      {/* Groups */}
+      {grouped.map(({ tipo, items }) => (
+        <div key={tipo} className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-200">
+            <span className="text-base">{tipo === 'AD' ? '🇺🇸' : '🇨🇱'}</span>
+            <span className="font-semibold text-slate-700 text-sm">{tipo === 'AD' ? 'Airworthiness Directives (FAA)' : 'Directivas de Aeronavegabilidad (DGAC)'}</span>
+            <span className="text-xs text-slate-400">({items.length})</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[11px] uppercase tracking-wide text-slate-400 border-b border-slate-100">
+                  <th className="px-3 py-2 font-semibold">Estado</th>
+                  <th className="px-3 py-2 font-semibold">N° · Enmienda</th>
+                  <th className="px-3 py-2 font-semibold">Descripción</th>
+                  <th className="px-3 py-2 font-semibold">Periodicidad</th>
+                  <th className="px-3 py-2 font-semibold">Último cumpl.</th>
+                  <th className="px-3 py-2 font-semibold text-right">Remanente</th>
+                  <th className="px-3 py-2 font-semibold">Próximo</th>
+                  <th className="px-3 py-2 font-semibold text-center">Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((d) => {
+                  const rag = CMP_STYLE[d.estado] || CMP_STYLE.NO_APLICA;
+                  const horasNeg = d.remanenteHoras != null && d.remanenteHoras <= 0;
+                  const diasNeg = d.remanenteDias != null && d.remanenteDias <= 0;
+                  const canLog = d.aplicabilidad === 'APLICA' && (d.recurrente || d.alEvento);
+                  return (
+                    <tr key={d.id} className={`border-b border-slate-50 transition-colors ${rag.row}`}>
+                      <td className="px-3 py-2.5">
+                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[11px] font-semibold ${rag.badge}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${rag.dot}`} /> {rag.label}
+                        </span>
+                        {d.esEmergencia && <span className="ml-1 text-red-500" title="Emergency AD">🚨</span>}
+                      </td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        <div className="font-medium text-slate-800">
+                          {d.urlReferencia ? (
+                            <a href={d.urlReferencia} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{d.numero}</a>
+                          ) : d.numero}
+                        </div>
+                        {d.enmienda && <div className="text-xs text-slate-400">{d.enmienda}</div>}
+                      </td>
+                      <td className="px-3 py-2.5 max-w-xs">
+                        <div className="text-slate-700 truncate" title={d.descripcion}>{d.descripcion}</div>
+                        {d.observacion && <div className="text-xs text-slate-400 truncate" title={d.observacion}>{d.observacion}</div>}
+                      </td>
+                      <td className="px-3 py-2.5 text-xs text-slate-500 whitespace-nowrap">{d.periodicidadRaw || (d.alEvento ? 'Al Evento' : '—')}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap text-slate-600">
+                        <div>{fmtDate(d.cumplimientoFecha)}</div>
+                        {d.cumplimientoHoras != null && <div className="text-xs text-slate-400">{fmtH(d.cumplimientoHoras)}</div>}
+                      </td>
+                      <td className="px-3 py-2.5 text-right whitespace-nowrap">
+                        {d.remanenteHoras != null && (
+                          <div className={`font-semibold ${horasNeg ? 'text-red-600' : d.estado === 'PROXIMO' ? 'text-amber-600' : 'text-slate-700'}`}>
+                            {horasNeg ? `−${fmtH(Math.abs(d.remanenteHoras))}` : fmtH(d.remanenteHoras)}
+                          </div>
+                        )}
+                        {d.remanenteDias != null && (
+                          <div className={`text-xs ${diasNeg ? 'text-red-500' : 'text-slate-400'}`}>{fmtDays(d.remanenteDias)}</div>
+                        )}
+                        {d.remanenteHoras == null && d.remanenteDias == null && <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        {d.fechaEfectiva ? (
+                          <div>
+                            <div className={`font-medium ${d.estado === 'VENCIDO' ? 'text-red-600' : 'text-slate-700'}`}>{fmtDate(d.fechaEfectiva)}</div>
+                            {d.proximaHoras != null && <div className="text-xs text-slate-400">{fmtH(d.proximaHoras)}</div>}
+                          </div>
+                        ) : (
+                          <span className="text-slate-300">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        {canLog ? (
+                          <button onClick={() => openModal(d)}
+                            className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-800 text-white hover:bg-slate-700 transition-colors whitespace-nowrap">
+                            Registrar cumpl.
+                          </button>
+                        ) : (
+                          <span className="text-slate-300 text-xs">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+
+      {/* Registrar cumplimiento modal */}
+      {modal.open && modal.dir && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !submitting && setModal({ open: false, dir: null })}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">Registrar cumplimiento</h3>
+                <p className="text-sm text-slate-500 mt-0.5">{modal.dir.tipo} {modal.dir.numero} — {modal.dir.descripcion}</p>
+              </div>
+              <button onClick={() => !submitting && setModal({ open: false, dir: null })} className="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Fecha de cumplimiento</label>
+                <input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Horas de la aeronave al cumplir</label>
+                <input type="number" step="0.1" value={form.horas} onChange={(e) => setForm({ ...form, horas: e.target.value })}
+                  placeholder={modal.dir.domainHours != null ? `Actual: ${Number(modal.dir.domainHours).toFixed(1)} h` : ''}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">N° de Orden de Trabajo (opcional)</label>
+                <input type="text" value={form.ot} onChange={(e) => setForm({ ...form, ot: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Notas (opcional)</label>
+                <textarea value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} rows={2}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 resize-none" />
+              </div>
+
+              {modal.dir.recurrente && form.fecha && (
+                <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 text-xs text-emerald-700">
+                  {modal.dir.intervaloMeses != null && (
+                    <>Próximo vencimiento calendario ≈ <strong>{fmtDate(new Date(new Date(form.fecha).setMonth(new Date(form.fecha).getMonth() + modal.dir.intervaloMeses)).toISOString())}</strong></>
+                  )}
+                  {modal.dir.intervaloHoras != null && form.horas && (
+                    <> · por horas <strong>{fmtH(parseFloat(form.horas) + modal.dir.intervaloHoras)}</strong></>
+                  )}
+                </div>
+              )}
+
+              {result && (
+                <div className={`rounded-lg px-3 py-2 text-sm ${result.success ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                  {result.success ? result.message : result.error}
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => !submitting && setModal({ open: false, dir: null })} disabled={submitting}
+                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+                Cancelar
+              </button>
+              <button onClick={handleSubmit} disabled={submitting}
+                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50">
+                {submitting ? 'Guardando…' : 'Confirmar cumplimiento'}
               </button>
             </div>
           </div>

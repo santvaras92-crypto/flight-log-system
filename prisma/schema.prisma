@@ -36,6 +36,7 @@ model Aircraft {
   Flight           Flight[]
   FlightSubmission FlightSubmission[]
   ReplacementPart  ReplacementPart[]
+  ComplianceDirective ComplianceDirective[]
 }
 
 model Component {
@@ -101,6 +102,61 @@ model ReplacementEvent {
   Part        ReplacementPart @relation(fields: [partId], references: [id], onDelete: Cascade)
 
   @@index([partId])
+}
+
+// ── Cumplimiento AD/DA (airworthiness directives) ──
+// One row per directive from the DGAC "ANÁLISIS Y REGISTRO DE CUMPLIMIENTOS"
+// sheets. Covers FAA Airworthiness Directives (tipo=AD) and Chilean DGAC
+// Directivas de Aeronavegabilidad (tipo=DA/DAN). For recurring directives the
+// next-due and status are recomputed live (interval + last compliance) against
+// the domain hour meter and calendar — the sheet's own "remanente" is stale.
+model ComplianceDirective {
+  id              Int      @id @default(autoincrement())
+  aircraftId      String
+  dominio         String // "AIRFRAME" | "ENGINE" | "PROPELLER" (source file)
+  tipo            String // "AD" (FAA) | "DA" (DGAC Chile, includes DAN)
+  numero          String // AD/DA number, e.g. "2020-18-01", "DA 96-01", "DAN 92 Vol I 92.603 (a)"
+  enmienda        String? // e.g. "39-21222", "R1", "ENM 9"
+  descripcion     String
+  aplicabilidad   String // "APLICA" | "NO_APLICA" (from "Aplica"/"N/A")
+  // Recurrence — parsed from the free-text periodicity column.
+  periodicidadRaw String? // e.g. "Cada 100 Horas 12 Meses", "Al Evento", "---"
+  recurrente      Boolean  @default(false)
+  alEvento        Boolean  @default(false)
+  intervaloMeses  Int?
+  intervaloHoras  Decimal?
+  // Effectivity (when the directive became effective) and last compliance.
+  efectividadFecha DateTime?
+  efectividadHoras Decimal?
+  cumplimientoFecha DateTime? // último cumplimiento
+  cumplimientoHoras Decimal?
+  observacion     String?
+  responsable     String?
+  fuente          String   @default("DGAC_XLS") // provenance: DGAC_XLS | FAA_DRS | DGAC_WEB
+  esEmergencia    Boolean  @default(false) // Emergency AD flag (auditor)
+  urlReferencia   String? // link to the directive PDF/page (auditor)
+  orden           Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  Aircraft        Aircraft @relation(fields: [aircraftId], references: [matricula])
+  eventos         ComplianceEvent[]
+
+  @@index([aircraftId, tipo])
+}
+
+// History of compliances logged for a recurring directive. Each event advances
+// the directive's cumplimientoFecha/cumplimientoHoras (resets the countdown).
+model ComplianceEvent {
+  id          Int                 @id @default(autoincrement())
+  directiveId Int
+  fecha       DateTime
+  horas       Decimal?
+  ordenTrabajo String? // O/T number
+  notas       String?
+  createdAt   DateTime            @default(now())
+  Directive   ComplianceDirective @relation(fields: [directiveId], references: [id], onDelete: Cascade)
+
+  @@index([directiveId])
 }
 
 model Flight {
