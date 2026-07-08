@@ -40,6 +40,7 @@ interface FRDoc {
   document_number: string;
   publication_date: string;
   effective_on: string | null;
+  docket_ids?: string[];
 }
 
 interface Assessment {
@@ -67,7 +68,7 @@ async function fetchFAACandidates(sinceISO: string, perTerm: number): Promise<FR
     params.append("conditions[publication_date][gte]", sinceISO);
     params.append("order", "newest");
     params.append("per_page", String(perTerm));
-    for (const f of ["title", "abstract", "html_url", "document_number", "publication_date", "effective_on"]) {
+    for (const f of ["title", "abstract", "html_url", "document_number", "publication_date", "effective_on", "docket_ids"]) {
       params.append("fields[]", f);
     }
     try {
@@ -142,6 +143,28 @@ function normNum(s: string): string {
   return s.replace(/^AD\s*/i, "").replace(/\s+/g, "").toUpperCase();
 }
 
+// The Federal Register exposes the canonical AD number and amendment in
+// `docket_ids` (e.g. ["Docket No. FAA-2024-1695", "Amendment 39-22869",
+// "AD 2024-21-02"]). Parsing these is far more reliable than asking the model to
+// mine the number out of the abstract — and it prevents duplicates like
+// "FR 2024-25365" being created for an AD already logged as "2024-21-02".
+function adNumberFromDocket(docketIds?: string[]): string | null {
+  if (!docketIds) return null;
+  for (const d of docketIds) {
+    const m = /\bAD\s+(\d{4}-\d{2}-\d{2}[A-Z0-9]*)\b/i.exec(d);
+    if (m) return m[1];
+  }
+  return null;
+}
+function amendmentFromDocket(docketIds?: string[]): string | null {
+  if (!docketIds) return null;
+  for (const d of docketIds) {
+    const m = /Amendment\s+([\d-]+)/i.exec(d);
+    if (m) return m[1];
+  }
+  return null;
+}
+
 // ── FAA audit ──
 async function auditFAA(report: AuditReport, opts: { sinceISO: string; maxCandidates: number; perTerm: number }) {
   const candidates = await fetchFAACandidates(opts.sinceISO, opts.perTerm);
@@ -164,9 +187,12 @@ async function auditFAA(report: AuditReport, opts: { sinceISO: string; maxCandid
     if (!a.applicable) { report.faa.skipped++; continue; }
     report.faa.applicable++;
 
-    const numero = a.adNumber ? a.adNumber : `FR ${doc.document_number}`;
+    // Prefer the canonical AD number from docket_ids; fall back to the model's
+    // extraction, then to the Federal Register document number.
+    const numero = adNumberFromDocket(doc.docket_ids) || a.adNumber || `FR ${doc.document_number}`;
     if (known.has(normNum(numero))) { report.faa.skipped++; continue; }
     known.add(normNum(numero));
+    const enmienda = amendmentFromDocket(doc.docket_ids);
 
     const maxOrden = await prisma.complianceDirective.aggregate({
       where: { aircraftId: MATRICULA, tipo: "AD", dominio: a.dominio },
@@ -179,6 +205,7 @@ async function auditFAA(report: AuditReport, opts: { sinceISO: string; maxCandid
         dominio: a.dominio,
         tipo: "AD",
         numero,
+        enmienda,
         descripcion: a.descripcion || doc.title,
         aplicabilidad: "APLICA",
         periodicidadRaw: a.alEvento ? "Al Evento" : a.recurrente ? [a.intervaloHoras ? `Cada ${a.intervaloHoras} Horas` : "", a.intervaloMeses ? `${a.intervaloMeses} Meses` : ""].filter(Boolean).join(" ") : null,
