@@ -8,6 +8,8 @@ import ImagePreviewModal from "../../../components/ImagePreviewModal";
 import { registerOverhaul } from "../../../actions/register-overhaul";
 import { registrarCambioComponente } from "../../../actions/registrar-cambio-componente";
 import { registrarCumplimiento } from "../../../actions/registrar-cumplimiento";
+import { guardarComponente, eliminarComponente } from "../../../actions/gestionar-componente";
+import { guardarDirectiva, eliminarDirectiva } from "../../../actions/gestionar-directiva";
 import { runAuditNow } from "../../../actions/run-audit";
 import EngineAnalysis from "./EngineAnalysis";
 
@@ -3922,6 +3924,14 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
 
+  // Edit/create modal.
+  const emptyEdit = { dominio: 'AIRFRAME', descripcion: '', marca: '', partNumber: '', serial: '', tboHoras: '', tboMeses: '', vidaHoras: '', vidaMeses: '', installDate: '', installHoras: '', notas: '' };
+  const [editModal, setEditModal] = useState<{ open: boolean; id: number | null; isNew: boolean }>({ open: false, id: null, isNew: false });
+  const [editForm, setEditForm] = useState<Record<string, string>>(emptyEdit);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editResult, setEditResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   const fmtH = (h: number | null | undefined) =>
     h == null ? '—' : `${Number(h).toLocaleString('es-CL', { maximumFractionDigits: 1 })} h`;
   const fmtDate = (iso: string | null | undefined) =>
@@ -3997,18 +4007,213 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
     setSubmitting(false);
   };
 
+  const openEditModal = (part: any | null) => {
+    if (part) {
+      setEditModal({ open: true, id: part.id, isNew: false });
+      setEditForm({
+        dominio: part.dominio || 'AIRFRAME',
+        descripcion: part.descripcion || '',
+        marca: part.marca || '',
+        partNumber: part.partNumber || '',
+        serial: part.serial || '',
+        tboHoras: part.tboHoras != null ? String(part.tboHoras) : '',
+        tboMeses: part.tboMeses != null ? String(part.tboMeses) : '',
+        vidaHoras: part.vidaHoras != null ? String(part.vidaHoras) : '',
+        vidaMeses: part.vidaMeses != null ? String(part.vidaMeses) : '',
+        installDate: part.installDate ? new Date(part.installDate).toISOString().split('T')[0] : '',
+        installHoras: part.installHoras != null ? String(part.installHoras) : '',
+        notas: part.notas || '',
+      });
+    } else {
+      setEditModal({ open: true, id: null, isNew: true });
+      setEditForm({ ...emptyEdit });
+    }
+    setEditResult(null);
+  };
+
+  const handleEditSubmit = async () => {
+    if (!editForm.descripcion.trim()) { setEditResult({ success: false, error: 'La descripción es requerida' }); return; }
+    setEditSubmitting(true);
+    setEditResult(null);
+    try {
+      const num = (v: string) => (v.trim() === '' ? null : parseFloat(v));
+      const res = await guardarComponente({
+        id: editModal.id ?? undefined,
+        dominio: editForm.dominio,
+        descripcion: editForm.descripcion,
+        marca: editForm.marca || null,
+        partNumber: editForm.partNumber || null,
+        serial: editForm.serial || null,
+        tboHoras: num(editForm.tboHoras),
+        tboMeses: num(editForm.tboMeses),
+        vidaHoras: num(editForm.vidaHoras),
+        vidaMeses: num(editForm.vidaMeses),
+        installDate: editForm.installDate || null,
+        installHoras: num(editForm.installHoras),
+        notas: editForm.notas || null,
+      });
+      setEditResult(res);
+      if (res.success) setTimeout(() => { router.refresh(); setEditModal({ open: false, id: null, isNew: false }); }, 1200);
+    } catch (e: any) {
+      setEditResult({ success: false, error: e.message || 'Error desconocido' });
+    }
+    setEditSubmitting(false);
+  };
+
+  const handleDelete = async () => {
+    if (!editModal.id) return;
+    if (!confirm('¿Eliminar este componente del Plan de Reemplazo? Esta acción no se puede deshacer.')) return;
+    setDeleting(true);
+    setEditResult(null);
+    try {
+      const res = await eliminarComponente(editModal.id);
+      setEditResult(res);
+      if (res.success) setTimeout(() => { router.refresh(); setEditModal({ open: false, id: null, isNew: false }); }, 1000);
+    } catch (e: any) {
+      setEditResult({ success: false, error: e.message || 'Error desconocido' });
+    }
+    setDeleting(false);
+  };
+
   if (!parts.length) {
     return (
       <div className="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-500 shadow-sm">
         <div className="text-3xl mb-2">🗓️</div>
         <p className="font-medium text-slate-700">Sin plan de reemplazo cargado</p>
-        <p className="text-sm mt-1">No hay componentes de vida limitada registrados para esta aeronave.</p>
+        <p className="text-sm mt-1 mb-4">No hay componentes de vida limitada registrados para esta aeronave.</p>
+        <button onClick={() => openEditModal(null)} className="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-white hover:bg-slate-700">
+          + Agregar componente
+        </button>
+        {editModal.open && renderEditModal()}
+      </div>
+    );
+  }
+
+  function renderEditModal() {
+    const usaVida = editForm.vidaHoras.trim() !== '' || editForm.vidaMeses.trim() !== '';
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !editSubmitting && !deleting && setEditModal({ open: false, id: null, isNew: false })}>
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-5 sm:p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-start justify-between mb-4">
+            <h3 className="text-lg font-bold text-slate-800">{editModal.isNew ? 'Agregar componente' : 'Editar componente'}</h3>
+            <button onClick={() => !editSubmitting && !deleting && setEditModal({ open: false, id: null, isNew: false })} className="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
+          </div>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Dominio</label>
+                <select value={editForm.dominio} onChange={(e) => setEditForm({ ...editForm, dominio: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300">
+                  <option value="AIRFRAME">Célula (Airframe)</option>
+                  <option value="ENGINE">Motor (Engine)</option>
+                  <option value="PROPELLER">Hélice (Propeller)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Marca</label>
+                <input type="text" value={editForm.marca} onChange={(e) => setEditForm({ ...editForm, marca: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Descripción *</label>
+              <input type="text" value={editForm.descripcion} onChange={(e) => setEditForm({ ...editForm, descripcion: e.target.value })}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Part Number</label>
+                <input type="text" value={editForm.partNumber} onChange={(e) => setEditForm({ ...editForm, partNumber: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Serial</label>
+                <input type="text" value={editForm.serial} onChange={(e) => setEditForm({ ...editForm, serial: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">TBO Horas</label>
+                <input type="number" step="0.1" value={editForm.tboHoras} onChange={(e) => setEditForm({ ...editForm, tboHoras: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">TBO Meses</label>
+                <input type="number" value={editForm.tboMeses} onChange={(e) => setEditForm({ ...editForm, tboMeses: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Vida Límite Horas</label>
+                <input type="number" step="0.1" value={editForm.vidaHoras} onChange={(e) => setEditForm({ ...editForm, vidaHoras: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Vida Límite Meses</label>
+                <input type="number" value={editForm.vidaMeses} onChange={(e) => setEditForm({ ...editForm, vidaMeses: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+              </div>
+            </div>
+            <div className="text-[11px] text-slate-400 -mt-1">
+              El límite efectivo usa Vida Límite si está definida; si no, el TBO. {usaVida ? 'Actualmente se usará Vida Límite.' : ''}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Fecha instalación</label>
+                <input type="date" value={editForm.installDate} onChange={(e) => setEditForm({ ...editForm, installDate: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Horas del dominio al instalar</label>
+                <input type="number" step="0.1" value={editForm.installHoras} onChange={(e) => setEditForm({ ...editForm, installHoras: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Notas</label>
+              <textarea value={editForm.notas} onChange={(e) => setEditForm({ ...editForm, notas: e.target.value })} rows={2}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 resize-none" />
+            </div>
+            {editResult && (
+              <div className={`rounded-lg px-3 py-2 text-sm ${editResult.success ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                {editResult.success ? editResult.message : editResult.error}
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2 mt-5">
+            {!editModal.isNew && (
+              <button onClick={handleDelete} disabled={editSubmitting || deleting}
+                className="px-3 py-2 rounded-lg text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50">
+                {deleting ? 'Eliminando…' : 'Eliminar'}
+              </button>
+            )}
+            <button onClick={() => !editSubmitting && !deleting && setEditModal({ open: false, id: null, isNew: false })} disabled={editSubmitting || deleting}
+              className="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+              Cancelar
+            </button>
+            <button onClick={handleEditSubmit} disabled={editSubmitting || deleting}
+              className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50">
+              {editSubmitting ? 'Guardando…' : editModal.isNew ? 'Crear' : 'Guardar'}
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-5">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-base font-bold text-slate-800">Plan de reemplazo de componentes</h3>
+        <button
+          onClick={() => openEditModal(null)}
+          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-500 transition-colors whitespace-nowrap"
+        >
+          + Agregar componente
+        </button>
+      </div>
+
       {/* Summary + methodology */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
@@ -4111,12 +4316,21 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
                         )}
                       </td>
                       <td className="px-3 py-2.5 text-center">
-                        <button
-                          onClick={() => openModal(p)}
-                          className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-800 text-white hover:bg-slate-700 transition-colors whitespace-nowrap"
-                        >
-                          Registrar cambio
-                        </button>
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => openModal(p)}
+                            className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-800 text-white hover:bg-slate-700 transition-colors whitespace-nowrap"
+                          >
+                            Registrar cambio
+                          </button>
+                          <button
+                            onClick={() => openEditModal(p)}
+                            title="Editar componente"
+                            className="px-2 py-1 rounded-md text-xs font-medium border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                          >
+                            Editar
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -4196,6 +4410,9 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
           </div>
         </div>
       )}
+
+      {/* Editar / Agregar componente modal */}
+      {editModal.open && renderEditModal()}
     </div>
   );
 }
@@ -4224,6 +4441,26 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
   const [result, setResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
   const [auditing, setAuditing] = useState(false);
   const [auditReport, setAuditReport] = useState<any | null>(null);
+
+  // Edit/create modal.
+  type DirEditForm = {
+    tipo: string; dominio: string; numero: string; enmienda: string; descripcion: string;
+    aplicabilidad: string; periodicidadRaw: string; recurrente: boolean; alEvento: boolean;
+    intervaloMeses: string; intervaloHoras: string; efectividadFecha: string; efectividadHoras: string;
+    cumplimientoFecha: string; cumplimientoHoras: string; observacion: string; responsable: string;
+    esEmergencia: boolean; urlReferencia: string;
+  };
+  const emptyEdit: DirEditForm = {
+    tipo: 'AD', dominio: 'AIRFRAME', numero: '', enmienda: '', descripcion: '', aplicabilidad: 'APLICA',
+    periodicidadRaw: '', recurrente: true, alEvento: false, intervaloMeses: '', intervaloHoras: '',
+    efectividadFecha: '', efectividadHoras: '', cumplimientoFecha: '', cumplimientoHoras: '',
+    observacion: '', responsable: '', esEmergencia: false, urlReferencia: '',
+  };
+  const [editModal, setEditModal] = useState<{ open: boolean; id: number | null; isNew: boolean }>({ open: false, id: null, isNew: false });
+  const [editForm, setEditForm] = useState<DirEditForm>(emptyEdit);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editResult, setEditResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const handleAudit = async () => {
     setAuditing(true);
@@ -4320,12 +4557,250 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
     setSubmitting(false);
   };
 
+  const openEditModal = (dir: any | null) => {
+    if (dir) {
+      setEditModal({ open: true, id: dir.id, isNew: false });
+      setEditForm({
+        tipo: dir.tipo || 'AD',
+        dominio: dir.dominio || 'AIRFRAME',
+        numero: dir.numero || '',
+        enmienda: dir.enmienda || '',
+        descripcion: dir.descripcion || '',
+        aplicabilidad: dir.aplicabilidad || 'APLICA',
+        periodicidadRaw: dir.periodicidadRaw || '',
+        recurrente: !!dir.recurrente,
+        alEvento: !!dir.alEvento,
+        intervaloMeses: dir.intervaloMeses != null ? String(dir.intervaloMeses) : '',
+        intervaloHoras: dir.intervaloHoras != null ? String(dir.intervaloHoras) : '',
+        efectividadFecha: dir.efectividadFecha ? new Date(dir.efectividadFecha).toISOString().split('T')[0] : '',
+        efectividadHoras: dir.efectividadHoras != null ? String(dir.efectividadHoras) : '',
+        cumplimientoFecha: dir.cumplimientoFecha ? new Date(dir.cumplimientoFecha).toISOString().split('T')[0] : '',
+        cumplimientoHoras: dir.cumplimientoHoras != null ? String(dir.cumplimientoHoras) : '',
+        observacion: dir.observacion || '',
+        responsable: dir.responsable || '',
+        esEmergencia: !!dir.esEmergencia,
+        urlReferencia: dir.urlReferencia || '',
+      });
+    } else {
+      setEditModal({ open: true, id: null, isNew: true });
+      setEditForm({ ...emptyEdit });
+    }
+    setEditResult(null);
+  };
+
+  const handleEditSubmit = async () => {
+    if (!editForm.numero.trim()) { setEditResult({ success: false, error: 'El número es requerido' }); return; }
+    if (!editForm.descripcion.trim()) { setEditResult({ success: false, error: 'La descripción es requerida' }); return; }
+    setEditSubmitting(true);
+    setEditResult(null);
+    try {
+      const num = (v: string) => (v.trim() === '' ? null : parseFloat(v));
+      const res = await guardarDirectiva({
+        id: editModal.id ?? undefined,
+        tipo: editForm.tipo,
+        dominio: editForm.dominio,
+        numero: editForm.numero,
+        enmienda: editForm.enmienda || null,
+        descripcion: editForm.descripcion,
+        aplicabilidad: editForm.aplicabilidad,
+        periodicidadRaw: editForm.periodicidadRaw || null,
+        recurrente: editForm.recurrente,
+        alEvento: editForm.alEvento,
+        intervaloMeses: num(editForm.intervaloMeses),
+        intervaloHoras: num(editForm.intervaloHoras),
+        efectividadFecha: editForm.efectividadFecha || null,
+        efectividadHoras: num(editForm.efectividadHoras),
+        cumplimientoFecha: editForm.cumplimientoFecha || null,
+        cumplimientoHoras: num(editForm.cumplimientoHoras),
+        observacion: editForm.observacion || null,
+        responsable: editForm.responsable || null,
+        esEmergencia: editForm.esEmergencia,
+        urlReferencia: editForm.urlReferencia || null,
+      });
+      setEditResult(res);
+      if (res.success) setTimeout(() => { router.refresh(); setEditModal({ open: false, id: null, isNew: false }); }, 1200);
+    } catch (e: any) {
+      setEditResult({ success: false, error: e.message || 'Error desconocido' });
+    }
+    setEditSubmitting(false);
+  };
+
+  const handleDelete = async () => {
+    if (!editModal.id) return;
+    if (!confirm('¿Eliminar esta directiva AD/DA? Esta acción no se puede deshacer.')) return;
+    setDeleting(true);
+    setEditResult(null);
+    try {
+      const res = await eliminarDirectiva(editModal.id);
+      setEditResult(res);
+      if (res.success) setTimeout(() => { router.refresh(); setEditModal({ open: false, id: null, isNew: false }); }, 1000);
+    } catch (e: any) {
+      setEditResult({ success: false, error: e.message || 'Error desconocido' });
+    }
+    setDeleting(false);
+  };
+
   if (!directives.length) {
     return (
       <div className="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-500 shadow-sm">
         <div className="text-3xl mb-2">📜</div>
         <p className="font-medium text-slate-700">Sin directivas AD/DA cargadas</p>
-        <p className="text-sm mt-1">No hay directivas de aeronavegabilidad registradas para esta aeronave.</p>
+        <p className="text-sm mt-1 mb-4">No hay directivas de aeronavegabilidad registradas para esta aeronave.</p>
+        <button onClick={() => openEditModal(null)} className="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-white hover:bg-slate-700">
+          + Agregar directiva
+        </button>
+        {editModal.open && renderEditModal()}
+      </div>
+    );
+  }
+
+  function renderEditModal() {
+    const set = (patch: Partial<DirEditForm>) => setEditForm({ ...editForm, ...patch });
+    const closeAllowed = !editSubmitting && !deleting;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => closeAllowed && setEditModal({ open: false, id: null, isNew: false })}>
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-5 sm:p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-start justify-between mb-4">
+            <h3 className="text-lg font-bold text-slate-800">{editModal.isNew ? 'Agregar directiva' : 'Editar directiva'}</h3>
+            <button onClick={() => closeAllowed && setEditModal({ open: false, id: null, isNew: false })} className="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
+          </div>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Tipo</label>
+                <select value={editForm.tipo} onChange={(e) => set({ tipo: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300">
+                  <option value="AD">AD (FAA)</option>
+                  <option value="DA">DA (DGAC)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Dominio</label>
+                <select value={editForm.dominio} onChange={(e) => set({ dominio: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300">
+                  <option value="AIRFRAME">Célula (Airframe)</option>
+                  <option value="ENGINE">Motor (Engine)</option>
+                  <option value="PROPELLER">Hélice (Propeller)</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Número *</label>
+                <input type="text" value={editForm.numero} onChange={(e) => set({ numero: e.target.value })} placeholder="ej. 2011-26-04"
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Enmienda</label>
+                <input type="text" value={editForm.enmienda} onChange={(e) => set({ enmienda: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Descripción *</label>
+              <textarea value={editForm.descripcion} onChange={(e) => set({ descripcion: e.target.value })} rows={2}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 resize-none" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Aplicabilidad</label>
+                <select value={editForm.aplicabilidad} onChange={(e) => set({ aplicabilidad: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300">
+                  <option value="APLICA">Aplica</option>
+                  <option value="NO_APLICA">No aplica</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Periodicidad (texto)</label>
+                <input type="text" value={editForm.periodicidadRaw} onChange={(e) => set({ periodicidadRaw: e.target.value })} placeholder="ej. Cada 100 h"
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-4 py-1">
+              <label className="flex items-center gap-1.5 text-sm text-slate-600 cursor-pointer select-none">
+                <input type="checkbox" checked={editForm.recurrente} onChange={(e) => set({ recurrente: e.target.checked })} className="rounded border-slate-300" /> Recurrente
+              </label>
+              <label className="flex items-center gap-1.5 text-sm text-slate-600 cursor-pointer select-none">
+                <input type="checkbox" checked={editForm.alEvento} onChange={(e) => set({ alEvento: e.target.checked })} className="rounded border-slate-300" /> Al evento
+              </label>
+              <label className="flex items-center gap-1.5 text-sm text-slate-600 cursor-pointer select-none">
+                <input type="checkbox" checked={editForm.esEmergencia} onChange={(e) => set({ esEmergencia: e.target.checked })} className="rounded border-slate-300" /> 🚨 Emergency AD
+              </label>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Intervalo horas</label>
+                <input type="number" step="0.1" value={editForm.intervaloHoras} onChange={(e) => set({ intervaloHoras: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Intervalo meses</label>
+                <input type="number" value={editForm.intervaloMeses} onChange={(e) => set({ intervaloMeses: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Efectividad fecha</label>
+                <input type="date" value={editForm.efectividadFecha} onChange={(e) => set({ efectividadFecha: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Efectividad horas</label>
+                <input type="number" step="0.1" value={editForm.efectividadHoras} onChange={(e) => set({ efectividadHoras: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Último cumplimiento (fecha)</label>
+                <input type="date" value={editForm.cumplimientoFecha} onChange={(e) => set({ cumplimientoFecha: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Último cumplimiento (horas)</label>
+                <input type="number" step="0.1" value={editForm.cumplimientoHoras} onChange={(e) => set({ cumplimientoHoras: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Responsable</label>
+              <input type="text" value={editForm.responsable} onChange={(e) => set({ responsable: e.target.value })}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">URL de referencia</label>
+              <input type="url" value={editForm.urlReferencia} onChange={(e) => set({ urlReferencia: e.target.value })} placeholder="https://…"
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Observación</label>
+              <textarea value={editForm.observacion} onChange={(e) => set({ observacion: e.target.value })} rows={2}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 resize-none" />
+            </div>
+            {editResult && (
+              <div className={`rounded-lg px-3 py-2 text-sm ${editResult.success ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                {editResult.success ? editResult.message : editResult.error}
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2 mt-5">
+            {!editModal.isNew && (
+              <button onClick={handleDelete} disabled={editSubmitting || deleting}
+                className="px-3 py-2 rounded-lg text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50">
+                {deleting ? 'Eliminando…' : 'Eliminar'}
+              </button>
+            )}
+            <button onClick={() => closeAllowed && setEditModal({ open: false, id: null, isNew: false })} disabled={editSubmitting || deleting}
+              className="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+              Cancelar
+            </button>
+            <button onClick={handleEditSubmit} disabled={editSubmitting || deleting}
+              className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50">
+              {editSubmitting ? 'Guardando…' : editModal.isNew ? 'Crear' : 'Guardar'}
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -4377,6 +4852,10 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
           ) : (
             <>🔎 Auditar ahora</>
           )}
+        </button>
+        <button onClick={() => openEditModal(null)}
+          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-500 transition-colors whitespace-nowrap">
+          + Agregar directiva
         </button>
       </div>
 
@@ -4495,14 +4974,18 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
                         )}
                       </td>
                       <td className="px-3 py-2.5 text-center">
-                        {canLog ? (
-                          <button onClick={() => openModal(d)}
-                            className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-800 text-white hover:bg-slate-700 transition-colors whitespace-nowrap">
-                            Registrar cumpl.
+                        <div className="flex items-center justify-center gap-1.5">
+                          {canLog && (
+                            <button onClick={() => openModal(d)}
+                              className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-800 text-white hover:bg-slate-700 transition-colors whitespace-nowrap">
+                              Registrar cumpl.
+                            </button>
+                          )}
+                          <button onClick={() => openEditModal(d)} title="Editar directiva"
+                            className="px-2 py-1 rounded-md text-xs font-medium border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors">
+                            Editar
                           </button>
-                        ) : (
-                          <span className="text-slate-300 text-xs">—</span>
-                        )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -4579,6 +5062,9 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
           </div>
         </div>
       )}
+
+      {/* Editar / Agregar directiva modal */}
+      {editModal.open && renderEditModal()}
     </div>
   );
 }

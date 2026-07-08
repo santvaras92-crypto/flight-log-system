@@ -808,6 +808,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       diasEfectivos,
       estado,
       datosInconsistentes,
+      notas: p.notas,
       ultimoEvento: p.eventos[0]
         ? { fecha: p.eventos[0].fecha.toISOString(), horas: p.eventos[0].horas != null ? Number(p.eventos[0].horas) : null }
         : null,
@@ -886,6 +887,8 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       alEvento: d.alEvento,
       intervaloHoras,
       intervaloMeses,
+      efectividadFecha: d.efectividadFecha ? new Date(d.efectividadFecha).toISOString() : null,
+      efectividadHoras: d.efectividadHoras != null ? Number(d.efectividadHoras) : null,
       cumplimientoFecha: cumplFecha ? cumplFecha.toISOString() : null,
       cumplimientoHoras: cumplHoras,
       domainHours,
@@ -900,6 +903,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       esEmergencia: d.esEmergencia,
       urlReferencia: d.urlReferencia,
       observacion: d.observacion,
+      responsable: d.responsable,
       fuente: d.fuente,
       ultimoEvento: d.eventos[0]
         ? { fecha: d.eventos[0].fecha.toISOString(), horas: d.eventos[0].horas != null ? Number(d.eventos[0].horas) : null }
