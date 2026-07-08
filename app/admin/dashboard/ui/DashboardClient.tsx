@@ -8,6 +8,7 @@ import ImagePreviewModal from "../../../components/ImagePreviewModal";
 import { registerOverhaul } from "../../../actions/register-overhaul";
 import { registrarCambioComponente } from "../../../actions/registrar-cambio-componente";
 import { registrarCumplimiento } from "../../../actions/registrar-cumplimiento";
+import { runAuditNow } from "../../../actions/run-audit";
 import EngineAnalysis from "./EngineAnalysis";
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler, DoughnutController, ArcElement);
@@ -4221,6 +4222,27 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
   const [form, setForm] = useState({ fecha: '', horas: '', ot: '', notas: '' });
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
+  const [auditing, setAuditing] = useState(false);
+  const [auditReport, setAuditReport] = useState<any | null>(null);
+
+  const handleAudit = async () => {
+    setAuditing(true);
+    setAuditReport(null);
+    try {
+      const res = await runAuditNow();
+      if (res.success && res.report) {
+        setAuditReport(res.report);
+        if ((res.report.faa.added + res.report.dgac.added) > 0) {
+          setTimeout(() => router.refresh(), 1600);
+        }
+      } else {
+        setAuditReport({ error: res.error || 'Error en la auditoría' });
+      }
+    } catch (e: any) {
+      setAuditReport({ error: e.message || 'Error desconocido' });
+    }
+    setAuditing(false);
+  };
 
   const fmtH = (h: number | null | undefined) => (h == null ? '—' : `${Number(h).toLocaleString('es-CL', { maximumFractionDigits: 1 })} h`);
   const fmtDate = (iso: string | null | undefined) => (iso ? formatFecha(new Date(iso), { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
@@ -4348,7 +4370,55 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
           Solo aplicables
         </label>
         <div className="text-xs text-slate-400 ml-auto">Tasa de uso: {rate > 0 ? `${rate.toFixed(2)} h/día` : 's/d'}</div>
+        <button onClick={handleAudit} disabled={auditing}
+          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap">
+          {auditing ? (
+            <><svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" /></svg> Auditando…</>
+          ) : (
+            <>🔎 Auditar ahora</>
+          )}
+        </button>
       </div>
+
+      {/* Audit report panel */}
+      {auditReport && (
+        <div className={`rounded-xl border p-4 shadow-sm ${auditReport.error ? 'bg-red-50 border-red-200' : 'bg-slate-50 border-slate-200'}`}>
+          {auditReport.error ? (
+            <p className="text-sm text-red-700">⚠️ {auditReport.error}</p>
+          ) : (
+            <>
+              <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                <h4 className="font-semibold text-slate-800 text-sm">Resultado de la auditoría</h4>
+                <button onClick={() => setAuditReport(null)} className="text-slate-400 hover:text-slate-600 text-lg leading-none">×</button>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm mb-3">
+                <div><div className="text-[11px] uppercase tracking-wide text-slate-400 font-semibold">FAA revisadas</div><div className="text-lg font-bold text-slate-700">{auditReport.faa?.scanned ?? 0}</div></div>
+                <div><div className="text-[11px] uppercase tracking-wide text-slate-400 font-semibold">FAA aplicables</div><div className="text-lg font-bold text-slate-700">{auditReport.faa?.applicable ?? 0}</div></div>
+                <div><div className="text-[11px] uppercase tracking-wide text-emerald-500 font-semibold">Nuevas agregadas</div><div className="text-lg font-bold text-emerald-600">{(auditReport.faa?.added ?? 0) + (auditReport.dgac?.added ?? 0)}</div></div>
+                <div><div className="text-[11px] uppercase tracking-wide text-slate-400 font-semibold">DGAC</div><div className="text-lg font-bold text-slate-700">{auditReport.dgac?.enabled ? (auditReport.dgac?.added ?? 0) : '—'}</div></div>
+              </div>
+              {Array.isArray(auditReport.added) && auditReport.added.length > 0 && (
+                <div className="space-y-1 mb-2">
+                  <div className="text-xs font-semibold text-slate-500">Directivas agregadas:</div>
+                  {auditReport.added.map((a: any, i: number) => (
+                    <div key={i} className="text-xs text-slate-600 flex items-center gap-1.5">
+                      {a.esEmergencia && <span title="Emergency AD">🚨</span>}
+                      <span className="font-medium">{a.tipo} {a.numero}</span> — {a.descripcion}
+                      {a.url && <a href={a.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline ml-1">ver</a>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {(!auditReport.added || auditReport.added.length === 0) && (
+                <p className="text-xs text-slate-500">✓ Sin directivas nuevas aplicables. Todo al día respecto a las fuentes consultadas.</p>
+              )}
+              {Array.isArray(auditReport.notes) && auditReport.notes.length > 0 && (
+                <div className="text-[11px] text-slate-400 mt-2 border-t border-slate-200 pt-2">{auditReport.notes.join(' · ')}</div>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {/* Groups */}
       {grouped.map(({ tipo, items }) => (
