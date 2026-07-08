@@ -736,9 +736,17 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     const installHoras = p.installHoras != null ? Number(p.installHoras) : null;
     const installDate = p.installDate ? new Date(p.installDate) : null;
 
+    // Guard against a reference-frame mismatch: if a part was installed at a
+    // higher meter reading than the live domain meter, its hour reference does
+    // not belong to the current frame (e.g. an ENGINE part whose install was
+    // recorded in AIRFRAME hours before the last engine overhaul). In that case
+    // the hours dimension is unreliable, so we drop it and rely on the calendar.
+    const hoursFrameValid = installHoras == null || installHoras <= domainHours + 0.1;
+    const datosInconsistentes = installHoras != null && limitHoras != null && !hoursFrameValid;
+
     // Hours remaining against the live domain meter.
     let remanenteHoras: number | null = null;
-    if (limitHoras != null && installHoras != null) {
+    if (limitHoras != null && installHoras != null && hoursFrameValid) {
       remanenteHoras = Number((installHoras + limitHoras - domainHours).toFixed(1));
     }
 
@@ -799,6 +807,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       fechaEfectiva: fechaEfectiva ? fechaEfectiva.toISOString() : null,
       diasEfectivos,
       estado,
+      datosInconsistentes,
       ultimoEvento: p.eventos[0]
         ? { fecha: p.eventos[0].fecha.toISOString(), horas: p.eventos[0].horas != null ? Number(p.eventos[0].horas) : null }
         : null,

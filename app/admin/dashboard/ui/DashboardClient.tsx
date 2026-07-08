@@ -4055,7 +4055,12 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
                         </span>
                       </td>
                       <td className="px-3 py-2.5">
-                        <div className="font-medium text-slate-800">{p.descripcion}</div>
+                        <div className="font-medium text-slate-800 flex items-center gap-1.5">
+                          {p.descripcion}
+                          {p.datosInconsistentes && (
+                            <span title="Horas de instalación fuera del marco actual del dominio (probablemente en horas de célula previas a un overhaul). Se monitorea solo por calendario; registre el cambio para corregir." className="text-amber-500 cursor-help text-xs">⚠</span>
+                          )}
+                        </div>
                         {p.marca && <div className="text-xs text-slate-400">{p.marca}</div>}
                       </td>
                       <td className="px-3 py-2.5 text-xs text-slate-500">
