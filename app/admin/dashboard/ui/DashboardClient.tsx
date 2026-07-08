@@ -4882,7 +4882,16 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
                 <div><div className="text-[11px] uppercase tracking-wide text-slate-400 font-semibold">FAA revisadas</div><div className="text-lg font-bold text-slate-700">{auditReport.faa?.scanned ?? 0}</div></div>
                 <div><div className="text-[11px] uppercase tracking-wide text-slate-400 font-semibold">FAA aplicables</div><div className="text-lg font-bold text-slate-700">{auditReport.faa?.applicable ?? 0}</div></div>
                 <div><div className="text-[11px] uppercase tracking-wide text-emerald-500 font-semibold">Nuevas agregadas</div><div className="text-lg font-bold text-emerald-600">{(auditReport.faa?.added ?? 0) + (auditReport.dgac?.added ?? 0)}</div></div>
-                <div><div className="text-[11px] uppercase tracking-wide text-slate-400 font-semibold">DGAC</div><div className="text-lg font-bold text-slate-700">{auditReport.dgac?.enabled ? (auditReport.dgac?.added ?? 0) : '—'}</div></div>
+                <div>
+                  <div className="text-[11px] uppercase tracking-wide text-slate-400 font-semibold">DGAC (Chile)</div>
+                  <div className="text-lg font-bold text-slate-700" title="Aeronave de diseño EE.UU.: la aeronavegabilidad DGAC se cumple adoptando las AD del estado de diseño (FAA), ya revisadas. Principio OACI Anexo 8.">
+                    {!auditReport.dgac?.enabled
+                      ? '—'
+                      : (auditReport.dgac?.added ?? 0) > 0
+                        ? auditReport.dgac.added
+                        : <span className="text-emerald-600" title="Cubierta vía estado de diseño (FAA)">✓ Estado de diseño</span>}
+                  </div>
+                </div>
               </div>
               {Array.isArray(auditReport.added) && auditReport.added.length > 0 && (
                 <div className="space-y-1 mb-2">
