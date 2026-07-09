@@ -34,7 +34,7 @@ export default function PdfDemoPage() {
     <div className="min-h-screen flex items-center justify-center p-8">
       <div className="max-w-md w-full space-y-6 text-center">
         <h1 className="text-2xl font-semibold">PDF Demo</h1>
-        <p className="text-sm text-gray-600">Genera un PDF de ejemplo con el nuevo header y footer.</p>
+        <p className="text-sm text-gray-600 dark:text-foreground-soft">Genera un PDF de ejemplo con el nuevo header y footer.</p>
         <button
           onClick={handleGenerate}
           className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"

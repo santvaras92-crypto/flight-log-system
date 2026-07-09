@@ -500,17 +500,17 @@ export default function RegisterClient({
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-      <div className="rounded-2xl border shadow-sm bg-white">
+      <div className="rounded-2xl border shadow-sm bg-white dark:bg-card">
         <div className="p-4 sm:p-6 border-b">
           <div className="flex justify-between items-start">
             <div>
               <h2 className="text-xl sm:text-2xl font-semibold">Registro</h2>
-              <p className="text-sm mt-1 text-slate-600">Selecciona piloto y tipo de registro.</p>
+              <p className="text-sm mt-1 text-slate-600 dark:text-foreground-soft">Selecciona piloto y tipo de registro.</p>
             </div>
             {userRole && (
               <Link
                 href={userRole === 'ADMIN' ? '/admin/dashboard' : '/pilot/dashboard'}
-                className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 shrink-0"
+                className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline flex items-center gap-1 shrink-0"
               >
                 <span>←</span>
                 <span className="hidden sm:inline">{userRole === 'ADMIN' ? 'Dashboard' : 'Portal Piloto'}</span>
@@ -526,7 +526,7 @@ export default function RegisterClient({
               <span className="mb-1 font-medium">Piloto</span>
               {userRole === 'PILOTO' || userRole === 'PILOT' ? (
                 // Si es piloto logueado, mostrar su nombre como texto fijo
-                <div className="rounded-xl border px-3 py-3 bg-slate-100 text-slate-700 font-medium">
+                <div className="rounded-xl border px-3 py-3 bg-slate-100 dark:bg-muted text-slate-700 dark:text-foreground-soft font-medium">
                   {!pilotNameLoaded
                     ? 'Cargando...'
                     : (pilots.find(p => p.value === pilotValue)?.label || 'Nombre no encontrado')
@@ -535,7 +535,7 @@ export default function RegisterClient({
               ) : (
                 // Si es admin o sin sesión, mostrar dropdown
                 <select
-                  className="rounded-xl border px-3 py-3 bg-slate-50"
+                  className="rounded-xl border px-3 py-3 bg-slate-50 dark:bg-muted"
                   value={pilotValue}
                   onChange={e => setPilotValue(e.target.value)}
                 >
@@ -549,11 +549,11 @@ export default function RegisterClient({
               <span className="mb-1 font-medium">Tipo</span>
               <div className="grid grid-cols-3 gap-2">
                 <button type="button" onClick={() => setMode('flight')}
-                  className={`rounded-lg px-3 py-2 border ${mode === 'flight' ? 'bg-blue-600 text-white' : 'bg-slate-50'}`}>Vuelo</button>
+                  className={`rounded-lg px-3 py-2 border ${mode === 'flight' ? 'bg-blue-600 text-white' : 'bg-slate-50 dark:bg-muted'}`}>Vuelo</button>
                 <button type="button" onClick={() => setMode('fuel')}
-                  className={`rounded-lg px-3 py-2 border ${mode === 'fuel' ? 'bg-amber-600 text-white' : 'bg-slate-50'}`}>Combustible</button>
+                  className={`rounded-lg px-3 py-2 border ${mode === 'fuel' ? 'bg-amber-600 text-white' : 'bg-slate-50 dark:bg-muted'}`}>Combustible</button>
                 <button type="button" onClick={() => setMode('deposit')}
-                  className={`rounded-lg px-3 py-2 border ${mode === 'deposit' ? 'bg-emerald-600 text-white' : 'bg-slate-50'}`}>Depósito</button>
+                  className={`rounded-lg px-3 py-2 border ${mode === 'deposit' ? 'bg-emerald-600 text-white' : 'bg-slate-50 dark:bg-muted'}`}>Depósito</button>
               </div>
             </label>
           </div>
@@ -568,11 +568,11 @@ export default function RegisterClient({
                   onChange={(e) => setFecha(e.target.value)}
                   type="date"
                   required
-                  className="rounded-xl border px-3 py-3 bg-slate-50"
+                  className="rounded-xl border px-3 py-3 bg-slate-50 dark:bg-muted"
                 />
               </label>
               {mode === 'flight' && (
-                <div className="text-sm text-slate-600 flex items-end">Avión: <span className="ml-1 font-medium">CC-AQI</span></div>
+                <div className="text-sm text-slate-600 dark:text-foreground-soft flex items-end">Avión: <span className="ml-1 font-medium">CC-AQI</span></div>
               )}
             </div>
 
@@ -586,9 +586,9 @@ export default function RegisterClient({
                       value={aerodromoSalida}
                       onChange={(e) => setAerodromoSalida(e.target.value.toUpperCase())}
                       placeholder="SCCV"
-                      className="rounded-xl border px-3 py-3 bg-slate-50 font-mono uppercase"
+                      className="rounded-xl border px-3 py-3 bg-slate-50 dark:bg-muted font-mono uppercase"
                     />
-                    <span className="text-xs text-slate-500 mt-1">Destino del último vuelo: {lastAerodromoDestino}</span>
+                    <span className="text-xs text-slate-500 dark:text-muted-foreground mt-1">Destino del último vuelo: {lastAerodromoDestino}</span>
                   </label>
                   <label className="flex flex-col text-sm">
                     <span className="mb-1 font-medium">Aeródromo de Destino</span>
@@ -596,7 +596,7 @@ export default function RegisterClient({
                       value={aerodromoDestino}
                       onChange={(e) => setAerodromoDestino(e.target.value.toUpperCase())}
                       placeholder="SCCV"
-                      className="rounded-xl border px-3 py-3 bg-slate-50 font-mono uppercase"
+                      className="rounded-xl border px-3 py-3 bg-slate-50 dark:bg-muted font-mono uppercase"
                     />
                   </label>
                 </div>
@@ -608,7 +608,7 @@ export default function RegisterClient({
                     <input
                       value={copiloto}
                       onChange={(e) => setCopiloto(e.target.value)}
-                      className="rounded-xl border px-3 py-3 bg-slate-50"
+                      className="rounded-xl border px-3 py-3 bg-slate-50 dark:bg-muted"
                     />
                   </label>
                   <label className="flex flex-col text-sm">
@@ -616,15 +616,15 @@ export default function RegisterClient({
                     <input
                       value={detalle}
                       onChange={(e) => setDetalle(e.target.value)}
-                      className="rounded-xl border px-3 py-3 bg-slate-50"
+                      className="rounded-xl border px-3 py-3 bg-slate-50 dark:bg-muted"
                     />
                   </label>
                 </div>
 
                 {/* Últimos contadores registrados */}
                 {(currentCounters.hobbs !== null || currentCounters.tach !== null) && (
-                  <div className="rounded-xl p-4 bg-amber-50 border border-amber-200">
-                    <h3 className="text-sm font-bold text-amber-900 mb-2 flex items-center gap-2">
+                  <div className="rounded-xl p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30">
+                    <h3 className="text-sm font-bold text-amber-900 dark:text-amber-200 mb-2 flex items-center gap-2">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
@@ -632,25 +632,25 @@ export default function RegisterClient({
                     </h3>
                     <div className="flex gap-6">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-slate-600">HOBBS:</span>
-                        <span className="font-mono font-bold text-blue-600">
+                        <span className="text-xs font-semibold text-slate-600 dark:text-foreground-soft">HOBBS:</span>
+                        <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
                           {currentCounters.hobbs !== null ? currentCounters.hobbs.toFixed(1) : "N/A"}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-slate-600">TACH:</span>
-                        <span className="font-mono font-bold text-blue-600">
+                        <span className="text-xs font-semibold text-slate-600 dark:text-foreground-soft">TACH:</span>
+                        <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
                           {currentCounters.tach !== null ? currentCounters.tach.toFixed(1) : "N/A"}
                         </span>
                       </div>
                     </div>
-                    <p className="text-xs text-amber-700 mt-2">Los nuevos valores deben ser mayores a estos</p>
+                    <p className="text-xs text-amber-700 dark:text-amber-300 mt-2">Los nuevos valores deben ser mayores a estos</p>
                   </div>
                 )}
 
                 {/* Contadores finales */}
-                <div className="rounded-xl p-4 bg-emerald-50 border border-emerald-200">
-                  <h3 className="text-sm font-bold text-emerald-900 mb-3 flex items-center gap-2">
+                <div className="rounded-xl p-4 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30">
+                  <h3 className="text-sm font-bold text-emerald-900 dark:text-emerald-200 mb-3 flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                     </svg>
@@ -658,7 +658,7 @@ export default function RegisterClient({
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="block text-xs font-bold uppercase tracking-wide text-slate-700">
+                      <label className="block text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-foreground-soft">
                         Hobbs Final *
                       </label>
                       <div className="flex gap-2 items-start">
@@ -670,7 +670,7 @@ export default function RegisterClient({
                           min={currentCounters.hobbs !== null ? currentCounters.hobbs : 0}
                           placeholder={currentCounters.hobbs !== null ? `≥ ${currentCounters.hobbs.toFixed(1)}` : "Ej: 2058.5"}
                           required
-                          className="flex-1 rounded-xl border px-3 py-3 bg-white font-mono font-bold text-lg"
+                          className="flex-1 rounded-xl border px-3 py-3 bg-white dark:bg-card font-mono font-bold text-lg"
                         />
                         <button
                           type="button"
@@ -678,8 +678,8 @@ export default function RegisterClient({
                           disabled={!deltaTach || deltaTach <= 0}
                           title={deltaTach && deltaTach > 0 ? "Calcular Hobbs automáticamente" : "Ingresa Tach Fin primero"}
                           className={`p-3 rounded-xl border-2 transition-all ${deltaTach && deltaTach > 0
-                              ? 'bg-slate-50 border-slate-300 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 cursor-pointer'
-                              : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-50'
+                              ? 'bg-slate-50 dark:bg-muted border-slate-300 dark:border-edge-strong text-slate-600 dark:text-foreground-soft hover:bg-blue-50 dark:hover:bg-blue-500/10 hover:border-blue-300 hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer'
+                              : 'bg-slate-100 dark:bg-muted border-slate-200 dark:border-edge text-slate-400 dark:text-faint cursor-not-allowed opacity-50'
                             }`}
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -689,23 +689,23 @@ export default function RegisterClient({
                         </button>
                       </div>
                       {hobbsAutoApplied && (
-                        <div className="flex items-center gap-2 p-2 rounded-lg bg-green-100 border border-green-300 animate-pulse">
-                          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-green-100 dark:bg-green-500/15 border border-green-300 animate-pulse">
+                          <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
-                          <span className="text-xs font-bold text-green-700">Hobbs estimado aplicado</span>
+                          <span className="text-xs font-bold text-green-700 dark:text-green-300">Hobbs estimado aplicado</span>
                         </div>
                       )}
                       {deltaHobbs !== null && (
-                        <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-100">
-                          <span className="text-xs font-bold uppercase text-blue-700">Δ Hobbs:</span>
-                          <span className="font-mono font-bold text-blue-600">{deltaHobbs.toFixed(1)} hrs</span>
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-100 dark:bg-blue-500/15">
+                          <span className="text-xs font-bold uppercase text-blue-700 dark:text-blue-300">Δ Hobbs:</span>
+                          <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{deltaHobbs.toFixed(1)} hrs</span>
                         </div>
                       )}
                     </div>
 
                     <div className="space-y-2">
-                      <label className="block text-xs font-bold uppercase tracking-wide text-slate-700">
+                      <label className="block text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-foreground-soft">
                         Tach Final *
                       </label>
                       <input
@@ -716,12 +716,12 @@ export default function RegisterClient({
                         min={currentCounters.tach !== null ? currentCounters.tach + 0.1 : 0}
                         placeholder={currentCounters.tach !== null ? `Mayor a ${currentCounters.tach.toFixed(1)}` : "Ej: 570.5"}
                         required
-                        className="w-full rounded-xl border px-3 py-3 bg-white font-mono font-bold text-lg"
+                        className="w-full rounded-xl border px-3 py-3 bg-white dark:bg-card font-mono font-bold text-lg"
                       />
                       {deltaTach !== null && (
-                        <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-100">
-                          <span className="text-xs font-bold uppercase text-blue-700">Δ Tach:</span>
-                          <span className="font-mono font-bold text-blue-600">{deltaTach.toFixed(1)} hrs</span>
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-100 dark:bg-blue-500/15">
+                          <span className="text-xs font-bold uppercase text-blue-700 dark:text-blue-300">Δ Tach:</span>
+                          <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{deltaTach.toFixed(1)} hrs</span>
                         </div>
                       )}
                     </div>
@@ -729,18 +729,18 @@ export default function RegisterClient({
 
                   {/* Alerta de ratio HOBBS/TACH fuera de rango */}
                   {ratioWarning && (
-                    <div className="mt-4 rounded-xl p-4 bg-red-50 border-2 border-red-400">
+                    <div className="mt-4 rounded-xl p-4 bg-red-50 dark:bg-red-500/10 border-2 border-red-400">
                       <div className="flex items-start gap-3">
-                        <svg className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
                         <div className="flex-1">
-                          <h4 className="text-sm font-bold text-red-900 mb-1">RATIO HOBBS/TACH FUERA DE RANGO</h4>
-                          <p className="text-sm text-red-800 mb-2">
+                          <h4 className="text-sm font-bold text-red-900 dark:text-red-200 mb-1">RATIO HOBBS/TACH FUERA DE RANGO</h4>
+                          <p className="text-sm text-red-800 dark:text-red-300 mb-2">
                             El ratio calculado es <strong className="font-mono">{ratioWarning.ratio.toFixed(2)}x</strong>
                             {' '}(Δ HOBBS: {deltaHobbs?.toFixed(1)} hrs ÷ Δ TACH: {deltaTach?.toFixed(1)} hrs)
                           </p>
-                          <p className="text-sm text-red-800">
+                          <p className="text-sm text-red-800 dark:text-red-300">
                             Para vuelos de <strong>{ratioWarning.bucket}h Tach</strong>, se espera un ratio de{' '}
                             <strong className="font-mono">{ratioWarning.expected.toFixed(2)}x</strong>{' '}
                             (basado en {ratioWarning.sampleSize} vuelos similares).
@@ -754,8 +754,8 @@ export default function RegisterClient({
 
                 {/* Vista previa de la bitácora */}
                 {deltaHobbs !== null && deltaTach !== null && hobbsFin && tachFin && (
-                  <div className="rounded-xl border-2 border-blue-500 p-4 bg-blue-50">
-                    <h3 className="text-sm font-bold text-blue-900 mb-3 flex items-center gap-2">
+                  <div className="rounded-xl border-2 border-blue-500 p-4 bg-blue-50 dark:bg-blue-500/10">
+                    <h3 className="text-sm font-bold text-blue-900 dark:text-blue-200 mb-3 flex items-center gap-2">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
@@ -764,7 +764,7 @@ export default function RegisterClient({
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs border-collapse">
                         <thead>
-                          <tr className="bg-slate-700 text-white">
+                          <tr className="bg-slate-700 dark:bg-slate-600 text-white">
                             <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>DATE</th>
                             <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>HOBBS</th>
                             <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>BLOCK<br />TIME</th>
@@ -776,41 +776,41 @@ export default function RegisterClient({
                             <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>ROUTE</th>
                             <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>REMARKS<br />SIGNATURE</th>
                           </tr>
-                          <tr className="bg-slate-700 text-white">
+                          <tr className="bg-slate-700 dark:bg-slate-600 text-white">
                             <th className="border border-slate-400 px-2 py-1 text-center text-[10px]">AIRFRAME</th>
                             <th className="border border-slate-400 px-2 py-1 text-center text-[10px]">ENGINE</th>
                             <th className="border border-slate-400 px-2 py-1 text-center text-[10px]">PROPELLER</th>
                           </tr>
                         </thead>
-                        <tbody className="bg-white">
-                          <tr className="hover:bg-gray-50">
-                            <td className="border border-slate-300 px-2 py-2 text-center font-mono whitespace-nowrap">{fecha.split('-').reverse().map((p, i) => i === 2 ? p.slice(-2) : p).join('-')}</td>
-                            <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold">{hobbsFin}</td>
-                            <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold text-blue-600">{deltaHobbs.toFixed(1)}</td>
-                            <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold">{tachFin}</td>
-                            <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold text-blue-600">{deltaTach.toFixed(1)}</td>
-                            <td className="border border-slate-300 px-2 py-2 text-center font-mono">{newComponents?.airframe?.toFixed(1) || '--'}</td>
-                            <td className="border border-slate-300 px-2 py-2 text-center font-mono">{newComponents?.engine?.toFixed(1) || '--'}</td>
-                            <td className="border border-slate-300 px-2 py-2 text-center font-mono">{newComponents?.propeller?.toFixed(1) || '--'}</td>
-                            <td className="border border-slate-300 px-2 py-2 text-center">{selectedPilot?.label.split('(')[0]?.trim() || '--'}</td>
-                            <td className="border border-slate-300 px-2 py-2 text-center">{copiloto || '--'}</td>
-                            <td className="border border-slate-300 px-2 py-2 text-center font-mono">{aerodromoSalida || 'SCCV'}-{aerodromoDestino || 'SCCV'}</td>
-                            <td className="border border-slate-300 px-2 py-2 text-center text-[10px]">{detalle || 'S/Obs'}</td>
+                        <tbody className="bg-white dark:bg-card">
+                          <tr className="hover:bg-gray-50 dark:hover:bg-muted">
+                            <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono whitespace-nowrap">{fecha.split('-').reverse().map((p, i) => i === 2 ? p.slice(-2) : p).join('-')}</td>
+                            <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono font-bold">{hobbsFin}</td>
+                            <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono font-bold text-blue-600 dark:text-blue-400">{deltaHobbs.toFixed(1)}</td>
+                            <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono font-bold">{tachFin}</td>
+                            <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono font-bold text-blue-600 dark:text-blue-400">{deltaTach.toFixed(1)}</td>
+                            <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono">{newComponents?.airframe?.toFixed(1) || '--'}</td>
+                            <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono">{newComponents?.engine?.toFixed(1) || '--'}</td>
+                            <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono">{newComponents?.propeller?.toFixed(1) || '--'}</td>
+                            <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center">{selectedPilot?.label.split('(')[0]?.trim() || '--'}</td>
+                            <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center">{copiloto || '--'}</td>
+                            <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono">{aerodromoSalida || 'SCCV'}-{aerodromoDestino || 'SCCV'}</td>
+                            <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center text-[10px]">{detalle || 'S/Obs'}</td>
                           </tr>
                         </tbody>
                       </table>
                     </div>
-                    <p className="text-xs text-blue-700 mt-2">
+                    <p className="text-xs text-blue-700 dark:text-blue-300 mt-2">
                       * Los valores mostrados son una vista previa. Se confirmarán al aprobar el vuelo.
                     </p>
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-xs text-slate-500 dark:text-muted-foreground mt-1">
                       Base A/E/P: {lastComponents.airframe?.toFixed(1) || 'N/A'} / {lastComponents.engine?.toFixed(1) || 'N/A'} / {lastComponents.propeller?.toFixed(1) || 'N/A'}
                       &nbsp;Δ Tach usado: {deltaTach.toFixed(1)} &nbsp;Δ Hobbs: {deltaHobbs.toFixed(1)}
                     </p>
                   </div>
                 )}
 
-                <p className="text-xs text-slate-500">Tras enviar, pasa a Validación para ingresar Airplane Rate e Instructor/SP Rate.</p>
+                <p className="text-xs text-slate-500 dark:text-muted-foreground">Tras enviar, pasa a Validación para ingresar Airplane Rate e Instructor/SP Rate.</p>
               </>
             )}
 
@@ -826,7 +826,7 @@ export default function RegisterClient({
                       required
                       value={fuelLitros}
                       onChange={(e) => setFuelLitros(e.target.value)}
-                      className="rounded-xl border px-3 py-3 bg-slate-50"
+                      className="rounded-xl border px-3 py-3 bg-slate-50 dark:bg-muted"
                     />
                   </label>
                   <label className="flex flex-col text-sm">
@@ -838,7 +838,7 @@ export default function RegisterClient({
                       required
                       value={fuelMonto}
                       onChange={(e) => setFuelMonto(e.target.value)}
-                      className="rounded-xl border px-3 py-3 bg-slate-50"
+                      className="rounded-xl border px-3 py-3 bg-slate-50 dark:bg-muted"
                     />
                   </label>
                   <div className="flex flex-col text-sm">
@@ -849,7 +849,7 @@ export default function RegisterClient({
                       type="file"
                       accept="image/*"
                       required
-                      className="rounded-xl border px-3 py-2 bg-slate-50"
+                      className="rounded-xl border px-3 py-2 bg-slate-50 dark:bg-muted"
                       onChange={(e) => handleFileChange(e, 'fuel')}
                     />
                   </div>
@@ -857,13 +857,13 @@ export default function RegisterClient({
 
                 {/* Fuel Image Preview */}
                 {fuelImagePreview && (
-                  <div className="relative rounded-xl border border-slate-200 bg-slate-50 p-2">
+                  <div className="relative rounded-xl border border-slate-200 dark:border-edge bg-slate-50 dark:bg-muted p-2">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-slate-600 font-medium">Vista previa de boleta</span>
+                      <span className="text-xs text-slate-600 dark:text-foreground-soft font-medium">Vista previa de boleta</span>
                       <button
                         type="button"
                         onClick={() => clearImagePreview('fuel')}
-                        className="text-red-500 hover:text-red-700 text-xs font-medium"
+                        className="text-red-500 hover:text-red-700 dark:hover:text-red-300 text-xs font-medium"
                       >
                         Eliminar
                       </button>
@@ -878,15 +878,15 @@ export default function RegisterClient({
                         alt="Preview boleta"
                         className="max-h-32 mx-auto rounded-lg object-contain cursor-pointer hover:opacity-80 transition-opacity"
                       />
-                      <span className="text-xs text-blue-600 mt-1 block">Tocar para ampliar</span>
+                      <span className="text-xs text-blue-600 dark:text-blue-400 mt-1 block">Tocar para ampliar</span>
                     </button>
                   </div>
                 )}
 
                 {/* AVGAS Price per Liter display */}
                 {precioLitro !== null && (
-                  <div className="rounded-lg p-3 bg-emerald-50 border border-emerald-200">
-                    <p className="text-sm text-emerald-800 font-medium">
+                  <div className="rounded-lg p-3 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30">
+                    <p className="text-sm text-emerald-800 dark:text-emerald-300 font-medium">
                       <Icon name="fuel" className="inline w-4 h-4 mr-1 align-text-bottom" /> Precio AVGAS: <span className="text-lg font-bold">${precioLitro.toLocaleString('es-CL')}</span> /litro
                     </p>
                   </div>
@@ -894,7 +894,7 @@ export default function RegisterClient({
 
                 <label className="flex flex-col text-sm">
                   <span className="mb-1">Detalle (opcional)</span>
-                  <input name="detalle" className="rounded-xl border px-3 py-3 bg-slate-50" />
+                  <input name="detalle" className="rounded-xl border px-3 py-3 bg-slate-50 dark:bg-muted" />
                 </label>
               </>
             )}
@@ -910,9 +910,9 @@ export default function RegisterClient({
                       inputMode="numeric"
                       placeholder="Ej: 105.000"
                       required
-                      className="rounded-xl border px-3 py-3 bg-slate-50"
+                      className="rounded-xl border px-3 py-3 bg-slate-50 dark:bg-muted"
                     />
-                    <span className="mt-1 text-[11px] text-slate-500">Ingrese el monto (ej: 105.000 o 105000)</span>
+                    <span className="mt-1 text-[11px] text-slate-500 dark:text-muted-foreground">Ingrese el monto (ej: 105.000 o 105000)</span>
                   </label>
                   <div className="flex flex-col text-sm">
                     <span className="mb-1 font-medium">Comprobante (imagen) *</span>
@@ -922,22 +922,22 @@ export default function RegisterClient({
                       type="file"
                       accept="image/*"
                       required
-                      className="rounded-xl border px-3 py-2 bg-slate-50"
+                      className="rounded-xl border px-3 py-2 bg-slate-50 dark:bg-muted"
                       onChange={(e) => handleFileChange(e, 'deposit')}
                     />
-                    <span className="mt-1 text-[11px] text-slate-500">La imagen del comprobante es obligatoria.</span>
+                    <span className="mt-1 text-[11px] text-slate-500 dark:text-muted-foreground">La imagen del comprobante es obligatoria.</span>
                   </div>
                 </div>
 
                 {/* Deposit Image Preview */}
                 {depositImagePreview && (
-                  <div className="relative rounded-xl border border-slate-200 bg-slate-50 p-2">
+                  <div className="relative rounded-xl border border-slate-200 dark:border-edge bg-slate-50 dark:bg-muted p-2">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-slate-600 font-medium">Vista previa de comprobante</span>
+                      <span className="text-xs text-slate-600 dark:text-foreground-soft font-medium">Vista previa de comprobante</span>
                       <button
                         type="button"
                         onClick={() => clearImagePreview('deposit')}
-                        className="text-red-500 hover:text-red-700 text-xs font-medium"
+                        className="text-red-500 hover:text-red-700 dark:hover:text-red-300 text-xs font-medium"
                       >
                         Eliminar
                       </button>
@@ -952,26 +952,26 @@ export default function RegisterClient({
                         alt="Preview comprobante"
                         className="max-h-32 mx-auto rounded-lg object-contain cursor-pointer hover:opacity-80 transition-opacity"
                       />
-                      <span className="text-xs text-blue-600 mt-1 block">Tocar para ampliar</span>
+                      <span className="text-xs text-blue-600 dark:text-blue-400 mt-1 block">Tocar para ampliar</span>
                     </button>
                   </div>
                 )}
 
                 <label className="flex flex-col text-sm">
                   <span className="mb-1">Detalle (opcional)</span>
-                  <input name="detalle" className="rounded-xl border px-3 py-3 bg-slate-50" />
+                  <input name="detalle" className="rounded-xl border px-3 py-3 bg-slate-50 dark:bg-muted" />
                 </label>
               </>
             )}
 
             {/* Success/Error messages near the submit button */}
             {formError && (
-              <div className="rounded-lg p-3 border border-red-400 bg-red-50 text-sm text-red-800 font-medium flex items-center gap-2">
+              <div className="rounded-lg p-3 border border-red-400 bg-red-50 dark:bg-red-500/10 text-sm text-red-800 dark:text-red-300 font-medium flex items-center gap-2">
                 <Icon name="warning" className="w-4 h-4 flex-shrink-0" /> {formError}
               </div>
             )}
             {formSuccess && (
-              <div className="rounded-lg p-3 border border-green-500 bg-green-50 text-sm text-green-800 font-medium flex items-center gap-2">
+              <div className="rounded-lg p-3 border border-green-500 bg-green-50 dark:bg-green-500/10 text-sm text-green-800 dark:text-green-300 font-medium flex items-center gap-2">
                 <Icon name="checkCircle" className="w-4 h-4 flex-shrink-0" /> {formSuccess}
               </div>
             )}
@@ -997,7 +997,7 @@ export default function RegisterClient({
           </form>
 
           {selectedPilot && (
-            <p className="text-xs text-slate-500">Piloto seleccionado: <span className="font-medium">{selectedPilot.label}</span></p>
+            <p className="text-xs text-slate-500 dark:text-muted-foreground">Piloto seleccionado: <span className="font-medium">{selectedPilot.label}</span></p>
           )}
         </div>
       </div>
@@ -1005,20 +1005,20 @@ export default function RegisterClient({
       {/* Modal de confirmación para vuelos */}
       {showConfirmModal && deltaHobbs !== null && deltaTach !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b bg-slate-100 rounded-t-2xl">
-              <h2 className="text-xl font-bold text-slate-800 flex items-center gap-3">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="bg-white dark:bg-card rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b bg-slate-100 dark:bg-muted rounded-t-2xl">
+              <h2 className="text-xl font-bold text-slate-800 dark:text-foreground flex items-center gap-3">
+                <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 CONFIRMAR REGISTRO DE VUELO
               </h2>
-              <p className="text-sm text-slate-600 mt-1">Revisa los datos antes de enviar a validación.</p>
+              <p className="text-sm text-slate-600 dark:text-foreground-soft mt-1">Revisa los datos antes de enviar a validación.</p>
             </div>
 
             <div className="p-6">
-              <div className="rounded-xl border-2 border-blue-500 bg-blue-50 p-4 mb-6">
-                <h3 className="text-sm font-bold text-blue-900 mb-4 flex items-center gap-2">
+              <div className="rounded-xl border-2 border-blue-500 bg-blue-50 dark:bg-blue-500/10 p-4 mb-6">
+                <h3 className="text-sm font-bold text-blue-900 dark:text-blue-200 mb-4 flex items-center gap-2">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
@@ -1027,7 +1027,7 @@ export default function RegisterClient({
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs border-collapse">
                     <thead>
-                      <tr className="bg-slate-700 text-white">
+                      <tr className="bg-slate-700 dark:bg-slate-600 text-white">
                         <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>DATE</th>
                         <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>HOBBS</th>
                         <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>BLOCK<br />TIME</th>
@@ -1039,31 +1039,31 @@ export default function RegisterClient({
                         <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>ROUTE</th>
                         <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>REMARKS<br />SIGNATURE</th>
                       </tr>
-                      <tr className="bg-slate-700 text-white">
+                      <tr className="bg-slate-700 dark:bg-slate-600 text-white">
                         <th className="border border-slate-400 px-2 py-1 text-center text-[10px]">AIRFRAME</th>
                         <th className="border border-slate-400 px-2 py-1 text-center text-[10px]">ENGINE</th>
                         <th className="border border-slate-400 px-2 py-1 text-center text-[10px]">PROPELLER</th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white">
-                      <tr className="hover:bg-gray-50">
-                        <td className="border border-slate-300 px-2 py-2 text-center font-mono whitespace-nowrap">{fecha.split('-').reverse().map((p, i) => i === 2 ? p.slice(-2) : p).join('-')}</td>
-                        <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold">{hobbsFin}</td>
-                        <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold text-blue-600">{deltaHobbs.toFixed(1)}</td>
-                        <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold">{tachFin}</td>
-                        <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold text-blue-600">{deltaTach.toFixed(1)}</td>
-                        <td className="border border-slate-300 px-2 py-2 text-center font-mono">{newComponents?.airframe?.toFixed(1) || '--'}</td>
-                        <td className="border border-slate-300 px-2 py-2 text-center font-mono">{newComponents?.engine?.toFixed(1) || '--'}</td>
-                        <td className="border border-slate-300 px-2 py-2 text-center font-mono">{newComponents?.propeller?.toFixed(1) || '--'}</td>
-                        <td className="border border-slate-300 px-2 py-2 text-center">{selectedPilot?.label.split('(')[0]?.trim() || '--'}</td>
-                        <td className="border border-slate-300 px-2 py-2 text-center">{copiloto || '--'}</td>
-                        <td className="border border-slate-300 px-2 py-2 text-center font-mono">{aerodromoSalida || 'SCCV'}-{aerodromoDestino || 'SCCV'}</td>
-                        <td className="border border-slate-300 px-2 py-2 text-center text-[10px]">{detalle || 'S/Obs'}</td>
+                    <tbody className="bg-white dark:bg-card">
+                      <tr className="hover:bg-gray-50 dark:hover:bg-muted">
+                        <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono whitespace-nowrap">{fecha.split('-').reverse().map((p, i) => i === 2 ? p.slice(-2) : p).join('-')}</td>
+                        <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono font-bold">{hobbsFin}</td>
+                        <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono font-bold text-blue-600 dark:text-blue-400">{deltaHobbs.toFixed(1)}</td>
+                        <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono font-bold">{tachFin}</td>
+                        <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono font-bold text-blue-600 dark:text-blue-400">{deltaTach.toFixed(1)}</td>
+                        <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono">{newComponents?.airframe?.toFixed(1) || '--'}</td>
+                        <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono">{newComponents?.engine?.toFixed(1) || '--'}</td>
+                        <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono">{newComponents?.propeller?.toFixed(1) || '--'}</td>
+                        <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center">{selectedPilot?.label.split('(')[0]?.trim() || '--'}</td>
+                        <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center">{copiloto || '--'}</td>
+                        <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono">{aerodromoSalida || 'SCCV'}-{aerodromoDestino || 'SCCV'}</td>
+                        <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center text-[10px]">{detalle || 'S/Obs'}</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
-                <p className="text-xs text-blue-700 mt-3">
+                <p className="text-xs text-blue-700 dark:text-blue-300 mt-3">
                   Base A/E/P: {lastComponents.airframe?.toFixed(1) || 'N/A'} / {lastComponents.engine?.toFixed(1) || 'N/A'} / {lastComponents.propeller?.toFixed(1) || 'N/A'}
                   &nbsp;| Δ Tach: {deltaTach.toFixed(1)} | Δ Hobbs: {deltaHobbs.toFixed(1)}
                 </p>
@@ -1071,14 +1071,14 @@ export default function RegisterClient({
 
               {/* Ratio warning in modal if applicable */}
               {ratioWarning && (
-                <div className="mb-6 rounded-xl p-4 bg-red-50 border-2 border-red-400">
+                <div className="mb-6 rounded-xl p-4 bg-red-50 dark:bg-red-500/10 border-2 border-red-400">
                   <div className="flex items-start gap-3">
-                    <svg className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                     <div className="flex-1">
-                      <h4 className="text-sm font-bold text-red-900 mb-1">RATIO HOBBS/TACH FUERA DE RANGO</h4>
-                      <p className="text-sm text-red-800">
+                      <h4 className="text-sm font-bold text-red-900 dark:text-red-200 mb-1">RATIO HOBBS/TACH FUERA DE RANGO</h4>
+                      <p className="text-sm text-red-800 dark:text-red-300">
                         Ratio: <strong className="font-mono">{ratioWarning.ratio.toFixed(2)}x</strong>{' '}
                         (esperado: {ratioWarning.expected.toFixed(2)}x para {ratioWarning.bucket}h, N={ratioWarning.sampleSize})
                       </p>
@@ -1094,7 +1094,7 @@ export default function RegisterClient({
                     setShowConfirmModal(false);
                     setPendingFormData(null);
                   }}
-                  className="px-6 py-3 rounded-xl border-2 border-slate-300 bg-slate-100 text-slate-700 font-medium hover:bg-slate-200 transition-colors"
+                  className="px-6 py-3 rounded-xl border-2 border-slate-300 dark:border-edge-strong bg-slate-100 dark:bg-muted text-slate-700 dark:text-foreground-soft font-medium hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
                 >
                   ← Volver
                 </button>
@@ -1142,8 +1142,8 @@ export default function RegisterClient({
       {/* Success Modal with PDF Download */}
       {showSuccessModal && flightData && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-green-200 bg-gradient-to-r from-green-50 to-emerald-50">
+          <div className="bg-white dark:bg-card rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-green-200 dark:border-green-500/30 bg-gradient-to-r from-green-50 to-emerald-50 dark:to-emerald-950/40">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center">
                   <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1151,16 +1151,16 @@ export default function RegisterClient({
                   </svg>
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-green-800">Vuelo Registrado Exitosamente</h2>
-                  <p className="text-sm text-green-600 mt-1">Registro #{flightData.submissionId} • Pendiente de validación</p>
+                  <h2 className="text-2xl font-bold text-green-800 dark:text-green-300">Vuelo Registrado Exitosamente</h2>
+                  <p className="text-sm text-green-600 dark:text-green-400 mt-1">Registro #{flightData.submissionId} • Pendiente de validación</p>
                 </div>
               </div>
             </div>
 
             <div className="p-6">
               <div className="mb-6">
-                <h3 className="text-lg font-bold text-slate-700 mb-3 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <h3 className="text-lg font-bold text-slate-700 dark:text-foreground-soft mb-3 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                   Vista Previa - Bitácora CC-AQI
@@ -1169,7 +1169,7 @@ export default function RegisterClient({
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs border-collapse">
                     <thead>
-                      <tr className="bg-slate-700 text-white">
+                      <tr className="bg-slate-700 dark:bg-slate-600 text-white">
                         <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>DATE</th>
                         <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>HOBBS</th>
                         <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>BLOCK<br />TIME</th>
@@ -1181,36 +1181,36 @@ export default function RegisterClient({
                         <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>ROUTE</th>
                         <th className="border border-slate-400 px-2 py-2 text-center font-bold" rowSpan={2}>REMARKS<br />SIGNATURE</th>
                       </tr>
-                      <tr className="bg-slate-700 text-white">
+                      <tr className="bg-slate-700 dark:bg-slate-600 text-white">
                         <th className="border border-slate-400 px-2 py-1 text-center text-[10px]">AIRFRAME</th>
                         <th className="border border-slate-400 px-2 py-1 text-center text-[10px]">ENGINE</th>
                         <th className="border border-slate-400 px-2 py-1 text-center text-[10px]">PROPELLER</th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white">
-                      <tr className="hover:bg-gray-50">
-                        <td className="border border-slate-300 px-2 py-2 text-center font-mono whitespace-nowrap">
+                    <tbody className="bg-white dark:bg-card">
+                      <tr className="hover:bg-gray-50 dark:hover:bg-muted">
+                        <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono whitespace-nowrap">
                           {(() => { const [y, m, d] = flightData.fecha.split('-'); return `${d}-${m}-${y.slice(-2)}`; })()}
                         </td>
-                        <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold">{flightData.hobbs_fin.toFixed(1)}</td>
-                        <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold text-blue-600">{flightData.diff_hobbs.toFixed(1)}</td>
-                        <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold">{flightData.tach_fin.toFixed(1)}</td>
-                        <td className="border border-slate-300 px-2 py-2 text-center font-mono font-bold text-blue-600">{flightData.diff_tach.toFixed(1)}</td>
-                        <td className="border border-slate-300 px-2 py-2 text-center font-mono">{flightData.airframe.toFixed(1)}</td>
-                        <td className="border border-slate-300 px-2 py-2 text-center font-mono">{flightData.engine.toFixed(1)}</td>
-                        <td className="border border-slate-300 px-2 py-2 text-center font-mono">{flightData.propeller.toFixed(1)}</td>
-                        <td className="border border-slate-300 px-2 py-2 text-center">{flightData.piloto.nombre}</td>
-                        <td className="border border-slate-300 px-2 py-2 text-center">{flightData.copiloto || '—'}</td>
-                        <td className="border border-slate-300 px-2 py-2 text-center font-mono">{flightData.aerodromoSalida}-{flightData.aerodromoDestino}</td>
-                        <td className="border border-slate-300 px-2 py-2 text-center text-[10px]">{flightData.detalle || 'S/Obs'}</td>
+                        <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono font-bold">{flightData.hobbs_fin.toFixed(1)}</td>
+                        <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono font-bold text-blue-600 dark:text-blue-400">{flightData.diff_hobbs.toFixed(1)}</td>
+                        <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono font-bold">{flightData.tach_fin.toFixed(1)}</td>
+                        <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono font-bold text-blue-600 dark:text-blue-400">{flightData.diff_tach.toFixed(1)}</td>
+                        <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono">{flightData.airframe.toFixed(1)}</td>
+                        <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono">{flightData.engine.toFixed(1)}</td>
+                        <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono">{flightData.propeller.toFixed(1)}</td>
+                        <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center">{flightData.piloto.nombre}</td>
+                        <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center">{flightData.copiloto || '—'}</td>
+                        <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center font-mono">{flightData.aerodromoSalida}-{flightData.aerodromoDestino}</td>
+                        <td className="border border-slate-300 dark:border-edge-strong px-2 py-2 text-center text-[10px]">{flightData.detalle || 'S/Obs'}</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
-                <p className="text-xs text-blue-700 mt-2">
+                <p className="text-xs text-blue-700 dark:text-blue-300 mt-2">
                   * Los valores mostrados son una vista previa. Se confirmarán al aprobar el vuelo.
                 </p>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-slate-500 dark:text-muted-foreground mt-1">
                   Base A/E/P: {flightData.airframe_inicio?.toFixed(1) ?? 'N/A'} / {flightData.engine_inicio?.toFixed(1) ?? 'N/A'} / {flightData.propeller_inicio?.toFixed(1) ?? 'N/A'}
                   &nbsp;Δ Tach usado: {flightData.diff_tach.toFixed(1)} &nbsp;Δ Hobbs: {flightData.diff_hobbs.toFixed(1)}
                 </p>
@@ -1249,7 +1249,7 @@ export default function RegisterClient({
                     setAerodromoDestino('SCCV');
                     (document.getElementById('registro-form') as HTMLFormElement)?.reset();
                   }}
-                  className="flex-1 px-6 py-3 rounded-xl bg-slate-600 text-white font-bold hover:bg-slate-700 transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 px-6 py-3 rounded-xl bg-slate-600 text-white font-bold hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors flex items-center justify-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />

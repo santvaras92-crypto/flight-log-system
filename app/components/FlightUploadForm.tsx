@@ -541,8 +541,8 @@ export default function FlightUploadForm({
                   <div className="overflow-x-auto -mx-2 sm:mx-0">
                     <div className="inline-block min-w-full align-middle">
                       <div className="overflow-hidden shadow-lg ring-1 ring-black ring-opacity-5 rounded-lg">
-                        <table className="min-w-full divide-y divide-gray-300 bg-white text-xs sm:text-sm">
-                          <thead className="bg-slate-700">
+                        <table className="min-w-full divide-y divide-gray-300 bg-white dark:bg-card text-xs sm:text-sm">
+                          <thead className="bg-slate-700 dark:bg-slate-600">
                             <tr>
                               <th className="border border-slate-400 px-2 sm:px-3 py-2 text-center font-bold text-white text-[10px] sm:text-xs" rowSpan={2}>DATE</th>
                               <th className="border border-slate-400 px-2 sm:px-3 py-2 text-center font-bold text-white text-[10px] sm:text-xs" rowSpan={2}>HOBBS</th>
@@ -561,26 +561,26 @@ export default function FlightUploadForm({
                               <th className="border border-slate-400 px-2 sm:px-3 py-1 text-center font-bold text-white text-[9px] sm:text-[10px]">PROPELLER</th>
                             </tr>
                           </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
-                            <tr className="hover:bg-gray-50">
-                              <td className="border border-slate-300 px-2 sm:px-3 py-2 sm:py-3 text-center font-mono text-gray-900 whitespace-nowrap">{fechaVuelo}</td>
-                              <td className="border border-slate-300 px-2 sm:px-3 py-2 sm:py-3 text-center font-mono font-bold text-gray-900">{hobbsManual}</td>
-                              <td className="border border-slate-300 px-2 sm:px-3 py-2 sm:py-3 text-center font-mono font-bold text-blue-600">{deltaHobbs.toFixed(1)}</td>
-                              <td className="border border-slate-300 px-2 sm:px-3 py-2 sm:py-3 text-center font-mono font-bold text-gray-900">{tachManual}</td>
-                              <td className="border border-slate-300 px-2 sm:px-3 py-2 sm:py-3 text-center font-mono font-bold text-blue-600">{deltaTach.toFixed(1)}</td>
-                              <td className="border border-slate-300 px-2 sm:px-3 py-2 sm:py-3 text-center font-mono font-bold text-gray-900">
+                          <tbody className="bg-white dark:bg-card divide-y divide-gray-200 dark:divide-edge">
+                            <tr className="hover:bg-gray-50 dark:hover:bg-muted">
+                              <td className="border border-slate-300 dark:border-edge-strong px-2 sm:px-3 py-2 sm:py-3 text-center font-mono text-gray-900 dark:text-foreground whitespace-nowrap">{fechaVuelo}</td>
+                              <td className="border border-slate-300 dark:border-edge-strong px-2 sm:px-3 py-2 sm:py-3 text-center font-mono font-bold text-gray-900 dark:text-foreground">{hobbsManual}</td>
+                              <td className="border border-slate-300 dark:border-edge-strong px-2 sm:px-3 py-2 sm:py-3 text-center font-mono font-bold text-blue-600 dark:text-blue-400">{deltaHobbs.toFixed(1)}</td>
+                              <td className="border border-slate-300 dark:border-edge-strong px-2 sm:px-3 py-2 sm:py-3 text-center font-mono font-bold text-gray-900 dark:text-foreground">{tachManual}</td>
+                              <td className="border border-slate-300 dark:border-edge-strong px-2 sm:px-3 py-2 sm:py-3 text-center font-mono font-bold text-blue-600 dark:text-blue-400">{deltaTach.toFixed(1)}</td>
+                              <td className="border border-slate-300 dark:border-edge-strong px-2 sm:px-3 py-2 sm:py-3 text-center font-mono font-bold text-gray-900 dark:text-foreground">
                                 {lastComponents.airframe !== null ? (lastComponents.airframe + deltaTach).toFixed(1) : "--"}
                               </td>
-                              <td className="border border-slate-300 px-2 sm:px-3 py-2 sm:py-3 text-center font-mono font-bold text-gray-900">
+                              <td className="border border-slate-300 dark:border-edge-strong px-2 sm:px-3 py-2 sm:py-3 text-center font-mono font-bold text-gray-900 dark:text-foreground">
                                 {lastComponents.engine !== null ? (lastComponents.engine + deltaTach).toFixed(1) : "--"}
                               </td>
-                              <td className="border border-slate-300 px-2 sm:px-3 py-2 sm:py-3 text-center font-mono font-bold text-gray-900">
+                              <td className="border border-slate-300 dark:border-edge-strong px-2 sm:px-3 py-2 sm:py-3 text-center font-mono font-bold text-gray-900 dark:text-foreground">
                                 {lastComponents.propeller !== null ? (lastComponents.propeller + deltaTach).toFixed(1) : "--"}
                               </td>
-                              <td className="border border-slate-300 px-2 sm:px-3 py-2 sm:py-3 text-center font-semibold text-gray-900">{selectedPilot.nombre}</td>
-                              <td className="border border-slate-300 px-2 sm:px-3 py-2 sm:py-3 text-center text-gray-900">{copiloto || "--"}</td>
-                              <td className="border border-slate-300 px-2 sm:px-3 py-2 sm:py-3 text-center text-gray-900">LOCAL</td>
-                              <td className="border border-slate-300 px-2 sm:px-3 py-2 sm:py-3 text-center text-gray-900">{detalle || "S/Obs"}</td>
+                              <td className="border border-slate-300 dark:border-edge-strong px-2 sm:px-3 py-2 sm:py-3 text-center font-semibold text-gray-900 dark:text-foreground">{selectedPilot.nombre}</td>
+                              <td className="border border-slate-300 dark:border-edge-strong px-2 sm:px-3 py-2 sm:py-3 text-center text-gray-900 dark:text-foreground">{copiloto || "--"}</td>
+                              <td className="border border-slate-300 dark:border-edge-strong px-2 sm:px-3 py-2 sm:py-3 text-center text-gray-900 dark:text-foreground">LOCAL</td>
+                              <td className="border border-slate-300 dark:border-edge-strong px-2 sm:px-3 py-2 sm:py-3 text-center text-gray-900 dark:text-foreground">{detalle || "S/Obs"}</td>
                             </tr>
                           </tbody>
                         </table>

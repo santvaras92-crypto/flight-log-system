@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Head from "next/head";
 import { Icon } from "../components/Icon";
+import ThemeToggle from "../components/ThemeToggle";
 
 const DEVICE_TOKEN_KEY = "aqi_device_token";
 
@@ -77,8 +78,8 @@ export default function PilotLayout({ children }: { children: React.ReactNode })
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-100">
-        <div className="text-slate-500">Cargando...</div>
+      <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-muted">
+        <div className="text-slate-500 dark:text-muted-foreground">Cargando...</div>
       </div>
     );
   }
@@ -90,7 +91,7 @@ export default function PilotLayout({ children }: { children: React.ReactNode })
       <Head>
         <link rel="manifest" href="/pilot-manifest.json" />
       </Head>
-      <div className="min-h-screen bg-slate-100">
+      <div className="min-h-screen bg-slate-100 dark:bg-muted">
         {/* Header - Same style as main nav */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 border-b border-blue-600/30 backdrop-blur-md shadow-lg">
         <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-3 sm:py-4">
@@ -127,6 +128,7 @@ export default function PilotLayout({ children }: { children: React.ReactNode })
                 <span className="sm:hidden"><Icon name="lock" className="w-4 h-4" title="Contraseña" /></span>
                 <span className="hidden sm:inline-flex items-center gap-1"><Icon name="lock" className="w-4 h-4" /> Contraseña</span>
               </button>
+              <ThemeToggle variant="nav" />
               <button
                 onClick={handleLogout}
                 className="bg-white/10 hover:bg-white/20 px-2 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors text-white"
@@ -151,10 +153,10 @@ export default function PilotLayout({ children }: { children: React.ReactNode })
       {/* Password Change Modal */}
       {showPasswordModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+          <div className="bg-white dark:bg-card rounded-xl shadow-xl w-full max-w-md">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-gray-800">Cambiar Contraseña</h2>
+                <h2 className="text-lg font-semibold text-gray-800 dark:text-foreground">Cambiar Contraseña</h2>
                 <button 
                   onClick={() => {
                     setShowPasswordModal(false);
@@ -163,52 +165,52 @@ export default function PilotLayout({ children }: { children: React.ReactNode })
                     setNewPassword("");
                     setConfirmPassword("");
                   }}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-gray-400 dark:text-faint hover:text-gray-600 dark:hover:text-foreground-soft"
                 >
                   <Icon name="close" className="w-5 h-5" title="Cerrar" />
                 </button>
               </div>
               <form onSubmit={handleChangePassword} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-foreground-soft mb-1">
                     Contraseña Actual
                   </label>
                   <input
                     type="password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-300 dark:border-edge-strong rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-foreground-soft mb-1">
                     Nueva Contraseña
                   </label>
                   <input
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-300 dark:border-edge-strong rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Mínimo 6 caracteres"
                     required
                     minLength={6}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-foreground-soft mb-1">
                     Confirmar Nueva Contraseña
                   </label>
                   <input
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-300 dark:border-edge-strong rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   />
                 </div>
                 {passwordMessage && (
-                  <p className={`text-sm ${passwordMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                  <p className={`text-sm ${passwordMessage.type === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                     {passwordMessage.text}
                   </p>
                 )}
@@ -219,7 +221,7 @@ export default function PilotLayout({ children }: { children: React.ReactNode })
                       setShowPasswordModal(false);
                       setPasswordMessage(null);
                     }}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-edge-strong rounded-lg text-sm font-medium text-gray-700 dark:text-foreground-soft hover:bg-gray-50 dark:hover:bg-muted"
                   >
                     Cancelar
                   </button>

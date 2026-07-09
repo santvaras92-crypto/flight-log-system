@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { formatFecha, parseLocalDate } from "../../../../lib/date-utils";
 import { Icon, type IconName } from "../../../components/Icon";
 
-const FlightMap = dynamic(() => import("@/app/components/FlightMap"), { ssr: false, loading: () => <div className="h-[350px] bg-slate-50 rounded-xl border border-slate-200 animate-pulse" /> });
+const FlightMap = dynamic(() => import("@/app/components/FlightMap"), { ssr: false, loading: () => <div className="h-[350px] bg-slate-50 dark:bg-muted rounded-xl border border-slate-200 dark:border-edge animate-pulse" /> });
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -702,7 +702,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
     return (
       <div className="flex items-center justify-center py-20">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600"></div>
-        <span className="ml-3 text-slate-500">Loading engine data...</span>
+        <span className="ml-3 text-slate-500 dark:text-muted-foreground">Loading engine data...</span>
       </div>
     );
   }
@@ -712,10 +712,10 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <Icon name="engine" className="w-5 h-5 text-slate-500" /> Engine Monitor — JPI EDM-830
+          <h2 className="text-lg font-bold text-slate-800 dark:text-foreground flex items-center gap-2">
+            <Icon name="engine" className="w-5 h-5 text-slate-500 dark:text-muted-foreground" /> Engine Monitor — JPI EDM-830
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-muted-foreground mt-0.5">
             Lycoming O-320-D2J · S/N RL-7662-39E · CC-AQI
           </p>
         </div>
@@ -723,7 +723,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
           {view === "detail" && (
             <button
               onClick={() => { setView("list"); setSelectedFlight(null); setTramoIds([]); setActiveTramo(0); }}
-              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-medium transition-colors"
+              className="px-3 py-1.5 bg-slate-100 dark:bg-muted hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-foreground-soft rounded-lg text-xs font-medium transition-colors"
             >
               ← Back to Fleet
             </button>
@@ -737,7 +737,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
               className="hidden"
               disabled={uploading}
             />
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${uploading ? "bg-slate-200 text-slate-400" : "bg-blue-600 hover:bg-blue-700 text-white"}`}>
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${uploading ? "bg-slate-200 dark:bg-white/10 text-slate-400 dark:text-faint" : "bg-blue-600 hover:bg-blue-700 text-white"}`}>
               {uploading ? (
                 <><Icon name="refresh" className="w-3.5 h-3.5 animate-spin" /> Uploading...</>
               ) : (
@@ -750,7 +750,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
 
       {/* Upload message */}
       {uploadMsg && (
-        <div className={`px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-2 ${uploadMsg.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+        <div className={`px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-2 ${uploadMsg.type === "success" ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30" : "bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-500/30"}`}>
           <Icon name={uploadMsg.type === "success" ? "checkCircle" : "warning"} className="w-4 h-4 flex-shrink-0" />
           <span>{uploadMsg.text}</span>
         </div>
@@ -770,9 +770,9 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
                 { label: "Avg Oil Temp", value: `${fleetStats.avgOilTemp}°F`, icon: "oil" as IconName },
                 { label: "CHT Exceedances", value: fleetStats.chtExceedances, icon: "warning" as IconName, warn: fleetStats.chtExceedances > 0 },
               ].map((s, i) => (
-                <div key={i} className={`rounded-xl p-3 border ${s.warn ? "bg-red-50 border-red-200" : "bg-white border-slate-200"}`}>
-                  <div className="text-xs text-slate-500 flex items-center gap-1"><Icon name={s.icon} className="w-3.5 h-3.5" /> {s.label}</div>
-                  <div className={`text-lg font-bold mt-0.5 ${s.warn ? "text-red-600" : "text-slate-800"}`}>{s.value}</div>
+                <div key={i} className={`rounded-xl p-3 border ${s.warn ? "bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30" : "bg-white dark:bg-card border-slate-200 dark:border-edge"}`}>
+                  <div className="text-xs text-slate-500 dark:text-muted-foreground flex items-center gap-1"><Icon name={s.icon} className="w-3.5 h-3.5" /> {s.label}</div>
+                  <div className={`text-lg font-bold mt-0.5 ${s.warn ? "text-red-600 dark:text-red-400" : "text-slate-800 dark:text-foreground"}`}>{s.value}</div>
                 </div>
               ))}
             </div>
@@ -780,9 +780,9 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
 
           {/* Trend Range Selector */}
           {flights.length >= 2 && (
-            <div className="bg-white rounded-xl border border-slate-200 p-3">
+            <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-edge p-3">
               <div className="flex flex-wrap items-center gap-2 mb-2">
-                <span className="text-xs font-semibold text-slate-500 mr-1">Period:</span>
+                <span className="text-xs font-semibold text-slate-500 dark:text-muted-foreground mr-1">Period:</span>
                 {([
                   ['all', 'All'],
                   ['5y', '5Y'],
@@ -798,7 +798,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
                     className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-all
                       ${trendRange === key
                         ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+                        : 'bg-slate-50 dark:bg-muted text-slate-600 dark:text-foreground-soft border-slate-200 dark:border-edge hover:bg-slate-100 dark:hover:bg-muted'}`}
                   >
                     {label}
                   </button>
@@ -808,21 +808,21 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
                   className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-all
                     ${trendRange === 'custom'
                       ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+                      : 'bg-slate-50 dark:bg-muted text-slate-600 dark:text-foreground-soft border-slate-200 dark:border-edge hover:bg-slate-100 dark:hover:bg-muted'}`}
                 >
                   Custom
                 </button>
-                <div className="w-px h-5 bg-slate-200 mx-1" />
+                <div className="w-px h-5 bg-slate-200 dark:bg-white/10 mx-1" />
                 <button
                   onClick={() => setSmoothTrend(!smoothTrend)}
                   className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-all flex items-center gap-1
                     ${smoothTrend
                       ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+                      : 'bg-slate-50 dark:bg-muted text-slate-600 dark:text-foreground-soft border-slate-200 dark:border-edge hover:bg-slate-100 dark:hover:bg-muted'}`}
                 >
                   〰️ Smooth
                 </button>
-                <span className="ml-auto text-[11px] text-slate-400 font-medium">
+                <span className="ml-auto text-[11px] text-slate-400 dark:text-faint font-medium">
                   {trendDateRange.start} → {trendDateRange.end} · {trendDateRange.count} flights
                 </span>
               </div>
@@ -831,7 +831,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
               {trendRange === 'custom' && (
                 <div className="mt-2 px-1">
                   <div className="flex items-center gap-3">
-                    <label className="text-[11px] text-slate-400 w-10 text-right">From</label>
+                    <label className="text-[11px] text-slate-400 dark:text-faint w-10 text-right">From</label>
                     <input
                       type="range"
                       min={0}
@@ -843,14 +843,14 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
                       }}
                       className="flex-1 h-1.5 accent-blue-600"
                     />
-                    <span className="text-[11px] text-slate-500 w-16 tabular-nums">
+                    <span className="text-[11px] text-slate-500 dark:text-muted-foreground w-16 tabular-nums">
                       {sortedFlights.length > 0
                         ? formatFecha(sortedFlights[Math.round((customRangeStart / 100) * (sortedFlights.length - 1))].flightDate, { month: "short", year: "2-digit" })
                         : ''}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 mt-1">
-                    <label className="text-[11px] text-slate-400 w-10 text-right">To</label>
+                    <label className="text-[11px] text-slate-400 dark:text-faint w-10 text-right">To</label>
                     <input
                       type="range"
                       min={0}
@@ -862,7 +862,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
                       }}
                       className="flex-1 h-1.5 accent-blue-600"
                     />
-                    <span className="text-[11px] text-slate-500 w-16 tabular-nums">
+                    <span className="text-[11px] text-slate-500 dark:text-muted-foreground w-16 tabular-nums">
                       {sortedFlights.length > 0
                         ? formatFecha(sortedFlights[Math.round((customRangeEnd / 100) * (sortedFlights.length - 1))].flightDate, { month: "short", year: "2-digit" })
                         : ''}
@@ -876,26 +876,26 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
           {/* Trend Charts */}
           {flights.length >= 2 && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 250 }}>
+              <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-edge p-3" style={{ height: 250 }}>
                 <canvas ref={trendChtRef}></canvas>
               </div>
-              <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 250 }}>
+              <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-edge p-3" style={{ height: 250 }}>
                 <canvas ref={trendOilRef}></canvas>
               </div>
             </div>
           )}
 
           {/* Flights Table */}
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/50">
-              <h3 className="text-sm font-semibold text-slate-700">Flight Log — {flights.length} recorded flights</h3>
+          <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-edge overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-slate-100 dark:border-edge bg-slate-50/50 dark:bg-muted">
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-foreground-soft">Flight Log — {flights.length} recorded flights</h3>
             </div>
             <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
               <table className="w-full text-xs">
-                <thead className="bg-slate-50 sticky top-0">
+                <thead className="bg-slate-50 dark:bg-muted sticky top-0">
                   <tr>
                     {["#", "Date", "Duration", "Max EGT", "Max CHT", "Oil T", "Oil P", "Avg RPM", "Avg FF", "Pts"].map(h => (
-                      <th key={h} className="px-3 py-2 text-left font-semibold text-slate-600 whitespace-nowrap">{h}</th>
+                      <th key={h} className="px-3 py-2 text-left font-semibold text-slate-600 dark:text-foreground-soft whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -908,20 +908,20 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
                       <tr
                         key={f.id}
                         onClick={() => { setTramoIds([f.id]); setActiveTramo(0); loadFlightDetail(f.id); }}
-                        className="border-t border-slate-100 hover:bg-blue-50/50 cursor-pointer transition-colors"
+                        className="border-t border-slate-100 dark:border-edge hover:bg-blue-50/50 dark:hover:bg-blue-500/10 cursor-pointer transition-colors"
                       >
-                        <td className="px-3 py-2 font-mono text-slate-500">{f.flightNumber}</td>
+                        <td className="px-3 py-2 font-mono text-slate-500 dark:text-muted-foreground">{f.flightNumber}</td>
                         <td className="px-3 py-2 whitespace-nowrap">{formatDate(f.flightDate)}</td>
                         <td className="px-3 py-2">{formatDuration(f.durationSec)}</td>
                         <td className="px-3 py-2 font-mono">{f.maxEGT?.toFixed(0) || "—"}</td>
-                        <td className={`px-3 py-2 font-mono font-semibold ${chtDanger ? "text-red-600" : chtWarn ? "text-amber-600" : ""}`}>
+                        <td className={`px-3 py-2 font-mono font-semibold ${chtDanger ? "text-red-600 dark:text-red-400" : chtWarn ? "text-amber-600 dark:text-amber-400" : ""}`}>
                           {f.maxCHT?.toFixed(0) || "—"}
                         </td>
-                        <td className={`px-3 py-2 font-mono ${oilWarn ? "text-red-600 font-semibold" : ""}`}>{f.maxOilTemp?.toFixed(0) || "—"}</td>
+                        <td className={`px-3 py-2 font-mono ${oilWarn ? "text-red-600 dark:text-red-400 font-semibold" : ""}`}>{f.maxOilTemp?.toFixed(0) || "—"}</td>
                         <td className="px-3 py-2 font-mono">{f.minOilPress?.toFixed(0) || "—"}</td>
                         <td className="px-3 py-2 font-mono">{f.avgRPM?.toFixed(0) || "—"}</td>
                         <td className="px-3 py-2 font-mono">{f.avgFF?.toFixed(1) || "—"}</td>
-                        <td className="px-3 py-2 text-slate-400">{f._count.readings}</td>
+                        <td className="px-3 py-2 text-slate-400 dark:text-faint">{f._count.readings}</td>
                       </tr>
                     );
                   })}
@@ -931,7 +931,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
           </div>
 
           {flights.length === 0 && (
-            <div className="text-center py-12 text-slate-400">
+            <div className="text-center py-12 text-slate-400 dark:text-faint">
               <div className="flex justify-center mb-3"><Icon name="chart" className="w-8 h-8 text-slate-300" /></div>
               <p>No engine data yet. Upload a JPI EDM-830 CSV file to get started.</p>
             </div>
@@ -945,38 +945,38 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
           {loadingDetail ? (
             <div className="flex items-center justify-center py-20">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600"></div>
-              <span className="ml-3 text-slate-500">Loading flight data...</span>
+              <span className="ml-3 text-slate-500 dark:text-muted-foreground">Loading flight data...</span>
             </div>
           ) : selectedFlight && (
             <>
               {/* Flight Header */}
-              <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-edge p-4">
                 <div className="flex flex-wrap gap-4 items-center justify-between">
                   <div>
-                    <h3 className="text-base font-bold text-slate-800">
+                    <h3 className="text-base font-bold text-slate-800 dark:text-foreground">
                       Flight #{selectedFlight.flightNumber} — {formatDate(selectedFlight.flightDate)}
                     </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-xs text-slate-500 dark:text-muted-foreground mt-0.5">
                       {selectedFlight.engineModel} · S/N {selectedFlight.engineSerial} · {selectedFlight.readings.length} data points
                     </p>
                   </div>
                   {detailStats && (
                     <div className="flex flex-wrap gap-3 text-xs">
-                      <div className="bg-slate-50 rounded-lg px-3 py-1.5">
-                        <span className="text-slate-500">EGT Spread</span>
-                        <span className="ml-1 font-bold text-slate-700">{detailStats.egt.maxSpread.toFixed(0)}°F max / {detailStats.egt.avgSpread.toFixed(0)}°F avg</span>
+                      <div className="bg-slate-50 dark:bg-muted rounded-lg px-3 py-1.5">
+                        <span className="text-slate-500 dark:text-muted-foreground">EGT Spread</span>
+                        <span className="ml-1 font-bold text-slate-700 dark:text-foreground-soft">{detailStats.egt.maxSpread.toFixed(0)}°F max / {detailStats.egt.avgSpread.toFixed(0)}°F avg</span>
                       </div>
-                      <div className="bg-slate-50 rounded-lg px-3 py-1.5">
-                        <span className="text-slate-500">Oil</span>
-                        <span className="ml-1 font-bold text-slate-700">{detailStats.oil.maxTemp.toFixed(0)}°F / {detailStats.oil.minPress.toFixed(0)} PSI</span>
+                      <div className="bg-slate-50 dark:bg-muted rounded-lg px-3 py-1.5">
+                        <span className="text-slate-500 dark:text-muted-foreground">Oil</span>
+                        <span className="ml-1 font-bold text-slate-700 dark:text-foreground-soft">{detailStats.oil.maxTemp.toFixed(0)}°F / {detailStats.oil.minPress.toFixed(0)} PSI</span>
                       </div>
-                      <div className="bg-slate-50 rounded-lg px-3 py-1.5">
-                        <span className="text-slate-500">Avg RPM</span>
-                        <span className="ml-1 font-bold text-slate-700">{detailStats.power.avgRPM.toFixed(0)}</span>
+                      <div className="bg-slate-50 dark:bg-muted rounded-lg px-3 py-1.5">
+                        <span className="text-slate-500 dark:text-muted-foreground">Avg RPM</span>
+                        <span className="ml-1 font-bold text-slate-700 dark:text-foreground-soft">{detailStats.power.avgRPM.toFixed(0)}</span>
                       </div>
-                      <div className="bg-slate-50 rounded-lg px-3 py-1.5">
-                        <span className="text-slate-500">Avg FF</span>
-                        <span className="ml-1 font-bold text-slate-700">{detailStats.power.avgFF.toFixed(1)} GPH</span>
+                      <div className="bg-slate-50 dark:bg-muted rounded-lg px-3 py-1.5">
+                        <span className="text-slate-500 dark:text-muted-foreground">Avg FF</span>
+                        <span className="ml-1 font-bold text-slate-700 dark:text-foreground-soft">{detailStats.power.avgFF.toFixed(1)} GPH</span>
                       </div>
                     </div>
                   )}
@@ -986,7 +986,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
               {/* Tramo Tabs (multi-engine flights) */}
               {tramoIds.length > 1 && (
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-semibold text-slate-500">Tramos:</span>
+                  <span className="text-xs font-semibold text-slate-500 dark:text-muted-foreground">Tramos:</span>
                   <div className="flex gap-1">
                     {tramoIds.map((tid, idx) => (
                       <button
@@ -1000,14 +1000,14 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                           idx === activeTramo
                             ? 'bg-blue-600 text-white shadow-sm'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            : 'bg-slate-100 dark:bg-muted text-slate-600 dark:text-foreground-soft hover:bg-slate-200 dark:hover:bg-white/10'
                         }`}
                       >
                         Tramo {idx + 1}
                       </button>
                     ))}
                   </div>
-                  <span className="text-[10px] text-slate-400 ml-1">
+                  <span className="text-[10px] text-slate-400 dark:text-faint ml-1">
                     ({tramoIds.length} registros de motor para este vuelo)
                   </span>
                   {/* Unlink / Mark as Ground Run button */}
@@ -1035,7 +1035,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
                         console.error('Failed to unlink tramo:', err);
                       }
                     }}
-                    className="ml-auto text-[10px] px-2 py-1 rounded bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors flex items-center gap-1"
+                    className="ml-auto text-[10px] px-2 py-1 rounded bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 hover:bg-amber-100 dark:hover:bg-amber-500/15 transition-colors flex items-center gap-1"
                     title="Desvincular este tramo y marcarlo como Ground Run"
                   >
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
@@ -1046,34 +1046,34 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
 
               {/* Linked Flight Record Info */}
               {selectedFlight.linkedFlight && (
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-3">
+                <div className="bg-gradient-to-r from-blue-50 dark:from-blue-950/40 to-indigo-50 dark:to-indigo-950/40 rounded-xl border border-blue-200 dark:border-blue-500/30 p-3">
                   <div className="flex flex-wrap gap-3 items-center text-xs">
-                    <span className="font-bold text-blue-700 flex items-center gap-1">
+                    <span className="font-bold text-blue-700 dark:text-blue-300 flex items-center gap-1">
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.172 13.828a4 4 0 015.656 0l4-4a4 4 0 00-5.656-5.656l-1.102 1.101" /></svg>
                       Flight Log #{selectedFlight.linkedFlight.id}
                     </span>
                     {selectedFlight.linkedFlight.piloto && (
-                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-700 inline-flex items-center gap-1" title="Piloto"><Icon name="pilot" className="w-3 h-3" /> {selectedFlight.linkedFlight.piloto}</span>
+                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-700 dark:text-foreground-soft inline-flex items-center gap-1" title="Piloto"><Icon name="pilot" className="w-3 h-3" /> {selectedFlight.linkedFlight.piloto}</span>
                     )}
                     {selectedFlight.linkedFlight.copiloto && (
-                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-600" title="Copiloto">+{selectedFlight.linkedFlight.copiloto}</span>
+                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-600 dark:text-foreground-soft" title="Copiloto">+{selectedFlight.linkedFlight.copiloto}</span>
                     )}
                     {selectedFlight.linkedFlight.instructor && (
-                      <span className="bg-amber-50 rounded-md px-2 py-0.5 text-amber-700 border border-amber-200 inline-flex items-center gap-1" title="Instructor"><Icon name="graduation" className="w-3 h-3" /> {selectedFlight.linkedFlight.instructor}</span>
+                      <span className="bg-amber-50 dark:bg-amber-500/10 rounded-md px-2 py-0.5 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 inline-flex items-center gap-1" title="Instructor"><Icon name="graduation" className="w-3 h-3" /> {selectedFlight.linkedFlight.instructor}</span>
                     )}
                     {selectedFlight.linkedFlight.diffHobbs != null && (
-                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-700 font-mono">{selectedFlight.linkedFlight.diffHobbs.toFixed(1)}h hobbs</span>
+                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-700 dark:text-foreground-soft font-mono">{selectedFlight.linkedFlight.diffHobbs.toFixed(1)}h hobbs</span>
                     )}
                     {selectedFlight.linkedFlight.costo != null && (
-                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-green-700 font-mono">${selectedFlight.linkedFlight.costo.toLocaleString('es-CL')}</span>
+                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-green-700 dark:text-green-300 font-mono">${selectedFlight.linkedFlight.costo.toLocaleString('es-CL')}</span>
                     )}
                     {(selectedFlight.linkedFlight.aerodromoSalida || selectedFlight.linkedFlight.aerodromoDestino) && (
-                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-600">
+                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-600 dark:text-foreground-soft">
                         {selectedFlight.linkedFlight.aerodromoSalida || '?'} → {selectedFlight.linkedFlight.aerodromoDestino || '?'}
                       </span>
                     )}
                     {selectedFlight.linkedFlight.detalle && (
-                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-500 italic truncate max-w-[200px]" title={selectedFlight.linkedFlight.detalle}>
+                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-500 dark:text-muted-foreground italic truncate max-w-[200px]" title={selectedFlight.linkedFlight.detalle}>
                         {selectedFlight.linkedFlight.detalle}
                       </span>
                     )}
@@ -1083,33 +1083,33 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
 
               {/* Per-Cylinder Summary Table */}
               {detailStats && (
-                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                  <div className="px-4 py-2 border-b border-slate-100 bg-slate-50/50">
-                    <h4 className="text-xs font-semibold text-slate-600">Per-Cylinder Analysis</h4>
+                <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-edge overflow-hidden">
+                  <div className="px-4 py-2 border-b border-slate-100 dark:border-edge bg-slate-50/50 dark:bg-muted">
+                    <h4 className="text-xs font-semibold text-slate-600 dark:text-foreground-soft">Per-Cylinder Analysis</h4>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
-                      <thead className="bg-slate-50">
+                      <thead className="bg-slate-50 dark:bg-muted">
                         <tr>
-                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600">Cyl</th>
-                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600">Max EGT</th>
-                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600">Avg EGT</th>
-                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600">Max CHT</th>
-                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600">Avg CHT</th>
-                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600">CHT &gt;{ENGINE_LIMITS.cht_redline}°F</th>
+                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600 dark:text-foreground-soft">Cyl</th>
+                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600 dark:text-foreground-soft">Max EGT</th>
+                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600 dark:text-foreground-soft">Avg EGT</th>
+                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600 dark:text-foreground-soft">Max CHT</th>
+                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600 dark:text-foreground-soft">Avg CHT</th>
+                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600 dark:text-foreground-soft">CHT &gt;{ENGINE_LIMITS.cht_redline}°F</th>
                         </tr>
                       </thead>
                       <tbody>
                         {[0, 1, 2, 3].map(i => (
-                          <tr key={i} className="border-t border-slate-100">
-                            <td className="px-3 py-1.5 font-bold text-slate-700">#{i + 1}</td>
+                          <tr key={i} className="border-t border-slate-100 dark:border-edge">
+                            <td className="px-3 py-1.5 font-bold text-slate-700 dark:text-foreground-soft">#{i + 1}</td>
                             <td className="px-3 py-1.5 font-mono">{detailStats.egt.maxPerCyl[i].toFixed(0)}°F</td>
-                            <td className="px-3 py-1.5 font-mono text-slate-500">{detailStats.egt.avgPerCyl[i].toFixed(0)}°F</td>
-                            <td className={`px-3 py-1.5 font-mono font-semibold ${detailStats.cht.maxPerCyl[i] >= ENGINE_LIMITS.cht_redline ? "text-red-600" : detailStats.cht.maxPerCyl[i] >= ENGINE_LIMITS.cht_caution ? "text-amber-600" : ""}`}>
+                            <td className="px-3 py-1.5 font-mono text-slate-500 dark:text-muted-foreground">{detailStats.egt.avgPerCyl[i].toFixed(0)}°F</td>
+                            <td className={`px-3 py-1.5 font-mono font-semibold ${detailStats.cht.maxPerCyl[i] >= ENGINE_LIMITS.cht_redline ? "text-red-600 dark:text-red-400" : detailStats.cht.maxPerCyl[i] >= ENGINE_LIMITS.cht_caution ? "text-amber-600 dark:text-amber-400" : ""}`}>
                               {detailStats.cht.maxPerCyl[i].toFixed(0)}°F
                             </td>
-                            <td className="px-3 py-1.5 font-mono text-slate-500">{detailStats.cht.avgPerCyl[i].toFixed(0)}°F</td>
-                            <td className={`px-3 py-1.5 font-mono ${detailStats.cht.exceedances[i] > 0 ? "text-red-600 font-semibold" : "text-slate-400"}`}>
+                            <td className="px-3 py-1.5 font-mono text-slate-500 dark:text-muted-foreground">{detailStats.cht.avgPerCyl[i].toFixed(0)}°F</td>
+                            <td className={`px-3 py-1.5 font-mono ${detailStats.cht.exceedances[i] > 0 ? "text-red-600 dark:text-red-400 font-semibold" : "text-slate-400 dark:text-faint"}`}>
                               {detailStats.cht.exceedances[i]}
                             </td>
                           </tr>
@@ -1122,21 +1122,21 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
 
               {/* 4 Charts Grid */}
               {chartError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2 text-xs flex items-center gap-1.5">
+                <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-300 rounded-lg px-3 py-2 text-xs flex items-center gap-1.5">
                   <Icon name="warning" className="w-4 h-4 flex-shrink-0" /> No se pudieron dibujar los gráficos: {chartError}
                 </div>
               )}
               <div ref={chartsGridRef} className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300, position: "relative" }}>
+                <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-edge p-3" style={{ height: 300, position: "relative" }}>
                   <canvas ref={egtChartRef}></canvas>
                 </div>
-                <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300, position: "relative" }}>
+                <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-edge p-3" style={{ height: 300, position: "relative" }}>
                   <canvas ref={chtChartRef}></canvas>
                 </div>
-                <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300, position: "relative" }}>
+                <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-edge p-3" style={{ height: 300, position: "relative" }}>
                   <canvas ref={oilChartRef}></canvas>
                 </div>
-                <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300, position: "relative" }}>
+                <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-edge p-3" style={{ height: 300, position: "relative" }}>
                   <canvas ref={powerChartRef}></canvas>
                 </div>
               </div>
@@ -1163,8 +1163,8 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
                       />
                     )}
                     {/* KML Upload area */}
-                    <div className={`${hasGps ? 'mt-2 flex items-center justify-between' : 'bg-slate-50 rounded-xl border border-dashed border-slate-300 p-6 flex flex-col items-center gap-3'}`}>
-                      {!hasGps && <span className="text-slate-400 text-sm inline-flex items-center gap-1"><Icon name="location" className="w-4 h-4" /> Sin datos GPS para este vuelo</span>}
+                    <div className={`${hasGps ? 'mt-2 flex items-center justify-between' : 'bg-slate-50 dark:bg-muted rounded-xl border border-dashed border-slate-300 dark:border-edge-strong p-6 flex flex-col items-center gap-3'}`}>
+                      {!hasGps && <span className="text-slate-400 dark:text-faint text-sm inline-flex items-center gap-1"><Icon name="location" className="w-4 h-4" /> Sin datos GPS para este vuelo</span>}
                       <input
                         ref={kmlInputRef}
                         type="file"
@@ -1173,13 +1173,13 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
                         className="hidden"
                       />
                       <div className="flex items-center gap-2">
-                        {hasGps && <span className="text-xs text-slate-400">{gpsCount} pts GPS</span>}
+                        {hasGps && <span className="text-xs text-slate-400 dark:text-faint">{gpsCount} pts GPS</span>}
                         <button
                           onClick={() => kmlInputRef.current?.click()}
                           disabled={uploadingKml}
                           className={`px-3 py-1.5 text-sm rounded-lg disabled:opacity-50 transition flex items-center gap-2 ${
                             hasGps
-                              ? 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
+                              ? 'bg-slate-100 dark:bg-muted text-slate-600 dark:text-foreground-soft hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-edge'
                               : 'bg-blue-600 text-white hover:bg-blue-700 px-4 py-2'
                           }`}
                         >
@@ -1196,7 +1196,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
                         </button>
                       </div>
                       {kmlMsg && (
-                        <p className={`text-xs flex items-center gap-1 ${kmlMsg.type === "success" ? "text-green-600" : "text-red-600"}`}>
+                        <p className={`text-xs flex items-center gap-1 ${kmlMsg.type === "success" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
                           <Icon name={kmlMsg.type === "success" ? "checkCircle" : "warning"} className="w-3.5 h-3.5 flex-shrink-0" /> {kmlMsg.text}
                         </p>
                       )}

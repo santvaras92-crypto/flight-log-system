@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTheme } from "next-themes";
 import { Chart, LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler, DoughnutController, ArcElement } from "chart.js";
 import { generateAccountStatementPDF } from "../../../../lib/generate-account-pdf";
 import { formatFecha, parseLocalDate, toDateString, getDateYear } from "../../../../lib/date-utils";
@@ -15,6 +16,31 @@ import { runAuditNow } from "../../../actions/run-audit";
 import EngineAnalysis from "./EngineAnalysis";
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler, DoughnutController, ArcElement);
+
+// Theme-aware colors for Chart.js canvases. Light values match the previous
+// hardcoded palette so light mode is unchanged; dark values are tuned for the
+// near-black surfaces. `key` is added to each chart effect's deps so charts
+// rebuild when the theme flips.
+function useChartTheme() {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
+  return {
+    isDark,
+    key: isDark ? 'dark' : 'light',
+    grid: isDark ? 'rgba(148,163,184,0.14)' : '#f1f5f9',
+    gridFaint: isDark ? 'rgba(148,163,184,0.07)' : '#f8fafc',
+    gridStrong: isDark ? 'rgba(148,163,184,0.18)' : '#e2e8f0',
+    tick: isDark ? '#8B98A7' : '#94a3b8',
+    ink: isDark ? '#E6EDF3' : '#0f172a',
+    accent: isDark ? '#3B82F6' : '#2563eb',
+    accent2: isDark ? '#34D399' : '#059669',
+    tooltipBg: isDark ? '#1B222B' : '#0f172a',
+    tooltipTitle: isDark ? '#E6EDF3' : '#ffffff',
+    tooltipBody: isDark ? '#9BA8B7' : '#e2e8f0',
+    tooltipBorder: isDark ? '#2E3946' : '#334155',
+    donutBorder: isDark ? '#141A22' : '#ffffff',
+  };
+}
 
 // Helper function to format currency with Chilean format (dot as thousands separator, no decimals)
 const formatCurrency = (value: number): string => {
@@ -125,7 +151,6 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
   const [backupMessage, setBackupMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [filterAircraft, setFilterAircraft] = useState("");
   const [filterPilot, setFilterPilot] = useState("");
-  const [theme, setTheme] = useState<string>('hybrid');
   const [yearFilter, setYearFilter] = useState<string>("");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [startDate, setStartDate] = useState<string>("");
@@ -137,7 +162,6 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
   const [cardOrder, setCardOrder] = useState<string[]>([]);
   const [draggedCard, setDraggedCard] = useState<string | null>(null);
   const pageSize = pagination?.pageSize || 100;
-  useEffect(() => { localStorage.setItem('dash-theme', theme); }, [theme]);
 
   // Load card order from localStorage
   useEffect(() => {
@@ -194,11 +218,11 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
   }, [initialData.submissions, initialData.users, filterPilot]);
 
   const palette = {
-    bg: 'bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100',
-    card: 'bg-white/95 backdrop-blur-sm border border-slate-200',
-    text: 'text-slate-900',
-    subtext: 'text-slate-600',
-    border: 'border-slate-200',
+    bg: 'bg-gradient-to-br from-slate-50 dark:from-slate-950 via-blue-50/30 dark:via-slate-900/30 to-slate-100 dark:to-slate-950',
+    card: 'bg-white/95 dark:bg-card backdrop-blur-sm border border-slate-200 dark:border-edge',
+    text: 'text-slate-900 dark:text-foreground',
+    subtext: 'text-slate-600 dark:text-foreground-soft',
+    border: 'border-slate-200 dark:border-edge',
     accent: '#2563eb',
     accent2: '#059669',
     grid: 'rgba(100,116,139,0.08)',
@@ -419,53 +443,53 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
     fuelRate: (
       <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] lg:overflow-y-auto flex flex-col`}>
         <div className="flex items-start justify-between mb-2 sm:mb-4">
-          <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-amber-100 flex items-center justify-center">
-            <svg className="w-4 h-4 sm:w-6 sm:h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-amber-100 dark:bg-amber-500/15 flex items-center justify-center">
+            <svg className="w-4 h-4 sm:w-6 sm:h-6 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
           </div>
-          <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-green-100 text-green-700 text-[9px] sm:text-xs font-semibold rounded-full">LIVE</span>
+          <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-300 text-[9px] sm:text-xs font-semibold rounded-full">LIVE</span>
         </div>
-        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Fuel Rate</h3>
+        <h3 className="text-slate-500 dark:text-muted-foreground text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Fuel Rate</h3>
         <div className="space-y-0.5 sm:space-y-1">
-          <div className="text-lg sm:text-3xl font-bold text-slate-900">
+          <div className="text-lg sm:text-3xl font-bold text-slate-900 dark:text-foreground">
             {typeof overviewMetrics?.fuelRateLph === 'number'
               ? overviewMetrics.fuelRateLph.toLocaleString('es-CL', { maximumFractionDigits: 2 })
-              : '0,00'} <span className="text-sm sm:text-xl text-slate-600">L/H</span>
+              : '0,00'} <span className="text-sm sm:text-xl text-slate-600 dark:text-foreground-soft">L/H</span>
           </div>
-          <div className="text-base sm:text-xl font-semibold text-amber-600">
+          <div className="text-base sm:text-xl font-semibold text-amber-600 dark:text-amber-400">
             {typeof overviewMetrics?.fuelRateGph === 'number'
               ? overviewMetrics.fuelRateGph.toLocaleString('es-CL', { maximumFractionDigits: 2 })
-              : '0,00'} <span className="text-xs sm:text-base text-slate-600">GAL/H</span>
+              : '0,00'} <span className="text-xs sm:text-base text-slate-600 dark:text-foreground-soft">GAL/H</span>
           </div>
         </div>
-        <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">Since Sep 9, 2020 • Excludes 10% idle</p>
+        <p className="text-[9px] sm:text-xs text-slate-500 dark:text-muted-foreground mt-2 sm:mt-3 hidden sm:block">Since Sep 9, 2020 • Excludes 10% idle</p>
       </div>
     ),
     totalHours: (
       <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] lg:overflow-y-auto flex flex-col`}>
-        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-blue-100 flex items-center justify-center mb-2 sm:mb-4">
-          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-blue-100 dark:bg-blue-500/15 flex items-center justify-center mb-2 sm:mb-4">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Total Hours</h3>
-        <div className="text-xl sm:text-3xl font-bold text-slate-900 mb-0.5 sm:mb-1">{overviewMetrics.totalHours.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
-        <p className="text-xs sm:text-sm text-slate-600 font-medium">Flight hours</p>
-        <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">Since Dec 2, 2017</p>
+        <h3 className="text-slate-500 dark:text-muted-foreground text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Total Hours</h3>
+        <div className="text-xl sm:text-3xl font-bold text-slate-900 dark:text-foreground mb-0.5 sm:mb-1">{overviewMetrics.totalHours.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
+        <p className="text-xs sm:text-sm text-slate-600 dark:text-foreground-soft font-medium">Flight hours</p>
+        <p className="text-[9px] sm:text-xs text-slate-500 dark:text-muted-foreground mt-2 sm:mt-3 hidden sm:block">Since Dec 2, 2017</p>
       </div>
     ),
     totalFlights: (
       <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] lg:overflow-y-auto flex flex-col`}>
-        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-indigo-100 flex items-center justify-center mb-2 sm:mb-4">
-          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-indigo-100 dark:bg-indigo-500/15 flex items-center justify-center mb-2 sm:mb-4">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
           </svg>
         </div>
-        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Total Flights</h3>
-        <div className="text-xl sm:text-3xl font-bold text-slate-900 mb-0.5 sm:mb-1">{overviewMetrics.totalFlights.toLocaleString('es-CL')}</div>
-        <p className="text-xs sm:text-sm text-slate-600 font-medium">Completed</p>
-        <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">8+ years of operations</p>
+        <h3 className="text-slate-500 dark:text-muted-foreground text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Total Flights</h3>
+        <div className="text-xl sm:text-3xl font-bold text-slate-900 dark:text-foreground mb-0.5 sm:mb-1">{overviewMetrics.totalFlights.toLocaleString('es-CL')}</div>
+        <p className="text-xs sm:text-sm text-slate-600 dark:text-foreground-soft font-medium">Completed</p>
+        <p className="text-[9px] sm:text-xs text-slate-500 dark:text-muted-foreground mt-2 sm:mt-3 hidden sm:block">8+ years of operations</p>
       </div>
     ),
     nextInspections: (() => {
@@ -523,10 +547,10 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
 
       const getProgressBg = (remaining: number, total: number) => {
         const pct = (remaining / total) * 100;
-        if (pct <= 20) return 'bg-red-100';
-        if (pct <= 40) return 'bg-orange-100';
-        if (pct <= 60) return 'bg-yellow-100';
-        return 'bg-green-100';
+        if (pct <= 20) return 'bg-red-100 dark:bg-red-500/15';
+        if (pct <= 40) return 'bg-orange-100 dark:bg-orange-500/15';
+        if (pct <= 60) return 'bg-yellow-100 dark:bg-yellow-500/15';
+        return 'bg-green-100 dark:bg-green-500/15';
       };
 
       const oilPct = Math.min(100, Math.max(0, 100 - (oilRemaining / OIL_INTERVAL) * 100));
@@ -539,22 +563,22 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           {/* Header */}
           <div className="flex items-center justify-between mb-2 sm:mb-3">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-red-100 flex items-center justify-center">
-                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-red-100 dark:bg-red-500/15 flex items-center justify-center">
+                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </div>
-              <h3 className="text-slate-900 text-xs sm:text-sm font-bold uppercase tracking-wide">Inspecciones</h3>
+              <h3 className="text-slate-900 dark:text-foreground text-xs sm:text-sm font-bold uppercase tracking-wide">Inspecciones</h3>
             </div>
-            <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[9px] sm:text-xs font-bold rounded-full inline-flex items-center gap-1"><Icon name="smart" className="w-3 h-3" /> SMART</span>
+            <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300 text-[9px] sm:text-xs font-bold rounded-full inline-flex items-center gap-1"><Icon name="smart" className="w-3 h-3" /> SMART</span>
           </div>
 
           {/* Oil Change Section */}
           <div className="mb-2 sm:mb-3">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] sm:text-xs font-bold text-slate-700 inline-flex items-center gap-1"><Icon name="oil" className="w-3.5 h-3.5" /> ACEITE</span>
-              <span className="text-[10px] sm:text-xs font-mono text-slate-600">{oilPct.toFixed(0)}%</span>
+              <span className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-foreground-soft inline-flex items-center gap-1"><Icon name="oil" className="w-3.5 h-3.5" /> ACEITE</span>
+              <span className="text-[10px] sm:text-xs font-mono text-slate-600 dark:text-foreground-soft">{oilPct.toFixed(0)}%</span>
             </div>
             <div className={`w-full h-2 sm:h-2.5 rounded-full ${getProgressBg(oilRemaining, OIL_INTERVAL)} overflow-hidden`}>
               <div
@@ -563,12 +587,12 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               />
             </div>
             <div className="flex items-center justify-between mt-1">
-              <div className="text-[9px] sm:text-[11px] text-slate-900 font-extrabold">
-                {oilRemaining.toFixed(1)} TACH <span className="text-slate-600 font-semibold">({oilHobbsRemaining.toFixed(1)} HOBBS)</span>
+              <div className="text-[9px] sm:text-[11px] text-slate-900 dark:text-foreground font-extrabold">
+                {oilRemaining.toFixed(1)} TACH <span className="text-slate-600 dark:text-foreground-soft font-semibold">({oilHobbsRemaining.toFixed(1)} HOBBS)</span>
               </div>
               {weightedRate > 0 && (
-                <div className="text-[9px] sm:text-[11px] text-slate-900 font-bold flex items-center gap-1">
-                  <Icon name="timer" className="w-3 h-3" /> ~{fmtTime(oilPred.days)} <span className="hidden sm:inline text-slate-500">({fmtTime(oilPred.minDays)}-{fmtTime(oilPred.maxDays)})</span>
+                <div className="text-[9px] sm:text-[11px] text-slate-900 dark:text-foreground font-bold flex items-center gap-1">
+                  <Icon name="timer" className="w-3 h-3" /> ~{fmtTime(oilPred.days)} <span className="hidden sm:inline text-slate-500 dark:text-muted-foreground">({fmtTime(oilPred.minDays)}-{fmtTime(oilPred.maxDays)})</span>
                 </div>
               )}
             </div>
@@ -577,8 +601,8 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           {/* 100hr Inspection Section */}
           <div className="mb-2 sm:mb-3">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] sm:text-xs font-bold text-slate-700 inline-flex items-center gap-1"><Icon name="wrench" className="w-3.5 h-3.5" /> 100 HORAS</span>
-              <span className="text-[10px] sm:text-xs font-mono text-slate-600">{hundredPct.toFixed(0)}%</span>
+              <span className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-foreground-soft inline-flex items-center gap-1"><Icon name="wrench" className="w-3.5 h-3.5" /> 100 HORAS</span>
+              <span className="text-[10px] sm:text-xs font-mono text-slate-600 dark:text-foreground-soft">{hundredPct.toFixed(0)}%</span>
             </div>
             <div className={`w-full h-2 sm:h-2.5 rounded-full ${getProgressBg(hundredRemaining, HUNDRED_HR_INTERVAL)} overflow-hidden`}>
               <div
@@ -587,31 +611,31 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               />
             </div>
             <div className="flex items-center justify-between mt-1">
-              <div className="text-[9px] sm:text-[11px] text-slate-900 font-extrabold">
-                {hundredRemaining.toFixed(1)} TACH <span className="text-slate-600 font-semibold">({hundredHobbsRemaining.toFixed(1)} HOBBS)</span>
+              <div className="text-[9px] sm:text-[11px] text-slate-900 dark:text-foreground font-extrabold">
+                {hundredRemaining.toFixed(1)} TACH <span className="text-slate-600 dark:text-foreground-soft font-semibold">({hundredHobbsRemaining.toFixed(1)} HOBBS)</span>
               </div>
               {weightedRate > 0 && (
-                <div className="text-[9px] sm:text-[11px] text-slate-900 font-bold flex items-center gap-1">
-                  <Icon name="timer" className="w-3 h-3" /> ~{fmtTime(hundredPred.days)} <span className="hidden sm:inline text-slate-500">({fmtTime(hundredPred.minDays)}-{fmtTime(hundredPred.maxDays)})</span>
+                <div className="text-[9px] sm:text-[11px] text-slate-900 dark:text-foreground font-bold flex items-center gap-1">
+                  <Icon name="timer" className="w-3 h-3" /> ~{fmtTime(hundredPred.days)} <span className="hidden sm:inline text-slate-500 dark:text-muted-foreground">({fmtTime(hundredPred.minDays)}-{fmtTime(hundredPred.maxDays)})</span>
                 </div>
               )}
             </div>
           </div>
 
           {/* Usage Stats Footer */}
-          <div className="mt-auto pt-2 border-t border-slate-200">
+          <div className="mt-auto pt-2 border-t border-slate-200 dark:border-edge">
             <div className="flex items-center justify-between text-[9px] sm:text-[11px]">
-              <div className="flex flex-col gap-0.5 text-slate-700">
-                <span className="font-extrabold text-slate-900">{(weightedRate * 7).toFixed(1)} TACH/sem</span>
-                <span className="font-semibold text-slate-800">{(weightedRate * hobbsTachRatio * 7).toFixed(1)} HOBBS/sem</span>
+              <div className="flex flex-col gap-0.5 text-slate-700 dark:text-foreground-soft">
+                <span className="font-extrabold text-slate-900 dark:text-foreground">{(weightedRate * 7).toFixed(1)} TACH/sem</span>
+                <span className="font-semibold text-slate-800 dark:text-foreground">{(weightedRate * hobbsTachRatio * 7).toFixed(1)} HOBBS/sem</span>
               </div>
               <div className="flex flex-col items-end gap-0.5">
-                <span className={`font-semibold ${trend > 0 ? 'text-orange-600' : trend < 0 ? 'text-green-600' : 'text-slate-600'}`}>
+                <span className={`font-semibold ${trend > 0 ? 'text-orange-600 dark:text-orange-400' : trend < 0 ? 'text-green-600 dark:text-green-400' : 'text-slate-600 dark:text-foreground-soft'}`}>
                   {trend > 0 ? '↗️' : trend < 0 ? '↘️' : '→'} {Math.abs(trend).toFixed(0)}%
                 </span>
-                <div className="flex items-center gap-1 text-slate-600">
+                <div className="flex items-center gap-1 text-slate-600 dark:text-foreground-soft">
                   <span>H/T</span>
-                  <span className="font-mono font-semibold text-slate-800">{hobbsTachRatio.toFixed(2)}</span>
+                  <span className="font-mono font-semibold text-slate-800 dark:text-foreground">{hobbsTachRatio.toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -621,17 +645,17 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
     })(),
     fuelConsumed: (
       <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] lg:overflow-y-auto flex flex-col`}>
-        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-orange-100 flex items-center justify-center mb-2 sm:mb-4">
-          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-orange-100 dark:bg-orange-500/15 flex items-center justify-center mb-2 sm:mb-4">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
           </svg>
         </div>
-        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Fuel</h3>
+        <h3 className="text-slate-500 dark:text-muted-foreground text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Fuel</h3>
         <div className="space-y-0.5 sm:space-y-1">
-          <div className="text-lg sm:text-3xl font-bold text-slate-900">{(overviewMetrics?.fuelConsumed || 0).toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-xs sm:text-lg text-slate-600">L</span></div>
-          <div className="text-base sm:text-xl font-semibold text-orange-600">{(((overviewMetrics?.fuelConsumed || 0) / 3.78541)).toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-xs sm:text-base text-slate-600">GAL</span></div>
+          <div className="text-lg sm:text-3xl font-bold text-slate-900 dark:text-foreground">{(overviewMetrics?.fuelConsumed || 0).toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-xs sm:text-lg text-slate-600 dark:text-foreground-soft">L</span></div>
+          <div className="text-base sm:text-xl font-semibold text-orange-600 dark:text-orange-400">{(((overviewMetrics?.fuelConsumed || 0) / 3.78541)).toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-xs sm:text-base text-slate-600 dark:text-foreground-soft">GAL</span></div>
         </div>
-        <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">Since Sep 9, 2020</p>
+        <p className="text-[9px] sm:text-xs text-slate-500 dark:text-muted-foreground mt-2 sm:mt-3 hidden sm:block">Since Sep 9, 2020</p>
       </div>
     ),
     activePilots: (() => {
@@ -697,29 +721,29 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       return (
         <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] lg:overflow-y-auto flex flex-col`}>
           <div className="flex items-start justify-between mb-2 sm:mb-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-purple-100 flex items-center justify-center">
-              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-purple-100 dark:bg-purple-500/15 flex items-center justify-center">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             </div>
-            <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-purple-100 text-purple-700 text-[9px] sm:text-xs font-bold rounded-full">{activePilotsData.length}</span>
+            <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-purple-100 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300 text-[9px] sm:text-xs font-bold rounded-full">{activePilotsData.length}</span>
           </div>
-          <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Pilotos Activos</h3>
-          <p className="text-[9px] sm:text-xs text-slate-500 mb-2">Últimos 60 días</p>
+          <h3 className="text-slate-500 dark:text-muted-foreground text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Pilotos Activos</h3>
+          <p className="text-[9px] sm:text-xs text-slate-500 dark:text-muted-foreground mb-2">Últimos 60 días</p>
           <div className="max-h-24 sm:max-h-32 overflow-y-auto space-y-0.5">
             {activePilotsData.map((pilot, i) => (
               <div key={i} className="flex items-center justify-between text-[10px] sm:text-xs">
-                <span className="text-slate-700 truncate flex-1 min-w-0">{pilot.name}</span>
-                <span className={`ml-1 text-right font-mono tabular-nums text-[9px] sm:text-[11px] ${pilot.balance >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                <span className="text-slate-700 dark:text-foreground-soft truncate flex-1 min-w-0">{pilot.name}</span>
+                <span className={`ml-1 text-right font-mono tabular-nums text-[9px] sm:text-[11px] ${pilot.balance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
                   {pilot.balance >= 0 ? '+' : '-'}${formatCurrency(Math.abs(pilot.balance))}
                 </span>
-                <span className={`ml-1.5 w-7 text-right font-mono text-[10px] sm:text-xs ${pilot.daysSince === 0 ? 'text-green-600 font-bold' : pilot.daysSince <= 7 ? 'text-emerald-500' : pilot.daysSince <= 30 ? 'text-slate-500' : 'text-orange-500'}`}>
+                <span className={`ml-1.5 w-7 text-right font-mono text-[10px] sm:text-xs ${pilot.daysSince === 0 ? 'text-green-600 dark:text-green-400 font-bold' : pilot.daysSince <= 7 ? 'text-emerald-500' : pilot.daysSince <= 30 ? 'text-slate-500 dark:text-muted-foreground' : 'text-orange-500'}`}>
                   {pilot.daysSince === 0 ? 'hoy' : `${pilot.daysSince}d`}
                 </span>
               </div>
             ))}
             {activePilotsData.length === 0 && (
-              <div className="text-[10px] sm:text-xs text-slate-400 italic">Sin vuelos recientes</div>
+              <div className="text-[10px] sm:text-xs text-slate-400 dark:text-faint italic">Sin vuelos recientes</div>
             )}
           </div>
         </div>
@@ -728,47 +752,47 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
     pendingBalance: (
       <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] lg:overflow-y-auto flex flex-col`}>
         <div className="flex items-start justify-between mb-2 sm:mb-4">
-          <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-yellow-100 flex items-center justify-center">
-            <svg className="w-4 h-4 sm:w-6 sm:h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-yellow-100 dark:bg-yellow-500/15 flex items-center justify-center">
+            <svg className="w-4 h-4 sm:w-6 sm:h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
             </svg>
           </div>
-          <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-yellow-100 text-yellow-700 text-[9px] sm:text-xs font-semibold rounded-full">PEND</span>
+          <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-yellow-100 dark:bg-yellow-500/15 text-yellow-700 dark:text-yellow-300 text-[9px] sm:text-xs font-semibold rounded-full">PEND</span>
         </div>
-        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Balance</h3>
-        <div className="text-lg sm:text-3xl font-bold text-slate-900 mb-0.5 sm:mb-1">${formatCurrency(overviewMetrics.pendingBalance)}</div>
-        <p className="text-xs sm:text-sm text-slate-600 font-medium">Unpaid</p>
-        <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">Auto-calculated</p>
+        <h3 className="text-slate-500 dark:text-muted-foreground text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Balance</h3>
+        <div className="text-lg sm:text-3xl font-bold text-slate-900 dark:text-foreground mb-0.5 sm:mb-1">${formatCurrency(overviewMetrics.pendingBalance)}</div>
+        <p className="text-xs sm:text-sm text-slate-600 dark:text-foreground-soft font-medium">Unpaid</p>
+        <p className="text-[9px] sm:text-xs text-slate-500 dark:text-muted-foreground mt-2 sm:mt-3 hidden sm:block">Auto-calculated</p>
       </div>
     ),
     thisMonth: (
       <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] lg:overflow-y-auto flex flex-col`}>
-        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-cyan-100 flex items-center justify-center mb-2 sm:mb-4">
-          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-cyan-100 dark:bg-cyan-500/15 flex items-center justify-center mb-2 sm:mb-4">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
           </svg>
         </div>
-        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">This Month</h3>
+        <h3 className="text-slate-500 dark:text-muted-foreground text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">This Month</h3>
         <div className="space-y-0.5 sm:space-y-1">
-          <div className="text-lg sm:text-3xl font-bold text-slate-900">{overviewMetrics.thisMonthFlights} <span className="text-xs sm:text-lg text-slate-600">flights</span></div>
-          <div className="text-base sm:text-xl font-semibold text-cyan-600">{overviewMetrics.thisMonthHours.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-xs sm:text-base text-slate-600">hrs</span></div>
+          <div className="text-lg sm:text-3xl font-bold text-slate-900 dark:text-foreground">{overviewMetrics.thisMonthFlights} <span className="text-xs sm:text-lg text-slate-600 dark:text-foreground-soft">flights</span></div>
+          <div className="text-base sm:text-xl font-semibold text-cyan-600 dark:text-cyan-400">{overviewMetrics.thisMonthHours.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-xs sm:text-base text-slate-600 dark:text-foreground-soft">hrs</span></div>
         </div>
-        <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">{new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'America/Santiago' })}</p>
+        <p className="text-[9px] sm:text-xs text-slate-500 dark:text-muted-foreground mt-2 sm:mt-3 hidden sm:block">{new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'America/Santiago' })}</p>
       </div>
     ),
     avgFlightTime: (
       <div className={`${palette.card} rounded-xl p-3 sm:p-6 ${palette.shadow} min-h-[160px] sm:min-h-[200px] lg:h-[280px] lg:overflow-y-auto flex flex-col`}>
-        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-rose-100 flex items-center justify-center mb-2 sm:mb-4">
-          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-rose-100 dark:bg-rose-500/15 flex items-center justify-center mb-2 sm:mb-4">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
           </svg>
         </div>
-        <h3 className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Avg Time</h3>
-        <div className="text-xl sm:text-3xl font-bold text-slate-900 mb-0.5 sm:mb-1">
-          {overviewMetrics.totalFlights > 0 ? (overviewMetrics.totalHours / overviewMetrics.totalFlights).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'} <span className="text-sm sm:text-xl text-slate-600">hrs</span>
+        <h3 className="text-slate-500 dark:text-muted-foreground text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Avg Time</h3>
+        <div className="text-xl sm:text-3xl font-bold text-slate-900 dark:text-foreground mb-0.5 sm:mb-1">
+          {overviewMetrics.totalFlights > 0 ? (overviewMetrics.totalHours / overviewMetrics.totalFlights).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'} <span className="text-sm sm:text-xl text-slate-600 dark:text-foreground-soft">hrs</span>
         </div>
-        <p className="text-xs sm:text-sm text-slate-600 font-medium">Per flight</p>
-        <p className="text-[9px] sm:text-xs text-slate-500 mt-2 sm:mt-3 hidden sm:block">{overviewMetrics.totalHours.toLocaleString('es-CL', { minimumFractionDigits: 1 })} ÷ {overviewMetrics.totalFlights.toLocaleString('es-CL')}</p>
+        <p className="text-xs sm:text-sm text-slate-600 dark:text-foreground-soft font-medium">Per flight</p>
+        <p className="text-[9px] sm:text-xs text-slate-500 dark:text-muted-foreground mt-2 sm:mt-3 hidden sm:block">{overviewMetrics.totalHours.toLocaleString('es-CL', { minimumFractionDigits: 1 })} ÷ {overviewMetrics.totalFlights.toLocaleString('es-CL')}</p>
       </div>
     ),
     ...(overviewMetrics?.annualStats ? {
@@ -778,7 +802,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         const renderTrend = (value: number) => {
           const isPositive = value >= 0;
           return (
-            <span className={`text-[7px] sm:text-xs font-bold px-1 sm:px-1.5 py-0.5 rounded-md ${isPositive ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+            <span className={`text-[7px] sm:text-xs font-bold px-1 sm:px-1.5 py-0.5 rounded-md ${isPositive ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
               {isPositive ? '↗' : '↘'} {Math.abs(value).toFixed(0)}%
             </span>
           );
@@ -806,23 +830,23 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             {/* Header — mobile: compact single row / desktop: standard */}
             <div className="flex items-center justify-between mb-1 sm:mb-1.5">
               <div className="flex items-center gap-1.5 sm:gap-0">
-                <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-full bg-violet-100 flex items-center justify-center">
-                  <svg className="w-3 h-3 sm:w-5 sm:h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-full bg-violet-100 dark:bg-violet-500/15 flex items-center justify-center">
+                  <svg className="w-3 h-3 sm:w-5 sm:h-5 text-violet-600 dark:text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
                 </div>
                 <div className="sm:hidden">
-                  <h3 className="text-slate-500 text-[8px] font-semibold uppercase tracking-wide leading-none">Annual Stats</h3>
-                  <p className="text-[6px] text-slate-400 leading-none mt-px">Last 365 days</p>
+                  <h3 className="text-slate-500 dark:text-muted-foreground text-[8px] font-semibold uppercase tracking-wide leading-none">Annual Stats</h3>
+                  <p className="text-[6px] text-slate-400 dark:text-faint leading-none mt-px">Last 365 days</p>
                 </div>
               </div>
-              <span className="px-1 sm:px-2 py-px sm:py-0.5 bg-violet-50 text-violet-700 text-[7px] sm:text-[10px] font-bold rounded-full border border-violet-100">
+              <span className="px-1 sm:px-2 py-px sm:py-0.5 bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 text-[7px] sm:text-[10px] font-bold rounded-full border border-violet-100 dark:border-violet-500/20">
                 H/T: {stats.hobbsTachRatio.toFixed(2)}
               </span>
             </div>
             {/* Desktop-only title */}
-            <h3 className="hidden sm:block text-slate-500 text-xs font-semibold uppercase tracking-wide mb-0.5">Annual Stats</h3>
-            <p className="hidden sm:block text-[9px] text-slate-400 mb-1">Last 365 days</p>
+            <h3 className="hidden sm:block text-slate-500 dark:text-muted-foreground text-xs font-semibold uppercase tracking-wide mb-0.5">Annual Stats</h3>
+            <p className="hidden sm:block text-[9px] text-slate-400 dark:text-faint mb-1">Last 365 days</p>
 
             {/* MOBILE: Evenly distributed layout — no white gap */}
             <div className="flex sm:hidden flex-col flex-1 justify-center gap-2">
@@ -831,34 +855,34 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                 <div>
                   <div className="flex items-center gap-1 mb-0.5">
                     {clockIcon('w-3 h-3 text-violet-500')}
-                    <span className="text-[7px] font-bold text-slate-400 tracking-wider">HOBBS</span>
+                    <span className="text-[7px] font-bold text-slate-400 dark:text-faint tracking-wider">HOBBS</span>
                     {renderTrend(stats.hobbsTrend)}
                   </div>
-                  <div className="text-[18px] font-bold text-slate-900 leading-tight">
+                  <div className="text-[18px] font-bold text-slate-900 dark:text-foreground leading-tight">
                     {stats.hobbsThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                   </div>
-                  <div className="text-[8px] text-slate-400 font-medium mt-0.5">{stats.avgMonthlyHobbsThisYear.toFixed(1)}/mo</div>
+                  <div className="text-[8px] text-slate-400 dark:text-faint font-medium mt-0.5">{stats.avgMonthlyHobbsThisYear.toFixed(1)}/mo</div>
                 </div>
                 {/* TACH */}
                 <div>
                   <div className="flex items-center gap-1 mb-0.5">
                     {gaugeIcon('w-3 h-3 text-violet-500')}
-                    <span className="text-[7px] font-bold text-slate-400 tracking-wider">TACH</span>
+                    <span className="text-[7px] font-bold text-slate-400 dark:text-faint tracking-wider">TACH</span>
                     {renderTrend(stats.tachTrend)}
                   </div>
-                  <div className="text-[18px] font-bold text-slate-800 leading-tight">
+                  <div className="text-[18px] font-bold text-slate-800 dark:text-foreground leading-tight">
                     {stats.tachThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                   </div>
-                  <div className="text-[8px] text-slate-400 font-medium mt-0.5">{stats.avgMonthlyTachThisYear.toFixed(1)}/mo</div>
+                  <div className="text-[8px] text-slate-400 dark:text-faint font-medium mt-0.5">{stats.avgMonthlyTachThisYear.toFixed(1)}/mo</div>
                 </div>
               </div>
               {/* FLIGHTS */}
-              <div className="flex items-center justify-between pt-1.5 border-t border-dashed border-slate-200/60">
+              <div className="flex items-center justify-between pt-1.5 border-t border-dashed border-slate-200/60 dark:border-edge">
                 <div className="flex items-center gap-1">
                   {planeIcon('w-3 h-3 text-violet-500')}
-                  <span className="text-[11px] font-bold text-slate-900">{(stats.avgMonthlyFlightsThisYear * 12).toFixed(0)}</span>
-                  <span className="text-[9px] text-slate-500">flights</span>
-                  <span className="text-[8px] text-slate-400">{stats.avgMonthlyFlightsThisYear.toFixed(1)}/mo</span>
+                  <span className="text-[11px] font-bold text-slate-900 dark:text-foreground">{(stats.avgMonthlyFlightsThisYear * 12).toFixed(0)}</span>
+                  <span className="text-[9px] text-slate-500 dark:text-muted-foreground">flights</span>
+                  <span className="text-[8px] text-slate-400 dark:text-faint">{stats.avgMonthlyFlightsThisYear.toFixed(1)}/mo</span>
                 </div>
                 {renderTrend(stats.flightsTrend)}
               </div>
@@ -867,35 +891,35 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             {/* DESKTOP: Vertical list layout — tighter to fit lg:h-[280px] without scroll */}
             <div className="hidden sm:flex flex-col gap-1.5 flex-1 justify-end">
               {/* HOBBS Row */}
-              <div className="flex items-center justify-between border-b border-dashed border-slate-200/50 pb-1.5">
+              <div className="flex items-center justify-between border-b border-dashed border-slate-200/50 dark:border-edge pb-1.5">
                 <div>
                   <div className="flex items-center gap-1 mb-px">
                     {clockIcon('w-3.5 h-3.5 text-violet-500')}
-                    <span className="text-[9px] font-bold text-slate-500 tracking-wider">HOBBS</span>
+                    <span className="text-[9px] font-bold text-slate-500 dark:text-muted-foreground tracking-wider">HOBBS</span>
                   </div>
-                  <div className="text-xl font-bold text-slate-900 leading-none">
+                  <div className="text-xl font-bold text-slate-900 dark:text-foreground leading-none">
                     {stats.hobbsThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                   </div>
                 </div>
                 <div className="text-right flex flex-col items-end gap-0.5">
                   {renderTrend(stats.hobbsTrend)}
-                  <div className="text-[9px] text-slate-400 font-medium">{stats.avgMonthlyHobbsThisYear.toFixed(1)}/mo</div>
+                  <div className="text-[9px] text-slate-400 dark:text-faint font-medium">{stats.avgMonthlyHobbsThisYear.toFixed(1)}/mo</div>
                 </div>
               </div>
               {/* TACH Row */}
-              <div className="flex items-center justify-between border-b border-dashed border-slate-200/50 pb-1.5">
+              <div className="flex items-center justify-between border-b border-dashed border-slate-200/50 dark:border-edge pb-1.5">
                 <div>
                   <div className="flex items-center gap-1 mb-px">
                     {gaugeIcon('w-3.5 h-3.5 text-violet-500')}
-                    <span className="text-[9px] font-bold text-slate-500 tracking-wider">TACH</span>
+                    <span className="text-[9px] font-bold text-slate-500 dark:text-muted-foreground tracking-wider">TACH</span>
                   </div>
-                  <div className="text-lg font-bold text-slate-800 leading-none">
+                  <div className="text-lg font-bold text-slate-800 dark:text-foreground leading-none">
                     {stats.tachThisYear.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                   </div>
                 </div>
                 <div className="text-right flex flex-col items-end gap-0.5">
                   {renderTrend(stats.tachTrend)}
-                  <div className="text-[9px] text-slate-400 font-medium">{stats.avgMonthlyTachThisYear.toFixed(1)}/mo</div>
+                  <div className="text-[9px] text-slate-400 dark:text-faint font-medium">{stats.avgMonthlyTachThisYear.toFixed(1)}/mo</div>
                 </div>
               </div>
               {/* FLIGHTS Row */}
@@ -903,15 +927,15 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                 <div>
                   <div className="flex items-center gap-1 mb-px">
                     {planeIcon('w-3.5 h-3.5 text-violet-500')}
-                    <span className="text-[9px] font-bold text-slate-500 tracking-wider">FLIGHTS</span>
+                    <span className="text-[9px] font-bold text-slate-500 dark:text-muted-foreground tracking-wider">FLIGHTS</span>
                   </div>
-                  <div className="text-lg font-bold text-slate-800 leading-none">
+                  <div className="text-lg font-bold text-slate-800 dark:text-foreground leading-none">
                     {(stats.avgMonthlyFlightsThisYear * 12).toFixed(0)}
                   </div>
                 </div>
                 <div className="text-right flex flex-col items-end gap-0.5">
                   {renderTrend(stats.flightsTrend)}
-                  <div className="text-[9px] text-slate-400 font-medium">{stats.avgMonthlyFlightsThisYear.toFixed(1)}/mo</div>
+                  <div className="text-[9px] text-slate-400 dark:text-faint font-medium">{stats.avgMonthlyFlightsThisYear.toFixed(1)}/mo</div>
                 </div>
               </div>
             </div>
@@ -926,27 +950,27 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       {/* Backup Modal */}
       {showBackupModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
-            <h3 className="text-2xl font-bold text-slate-900 mb-4 flex items-center gap-2"><Icon name="save" className="w-6 h-6 text-slate-500" /> Generar Backup Completo</h3>
+          <div className="bg-white dark:bg-card rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-foreground mb-4 flex items-center gap-2"><Icon name="save" className="w-6 h-6 text-slate-500 dark:text-muted-foreground" /> Generar Backup Completo</h3>
 
             {backupMessage && (
-              <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${backupMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+              <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${backupMessage.type === 'success' ? 'bg-green-100 dark:bg-green-500/15 text-green-800 dark:text-green-300' : 'bg-red-100 dark:bg-red-500/15 text-red-800 dark:text-red-300'}`}>
                 <Icon name={backupMessage.type === 'success' ? 'checkCircle' : 'warning'} className="w-4 h-4 flex-shrink-0" />
                 <span>{backupMessage.text}</span>
               </div>
             )}
 
-            <p className="text-slate-600 mb-6">
+            <p className="text-slate-600 dark:text-foreground-soft mb-6">
               Este backup incluye <strong>toda la información histórica</strong> desde el primer vuelo hasta hoy:
             </p>
 
-            <ul className="text-sm text-slate-600 space-y-2 mb-6">
-              <li className="flex items-center gap-2"><Icon name="airframe" className="w-4 h-4 text-slate-400" /> Todos los vuelos registrados</li>
-              <li className="flex items-center gap-2"><Icon name="money" className="w-4 h-4 text-slate-400" /> Depósitos completos (DB + CSV)</li>
-              <li className="flex items-center gap-2"><Icon name="fuel" className="w-4 h-4 text-slate-400" /> Combustible histórico</li>
-              <li className="flex items-center gap-2"><Icon name="people" className="w-4 h-4 text-slate-400" /> Pilotos con balances</li>
-              <li className="flex items-center gap-2"><Icon name="wrench" className="w-4 h-4 text-slate-400" /> Aeronaves y mantenimiento</li>
-              <li className="flex items-center gap-2"><Icon name="document" className="w-4 h-4 text-slate-400" /> Transacciones y pendientes</li>
+            <ul className="text-sm text-slate-600 dark:text-foreground-soft space-y-2 mb-6">
+              <li className="flex items-center gap-2"><Icon name="airframe" className="w-4 h-4 text-slate-400 dark:text-faint" /> Todos los vuelos registrados</li>
+              <li className="flex items-center gap-2"><Icon name="money" className="w-4 h-4 text-slate-400 dark:text-faint" /> Depósitos completos (DB + CSV)</li>
+              <li className="flex items-center gap-2"><Icon name="fuel" className="w-4 h-4 text-slate-400 dark:text-faint" /> Combustible histórico</li>
+              <li className="flex items-center gap-2"><Icon name="people" className="w-4 h-4 text-slate-400 dark:text-faint" /> Pilotos con balances</li>
+              <li className="flex items-center gap-2"><Icon name="wrench" className="w-4 h-4 text-slate-400 dark:text-faint" /> Aeronaves y mantenimiento</li>
+              <li className="flex items-center gap-2"><Icon name="document" className="w-4 h-4 text-slate-400 dark:text-faint" /> Transacciones y pendientes</li>
             </ul>
 
             <div className="space-y-3">
@@ -1002,13 +1026,13 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                   setBackupMessage(null);
                 }}
                 disabled={backupLoading}
-                className="w-full px-6 py-3 bg-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-300 transition-colors disabled:opacity-50"
+                className="w-full px-6 py-3 bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-foreground-soft rounded-xl font-bold hover:bg-slate-300 transition-colors disabled:opacity-50"
               >
                 Cancelar
               </button>
             </div>
 
-            <p className="text-xs text-slate-500 mt-4 text-center">
+            <p className="text-xs text-slate-500 dark:text-muted-foreground mt-4 text-center">
               El backup se genera con todos los datos históricos.<br />
               Tamaño estimado: 2-5 MB
             </p>
@@ -1018,7 +1042,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
 
       {/* Navigation Tabs - Mobile Responsive */}
       <div className="mb-6 sm:mb-8 space-y-3">
-        <nav className="flex gap-1 sm:gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-xl border border-slate-200 shadow-sm">
+        <nav className="flex gap-1 sm:gap-2 bg-white/90 dark:bg-card backdrop-blur-sm p-2 rounded-xl border border-slate-200 dark:border-edge shadow-sm">
           {[
             { id: "overview", label: "Overview", icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
             { id: "flights", label: "Flights", icon: "M12 19l9 2-9-18-9 18 9-2zm0 0v-8" },
@@ -1032,7 +1056,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               onClick={() => setTab(t.id)}
               className={`flex-1 min-w-0 px-2 sm:px-6 py-3 sm:py-4 rounded-lg font-bold uppercase tracking-wide text-xs sm:text-sm transition-all flex items-center justify-center gap-1 sm:gap-2 ${tab === t.id
                 ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                : 'text-slate-600 dark:text-foreground-soft hover:text-slate-900 dark:hover:text-foreground hover:bg-slate-100 dark:hover:bg-muted'
                 }`}
             >
               <svg className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1059,7 +1083,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               onClick={() => setEditMode(!editMode)}
               className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 ${editMode
                 ? 'bg-yellow-500 hover:bg-yellow-600 text-white shadow-lg'
-                : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                : 'bg-slate-200 dark:bg-white/10 hover:bg-slate-300 text-slate-700 dark:text-foreground-soft'
                 }`}
             >
               {editMode ? <span className="inline-flex items-center gap-2"><Icon name="edit" className="w-4 h-4" /> Modo Edición ON</span> : <span className="inline-flex items-center gap-2"><Icon name="edit" className="w-4 h-4" /> Editar Celdas</span>}
@@ -1092,7 +1116,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               setMxSubTab("engine");
             }}
           />
-          <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 bg-slate-50 border-2 border-slate-200 rounded-b-2xl mt-2">
+          <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 bg-slate-50 dark:bg-muted border-2 border-slate-200 dark:border-edge rounded-b-2xl mt-2">
             <button
               className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-40 hover:bg-blue-700 transition-colors text-sm sm:text-base"
               onClick={() => {
@@ -1111,7 +1135,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             </button>
 
             {/* Mobile: show only current page / total */}
-            <span className="sm:hidden text-sm font-semibold text-slate-600">
+            <span className="sm:hidden text-sm font-semibold text-slate-600 dark:text-foreground-soft">
               {currentPage} / {pagination ? Math.ceil((pagination.total || 0) / pageSize) : Math.ceil(initialData.flights.length / pageSize)}
             </span>
 
@@ -1144,7 +1168,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
 
                 return pages.map((p, idx) => {
                   if (p === '...') {
-                    return <span key={`ellipsis-${idx}`} className="px-2 text-slate-400">...</span>;
+                    return <span key={`ellipsis-${idx}`} className="px-2 text-slate-400 dark:text-faint">...</span>;
                   }
                   const pageNum = p as number;
                   const isActive = pageNum === currentPage;
@@ -1162,7 +1186,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                       }}
                       className={`min-w-[40px] px-3 py-2 rounded-lg font-semibold transition-all ${isActive
                         ? 'bg-blue-600 text-white shadow-lg'
-                        : 'bg-white text-slate-600 hover:bg-blue-50 border border-slate-300'
+                        : 'bg-white dark:bg-card text-slate-600 dark:text-foreground-soft hover:bg-blue-50 dark:hover:bg-blue-500/10 border border-slate-300 dark:border-edge-strong'
                         }`}
                     >
                       {pageNum}
@@ -1197,12 +1221,12 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       )}
       {tab === "pilots" && (
         <>
-          <div className="mb-4 flex gap-1 p-1 bg-slate-100 rounded-lg">
+          <div className="mb-4 flex gap-1 p-1 bg-slate-100 dark:bg-muted rounded-lg">
             <button
               onClick={() => setPilotSubTab("accounts")}
               className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${pilotSubTab === "accounts"
-                ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
+                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
             >
               <span className="hidden sm:inline">Pilot </span>Accounts
@@ -1210,8 +1234,8 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             <button
               onClick={() => setPilotSubTab("directory")}
               className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${pilotSubTab === "directory"
-                ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
+                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
             >
               <span className="hidden sm:inline">Pilot </span>Directory
@@ -1219,8 +1243,8 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             <button
               onClick={() => setPilotSubTab("deposits")}
               className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${pilotSubTab === "deposits"
-                ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
+                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
             >
               Deposits
@@ -1234,12 +1258,12 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       {tab === "fuel" && <FuelTable logs={initialData.fuelLogs || []} />}
       {tab === "maintenance" && (
         <>
-          <div className="flex gap-1 bg-slate-100/80 p-1 rounded-lg mb-4 max-w-2xl">
+          <div className="flex gap-1 bg-slate-100/80 dark:bg-muted p-1 rounded-lg mb-4 max-w-2xl">
             <button
               onClick={() => setMxSubTab("components")}
               className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${mxSubTab === "components"
-                ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
+                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
             >
               Components
@@ -1247,8 +1271,8 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             <button
               onClick={() => setMxSubTab("reemplazo")}
               className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${mxSubTab === "reemplazo"
-                ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
+                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
             >
               <span className="hidden sm:inline">Plan de </span>Reemplazo
@@ -1256,8 +1280,8 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             <button
               onClick={() => setMxSubTab("adda")}
               className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${mxSubTab === "adda"
-                ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
+                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
             >
               AD/DA
@@ -1265,8 +1289,8 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             <button
               onClick={() => setMxSubTab("engine")}
               className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${mxSubTab === "engine"
-                ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
+                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
             >
               Engine<span className="hidden sm:inline"> Monitor</span>
@@ -1280,12 +1304,12 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       )}
       {tab === "finance" && (
         <>
-          <div className="flex gap-1 bg-slate-100/80 p-1 rounded-lg mb-4 max-w-md">
+          <div className="flex gap-1 bg-slate-100/80 dark:bg-muted p-1 rounded-lg mb-4 max-w-md">
             <button
               onClick={() => setFinanceSubTab("movements")}
               className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${financeSubTab === "movements"
-                ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
+                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
             >
               <span className="hidden sm:inline">Bank </span>Movements
@@ -1293,8 +1317,8 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             <button
               onClick={() => setFinanceSubTab("costs")}
               className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${financeSubTab === "costs"
-                ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
+                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
             >
               Cost Analysis
@@ -1407,24 +1431,24 @@ function Overview({ data, flights, palette, allowedPilotCodes, activeDaysLimit, 
           </div>
           <div className="p-8">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200">
-                <thead className="bg-slate-50">
+              <table className="min-w-full divide-y divide-slate-200 dark:divide-edge">
+                <thead className="bg-slate-50 dark:bg-muted">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Code</th>
-                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Last Flight</th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">Code</th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">Last Flight</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-slate-100">
+                <tbody className="bg-white dark:bg-card divide-y divide-slate-100 dark:divide-edge">
                   {activePilots.map(p => {
                     const lastFlight = data.flights
                       .filter(f => f.pilotoId === p.id)
                       .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())[0];
                     return (
-                      <tr key={p.id} className="hover:bg-blue-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-blue-600 font-mono">{p.codigo}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">{p.nombre}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                      <tr key={p.id} className="hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-blue-600 dark:text-blue-400 font-mono">{p.codigo}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900 dark:text-foreground">{p.nombre}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-foreground-soft">
                           {lastFlight ? formatFecha(lastFlight.fecha) : '-'}
                         </td>
                       </tr>
@@ -1462,7 +1486,7 @@ function StatCard({ title, value, accent, icon, palette, onClick }: { title: str
       onClick={onClick}
     >
       <div className="absolute top-0 right-0 w-32 h-32 rounded-bl-full opacity-5" style={{ background: `linear-gradient(135deg, ${accent}, ${accent}dd)` }} />
-      <div className="absolute top-4 right-4 w-12 h-12 rounded-xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
+      <div className="absolute top-4 right-4 w-12 h-12 rounded-xl bg-gradient-to-br from-white dark:from-slate-900/10 to-white dark:to-slate-900/5 flex items-center justify-center group-hover:scale-110 transition-transform">
         <svg className="w-7 h-7" style={{ color: accent }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={icon} />
         </svg>
@@ -1478,23 +1502,24 @@ function StatCard({ title, value, accent, icon, palette, onClick }: { title: str
 
 function LineChart({ labels, values, palette }: { labels: string[]; values: number[]; palette: any }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const ct = useChartTheme();
   useEffect(() => {
     if (!ref.current) return;
     const ctx = ref.current.getContext("2d");
     if (!ctx) return;
     const gradient = ctx.createLinearGradient(0, 0, 0, 180);
-    gradient.addColorStop(0, `${palette.accent}33`);
-    gradient.addColorStop(1, `${palette.accent}00`);
+    gradient.addColorStop(0, `${ct.accent}33`);
+    gradient.addColorStop(1, `${ct.accent}00`);
     const chart = new Chart(ctx, {
       type: "line",
       data: {
         labels,
-        datasets: [{ label: "Horas", data: values, borderColor: palette.accent, backgroundColor: gradient, tension: 0.35, pointRadius: 2, fill: true }],
+        datasets: [{ label: "Horas", data: values, borderColor: ct.accent, backgroundColor: gradient, tension: 0.35, pointRadius: 2, fill: true }],
       },
-      options: { responsive: true, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#0f172a', titleColor: '#fff', bodyColor: '#e2e8f0' } }, scales: { x: { grid: { color: palette.grid } }, y: { grid: { color: palette.grid } } } },
+      options: { responsive: true, plugins: { legend: { display: false }, tooltip: { backgroundColor: ct.tooltipBg, titleColor: ct.tooltipTitle, bodyColor: ct.tooltipBody } }, scales: { x: { grid: { color: ct.grid }, ticks: { color: ct.tick } }, y: { grid: { color: ct.grid }, ticks: { color: ct.tick } } } },
     });
     return () => chart.destroy();
-  }, [labels, values]);
+  }, [labels, values, ct.key]);
   return <canvas ref={ref} height={120} />;
 }
 
@@ -1515,6 +1540,7 @@ function FuelForecastChart({
 }) {
   const chartRef = useRef<HTMLCanvasElement>(null);
   const chartInstance = useRef<Chart | null>(null);
+  const ct = useChartTheme();
   const [visibleSeries, setVisibleSeries] = useState<Record<string, boolean>>({
     avgas: true,
     brent: true,
@@ -1828,14 +1854,14 @@ function FuelForecastChart({
       datasets.push({
         label: 'Brent US$/bbl',
         data: visibleMonths.map(m => brentMap[m]?.brentUSD ?? null),
-        borderColor: '#1e293b',
+        borderColor: ct.ink,
         backgroundColor: 'transparent',
         borderWidth: 1.5,
         // Provisional months get a hollow white circle; closed months stay flat
         pointRadius: brentPartial.map(p => p ? 3.5 : 0),
         pointStyle: 'circle',
-        pointBackgroundColor: brentPartial.map(p => p ? '#ffffff' : '#1e293b'),
-        pointBorderColor: '#1e293b',
+        pointBackgroundColor: brentPartial.map(p => p ? '#ffffff' : ct.ink),
+        pointBorderColor: ct.ink,
         pointBorderWidth: brentPartial.map(p => p ? 2 : 0),
         tension: 0.3,
         yAxisID: 'yBrent',
@@ -1880,10 +1906,10 @@ function FuelForecastChart({
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#0f172a',
-            titleColor: '#f1f5f9',
-            bodyColor: '#e2e8f0',
-            borderColor: '#334155',
+            backgroundColor: ct.tooltipBg,
+            titleColor: ct.tooltipTitle,
+            bodyColor: ct.tooltipBody,
+            borderColor: ct.tooltipBorder,
             borderWidth: 1,
             padding: 10,
             bodySpacing: 4,
@@ -1913,10 +1939,10 @@ function FuelForecastChart({
         },
         scales: {
           x: {
-            grid: { color: '#f1f5f9' },
+            grid: { color: ct.grid },
             ticks: {
               font: { size: 9 },
-              color: '#94a3b8',
+              color: ct.tick,
               maxTicksLimit: 20,
               maxRotation: 45,
             },
@@ -1925,7 +1951,7 @@ function FuelForecastChart({
             type: 'linear',
             position: 'left',
             title: { display: true, text: 'AVGAS $/L (CLP)', font: { size: 9 }, color: '#d97706' },
-            grid: { color: '#f8fafc' },
+            grid: { color: ct.gridFaint },
             ticks: {
               font: { size: 9 },
               color: '#d97706',
@@ -1936,11 +1962,11 @@ function FuelForecastChart({
             type: 'linear',
             position: 'right',
             display: visibleSeries.brent,
-            title: { display: true, text: 'Brent US$/bbl', font: { size: 9 }, color: '#1e293b' },
+            title: { display: true, text: 'Brent US$/bbl', font: { size: 9 }, color: ct.ink },
             grid: { drawOnChartArea: false },
             ticks: {
               font: { size: 9 },
-              color: '#1e293b',
+              color: ct.ink,
               callback: function(value: any) { return 'US$' + Math.round(value); },
             },
           },
@@ -1948,11 +1974,11 @@ function FuelForecastChart({
             type: 'linear',
             position: 'right',
             display: visibleSeries.usdclp,
-            title: { display: true, text: 'USD/CLP', font: { size: 9 }, color: '#94a3b8' },
+            title: { display: true, text: 'USD/CLP', font: { size: 9 }, color: ct.tick },
             grid: { drawOnChartArea: false },
             ticks: {
               font: { size: 9 },
-              color: '#94a3b8',
+              color: ct.tick,
             },
           },
         },
@@ -1961,7 +1987,7 @@ function FuelForecastChart({
 
     chartInstance.current = chart;
     return () => { chart.destroy(); chartInstance.current = null; };
-  }, [fuelPriceAnalysis, brentData, brentAvgasCorrelation, currentFX, visibleSeries, fuelChartRange, customStart, customEnd]);
+  }, [fuelPriceAnalysis, brentData, brentAvgasCorrelation, currentFX, visibleSeries, fuelChartRange, customStart, customEnd, ct.key]);
 
   // Series legend config
   const seriesConfig = [
@@ -1971,7 +1997,7 @@ function FuelForecastChart({
     { key: 'avg3m', label: 'MA 3m', color: '#10b981', solid: true },
     { key: 'avg6m', label: 'MA 6m', color: '#0ea5e9', solid: true },
     { key: 'avg12m', label: 'MA 12m', color: '#8b5cf6', solid: true },
-    { key: 'brent', label: 'Brent $/bbl', color: '#1e293b', solid: true },
+    { key: 'brent', label: 'Brent $/bbl', color: ct.ink, solid: true },
     { key: 'usdclp', label: 'USD/CLP', color: '#94a3b8', dashed: true },
   ];
 
@@ -1992,7 +2018,7 @@ function FuelForecastChart({
   return (
     <div className="mb-5">
       <div className="flex items-center justify-between mb-2">
-        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+        <p className="text-[10px] font-semibold text-slate-400 dark:text-faint uppercase tracking-wider">
           Fuel Price — All Variables
         </p>
         {brentAvgasCorrelation && (
@@ -2032,7 +2058,7 @@ function FuelForecastChart({
       </div>
       {/* Period Selector */}
       <div className="flex flex-wrap items-center gap-1.5 mb-2">
-        <span className="text-[10px] font-semibold text-slate-400 mr-0.5">Period:</span>
+        <span className="text-[10px] font-semibold text-slate-400 dark:text-faint mr-0.5">Period:</span>
         {([
           ['all', 'All'],
           ['5y', '5Y'],
@@ -2049,7 +2075,7 @@ function FuelForecastChart({
             className={`px-2 py-0.5 text-[9px] font-medium rounded-full border transition-all
               ${fuelChartRange === key
                 ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'}`}
+                : 'bg-slate-50 dark:bg-muted text-slate-500 dark:text-muted-foreground border-slate-200 dark:border-edge hover:bg-slate-100 dark:hover:bg-muted'}`}
           >
             {label}
           </button>
@@ -2059,7 +2085,7 @@ function FuelForecastChart({
       {fuelChartRange === 'custom' && (
         <div className="mb-2 px-1">
           <div className="flex items-center gap-3">
-            <label className="text-[10px] text-slate-400 w-8 text-right">From</label>
+            <label className="text-[10px] text-slate-400 dark:text-faint w-8 text-right">From</label>
             <input
               type="range"
               min={0}
@@ -2071,7 +2097,7 @@ function FuelForecastChart({
               }}
               className="flex-1 h-1.5 accent-blue-600"
             />
-            <span className="text-[10px] text-slate-500 w-14 tabular-nums font-mono">
+            <span className="text-[10px] text-slate-500 dark:text-muted-foreground w-14 tabular-nums font-mono">
               {(() => {
                 const allM = buildAllMonths();
                 const idx = Math.round((customStart / 100) * (allM.length - 1));
@@ -2081,7 +2107,7 @@ function FuelForecastChart({
             </span>
           </div>
           <div className="flex items-center gap-3 mt-1">
-            <label className="text-[10px] text-slate-400 w-8 text-right">To</label>
+            <label className="text-[10px] text-slate-400 dark:text-faint w-8 text-right">To</label>
             <input
               type="range"
               min={0}
@@ -2093,7 +2119,7 @@ function FuelForecastChart({
               }}
               className="flex-1 h-1.5 accent-blue-600"
             />
-            <span className="text-[10px] text-slate-500 w-14 tabular-nums font-mono">
+            <span className="text-[10px] text-slate-500 dark:text-muted-foreground w-14 tabular-nums font-mono">
               {(() => {
                 const allM = buildAllMonths();
                 const idx = Math.round((customEnd / 100) * (allM.length - 1));
@@ -2276,7 +2302,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
   }, [filterClient, filteredFlights, depositsByCode, fuelByCode, depositsDetailsByCode, fuelDetailsByCode, csvPilotNames]);
 
   return (
-    <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
+    <div className="bg-white/95 dark:bg-card backdrop-blur-lg border-2 border-slate-200 dark:border-edge rounded-2xl shadow-2xl overflow-hidden">
       <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
         <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -2299,14 +2325,14 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
       </div>
 
       {/* Filter and PDF Generation Bar */}
-      <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
+      <div className="bg-slate-50 dark:bg-muted px-6 py-4 border-b border-slate-200 dark:border-edge">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-sm font-semibold text-slate-600">Pilot ID:</span>
+          <span className="text-sm font-semibold text-slate-600 dark:text-foreground-soft">Pilot ID:</span>
 
           <select
             value={filterClient}
             onChange={e => setFilterClient(e.target.value)}
-            className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[200px]"
+            className="px-3 py-2 text-sm border border-slate-300 dark:border-edge-strong rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[200px]"
           >
             <option value="">All Pilots</option>
             {(clientOptions || []).map(c => (
@@ -2318,7 +2344,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
             <>
               <button
                 onClick={clearFilters}
-                className="px-3 py-2 text-sm bg-slate-200 text-slate-700 hover:bg-slate-300 rounded-lg font-medium transition-colors"
+                className="px-3 py-2 text-sm bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-foreground-soft hover:bg-slate-300 rounded-lg font-medium transition-colors"
               >
                 Clear
               </button>
@@ -2386,35 +2412,35 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
 
       {/* Pilot Balance Summary Preview */}
       {pilotBalanceSummary && (
-        <div className="bg-gradient-to-br from-slate-50 to-blue-50 px-6 py-6 border-b-2 border-blue-200">
+        <div className="bg-gradient-to-br from-slate-50 dark:from-slate-950 to-blue-50 dark:to-blue-950/40 px-6 py-6 border-b-2 border-blue-200 dark:border-blue-500/30">
           <div className="mb-4">
-            <h4 className="text-lg font-bold text-slate-900 mb-1">{pilotBalanceSummary.name}</h4>
-            <p className="text-sm text-slate-600">Pilot ID: {pilotBalanceSummary.code}</p>
+            <h4 className="text-lg font-bold text-slate-900 dark:text-foreground mb-1">{pilotBalanceSummary.name}</h4>
+            <p className="text-sm text-slate-600 dark:text-foreground-soft">Pilot ID: {pilotBalanceSummary.code}</p>
           </div>
 
           {/* Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            <div className="bg-white rounded-lg p-3 border border-blue-200 shadow-sm">
-              <div className="text-xs text-slate-500 font-medium mb-1">Total Flights</div>
-              <div className="text-2xl font-bold text-slate-900 leading-none">
+            <div className="bg-white dark:bg-card rounded-lg p-3 border border-blue-200 dark:border-blue-500/30 shadow-sm">
+              <div className="text-xs text-slate-500 dark:text-muted-foreground font-medium mb-1">Total Flights</div>
+              <div className="text-2xl font-bold text-slate-900 dark:text-foreground leading-none">
                 {pilotBalanceSummary.totalFlights}
               </div>
             </div>
-            <div className="bg-white rounded-lg p-3 border border-emerald-200 shadow-sm">
-              <div className="text-xs text-slate-500 font-medium mb-1">Total Hours</div>
-              <div className="text-2xl font-bold text-emerald-700 leading-none">
+            <div className="bg-white dark:bg-card rounded-lg p-3 border border-emerald-200 dark:border-emerald-500/30 shadow-sm">
+              <div className="text-xs text-slate-500 dark:text-muted-foreground font-medium mb-1">Total Hours</div>
+              <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-300 leading-none">
                 {pilotBalanceSummary.totalHours.toFixed(1)}
               </div>
             </div>
-            <div className="bg-white rounded-lg p-3 border border-amber-200 shadow-sm">
-              <div className="text-xs text-slate-500 font-medium mb-1">Total Spent</div>
-              <div className="text-xl font-bold text-amber-700">
+            <div className="bg-white dark:bg-card rounded-lg p-3 border border-amber-200 dark:border-amber-500/30 shadow-sm">
+              <div className="text-xs text-slate-500 dark:text-muted-foreground font-medium mb-1">Total Spent</div>
+              <div className="text-xl font-bold text-amber-700 dark:text-amber-300">
                 ${formatCurrency(pilotBalanceSummary.totalSpent)}
               </div>
             </div>
-            <div className={`bg-white rounded-lg p-3 border-2 shadow-md ${pilotBalanceSummary.balance >= 0 ? 'border-emerald-400' : 'border-red-400'}`}>
-              <div className="text-xs text-slate-500 font-medium mb-1">Balance</div>
-              <div className={`text-2xl font-bold ${pilotBalanceSummary.balance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+            <div className={`bg-white dark:bg-card rounded-lg p-3 border-2 shadow-md ${pilotBalanceSummary.balance >= 0 ? 'border-emerald-400' : 'border-red-400'}`}>
+              <div className="text-xs text-slate-500 dark:text-muted-foreground font-medium mb-1">Balance</div>
+              <div className={`text-2xl font-bold ${pilotBalanceSummary.balance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
                 ${formatCurrency(pilotBalanceSummary.balance)}
               </div>
             </div>
@@ -2423,78 +2449,78 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
           {/* Financial Breakdown */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Deposits */}
-            <div className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
+            <div className="bg-white dark:bg-card rounded-lg p-4 border border-slate-200 dark:border-edge shadow-sm">
               <div className="flex items-center justify-between mb-3">
-                <h5 className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <h5 className="text-sm font-bold text-slate-700 dark:text-foreground-soft flex items-center gap-2">
+                  <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   Deposits
                 </h5>
-                <span className="text-lg font-bold text-emerald-600">${formatCurrency(pilotBalanceSummary.totalDeposits)}</span>
+                <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">${formatCurrency(pilotBalanceSummary.totalDeposits)}</span>
               </div>
               <div className="max-h-32 overflow-y-auto text-xs space-y-1">
                 {pilotBalanceSummary.deposits.length > 0 ? (
                   pilotBalanceSummary.deposits.map((d, i) => (
-                    <div key={i} className="flex justify-between text-slate-600 border-b border-slate-100 pb-1">
+                    <div key={i} className="flex justify-between text-slate-600 dark:text-foreground-soft border-b border-slate-100 dark:border-edge pb-1">
                       <span className="truncate mr-2">{d.fecha}: {d.descripcion}</span>
                       <span className="font-semibold whitespace-nowrap">${formatCurrency(d.monto)}</span>
                     </div>
                   ))
                 ) : (
-                  <p className="text-slate-400 italic">No deposits</p>
+                  <p className="text-slate-400 dark:text-faint italic">No deposits</p>
                 )}
               </div>
             </div>
 
             {/* Fuel Credits */}
-            <div className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
+            <div className="bg-white dark:bg-card rounded-lg p-4 border border-slate-200 dark:border-edge shadow-sm">
               <div className="flex items-center justify-between mb-3">
-                <h5 className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <h5 className="text-sm font-bold text-slate-700 dark:text-foreground-soft flex items-center gap-2">
+                  <svg className="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                   Fuel Credits
                 </h5>
-                <span className="text-lg font-bold text-amber-600">${formatCurrency(pilotBalanceSummary.totalFuel)}</span>
+                <span className="text-lg font-bold text-amber-600 dark:text-amber-400">${formatCurrency(pilotBalanceSummary.totalFuel)}</span>
               </div>
               <div className="max-h-32 overflow-y-auto text-xs space-y-1">
                 {pilotBalanceSummary.fuelCredits.length > 0 ? (
                   pilotBalanceSummary.fuelCredits.map((f, i) => (
-                    <div key={i} className="flex justify-between text-slate-600 border-b border-slate-100 pb-1">
+                    <div key={i} className="flex justify-between text-slate-600 dark:text-foreground-soft border-b border-slate-100 dark:border-edge pb-1">
                       <span className="truncate mr-2">{f.fecha}: {f.litros}L</span>
                       <span className="font-semibold whitespace-nowrap">${formatCurrency(f.monto)}</span>
                     </div>
                   ))
                 ) : (
-                  <p className="text-slate-400 italic">No fuel credits</p>
+                  <p className="text-slate-400 dark:text-faint italic">No fuel credits</p>
                 )}
               </div>
             </div>
 
             {/* Account Summary */}
-            <div className="bg-gradient-to-br from-slate-100 to-blue-100 rounded-lg p-4 border-2 border-blue-300 shadow-md">
-              <h5 className="text-sm font-bold text-slate-800 mb-3">Account Summary</h5>
+            <div className="bg-gradient-to-br from-slate-100 dark:from-slate-900 to-blue-100 dark:to-blue-950/50 rounded-lg p-4 border-2 border-blue-300 shadow-md">
+              <h5 className="text-sm font-bold text-slate-800 dark:text-foreground mb-3">Account Summary</h5>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Deposits:</span>
-                  <span className="font-semibold text-emerald-700">+${formatCurrency(pilotBalanceSummary.totalDeposits)}</span>
+                  <span className="text-slate-600 dark:text-foreground-soft">Deposits:</span>
+                  <span className="font-semibold text-emerald-700 dark:text-emerald-300">+${formatCurrency(pilotBalanceSummary.totalDeposits)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Fuel Credits:</span>
-                  <span className="font-semibold text-amber-700">+${formatCurrency(pilotBalanceSummary.totalFuel)}</span>
+                  <span className="text-slate-600 dark:text-foreground-soft">Fuel Credits:</span>
+                  <span className="font-semibold text-amber-700 dark:text-amber-300">+${formatCurrency(pilotBalanceSummary.totalFuel)}</span>
                 </div>
-                <div className="flex justify-between border-t border-slate-300 pt-2">
-                  <span className="text-slate-600">Total Credit:</span>
-                  <span className="font-bold text-blue-700">${formatCurrency(pilotBalanceSummary.totalDeposits + pilotBalanceSummary.totalFuel)}</span>
+                <div className="flex justify-between border-t border-slate-300 dark:border-edge-strong pt-2">
+                  <span className="text-slate-600 dark:text-foreground-soft">Total Credit:</span>
+                  <span className="font-bold text-blue-700 dark:text-blue-300">${formatCurrency(pilotBalanceSummary.totalDeposits + pilotBalanceSummary.totalFuel)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Flight Charges:</span>
-                  <span className="font-semibold text-red-600">-${formatCurrency(pilotBalanceSummary.totalSpent)}</span>
+                  <span className="text-slate-600 dark:text-foreground-soft">Flight Charges:</span>
+                  <span className="font-semibold text-red-600 dark:text-red-400">-${formatCurrency(pilotBalanceSummary.totalSpent)}</span>
                 </div>
                 <div className={`flex justify-between border-t-2 pt-2 ${pilotBalanceSummary.balance >= 0 ? 'border-emerald-400' : 'border-red-400'}`}>
-                  <span className="font-bold text-slate-800">Balance:</span>
-                  <span className={`font-bold text-lg ${pilotBalanceSummary.balance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                  <span className="font-bold text-slate-800 dark:text-foreground">Balance:</span>
+                  <span className={`font-bold text-lg ${pilotBalanceSummary.balance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
                     ${formatCurrency(pilotBalanceSummary.balance)}
                   </span>
                 </div>
@@ -2505,35 +2531,35 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
       )}
 
       <div className="overflow-x-auto px-4 sm:px-0">
-        <table className="min-w-full divide-y divide-slate-200" style={{ minWidth: '1400px' }}>
-          <thead className="bg-slate-50">
+        <table className="min-w-full divide-y divide-slate-200 dark:divide-edge" style={{ minWidth: '1400px' }}>
+          <thead className="bg-slate-50 dark:bg-muted">
             <tr>
-              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Fecha</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Tac. 1</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Tac. 2</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Dif. Taco</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Hobbs I</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Hobbs F</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Horas</th>
-              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Piloto</th>
-              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Copiloto</th>
-              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">ID</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Tarifa</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Inst. Rate</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Total</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">AIRFRAME</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">ENGINE</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">PROPELLER</th>
-              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">AD Sal</th>
-              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">AD Dest</th>
-              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Detalle</th>
-              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Año</th>
-              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Mes</th>
-              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-blue-600 uppercase tracking-wider whitespace-nowrap" title="Engine Monitor Analysis"><span className="inline-flex justify-center w-full"><Icon name="engine" className="w-4 h-4 text-blue-600" title="Engine Monitor Analysis" /></span></th>
-              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-red-600 uppercase tracking-wider whitespace-nowrap"><span className="inline-flex justify-center w-full"><Icon name="trash" className="w-4 h-4 text-red-600" title="Eliminar" /></span></th>
+              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Fecha</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Tac. 1</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Tac. 2</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Dif. Taco</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Hobbs I</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Hobbs F</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Horas</th>
+              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Piloto</th>
+              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Copiloto</th>
+              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">ID</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Tarifa</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Inst. Rate</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Total</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">AIRFRAME</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">ENGINE</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">PROPELLER</th>
+              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">AD Sal</th>
+              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">AD Dest</th>
+              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">Detalle</th>
+              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Año</th>
+              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Mes</th>
+              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider whitespace-nowrap" title="Engine Monitor Analysis"><span className="inline-flex justify-center w-full"><Icon name="engine" className="w-4 h-4 text-blue-600 dark:text-blue-400" title="Engine Monitor Analysis" /></span></th>
+              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider whitespace-nowrap"><span className="inline-flex justify-center w-full"><Icon name="trash" className="w-4 h-4 text-red-600 dark:text-red-400" title="Eliminar" /></span></th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-slate-100">
+          <tbody className="bg-white dark:bg-card divide-y divide-slate-100 dark:divide-edge">
             {filteredFlights.map(f => {
               const code = (f.cliente || '').toUpperCase();
               const u = users.find(u => u.id === (f as any).pilotoId) || users.find(u => (u.codigo || '').toUpperCase() === code);
@@ -2544,9 +2570,9 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
               const mes = mesNombres[fecha.getMonth()];
 
               return (
-                <tr key={f.id} className="hover:bg-blue-50 transition-colors">
+                <tr key={f.id} className="hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors">
                   {/* Fecha */}
-                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-medium">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 dark:text-foreground-soft font-medium">
                     {editMode ? (
                       <input type="date" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-full" value={toDateString(f.fecha)} onChange={e => handleChange(f.id, 'fecha', e.target.value)} />
                     ) : (
@@ -2555,42 +2581,42 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                   </td>
 
                   {/* Tac. 1 */}
-                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 dark:text-foreground-soft font-mono text-right">
                     {editMode ? (
                       <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={Number(f.tach_inicio).toFixed(1)} onChange={e => handleChange(f.id, 'tach_inicio', e.target.value)} />
                     ) : Number(f.tach_inicio).toFixed(1)}
                   </td>
 
                   {/* Tac. 2 */}
-                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 dark:text-foreground-soft font-mono text-right">
                     {editMode ? (
                       <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={Number(f.tach_fin).toFixed(1)} onChange={e => handleChange(f.id, 'tach_fin', e.target.value)} />
                     ) : Number(f.tach_fin).toFixed(1)}
                   </td>
 
                   {/* Dif. Taco */}
-                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs font-semibold text-blue-600 font-mono text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs font-semibold text-blue-600 dark:text-blue-400 font-mono text-right">
                     {editMode ? (
                       <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.diff_tach ?? ''} onChange={e => handleChange(f.id, 'diff_tach', e.target.value)} />
                     ) : (f.diff_tach != null ? Number(f.diff_tach).toFixed(1) : '-')}
                   </td>
 
                   {/* Hobbs I */}
-                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 dark:text-foreground-soft font-mono text-right">
                     {editMode ? (
                       <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.hobbs_inicio ?? ''} onChange={e => handleChange(f.id, 'hobbs_inicio', e.target.value)} />
                     ) : (f.hobbs_inicio != null ? Number(f.hobbs_inicio).toFixed(1) : '-')}
                   </td>
 
                   {/* Hobbs F */}
-                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 dark:text-foreground-soft font-mono text-right">
                     {editMode ? (
                       <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.hobbs_fin ?? ''} onChange={e => handleChange(f.id, 'hobbs_fin', e.target.value)} />
                     ) : (f.hobbs_fin != null ? Number(f.hobbs_fin).toFixed(1) : '-')}
                   </td>
 
                   {/* Dif. Hobbs (Horas) */}
-                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs font-semibold text-blue-600 font-mono text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs font-semibold text-blue-600 dark:text-blue-400 font-mono text-right">
                     {editMode ? (
                       <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.diff_hobbs ?? ''} onChange={e => handleChange(f.id, 'diff_hobbs', e.target.value)} />
                     ) : (f.diff_hobbs != null ? Number(f.diff_hobbs).toFixed(1) : '-')}
@@ -2598,7 +2624,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
 
                   {/* Piloto */}
                   <td
-                    className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-700 font-medium"
+                    className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-700 dark:text-foreground-soft font-medium"
                     title={pilotName}
                   >
                     {editMode ? (
@@ -2614,77 +2640,77 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                   </td>
 
                   {/* Copiloto-instructor */}
-                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 dark:text-foreground-soft">
                     {editMode ? (
                       <input type="text" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-full" defaultValue={f.copiloto || ''} onChange={e => handleChange(f.id, 'copiloto', e.target.value)} />
                     ) : (f.copiloto || '-')}
                   </td>
 
                   {/* Pilot ID (Cliente) */}
-                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-700 font-semibold">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-700 dark:text-foreground-soft font-semibold">
                     {editMode ? (
                       <input type="text" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-12" defaultValue={f.cliente || ''} onChange={e => handleChange(f.id, 'cliente', e.target.value)} />
                     ) : (f.cliente || '-')}
                   </td>
 
                   {/* Airplane Rate (Tarifa) */}
-                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 dark:text-foreground-soft font-mono text-right">
                     {editMode ? (
                       <input type="number" step="1000" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-20" defaultValue={f.tarifa || ''} onChange={e => handleChange(f.id, 'tarifa', e.target.value)} />
                     ) : (f.tarifa ? `$${formatCurrency(Number(f.tarifa))}` : '-')}
                   </td>
 
                   {/* Instructor/ Safety Pilot Rate */}
-                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 dark:text-foreground-soft font-mono text-right">
                     {editMode ? (
                       <input type="number" step="1000" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-20" defaultValue={f.instructor_rate || ''} onChange={e => handleChange(f.id, 'instructor_rate', e.target.value)} />
                     ) : (f.instructor_rate ? `$${formatCurrency(Number(f.instructor_rate))}` : '-')}
                   </td>
 
                   {/* Total */}
-                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs font-bold text-green-700 font-mono text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs font-bold text-green-700 dark:text-green-300 font-mono text-right">
                     {editMode ? (
                       <input type="number" step="1000" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-20" defaultValue={f.costo ?? ''} onChange={e => handleChange(f.id, 'costo', e.target.value)} />
                     ) : (f.costo != null ? `$${formatCurrency(Number(f.costo))}` : '-')}
                   </td>
 
                   {/* AIRFRAME */}
-                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 dark:text-foreground-soft font-mono text-right">
                     {editMode ? (
                       <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.airframe_hours != null ? Number(f.airframe_hours).toFixed(1) : ''} onChange={e => handleChange(f.id, 'airframe_hours', e.target.value)} />
                     ) : (f.airframe_hours != null ? Number(f.airframe_hours).toFixed(1) : '-')}
                   </td>
 
                   {/* ENGINE */}
-                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 dark:text-foreground-soft font-mono text-right">
                     {editMode ? (
                       <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.engine_hours != null ? Number(f.engine_hours).toFixed(1) : ''} onChange={e => handleChange(f.id, 'engine_hours', e.target.value)} />
                     ) : (f.engine_hours != null ? Number(f.engine_hours).toFixed(1) : '-')}
                   </td>
 
                   {/* PROPELLER */}
-                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 font-mono text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 dark:text-foreground-soft font-mono text-right">
                     {editMode ? (
                       <input type="number" step="0.1" className="px-1 py-1 border rounded text-right text-[10px] sm:text-xs w-16" defaultValue={f.propeller_hours != null ? Number(f.propeller_hours).toFixed(1) : ''} onChange={e => handleChange(f.id, 'propeller_hours', e.target.value)} />
                     ) : (f.propeller_hours != null ? Number(f.propeller_hours).toFixed(1) : '-')}
                   </td>
 
                   {/* AD Salida */}
-                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 dark:text-foreground-soft">
                     {editMode ? (
                       <input type="text" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-16" defaultValue={f.aerodromoSalida || ''} onChange={e => handleChange(f.id, 'aerodromoSalida', e.target.value)} />
                     ) : (f.aerodromoSalida || '-')}
                   </td>
 
                   {/* AD Destino */}
-                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 dark:text-foreground-soft">
                     {editMode ? (
                       <input type="text" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-16" defaultValue={f.aerodromoDestino || ''} onChange={e => handleChange(f.id, 'aerodromoDestino', e.target.value)} />
                     ) : (f.aerodromoDestino || '-')}
                   </td>
 
                   {/* Detalle */}
-                  <td className="px-2 py-2 text-[10px] sm:text-xs text-slate-600 whitespace-nowrap max-w-[300px] overflow-x-auto">
+                  <td className="px-2 py-2 text-[10px] sm:text-xs text-slate-600 dark:text-foreground-soft whitespace-nowrap max-w-[300px] overflow-x-auto">
                     {editMode ? (
                       <input type="text" className="px-1 py-1 border rounded text-[10px] sm:text-xs w-full" defaultValue={f.detalle || ''} onChange={e => handleChange(f.id, 'detalle', e.target.value)} />
                     ) : (
@@ -2693,12 +2719,12 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                   </td>
 
                   {/* Año */}
-                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 text-center font-medium">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 dark:text-foreground-soft text-center font-medium">
                     {año}
                   </td>
 
                   {/* Mes */}
-                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 text-center">
+                  <td className="px-2 py-2 whitespace-nowrap text-[10px] sm:text-xs text-slate-600 dark:text-foreground-soft text-center">
                     {mes}
                   </td>
 
@@ -2707,7 +2733,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                     {f.engineFlightIds && f.engineFlightIds.length > 0 ? (
                       <button
                         onClick={() => onNavigateToEngine?.(f.engineFlightIds)}
-                        className="px-2 py-1 text-[10px] sm:text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg font-medium transition-colors"
+                        className="px-2 py-1 text-[10px] sm:text-xs bg-blue-100 dark:bg-blue-500/15 hover:bg-blue-200 text-blue-700 dark:text-blue-300 rounded-lg font-medium transition-colors"
                         title={`Ver Engine Analysis${f.engineFlightIds.length > 1 ? ` (${f.engineFlightIds.length} tramos)` : ''}`}
                       >
                         <span className="inline-flex items-center gap-1"><Icon name="engine" className="w-3.5 h-3.5" />{f.engineFlightIds.length > 1 ? ` ${f.engineFlightIds.length}` : ''}</span>
@@ -2727,7 +2753,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                         Number(f.costo || 0)
                       )}
                       disabled={deletingId === f.id}
-                      className="px-2 py-1 text-[10px] sm:text-xs bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-medium transition-colors disabled:opacity-50"
+                      className="px-2 py-1 text-[10px] sm:text-xs bg-red-100 dark:bg-red-500/15 hover:bg-red-200 text-red-700 dark:text-red-300 rounded-lg font-medium transition-colors disabled:opacity-50"
                       title="Eliminar vuelo y revertir saldo/contadores"
                     >
                       {deletingId === f.id ? '...' : <Icon name="trash" className="w-3.5 h-3.5" />}
@@ -2807,45 +2833,45 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
     return result.sort((a, b) => (a.codigo || '').localeCompare(b.codigo || ''));
   }, [users, flights, transactions, fuelByCode, depositsByCode, csvPilotStats, allowedPilotCodes, registeredPilotCodes, csvPilotNames]); // Sort by codigo
   return (
-    <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-      <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
+    <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl shadow-sm overflow-hidden">
+      <div className="px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-edge">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-            <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-muted flex items-center justify-center">
+            <svg className="w-5 h-5 text-slate-600 dark:text-foreground-soft" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
           </div>
-          <h3 className="text-sm font-semibold text-slate-800">Pilot Accounts</h3>
-          <span className="ml-auto px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md text-xs font-medium">{data.length} pilots</span>
+          <h3 className="text-sm font-semibold text-slate-800 dark:text-foreground">Pilot Accounts</h3>
+          <span className="ml-auto px-2 py-0.5 bg-slate-100 dark:bg-muted text-slate-500 dark:text-muted-foreground rounded-md text-xs font-medium">{data.length} pilots</span>
         </div>
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-full">
-          <thead className="bg-slate-50">
+          <thead className="bg-slate-50 dark:bg-muted">
             <tr>
-              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Code</th>
-              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Pilot</th>
-              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Flights</th>
-              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Hours</th>
-              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Rate/Hr</th>
-              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Balance</th>
-              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Spent</th>
-              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Fuel</th>
-              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Deposits</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Code</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Pilot</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Flights</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Hours</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Rate/Hr</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Balance</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Spent</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Fuel</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Deposits</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100 dark:divide-edge">
             {data.map(p => (
-              <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-semibold text-slate-700 font-mono">{p.codigo || '-'}</td>
-                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-medium text-slate-800">{p.nombre}</td>
-                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 font-mono">{p.flights}</td>
-                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 font-mono">{p.hours.toFixed(1)}</td>
-                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 font-mono">${Number(p.tarifa_hora).toLocaleString("es-CL")}</td>
-                <td className={`px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-semibold font-mono ${Number(p.saldo_cuenta) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>${Number(p.saldo_cuenta).toLocaleString("es-CL")}</td>
-                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 font-mono">${Number(-p.spent).toLocaleString("es-CL")}</td>
-                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 font-mono">${Number(p.fuel || 0).toLocaleString("es-CL")}</td>
-                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 font-mono">${Number(p.deposits).toLocaleString("es-CL")}</td>
+              <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-muted transition-colors">
+                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-semibold text-slate-700 dark:text-foreground-soft font-mono">{p.codigo || '-'}</td>
+                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-medium text-slate-800 dark:text-foreground">{p.nombre}</td>
+                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 dark:text-foreground-soft font-mono">{p.flights}</td>
+                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 dark:text-foreground-soft font-mono">{p.hours.toFixed(1)}</td>
+                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 dark:text-foreground-soft font-mono">${Number(p.tarifa_hora).toLocaleString("es-CL")}</td>
+                <td className={`px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-semibold font-mono ${Number(p.saldo_cuenta) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>${Number(p.saldo_cuenta).toLocaleString("es-CL")}</td>
+                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 dark:text-foreground-soft font-mono">${Number(-p.spent).toLocaleString("es-CL")}</td>
+                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 dark:text-foreground-soft font-mono">${Number(p.fuel || 0).toLocaleString("es-CL")}</td>
+                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 dark:text-foreground-soft font-mono">${Number(p.deposits).toLocaleString("es-CL")}</td>
               </tr>
             ))}
           </tbody>
@@ -2915,14 +2941,14 @@ function FuelTable({ logs }: { logs: any[] }) {
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4">
+      <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl shadow-sm p-4">
         <div className="flex flex-wrap gap-3 items-center">
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-slate-500">Pilot:</label>
+            <label className="text-xs font-medium text-slate-500 dark:text-muted-foreground">Pilot:</label>
             <select
               value={filterPilot}
               onChange={e => { setFilterPilot(e.target.value); setCurrentPage(1); }}
-              className="px-3 py-1.5 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-1 focus:ring-slate-300 focus:border-slate-400 min-w-[180px]"
+              className="px-3 py-1.5 text-xs sm:text-sm border border-slate-300 dark:border-edge-strong rounded-lg focus:ring-1 focus:ring-slate-300 dark:focus:ring-edge-strong focus:border-slate-400 min-w-[180px]"
             >
               <option value="">All</option>
               {pilots.map(([code, name]) => (
@@ -2931,11 +2957,11 @@ function FuelTable({ logs }: { logs: any[] }) {
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-slate-500">Source:</label>
+            <label className="text-xs font-medium text-slate-500 dark:text-muted-foreground">Source:</label>
             <select
               value={filterSource}
               onChange={e => { setFilterSource(e.target.value as any); setCurrentPage(1); }}
-              className="px-3 py-1.5 border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-1 focus:ring-slate-300 focus:border-slate-400"
+              className="px-3 py-1.5 border border-slate-300 dark:border-edge-strong rounded-lg text-xs sm:text-sm focus:ring-1 focus:ring-slate-300 dark:focus:ring-edge-strong focus:border-slate-400"
             >
               <option value="ALL">All</option>
               <option value="CSV">Historic (CSV)</option>
@@ -2943,11 +2969,11 @@ function FuelTable({ logs }: { logs: any[] }) {
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-slate-500">Year:</label>
+            <label className="text-xs font-medium text-slate-500 dark:text-muted-foreground">Year:</label>
             <select
               value={filterYear}
               onChange={e => { setFilterYear(e.target.value); setCurrentPage(1); }}
-              className="px-3 py-1.5 border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-1 focus:ring-slate-300 focus:border-slate-400"
+              className="px-3 py-1.5 border border-slate-300 dark:border-edge-strong rounded-lg text-xs sm:text-sm focus:ring-1 focus:ring-slate-300 dark:focus:ring-edge-strong focus:border-slate-400"
             >
               <option value="">All</option>
               {years.map(y => (
@@ -2956,11 +2982,11 @@ function FuelTable({ logs }: { logs: any[] }) {
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-slate-500">Month:</label>
+            <label className="text-xs font-medium text-slate-500 dark:text-muted-foreground">Month:</label>
             <select
               value={filterMonth}
               onChange={e => { setFilterMonth(e.target.value); setCurrentPage(1); }}
-              className="px-3 py-1.5 border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-1 focus:ring-slate-300 focus:border-slate-400"
+              className="px-3 py-1.5 border border-slate-300 dark:border-edge-strong rounded-lg text-xs sm:text-sm focus:ring-1 focus:ring-slate-300 dark:focus:ring-edge-strong focus:border-slate-400"
             >
               <option value="">All</option>
               {MONTHS.map((m, i) => (
@@ -2969,13 +2995,13 @@ function FuelTable({ logs }: { logs: any[] }) {
             </select>
           </div>
           <div className="ml-auto flex gap-2 text-xs">
-            <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md font-medium border border-slate-200">
+            <span className="px-2.5 py-1 bg-slate-100 dark:bg-muted text-slate-600 dark:text-foreground-soft rounded-md font-medium border border-slate-200 dark:border-edge">
               {filteredLogs.length} records
             </span>
-            <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md font-medium border border-emerald-200">
+            <span className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 rounded-md font-medium border border-emerald-200 dark:border-emerald-500/30">
               ${totalMonto.toLocaleString('es-CL')}
             </span>
-            <span className="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-md font-medium border border-amber-200">
+            <span className="px-2.5 py-1 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 rounded-md font-medium border border-amber-200 dark:border-amber-500/30">
               {totalLitros.toFixed(1)} L
             </span>
           </div>
@@ -2983,61 +3009,61 @@ function FuelTable({ logs }: { logs: any[] }) {
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
+      <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl shadow-sm overflow-hidden">
+        <div className="px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-edge">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
-              <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center">
+              <svg className="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
-            <h3 className="text-sm font-semibold text-slate-800">Fuel Records (Historic + App)</h3>
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-foreground">Fuel Records (Historic + App)</h3>
           </div>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full">
-            <thead className="bg-slate-50">
+            <thead className="bg-slate-50 dark:bg-muted">
               <tr>
-                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Pilot</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Code</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Liters</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Amount</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">$/L</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Source</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Detail</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Receipt</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Date</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Pilot</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Code</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Liters</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Amount</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">$/L</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Source</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Detail</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Receipt</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-edge">
               {paginatedLogs.map((l) => (
-                <tr key={l.id} className={`hover:bg-slate-50 transition-colors ${l.source === 'CSV' ? 'bg-slate-50/30' : ''}`}>
-                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600">
+                <tr key={l.id} className={`hover:bg-slate-50 dark:hover:bg-muted transition-colors ${l.source === 'CSV' ? 'bg-slate-50/30 dark:bg-muted' : ''}`}>
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 dark:text-foreground-soft">
                     {formatFecha(l.fecha)}
                   </td>
-                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-medium text-slate-800">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-medium text-slate-800 dark:text-foreground">
                     {l.pilotName}
                   </td>
-                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-mono text-slate-600">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-mono text-slate-600 dark:text-foreground-soft">
                     {l.pilotCode || '-'}
                   </td>
-                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 font-mono">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 dark:text-foreground-soft font-mono">
                     {l.litros > 0 ? `${l.litros.toFixed(1)} L` : '-'}
                   </td>
-                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-semibold text-emerald-600 font-mono">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
                     ${l.monto.toLocaleString('es-CL')}
                   </td>
-                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-mono text-slate-600">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-mono text-slate-600 dark:text-foreground-soft">
                     {l.litros > 0 && l.monto > 0 ? `$${Math.round(l.monto / l.litros).toLocaleString('es-CL')}` : '-'}
                   </td>
                   <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm">
-                    <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-medium border ${l.source === 'CSV' ? 'bg-slate-50 text-slate-600 border-slate-200' : 'bg-blue-50 text-blue-700 border-blue-200'
+                    <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-medium border ${l.source === 'CSV' ? 'bg-slate-50 dark:bg-muted text-slate-600 dark:text-foreground-soft border-slate-200 dark:border-edge' : 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/30'
                       }`}>
                       {l.source === 'CSV' ? 'Historic' : 'App'}
                     </span>
                   </td>
-                  <td className="px-3 sm:px-4 py-2.5 text-xs sm:text-sm text-slate-600 max-w-[180px] truncate">
+                  <td className="px-3 sm:px-4 py-2.5 text-xs sm:text-sm text-slate-600 dark:text-foreground-soft max-w-[180px] truncate">
                     {l.detalle || '-'}
                   </td>
                   <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm">
@@ -3051,24 +3077,24 @@ function FuelTable({ logs }: { logs: any[] }) {
                                 : l.imageUrl;
                           setFuelImageModalUrl(url);
                         }}
-                        className="text-xs font-medium text-slate-600 hover:text-slate-800 underline"
+                        className="text-xs font-medium text-slate-600 dark:text-foreground-soft hover:text-slate-800 dark:hover:text-foreground underline"
                       >
                         View
                       </button>
                     ) : (
-                      <span className="text-slate-400">-</span>
+                      <span className="text-slate-400 dark:text-faint">-</span>
                     )}
                   </td>
                   <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm">
                     {l.source === 'DB' && typeof l.id === 'number' ? (
                       <form action={require('../../../actions/delete-fuel-log').deleteFuelLog} onSubmit={(e) => { if (!confirm(`Delete record ${l.id}?`)) { e.preventDefault(); } }}>
                         <input type="hidden" name="fuelLogId" value={l.id} />
-                        <button type="submit" className="px-2 py-1 rounded-md bg-red-50 text-red-600 hover:bg-red-100 text-[10px] sm:text-xs font-medium border border-red-200 transition-colors">
+                        <button type="submit" className="px-2 py-1 rounded-md bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/15 text-[10px] sm:text-xs font-medium border border-red-200 dark:border-red-500/30 transition-colors">
                           Delete
                         </button>
                       </form>
                     ) : (
-                      <span className="text-slate-400 text-xs">-</span>
+                      <span className="text-slate-400 dark:text-faint text-xs">-</span>
                     )}
                   </td>
                 </tr>
@@ -3079,25 +3105,25 @@ function FuelTable({ logs }: { logs: any[] }) {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="px-4 sm:px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-            <div className="text-xs text-slate-500">
+          <div className="px-4 sm:px-6 py-3 bg-slate-50 dark:bg-muted border-t border-slate-100 dark:border-edge flex items-center justify-between">
+            <div className="text-xs text-slate-500 dark:text-muted-foreground">
               {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredLogs.length)} of {filteredLogs.length}
             </div>
             <div className="flex gap-2 items-center">
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="px-2.5 py-1 rounded-md border border-slate-200 text-xs disabled:opacity-40 hover:bg-slate-100 transition-colors"
+                className="px-2.5 py-1 rounded-md border border-slate-200 dark:border-edge text-xs disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-muted transition-colors"
               >
                 ← Prev
               </button>
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-slate-500 dark:text-muted-foreground">
                 {currentPage}/{totalPages}
               </span>
               <button
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="px-2.5 py-1 rounded-md border border-slate-200 text-xs disabled:opacity-40 hover:bg-slate-100 transition-colors"
+                className="px-2.5 py-1 rounded-md border border-slate-200 dark:border-edge text-xs disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-muted transition-colors"
               >
                 Next →
               </button>
@@ -3244,20 +3270,20 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-      <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
+    <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl shadow-sm overflow-hidden">
+      <div className="px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-edge">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-              <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-muted flex items-center justify-center">
+              <svg className="w-5 h-5 text-slate-600 dark:text-foreground-soft" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M3 12h18M3 17h18" />
               </svg>
             </div>
-            <h3 className="text-sm font-semibold text-slate-800">Pilot Directory</h3>
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-foreground">Pilot Directory</h3>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {message && (
-              <span className={`text-xs px-2.5 py-1 rounded-md inline-flex items-center gap-1 ${message.startsWith('✓') ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+              <span className={`text-xs px-2.5 py-1 rounded-md inline-flex items-center gap-1 ${message.startsWith('✓') ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30' : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30'}`}>
                 <Icon name={message.startsWith('✓') ? 'checkCircle' : 'warning'} className="w-3.5 h-3.5" /> {message.replace(/^[✓⚠]\s*/, '')}
               </span>
             )}
@@ -3272,7 +3298,7 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
             )}
             <a
               href="/pilots/new"
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-md text-xs font-medium transition-colors"
+              className="px-3 py-1.5 bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-800 text-white rounded-md text-xs font-medium transition-colors"
             >
               + New Pilot
             </a>
@@ -3282,8 +3308,8 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
                 if (editMode) setEditedRows({});
               }}
               className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${editMode
-                ? 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'
-                : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'
+                ? 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-500/30 hover:bg-red-100 dark:hover:bg-red-500/15'
+                : 'bg-slate-50 dark:bg-muted text-slate-600 dark:text-foreground-soft border border-slate-200 dark:border-edge hover:bg-slate-100 dark:hover:bg-muted'
                 }`}
             >
               {editMode ? 'Cancel' : 'Edit'}
@@ -3293,105 +3319,105 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-full">
-          <thead className="bg-slate-50">
+          <thead className="bg-slate-50 dark:bg-muted">
             <tr>
-              {editMode && <th className="px-3 sm:px-4 py-3 text-center text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>}
-              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Code</th>
-              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
-              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">DOB</th>
-              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Email</th>
-              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Phone</th>
-              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">License #</th>
-              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Doc Type</th>
-              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Document</th>
+              {editMode && <th className="px-3 sm:px-4 py-3 text-center text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Actions</th>}
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Code</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Name</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">DOB</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Email</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Phone</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">License #</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Doc Type</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Document</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100 dark:divide-edge">
             {rows.filter(r => !deletedIds.has(r.id || 0)).map((r, idx) => {
               const canEdit = editMode && r.id !== null;
               return (
-                <tr key={`${r.code}-${idx}`} className={`transition-colors ${canEdit ? 'bg-amber-50/30' : 'hover:bg-slate-50'}`}>
+                <tr key={`${r.code}-${idx}`} className={`transition-colors ${canEdit ? 'bg-amber-50/30 dark:bg-amber-500/10' : 'hover:bg-slate-50 dark:hover:bg-muted'}`}>
                   {editMode && (
                     <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-center">
                       {r.id !== null ? (
                         <button
                           onClick={() => handleDelete(r.id!, r.name)}
                           disabled={deletingId === r.id}
-                          className="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded-md text-[10px] sm:text-xs font-medium disabled:opacity-50 border border-red-200 transition-colors"
+                          className="px-2 py-1 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/15 text-red-600 dark:text-red-400 rounded-md text-[10px] sm:text-xs font-medium disabled:opacity-50 border border-red-200 dark:border-red-500/30 transition-colors"
                           title="Delete pilot"
                         >
                           {deletingId === r.id ? '...' : 'Del'}
                         </button>
                       ) : (
-                        <span className="text-slate-400 text-[10px]">CSV</span>
+                        <span className="text-slate-400 dark:text-faint text-[10px]">CSV</span>
                       )}
                     </td>
                   )}
-                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-semibold text-slate-700 font-mono">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-semibold text-slate-700 dark:text-foreground-soft font-mono">
                     {canEdit ? (
                       <input
                         type="text"
-                        className="w-20 px-2 py-1 border border-slate-300 rounded-md text-xs sm:text-sm font-mono focus:border-slate-500 focus:ring-1 focus:ring-slate-200"
+                        className="w-20 px-2 py-1 border border-slate-300 dark:border-edge-strong rounded-md text-xs sm:text-sm font-mono focus:border-slate-500 focus:ring-1 focus:ring-slate-200 dark:focus:ring-edge"
                         defaultValue={r.code}
                         onChange={e => handleChange(r.id!, 'codigo', e.target.value)}
                       />
                     ) : r.code}
                   </td>
-                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-medium text-slate-800">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-medium text-slate-800 dark:text-foreground">
                     {canEdit ? (
                       <input
                         type="text"
-                        className="w-full px-2 py-1 border border-slate-300 rounded-md text-xs sm:text-sm focus:border-slate-500 focus:ring-1 focus:ring-slate-200"
+                        className="w-full px-2 py-1 border border-slate-300 dark:border-edge-strong rounded-md text-xs sm:text-sm focus:border-slate-500 focus:ring-1 focus:ring-slate-200 dark:focus:ring-edge"
                         defaultValue={r.name}
                         onChange={e => handleChange(r.id!, 'nombre', e.target.value)}
                       />
                     ) : r.name}
                   </td>
-                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 dark:text-foreground-soft">
                     {canEdit ? (
                       <input
                         type="date"
-                        className="w-32 px-2 py-1 border border-slate-300 rounded-md text-xs sm:text-sm focus:border-slate-500 focus:ring-1 focus:ring-slate-200"
+                        className="w-32 px-2 py-1 border border-slate-300 dark:border-edge-strong rounded-md text-xs sm:text-sm focus:border-slate-500 focus:ring-1 focus:ring-slate-200 dark:focus:ring-edge"
                         defaultValue={r.fechaNacimiento || ''}
                         onChange={e => handleChange(r.id!, 'fechaNacimiento', e.target.value)}
                       />
                     ) : r.fechaNacimientoDisplay}
                   </td>
-                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 dark:text-foreground-soft">
                     {canEdit ? (
                       <input
                         type="email"
-                        className="w-44 px-2 py-1 border border-slate-300 rounded-md text-xs sm:text-sm focus:border-slate-500 focus:ring-1 focus:ring-slate-200"
+                        className="w-44 px-2 py-1 border border-slate-300 dark:border-edge-strong rounded-md text-xs sm:text-sm focus:border-slate-500 focus:ring-1 focus:ring-slate-200 dark:focus:ring-edge"
                         defaultValue={r.email !== '-' ? r.email : ''}
                         onChange={e => handleChange(r.id!, 'email', e.target.value)}
                         placeholder="Email"
                       />
                     ) : r.email}
                   </td>
-                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 dark:text-foreground-soft">
                     {canEdit ? (
                       <input
                         type="tel"
-                        className="w-28 px-2 py-1 border border-slate-300 rounded-md text-xs sm:text-sm focus:border-slate-500 focus:ring-1 focus:ring-slate-200"
+                        className="w-28 px-2 py-1 border border-slate-300 dark:border-edge-strong rounded-md text-xs sm:text-sm focus:border-slate-500 focus:ring-1 focus:ring-slate-200 dark:focus:ring-edge"
                         defaultValue={r.telefono}
                         onChange={e => handleChange(r.id!, 'telefono', e.target.value)}
                       />
                     ) : (r.telefono || '-')}
                   </td>
-                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 dark:text-foreground-soft">
                     {canEdit ? (
                       <input
                         type="text"
-                        className="w-24 px-2 py-1 border border-slate-300 rounded-md text-xs sm:text-sm focus:border-slate-500 focus:ring-1 focus:ring-slate-200"
+                        className="w-24 px-2 py-1 border border-slate-300 dark:border-edge-strong rounded-md text-xs sm:text-sm focus:border-slate-500 focus:ring-1 focus:ring-slate-200 dark:focus:ring-edge"
                         defaultValue={r.numeroLicencia}
                         onChange={e => handleChange(r.id!, 'licencia', e.target.value)}
                       />
                     ) : (r.numeroLicencia || '-')}
                   </td>
-                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 dark:text-foreground-soft">
                     {canEdit ? (
                       <select
-                        className="w-24 px-2 py-1 border border-slate-300 rounded-md text-xs sm:text-sm focus:border-slate-500 focus:ring-1 focus:ring-slate-200"
+                        className="w-24 px-2 py-1 border border-slate-300 dark:border-edge-strong rounded-md text-xs sm:text-sm focus:border-slate-500 focus:ring-1 focus:ring-slate-200 dark:focus:ring-edge"
                         defaultValue={r.tipoDocumento}
                         onChange={e => handleChange(r.id!, 'tipoDocumento', e.target.value)}
                       >
@@ -3401,11 +3427,11 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
                       </select>
                     ) : (r.tipoDocumento || '-')}
                   </td>
-                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600">
+                  <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 dark:text-foreground-soft">
                     {canEdit ? (
                       <input
                         type="text"
-                        className="w-28 px-2 py-1 border border-slate-300 rounded-md text-xs sm:text-sm focus:border-slate-500 focus:ring-1 focus:ring-slate-200"
+                        className="w-28 px-2 py-1 border border-slate-300 dark:border-edge-strong rounded-md text-xs sm:text-sm focus:border-slate-500 focus:ring-1 focus:ring-slate-200 dark:focus:ring-edge"
                         defaultValue={r.documento}
                         onChange={e => handleChange(r.id!, 'documento', e.target.value)}
                       />
@@ -3489,10 +3515,10 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
   };
 
   const getUrgencyClass = (days: number) => {
-    if (days <= 7) return { row: 'bg-red-50 border-l-4 border-red-500', badge: 'bg-red-100 text-red-700', text: 'text-red-600' };
-    if (days <= 15) return { row: 'bg-orange-50 border-l-4 border-orange-500', badge: 'bg-orange-100 text-orange-700', text: 'text-orange-600' };
-    if (days <= 30) return { row: 'bg-yellow-50 border-l-4 border-yellow-500', badge: 'bg-yellow-100 text-yellow-700', text: 'text-yellow-600' };
-    return { row: 'hover:bg-blue-50', badge: 'bg-green-100 text-green-700', text: 'text-green-600' };
+    if (days <= 7) return { row: 'bg-red-50 dark:bg-red-500/10 border-l-4 border-red-500', badge: 'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300', text: 'text-red-600 dark:text-red-400' };
+    if (days <= 15) return { row: 'bg-orange-50 dark:bg-orange-500/10 border-l-4 border-orange-500', badge: 'bg-orange-100 dark:bg-orange-500/15 text-orange-700 dark:text-orange-300', text: 'text-orange-600 dark:text-orange-400' };
+    if (days <= 30) return { row: 'bg-yellow-50 dark:bg-yellow-500/10 border-l-4 border-yellow-500', badge: 'bg-yellow-100 dark:bg-yellow-500/15 text-yellow-700 dark:text-yellow-300', text: 'text-yellow-600 dark:text-yellow-400' };
+    return { row: 'hover:bg-blue-50 dark:hover:bg-blue-500/10', badge: 'bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-300', text: 'text-green-600 dark:text-green-400' };
   };
 
   // Overhaul functions
@@ -3569,75 +3595,75 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
     <div className="space-y-6">
       {/* Usage Rate Overview */}
       {stats && (
-        <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-sm">
+        <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl p-4 sm:p-6 shadow-sm">
           <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center">
-                <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+              <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-muted flex items-center justify-center">
+                <svg className="w-5 h-5 text-slate-600 dark:text-foreground-soft" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-slate-800">Predictive System</h3>
-                <p className="text-xs text-slate-500">Weighted rate: ⅔ annual + ⅓ last 90 days</p>
+                <h3 className="text-sm font-semibold text-slate-800 dark:text-foreground">Predictive System</h3>
+                <p className="text-xs text-slate-500 dark:text-muted-foreground">Weighted rate: ⅔ annual + ⅓ last 90 days</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-center">
-                <div className="text-lg font-bold text-slate-800 font-mono">{(weightedRate * 7).toFixed(1)}</div>
-                <div className="text-[10px] text-slate-500">TACH/wk</div>
+                <div className="text-lg font-bold text-slate-800 dark:text-foreground font-mono">{(weightedRate * 7).toFixed(1)}</div>
+                <div className="text-[10px] text-slate-500 dark:text-muted-foreground">TACH/wk</div>
               </div>
               <div className="text-center">
-                <div className="text-lg font-bold text-slate-800 font-mono">{(weightedRate * 30.44).toFixed(1)}</div>
-                <div className="text-[10px] text-slate-500">TACH/mo</div>
+                <div className="text-lg font-bold text-slate-800 dark:text-foreground font-mono">{(weightedRate * 30.44).toFixed(1)}</div>
+                <div className="text-[10px] text-slate-500 dark:text-muted-foreground">TACH/mo</div>
               </div>
               <div className="text-center">
-                <div className={`text-lg font-bold font-mono ${trend > 0 ? 'text-amber-600' : trend < 0 ? 'text-emerald-600' : 'text-slate-600'}`}>
+                <div className={`text-lg font-bold font-mono ${trend > 0 ? 'text-amber-600 dark:text-amber-400' : trend < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-foreground-soft'}`}>
                   {trend > 0 ? '↗' : trend < 0 ? '↘' : '→'} {Math.abs(trend).toFixed(0)}%
                 </div>
-                <div className="text-[10px] text-slate-500">trend</div>
+                <div className="text-[10px] text-slate-500 dark:text-muted-foreground">trend</div>
               </div>
             </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
-              <div className="text-[10px] text-slate-500 font-medium">30-day rate</div>
-              <div className="font-mono font-semibold text-sm text-slate-800">{(rate30d * 30.44).toFixed(1)} <span className="text-slate-400 text-xs">T/mo</span></div>
-              <div className="text-[10px] text-slate-400">≈{(rate30d * 30.44 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} H/mo</div>
+            <div className="bg-slate-50 dark:bg-muted rounded-lg p-3 border border-slate-100 dark:border-edge">
+              <div className="text-[10px] text-slate-500 dark:text-muted-foreground font-medium">30-day rate</div>
+              <div className="font-mono font-semibold text-sm text-slate-800 dark:text-foreground">{(rate30d * 30.44).toFixed(1)} <span className="text-slate-400 dark:text-faint text-xs">T/mo</span></div>
+              <div className="text-[10px] text-slate-400 dark:text-faint">≈{(rate30d * 30.44 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} H/mo</div>
             </div>
-            <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
-              <div className="text-[10px] text-slate-500 font-medium">60-day rate</div>
-              <div className="font-mono font-semibold text-sm text-slate-800">{((stats.rate60d || 0) * 30.44).toFixed(1)} <span className="text-slate-400 text-xs">T/mo</span></div>
-              <div className="text-[10px] text-slate-400">≈{((stats.rate60d || 0) * 30.44 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} H/mo</div>
+            <div className="bg-slate-50 dark:bg-muted rounded-lg p-3 border border-slate-100 dark:border-edge">
+              <div className="text-[10px] text-slate-500 dark:text-muted-foreground font-medium">60-day rate</div>
+              <div className="font-mono font-semibold text-sm text-slate-800 dark:text-foreground">{((stats.rate60d || 0) * 30.44).toFixed(1)} <span className="text-slate-400 dark:text-faint text-xs">T/mo</span></div>
+              <div className="text-[10px] text-slate-400 dark:text-faint">≈{((stats.rate60d || 0) * 30.44 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} H/mo</div>
             </div>
-            <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
-              <div className="text-[10px] text-slate-500 font-medium">90-day rate</div>
-              <div className="font-mono font-semibold text-sm text-slate-800">{((stats.rate90d || 0) * 30.44).toFixed(1)} <span className="text-slate-400 text-xs">T/mo</span></div>
-              <div className="text-[10px] text-slate-400">≈{((stats.rate90d || 0) * 30.44 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} H/mo</div>
+            <div className="bg-slate-50 dark:bg-muted rounded-lg p-3 border border-slate-100 dark:border-edge">
+              <div className="text-[10px] text-slate-500 dark:text-muted-foreground font-medium">90-day rate</div>
+              <div className="font-mono font-semibold text-sm text-slate-800 dark:text-foreground">{((stats.rate90d || 0) * 30.44).toFixed(1)} <span className="text-slate-400 dark:text-faint text-xs">T/mo</span></div>
+              <div className="text-[10px] text-slate-400 dark:text-faint">≈{((stats.rate90d || 0) * 30.44 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} H/mo</div>
             </div>
-            <div className="bg-slate-50 rounded-lg p-3 border-2 border-slate-200">
-              <div className="text-[10px] text-slate-500 font-medium">Annual rate</div>
-              <div className="font-mono font-semibold text-sm text-slate-800">{((stats.rateAnnual || 0) * 30.44).toFixed(1)} <span className="text-slate-400 text-xs">T/mo</span></div>
-              <div className="text-[10px] text-slate-400">≈{((stats.rateAnnual || 0) * 30.44 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} H/mo</div>
+            <div className="bg-slate-50 dark:bg-muted rounded-lg p-3 border-2 border-slate-200 dark:border-edge">
+              <div className="text-[10px] text-slate-500 dark:text-muted-foreground font-medium">Annual rate</div>
+              <div className="font-mono font-semibold text-sm text-slate-800 dark:text-foreground">{((stats.rateAnnual || 0) * 30.44).toFixed(1)} <span className="text-slate-400 dark:text-faint text-xs">T/mo</span></div>
+              <div className="text-[10px] text-slate-400 dark:text-faint">≈{((stats.rateAnnual || 0) * 30.44 * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} H/mo</div>
             </div>
           </div>
         </div>
       )}
 
       {/* Next Inspections */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
+      <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl shadow-sm overflow-hidden">
+        <div className="px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-edge">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
-                <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center">
+                <svg className="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-slate-800">Next Inspections</h3>
-                <p className="text-xs text-slate-500">95% confidence interval predictions</p>
+                <h3 className="text-sm font-semibold text-slate-800 dark:text-foreground">Next Inspections</h3>
+                <p className="text-xs text-slate-500 dark:text-muted-foreground">95% confidence interval predictions</p>
               </div>
             </div>
-            <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md text-xs font-medium">SMART</span>
+            <span className="px-2.5 py-1 bg-slate-100 dark:bg-muted text-slate-600 dark:text-foreground-soft rounded-md text-xs font-medium">SMART</span>
           </div>
         </div>
 
@@ -3650,30 +3676,30 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
               <div key={item.id} className={`rounded-lg border p-3 sm:p-4 transition-all ${urgency.row}`}>
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <Icon name={item.icon} className="w-5 h-5 text-slate-500" />
+                    <Icon name={item.icon} className="w-5 h-5 text-slate-500 dark:text-muted-foreground" />
                     <div>
-                      <h4 className="text-sm font-semibold text-slate-800">{item.name}</h4>
-                      <p className="text-[10px] text-slate-500">Interval: {item.interval} hrs</p>
+                      <h4 className="text-sm font-semibold text-slate-800 dark:text-foreground">{item.name}</h4>
+                      <p className="text-[10px] text-slate-500 dark:text-muted-foreground">Interval: {item.interval} hrs</p>
                     </div>
                   </div>
                   <div className="text-right">
                     <div className={`text-lg sm:text-xl font-bold font-mono ${urgency.text}`}>{item.remaining.toFixed(1)} <span className="text-xs sm:text-sm font-medium">TACH</span></div>
-                    <div className="text-xs text-slate-500 font-mono">≈{(item.remaining * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS</div>
+                    <div className="text-xs text-slate-500 dark:text-muted-foreground font-mono">≈{(item.remaining * (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25)).toFixed(1)} HOBBS</div>
                   </div>
                 </div>
 
                 {pred && (
-                  <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-2 pt-2 border-t border-slate-200/60">
-                    <div className="bg-slate-50 rounded-md p-2 sm:p-3">
-                      <div className="text-[10px] text-slate-500 mb-0.5">Time Left</div>
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-2 pt-2 border-t border-slate-200/60 dark:border-edge">
+                    <div className="bg-slate-50 dark:bg-muted rounded-md p-2 sm:p-3">
+                      <div className="text-[10px] text-slate-500 dark:text-muted-foreground mb-0.5">Time Left</div>
                       <div className={`font-semibold text-sm ${urgency.text}`}>{formatTimeRemaining(pred.days)}</div>
                     </div>
-                    <div className="bg-slate-50 rounded-md p-2 sm:p-3">
-                      <div className="text-[10px] text-slate-500 mb-0.5">Est. Date</div>
-                      <div className="font-semibold text-sm text-slate-800 truncate">{formatShortDate(pred.date)}</div>
+                    <div className="bg-slate-50 dark:bg-muted rounded-md p-2 sm:p-3">
+                      <div className="text-[10px] text-slate-500 dark:text-muted-foreground mb-0.5">Est. Date</div>
+                      <div className="font-semibold text-sm text-slate-800 dark:text-foreground truncate">{formatShortDate(pred.date)}</div>
                     </div>
-                    <div className="bg-slate-50 rounded-md p-2 sm:p-3">
-                      <div className="text-[10px] text-slate-500 mb-0.5">Range (95%)</div>
+                    <div className="bg-slate-50 dark:bg-muted rounded-md p-2 sm:p-3">
+                      <div className="text-[10px] text-slate-500 dark:text-muted-foreground mb-0.5">Range (95%)</div>
                       <div className={`text-xs font-semibold ${urgency.text} truncate`}>
                         {formatTimeRemaining(pred.minDays)}–{formatTimeRemaining(pred.maxDays)}
                       </div>
@@ -3682,75 +3708,75 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
                 )}
 
                 {!pred && (
-                  <div className="text-sm text-slate-500 italic mt-2">Sin datos suficientes para predicción</div>
+                  <div className="text-sm text-slate-500 dark:text-muted-foreground italic mt-2">Sin datos suficientes para predicción</div>
                 )}
               </div>
             );
           })}
         </div>
 
-        <div className="px-4 sm:px-6 py-3 bg-slate-50 border-t border-slate-100">
-          <p className="text-[10px] sm:text-xs text-slate-400">
+        <div className="px-4 sm:px-6 py-3 bg-slate-50 dark:bg-muted border-t border-slate-100 dark:border-edge">
+          <p className="text-[10px] sm:text-xs text-slate-400 dark:text-faint">
             Weighted avg: 30d (×3) + 60d (×2) + 90d (×1) · σ = {stdDev.toFixed(3)} hrs/day
           </p>
         </div>
       </div>
 
       {/* Component Status Table */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
+      <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl shadow-sm overflow-hidden">
+        <div className="px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-edge">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-              <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-muted flex items-center justify-center">
+              <svg className="w-5 h-5 text-slate-600 dark:text-foreground-soft" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </div>
-            <h3 className="text-sm font-semibold text-slate-800">Component Status (TBO)</h3>
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-foreground">Component Status (TBO)</h3>
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50">
+          <table className="min-w-full divide-y divide-slate-200 dark:divide-edge">
+            <thead className="bg-slate-50 dark:bg-muted">
               <tr>
-                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Aircraft</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Component</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Hours</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">TBO</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Remaining</th>
-                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Life %</th>
-                {effectiveRate > 0 && <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Est. TBO</th>}
-                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Overhaul</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Aircraft</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Component</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Hours</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">TBO</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Remaining</th>
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Life %</th>
+                {effectiveRate > 0 && <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Est. TBO</th>}
+                <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Overhaul</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-slate-100">
+            <tbody className="bg-white dark:bg-card divide-y divide-slate-100 dark:divide-edge">
               {components.map(c => {
                 const restante = Number(c.limite_tbo) - Number(c.horas_acumuladas);
                 const pct = (Number(c.horas_acumuladas) / Number(c.limite_tbo)) * 100;
-                const colorClass = pct > 80 ? 'text-red-600 font-bold' : pct > 60 ? 'text-orange-500 font-bold' : 'text-green-600 font-bold';
+                const colorClass = pct > 80 ? 'text-red-600 dark:text-red-400 font-bold' : pct > 60 ? 'text-orange-500 font-bold' : 'text-green-600 dark:text-green-400 font-bold';
                 const tboPred = effectiveRate > 0 ? getPrediction(restante) : null;
                 const hasOverhaul = c.overhaul_airframe != null;
 
                 return (
-                  <tr key={c.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-semibold text-slate-700 font-mono">{c.aircraftId}</td>
-                    <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-medium text-slate-800">
+                  <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-muted transition-colors">
+                    <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-semibold text-slate-700 dark:text-foreground-soft font-mono">{c.aircraftId}</td>
+                    <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm font-medium text-slate-800 dark:text-foreground">
                       {c.tipo}
                       {hasOverhaul && (
-                        <span className="ml-1.5 inline-flex items-center px-1.5 py-px rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200" title={`Overhaul @ AF ${c.overhaul_airframe}${c.overhaul_date ? ' - ' + formatFecha(c.overhaul_date) : ''}`}>
+                        <span className="ml-1.5 inline-flex items-center px-1.5 py-px rounded text-[10px] font-medium bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30" title={`Overhaul @ AF ${c.overhaul_airframe}${c.overhaul_date ? ' - ' + formatFecha(c.overhaul_date) : ''}`}>
                           OH
                         </span>
                       )}
                     </td>
-                    <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 font-mono">{Number(c.horas_acumuladas).toFixed(1)}</td>
-                    <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 font-mono">{Number(c.limite_tbo).toFixed(0)}</td>
-                    <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 font-mono">{restante.toFixed(1)}</td>
+                    <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 dark:text-foreground-soft font-mono">{Number(c.horas_acumuladas).toFixed(1)}</td>
+                    <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 dark:text-foreground-soft font-mono">{Number(c.limite_tbo).toFixed(0)}</td>
+                    <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 dark:text-foreground-soft font-mono">{restante.toFixed(1)}</td>
                     <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] sm:text-xs font-semibold ${colorClass}`}>
                         {pct.toFixed(1)}%
                       </span>
                     </td>
                     {effectiveRate > 0 && (
-                      <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600">
+                      <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 dark:text-foreground-soft">
                         {tboPred ? (
                           <span className="font-mono font-medium">{formatTimeRemaining(tboPred.days)}</span>
                         ) : '-'}
@@ -3760,7 +3786,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
                       {c.tipo !== 'AIRFRAME' && (
                         <button
                           onClick={() => openOverhaulModal(c)}
-                          className="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-md text-[10px] sm:text-xs font-medium transition-colors border border-slate-200"
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 dark:bg-muted hover:bg-slate-100 dark:hover:bg-muted text-slate-700 dark:text-foreground-soft rounded-md text-[10px] sm:text-xs font-medium transition-colors border border-slate-200 dark:border-edge"
                           title={hasOverhaul ? 'Edit overhaul' : 'Register overhaul'}
                         >
                           {hasOverhaul ? 'Edit' : 'Register'}
@@ -3778,31 +3804,31 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
       {/* Overhaul Registration Modal */}
       {overhaulModal.open && overhaulModal.component && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setOverhaulModal({ open: false, component: null })}>
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-4 border-b border-slate-200">
+          <div className="bg-white dark:bg-card rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-slate-200 dark:border-edge">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-base font-semibold text-slate-800">Overhaul — {overhaulModal.component.tipo}</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">Aircraft: {overhaulModal.component.aircraftId}</p>
+                  <h3 className="text-base font-semibold text-slate-800 dark:text-foreground">Overhaul — {overhaulModal.component.tipo}</h3>
+                  <p className="text-xs text-slate-500 dark:text-muted-foreground mt-0.5">Aircraft: {overhaulModal.component.aircraftId}</p>
                 </div>
-                <button onClick={() => setOverhaulModal({ open: false, component: null })} className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
-                  <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                <button onClick={() => setOverhaulModal({ open: false, component: null })} className="p-1 hover:bg-slate-100 dark:hover:bg-muted rounded-lg transition-colors">
+                  <svg className="w-5 h-5 text-slate-400 dark:text-faint" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </div>
             </div>
 
             <div className="p-5 space-y-4">
               {/* Explanation */}
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-600">
-                <p className="font-semibold text-slate-700 mb-0.5">How it works</p>
+              <div className="bg-slate-50 dark:bg-muted border border-slate-200 dark:border-edge rounded-lg p-3 text-xs text-slate-600 dark:text-foreground-soft">
+                <p className="font-semibold text-slate-700 dark:text-foreground-soft mb-0.5">How it works</p>
                 <p>AIRFRAME is used as stable reference (not reset by engine overhauls). Hours since overhaul:</p>
-                <p className="font-mono mt-1 text-center font-semibold text-slate-800">Hours = Current AF − AF at overhaul</p>
+                <p className="font-mono mt-1 text-center font-semibold text-slate-800 dark:text-foreground">Hours = Current AF − AF at overhaul</p>
               </div>
 
               {/* Form */}
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">
+                  <label className="block text-xs font-medium text-slate-600 dark:text-foreground-soft mb-1">
                     AIRFRAME hours at overhaul *
                   </label>
                   <input
@@ -3810,31 +3836,31 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
                     step="0.1"
                     value={overhaulForm.airframeHours}
                     onChange={(e) => setOverhaulForm(f => ({ ...f, airframeHours: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-slate-500 focus:ring-1 focus:ring-slate-200 transition-all font-mono text-sm"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-edge-strong rounded-lg focus:border-slate-500 focus:ring-1 focus:ring-slate-200 dark:focus:ring-edge transition-all font-mono text-sm"
                     placeholder="e.g. 2745.5"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">
+                  <label className="block text-xs font-medium text-slate-600 dark:text-foreground-soft mb-1">
                     Overhaul date *
                   </label>
                   <input
                     type="date"
                     value={overhaulForm.date}
                     onChange={(e) => setOverhaulForm(f => ({ ...f, date: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-slate-500 focus:ring-1 focus:ring-slate-200 transition-all text-sm"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-edge-strong rounded-lg focus:border-slate-500 focus:ring-1 focus:ring-slate-200 dark:focus:ring-edge transition-all text-sm"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">
+                  <label className="block text-xs font-medium text-slate-600 dark:text-foreground-soft mb-1">
                     Notes (optional)
                   </label>
                   <textarea
                     value={overhaulForm.notes}
                     onChange={(e) => setOverhaulForm(f => ({ ...f, notes: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-slate-500 focus:ring-1 focus:ring-slate-200 transition-all text-sm"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-edge-strong rounded-lg focus:border-slate-500 focus:ring-1 focus:ring-slate-200 dark:focus:ring-edge transition-all text-sm"
                     rows={2}
                     placeholder="e.g. Full overhaul at shop XYZ"
                   />
@@ -3843,28 +3869,28 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
 
               {/* Preview */}
               {overhaulPreview && (
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                  <h4 className="text-xs font-semibold text-slate-700 mb-2">Preview</h4>
+                <div className="bg-slate-50 dark:bg-muted border border-slate-200 dark:border-edge rounded-lg p-3">
+                  <h4 className="text-xs font-semibold text-slate-700 dark:text-foreground-soft mb-2">Preview</h4>
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-white rounded-md p-2 text-center border border-slate-100">
-                      <div className="text-slate-500 text-[10px]">Current AF</div>
+                    <div className="bg-white dark:bg-card rounded-md p-2 text-center border border-slate-100 dark:border-edge">
+                      <div className="text-slate-500 dark:text-muted-foreground text-[10px]">Current AF</div>
                       <div className="font-mono font-semibold text-sm">{overhaulPreview.currentAirframe.toFixed(1)}</div>
                     </div>
-                    <div className="bg-white rounded-md p-2 text-center border border-slate-100">
-                      <div className="text-slate-500 text-[10px]">Overhaul @</div>
+                    <div className="bg-white dark:bg-card rounded-md p-2 text-center border border-slate-100 dark:border-edge">
+                      <div className="text-slate-500 dark:text-muted-foreground text-[10px]">Overhaul @</div>
                       <div className="font-mono font-semibold text-sm">{parseFloat(overhaulForm.airframeHours).toFixed(1)}</div>
                     </div>
-                    <div className="bg-white rounded-md p-2 text-center border border-slate-100">
-                      <div className="text-slate-500 text-[10px]">Since OH</div>
-                      <div className="font-mono font-semibold text-sm text-slate-700">{overhaulPreview.hoursSinceOverhaul}</div>
+                    <div className="bg-white dark:bg-card rounded-md p-2 text-center border border-slate-100 dark:border-edge">
+                      <div className="text-slate-500 dark:text-muted-foreground text-[10px]">Since OH</div>
+                      <div className="font-mono font-semibold text-sm text-slate-700 dark:text-foreground-soft">{overhaulPreview.hoursSinceOverhaul}</div>
                     </div>
-                    <div className="bg-white rounded-md p-2 text-center border border-slate-100">
-                      <div className="text-slate-500 text-[10px]">TBO Remaining</div>
-                      <div className="font-mono font-semibold text-sm text-emerald-600">{overhaulPreview.remaining}</div>
+                    <div className="bg-white dark:bg-card rounded-md p-2 text-center border border-slate-100 dark:border-edge">
+                      <div className="text-slate-500 dark:text-muted-foreground text-[10px]">TBO Remaining</div>
+                      <div className="font-mono font-semibold text-sm text-emerald-600 dark:text-emerald-400">{overhaulPreview.remaining}</div>
                     </div>
                   </div>
                   <div className="mt-2 text-center">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold ${parseFloat(overhaulPreview.pct) > 80 ? 'bg-red-50 text-red-700 border border-red-200' : parseFloat(overhaulPreview.pct) > 60 ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold ${parseFloat(overhaulPreview.pct) > 80 ? 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-500/30' : parseFloat(overhaulPreview.pct) > 60 ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30' : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30'}`}>
                       {overhaulPreview.pct}% life used
                     </span>
                   </div>
@@ -3873,7 +3899,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
 
               {/* Result message */}
               {overhaulResult && (
-                <div className={`rounded-lg p-3 text-xs font-medium ${overhaulResult.success ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+                <div className={`rounded-lg p-3 text-xs font-medium ${overhaulResult.success ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30' : 'bg-red-50 dark:bg-red-500/10 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-500/30'}`}>
                   {overhaulResult.success ? overhaulResult.message : overhaulResult.error}
                 </div>
               )}
@@ -3882,14 +3908,14 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
               <div className="flex gap-2.5 pt-1">
                 <button
                   onClick={() => setOverhaulModal({ open: false, component: null })}
-                  className="flex-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-medium transition-colors"
+                  className="flex-1 px-3 py-2 bg-slate-100 dark:bg-muted hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-foreground-soft rounded-lg text-sm font-medium transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleOverhaulSubmit}
                   disabled={overhaulSubmitting || !overhaulForm.airframeHours || !overhaulForm.date}
-                  className="flex-1 px-3 py-2 bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 text-white rounded-lg text-sm font-medium transition-colors"
+                  className="flex-1 px-3 py-2 bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-800 disabled:bg-slate-300 text-white rounded-lg text-sm font-medium transition-colors"
                 >
                   {overhaulSubmitting ? 'Saving...' : 'Save Overhaul'}
                 </button>
@@ -3906,10 +3932,10 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
 // Plan de Reemplazo (life-limited parts) — dynamic monitoring
 // ─────────────────────────────────────────────────────────────
 const RAG_STYLE: Record<string, { badge: string; dot: string; label: string; row: string }> = {
-  VENCIDO: { badge: 'bg-red-100 text-red-700 border-red-200', dot: 'bg-red-500', label: 'Vencido', row: 'bg-red-50/60 border-l-4 border-red-500' },
-  PROXIMO: { badge: 'bg-amber-100 text-amber-700 border-amber-200', dot: 'bg-amber-500', label: 'Próximo', row: 'bg-amber-50/50 border-l-4 border-amber-400' },
-  OK: { badge: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500', label: 'OK', row: 'hover:bg-slate-50' },
-  SIN_LIMITE: { badge: 'bg-slate-100 text-slate-500 border-slate-200', dot: 'bg-slate-400', label: 'Sin límite', row: 'hover:bg-slate-50' },
+  VENCIDO: { badge: 'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300 border-red-200 dark:border-red-500/30', dot: 'bg-red-500', label: 'Vencido', row: 'bg-red-50/60 dark:bg-red-500/10 border-l-4 border-red-500' },
+  PROXIMO: { badge: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30', dot: 'bg-amber-500', label: 'Próximo', row: 'bg-amber-50/50 dark:bg-amber-500/10 border-l-4 border-amber-400' },
+  OK: { badge: 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30', dot: 'bg-emerald-500', label: 'OK', row: 'hover:bg-slate-50 dark:hover:bg-muted' },
+  SIN_LIMITE: { badge: 'bg-slate-100 dark:bg-muted text-slate-500 dark:text-muted-foreground border-slate-200 dark:border-edge', dot: 'bg-slate-400', label: 'Sin límite', row: 'hover:bg-slate-50 dark:hover:bg-muted' },
 };
 const DOMAIN_META: Record<string, { label: string; icon: IconName }> = {
   AIRFRAME: { label: 'Célula · Airframe', icon: 'airframe' },
@@ -4081,11 +4107,11 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
 
   if (!parts.length) {
     return (
-      <div className="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-500 shadow-sm">
+      <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl p-8 text-center text-slate-500 dark:text-muted-foreground shadow-sm">
         <div className="flex justify-center mb-3"><Icon name="plan" className="w-8 h-8 text-slate-300" /></div>
-        <p className="font-medium text-slate-700">Sin plan de reemplazo cargado</p>
+        <p className="font-medium text-slate-700 dark:text-foreground-soft">Sin plan de reemplazo cargado</p>
         <p className="text-sm mt-1 mb-4">No hay componentes de vida limitada registrados para esta aeronave.</p>
-        <button onClick={() => openEditModal(null)} className="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-white hover:bg-slate-700">
+        <button onClick={() => openEditModal(null)} className="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 dark:bg-slate-700 text-white hover:bg-slate-700 dark:hover:bg-slate-600">
           + Agregar componente
         </button>
         {editModal.open && renderEditModal()}
@@ -4097,95 +4123,95 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
     const usaVida = editForm.vidaHoras.trim() !== '' || editForm.vidaMeses.trim() !== '';
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !editSubmitting && !deleting && setEditModal({ open: false, id: null, isNew: false })}>
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-5 sm:p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-white dark:bg-card rounded-2xl shadow-xl w-full max-w-lg p-5 sm:p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-start justify-between mb-4">
-            <h3 className="text-lg font-bold text-slate-800">{editModal.isNew ? 'Agregar componente' : 'Editar componente'}</h3>
-            <button onClick={() => !editSubmitting && !deleting && setEditModal({ open: false, id: null, isNew: false })} className="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-foreground">{editModal.isNew ? 'Agregar componente' : 'Editar componente'}</h3>
+            <button onClick={() => !editSubmitting && !deleting && setEditModal({ open: false, id: null, isNew: false })} className="text-slate-400 dark:text-faint hover:text-slate-600 dark:hover:text-foreground-soft text-xl leading-none">×</button>
           </div>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Dominio</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Dominio</label>
                 <select value={editForm.dominio} onChange={(e) => setEditForm({ ...editForm, dominio: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300">
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong">
                   <option value="AIRFRAME">Célula (Airframe)</option>
                   <option value="ENGINE">Motor (Engine)</option>
                   <option value="PROPELLER">Hélice (Propeller)</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Marca</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Marca</label>
                 <input type="text" value={editForm.marca} onChange={(e) => setEditForm({ ...editForm, marca: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1">Descripción *</label>
+              <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Descripción *</label>
               <input type="text" value={editForm.descripcion} onChange={(e) => setEditForm({ ...editForm, descripcion: e.target.value })}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Part Number</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Part Number</label>
                 <input type="text" value={editForm.partNumber} onChange={(e) => setEditForm({ ...editForm, partNumber: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Serial</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Serial</label>
                 <input type="text" value={editForm.serial} onChange={(e) => setEditForm({ ...editForm, serial: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">TBO Horas</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">TBO Horas</label>
                 <input type="number" step="0.1" value={editForm.tboHoras} onChange={(e) => setEditForm({ ...editForm, tboHoras: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">TBO Meses</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">TBO Meses</label>
                 <input type="number" value={editForm.tboMeses} onChange={(e) => setEditForm({ ...editForm, tboMeses: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Vida Límite Horas</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Vida Límite Horas</label>
                 <input type="number" step="0.1" value={editForm.vidaHoras} onChange={(e) => setEditForm({ ...editForm, vidaHoras: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Vida Límite Meses</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Vida Límite Meses</label>
                 <input type="number" value={editForm.vidaMeses} onChange={(e) => setEditForm({ ...editForm, vidaMeses: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
             </div>
-            <div className="text-[11px] text-slate-400 -mt-1">
+            <div className="text-[11px] text-slate-400 dark:text-faint -mt-1">
               El límite efectivo usa Vida Límite si está definida; si no, el TBO. {usaVida ? 'Actualmente se usará Vida Límite.' : ''}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Fecha instalación</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Fecha instalación</label>
                 <input type="date" value={editForm.installDate} onChange={(e) => setEditForm({ ...editForm, installDate: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Horas del dominio al instalar</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Horas del dominio al instalar</label>
                 <input type="number" step="0.1" value={editForm.installHoras} onChange={(e) => setEditForm({ ...editForm, installHoras: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1">Vencimiento del documento (opcional)</label>
+              <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Vencimiento del documento (opcional)</label>
               <input type="date" value={editForm.proximaFecha} onChange={(e) => setEditForm({ ...editForm, proximaFecha: e.target.value })}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
-              <p className="text-[11px] text-slate-400 mt-1">Fecha de reemplazo estampada/certificada (p. ej. batería ELT). Si se define y es posterior a la instalación, tiene prioridad sobre el cálculo instalación + meses. Se limpia al registrar un cambio.</p>
+                className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
+              <p className="text-[11px] text-slate-400 dark:text-faint mt-1">Fecha de reemplazo estampada/certificada (p. ej. batería ELT). Si se define y es posterior a la instalación, tiene prioridad sobre el cálculo instalación + meses. Se limpia al registrar un cambio.</p>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1">Notas</label>
+              <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Notas</label>
               <textarea value={editForm.notas} onChange={(e) => setEditForm({ ...editForm, notas: e.target.value })} rows={2}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 resize-none" />
+                className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong resize-none" />
             </div>
             {editResult && (
-              <div className={`rounded-lg px-3 py-2 text-sm ${editResult.success ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+              <div className={`rounded-lg px-3 py-2 text-sm ${editResult.success ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-500/20' : 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border border-red-100 dark:border-red-500/20'}`}>
                 {editResult.success ? editResult.message : editResult.error}
               </div>
             )}
@@ -4193,16 +4219,16 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
           <div className="flex gap-2 mt-5">
             {!editModal.isNew && (
               <button onClick={handleDelete} disabled={editSubmitting || deleting}
-                className="px-3 py-2 rounded-lg text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50">
+                className="px-3 py-2 rounded-lg text-sm font-medium border border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 disabled:opacity-50">
                 {deleting ? 'Eliminando…' : 'Eliminar'}
               </button>
             )}
             <button onClick={() => !editSubmitting && !deleting && setEditModal({ open: false, id: null, isNew: false })} disabled={editSubmitting || deleting}
-              className="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+              className="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-edge text-slate-600 dark:text-foreground-soft hover:bg-slate-50 dark:hover:bg-muted disabled:opacity-50">
               Cancelar
             </button>
             <button onClick={handleEditSubmit} disabled={editSubmitting || deleting}
-              className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50">
+              className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 dark:bg-slate-700 text-white hover:bg-slate-700 dark:hover:bg-slate-600 disabled:opacity-50">
               {editSubmitting ? 'Guardando…' : editModal.isNew ? 'Crear' : 'Guardar'}
             </button>
           </div>
@@ -4215,7 +4241,7 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
     <div className="space-y-5">
       {/* Toolbar */}
       <div className="flex items-center justify-between">
-        <h3 className="text-base font-bold text-slate-800">Plan de reemplazo de componentes</h3>
+        <h3 className="text-base font-bold text-slate-800 dark:text-foreground">Plan de reemplazo de componentes</h3>
         <button
           onClick={() => openEditModal(null)}
           className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-500 transition-colors whitespace-nowrap"
@@ -4227,13 +4253,13 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
       {/* Summary + methodology */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Componentes', value: summary.total, cls: 'text-slate-800', dot: 'bg-slate-400' },
-          { label: 'Vencidos', value: summary.vencido, cls: 'text-red-600', dot: 'bg-red-500' },
-          { label: 'Próximos', value: summary.proximo, cls: 'text-amber-600', dot: 'bg-amber-500' },
-          { label: 'En regla', value: summary.ok, cls: 'text-emerald-600', dot: 'bg-emerald-500' },
+          { label: 'Componentes', value: summary.total, cls: 'text-slate-800 dark:text-foreground', dot: 'bg-slate-400' },
+          { label: 'Vencidos', value: summary.vencido, cls: 'text-red-600 dark:text-red-400', dot: 'bg-red-500' },
+          { label: 'Próximos', value: summary.proximo, cls: 'text-amber-600 dark:text-amber-400', dot: 'bg-amber-500' },
+          { label: 'En regla', value: summary.ok, cls: 'text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-500' },
         ].map((c) => (
-          <div key={c.label} className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm">
-            <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-slate-400 font-semibold">
+          <div key={c.label} className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl p-3.5 shadow-sm">
+            <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-slate-400 dark:text-faint font-semibold">
               <span className={`w-2 h-2 rounded-full ${c.dot}`} /> {c.label}
             </div>
             <div className={`text-2xl font-bold mt-1 ${c.cls}`}>{c.value}</div>
@@ -4241,7 +4267,7 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
         ))}
       </div>
 
-      <div className="text-xs text-slate-500 bg-blue-50/60 border border-blue-100 rounded-lg px-3 py-2">
+      <div className="text-xs text-slate-500 dark:text-muted-foreground bg-blue-50/60 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 rounded-lg px-3 py-2">
         Monitoreo dinámico: el remanente se recalcula en vivo contra el horómetro de cada dominio
         (Célula / Motor TSMOH / Hélice) y contra el calendario. La <strong>fecha proyectada</strong> usa
         la tasa de uso actual ({rate > 0 ? `${rate.toFixed(2)} h/día` : 's/d'}) y toma lo que ocurra primero
@@ -4250,16 +4276,16 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
 
       {/* Domain groups */}
       {grouped.map(({ dominio, items }) => (
-        <div key={dominio} className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-200">
-            <Icon name={DOMAIN_META[dominio]?.icon ?? 'gear'} className="w-4 h-4 text-slate-500" />
-            <span className="font-semibold text-slate-700 text-sm">{DOMAIN_META[dominio]?.label || dominio}</span>
-            <span className="text-xs text-slate-400">({items.length})</span>
+        <div key={dominio} className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 dark:bg-muted border-b border-slate-200 dark:border-edge">
+            <Icon name={DOMAIN_META[dominio]?.icon ?? 'gear'} className="w-4 h-4 text-slate-500 dark:text-muted-foreground" />
+            <span className="font-semibold text-slate-700 dark:text-foreground-soft text-sm">{DOMAIN_META[dominio]?.label || dominio}</span>
+            <span className="text-xs text-slate-400 dark:text-faint">({items.length})</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wide text-slate-400 border-b border-slate-100">
+                <tr className="text-left text-[11px] uppercase tracking-wide text-slate-400 dark:text-faint border-b border-slate-100 dark:border-edge">
                   <th className="px-3 py-2 font-semibold">Estado</th>
                   <th className="px-3 py-2 font-semibold">Componente</th>
                   <th className="px-3 py-2 font-semibold">P/N · S/N</th>
@@ -4283,43 +4309,43 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
                         </span>
                       </td>
                       <td className="px-3 py-2.5">
-                        <div className="font-medium text-slate-800 flex items-center gap-1.5">
+                        <div className="font-medium text-slate-800 dark:text-foreground flex items-center gap-1.5">
                           {p.descripcion}
                           {p.datosInconsistentes && (
                             <span title="Horas de instalación fuera del marco actual del dominio (probablemente en horas de célula previas a un overhaul). Se monitorea solo por calendario; registre el cambio para corregir." className="text-amber-500 cursor-help inline-flex"><Icon name="warning" className="w-3.5 h-3.5" /></span>
                           )}
                         </div>
-                        {p.marca && <div className="text-xs text-slate-400">{p.marca}</div>}
+                        {p.marca && <div className="text-xs text-slate-400 dark:text-faint">{p.marca}</div>}
                       </td>
-                      <td className="px-3 py-2.5 text-xs text-slate-500">
+                      <td className="px-3 py-2.5 text-xs text-slate-500 dark:text-muted-foreground">
                         <div>{p.partNumber || '—'}</div>
-                        <div className="text-slate-400">{p.serial || '—'}</div>
+                        <div className="text-slate-400 dark:text-faint">{p.serial || '—'}</div>
                       </td>
-                      <td className="px-3 py-2.5 text-right text-slate-600 whitespace-nowrap">
+                      <td className="px-3 py-2.5 text-right text-slate-600 dark:text-foreground-soft whitespace-nowrap">
                         {p.limitHoras != null && <div>{fmtH(p.limitHoras)}</div>}
-                        {p.limitMeses != null && <div className="text-xs text-slate-400">{p.limitMeses} meses</div>}
+                        {p.limitMeses != null && <div className="text-xs text-slate-400 dark:text-faint">{p.limitMeses} meses</div>}
                         {p.limitHoras == null && p.limitMeses == null && <span className="text-slate-300">—</span>}
                       </td>
-                      <td className="px-3 py-2.5 text-right text-slate-600 whitespace-nowrap">
+                      <td className="px-3 py-2.5 text-right text-slate-600 dark:text-foreground-soft whitespace-nowrap">
                         <div>{fmtDate(p.installDate)}</div>
-                        {p.installHoras != null && <div className="text-xs text-slate-400">{fmtH(p.installHoras)}</div>}
+                        {p.installHoras != null && <div className="text-xs text-slate-400 dark:text-faint">{fmtH(p.installHoras)}</div>}
                       </td>
                       <td className="px-3 py-2.5 text-right whitespace-nowrap">
                         {p.remanenteHoras != null && (
-                          <div className={`font-semibold ${horasNeg ? 'text-red-600' : p.estado === 'PROXIMO' ? 'text-amber-600' : 'text-slate-700'}`}>
+                          <div className={`font-semibold ${horasNeg ? 'text-red-600 dark:text-red-400' : p.estado === 'PROXIMO' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-700 dark:text-foreground-soft'}`}>
                             {horasNeg ? `−${fmtH(Math.abs(p.remanenteHoras))}` : fmtH(p.remanenteHoras)}
                           </div>
                         )}
                         {p.remanenteDias != null && (
-                          <div className={`text-xs ${diasNeg ? 'text-red-500' : 'text-slate-400'}`}>{fmtDays(p.remanenteDias)}</div>
+                          <div className={`text-xs ${diasNeg ? 'text-red-500' : 'text-slate-400 dark:text-faint'}`}>{fmtDays(p.remanenteDias)}</div>
                         )}
                         {p.remanenteHoras == null && p.remanenteDias == null && <span className="text-slate-300">—</span>}
                       </td>
                       <td className="px-3 py-2.5 whitespace-nowrap">
                         {p.fechaEfectiva ? (
                           <div>
-                            <div className={`font-medium ${p.estado === 'VENCIDO' ? 'text-red-600' : 'text-slate-700'}`}>{fmtDate(p.fechaEfectiva)}</div>
-                            <div className="text-xs text-slate-400">{p.diasEfectivos != null && p.diasEfectivos > 0 ? `en ${fmtDays(p.diasEfectivos)}` : 'ahora'}</div>
+                            <div className={`font-medium ${p.estado === 'VENCIDO' ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-foreground-soft'}`}>{fmtDate(p.fechaEfectiva)}</div>
+                            <div className="text-xs text-slate-400 dark:text-faint">{p.diasEfectivos != null && p.diasEfectivos > 0 ? `en ${fmtDays(p.diasEfectivos)}` : 'ahora'}</div>
                           </div>
                         ) : (
                           <span className="text-slate-300">—</span>
@@ -4329,14 +4355,14 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
                         <div className="flex items-center justify-center gap-1.5">
                           <button
                             onClick={() => openModal(p)}
-                            className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-800 text-white hover:bg-slate-700 transition-colors whitespace-nowrap"
+                            className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-800 dark:bg-slate-700 text-white hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors whitespace-nowrap"
                           >
                             Registrar cambio
                           </button>
                           <button
                             onClick={() => openEditModal(p)}
                             title="Editar componente"
-                            className="px-2 py-1 rounded-md text-xs font-medium border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                            className="px-2 py-1 rounded-md text-xs font-medium border border-slate-200 dark:border-edge text-slate-500 dark:text-muted-foreground hover:bg-slate-100 dark:hover:bg-muted hover:text-slate-700 dark:hover:text-foreground-soft transition-colors"
                           >
                             Editar
                           </button>
@@ -4354,45 +4380,45 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
       {/* Registrar cambio modal */}
       {modal.open && modal.part && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !submitting && setModal({ open: false, part: null })}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white dark:bg-card rounded-2xl shadow-xl w-full max-w-md p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h3 className="text-lg font-bold text-slate-800">Registrar cambio</h3>
-                <p className="text-sm text-slate-500 mt-0.5">{modal.part.descripcion}</p>
+                <h3 className="text-lg font-bold text-slate-800 dark:text-foreground">Registrar cambio</h3>
+                <p className="text-sm text-slate-500 dark:text-muted-foreground mt-0.5">{modal.part.descripcion}</p>
               </div>
-              <button onClick={() => !submitting && setModal({ open: false, part: null })} className="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
+              <button onClick={() => !submitting && setModal({ open: false, part: null })} className="text-slate-400 dark:text-faint hover:text-slate-600 dark:hover:text-foreground-soft text-xl leading-none">×</button>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Fecha del cambio</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Fecha del cambio</label>
                 <input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">
                   Horas del {DOMAIN_META[modal.part.dominio]?.label.split(' · ')[0] || 'dominio'} al instalar
                 </label>
                 <input type="number" step="0.1" value={form.horas} onChange={(e) => setForm({ ...form, horas: e.target.value })}
                   placeholder={modal.part.domainHours != null ? `Actual: ${Number(modal.part.domainHours).toFixed(1)} h` : ''}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
-                <p className="text-[11px] text-slate-400 mt-1">Reinicia el conteo de vida útil desde este punto.</p>
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
+                <p className="text-[11px] text-slate-400 dark:text-faint mt-1">Reinicia el conteo de vida útil desde este punto.</p>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Nuevo serial (opcional)</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Nuevo serial (opcional)</label>
                 <input type="text" value={form.serial} onChange={(e) => setForm({ ...form, serial: e.target.value })}
                   placeholder={modal.part.serial || 'S/N del componente instalado'}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Notas (opcional)</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Notas (opcional)</label>
                 <textarea value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} rows={2}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 resize-none" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong resize-none" />
               </div>
 
               {/* Preview */}
               {form.horas && modal.part.limitHoras != null && (
-                <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 text-xs text-emerald-700">
+                <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-lg px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
                   Nuevo remanente ≈ <strong>{fmtH(modal.part.limitHoras)}</strong>
                   {modal.part.limitMeses != null && form.fecha && (
                     <> · próxima fecha límite <strong>{fmtDate(new Date(new Date(form.fecha).setMonth(new Date(form.fecha).getMonth() + modal.part.limitMeses)).toISOString())}</strong></>
@@ -4401,7 +4427,7 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
               )}
 
               {result && (
-                <div className={`rounded-lg px-3 py-2 text-sm ${result.success ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                <div className={`rounded-lg px-3 py-2 text-sm ${result.success ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-500/20' : 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border border-red-100 dark:border-red-500/20'}`}>
                   {result.success ? result.message : result.error}
                 </div>
               )}
@@ -4409,11 +4435,11 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
 
             <div className="flex gap-2 mt-5">
               <button onClick={() => !submitting && setModal({ open: false, part: null })} disabled={submitting}
-                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-edge text-slate-600 dark:text-foreground-soft hover:bg-slate-50 dark:hover:bg-muted disabled:opacity-50">
                 Cancelar
               </button>
               <button onClick={handleSubmit} disabled={submitting}
-                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50">
+                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 dark:bg-slate-700 text-white hover:bg-slate-700 dark:hover:bg-slate-600 disabled:opacity-50">
                 {submitting ? 'Guardando…' : 'Confirmar cambio'}
               </button>
             </div>
@@ -4431,12 +4457,12 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
 // Cumplimiento AD/DA (airworthiness directives) — dynamic monitoring
 // ─────────────────────────────────────────────────────────────
 const CMP_STYLE: Record<string, { badge: string; dot: string; label: string; row: string }> = {
-  VENCIDO: { badge: 'bg-red-100 text-red-700 border-red-200', dot: 'bg-red-500', label: 'Vencido', row: 'bg-red-50/60 border-l-4 border-red-500' },
-  PROXIMO: { badge: 'bg-amber-100 text-amber-700 border-amber-200', dot: 'bg-amber-500', label: 'Próximo', row: 'bg-amber-50/50 border-l-4 border-amber-400' },
-  OK: { badge: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500', label: 'Vigente', row: 'hover:bg-slate-50' },
-  AL_EVENTO: { badge: 'bg-sky-100 text-sky-700 border-sky-200', dot: 'bg-sky-500', label: 'Al evento', row: 'hover:bg-slate-50' },
-  CUMPLIDO: { badge: 'bg-slate-100 text-slate-600 border-slate-200', dot: 'bg-slate-400', label: 'Cumplido', row: 'hover:bg-slate-50' },
-  NO_APLICA: { badge: 'bg-slate-50 text-slate-400 border-slate-200', dot: 'bg-slate-300', label: 'No aplica', row: 'opacity-60 hover:bg-slate-50' },
+  VENCIDO: { badge: 'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300 border-red-200 dark:border-red-500/30', dot: 'bg-red-500', label: 'Vencido', row: 'bg-red-50/60 dark:bg-red-500/10 border-l-4 border-red-500' },
+  PROXIMO: { badge: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30', dot: 'bg-amber-500', label: 'Próximo', row: 'bg-amber-50/50 dark:bg-amber-500/10 border-l-4 border-amber-400' },
+  OK: { badge: 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30', dot: 'bg-emerald-500', label: 'Vigente', row: 'hover:bg-slate-50 dark:hover:bg-muted' },
+  AL_EVENTO: { badge: 'bg-sky-100 dark:bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-500/30', dot: 'bg-sky-500', label: 'Al evento', row: 'hover:bg-slate-50 dark:hover:bg-muted' },
+  CUMPLIDO: { badge: 'bg-slate-100 dark:bg-muted text-slate-600 dark:text-foreground-soft border-slate-200 dark:border-edge', dot: 'bg-slate-400', label: 'Cumplido', row: 'hover:bg-slate-50 dark:hover:bg-muted' },
+  NO_APLICA: { badge: 'bg-slate-50 dark:bg-muted text-slate-400 dark:text-faint border-slate-200 dark:border-edge', dot: 'bg-slate-300', label: 'No aplica', row: 'opacity-60 hover:bg-slate-50 dark:hover:bg-muted' },
 };
 
 function ComplianceTable({ directives, usageStats }: { directives: any[]; usageStats?: { weightedRate: number; rateAnnual: number } }) {
@@ -4652,11 +4678,11 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
 
   if (!directives.length) {
     return (
-      <div className="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-500 shadow-sm">
+      <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl p-8 text-center text-slate-500 dark:text-muted-foreground shadow-sm">
         <div className="flex justify-center mb-3"><Icon name="compliance" className="w-8 h-8 text-slate-300" /></div>
-        <p className="font-medium text-slate-700">Sin directivas AD/DA cargadas</p>
+        <p className="font-medium text-slate-700 dark:text-foreground-soft">Sin directivas AD/DA cargadas</p>
         <p className="text-sm mt-1 mb-4">No hay directivas de aeronavegabilidad registradas para esta aeronave.</p>
-        <button onClick={() => openEditModal(null)} className="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-white hover:bg-slate-700">
+        <button onClick={() => openEditModal(null)} className="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 dark:bg-slate-700 text-white hover:bg-slate-700 dark:hover:bg-slate-600">
           + Agregar directiva
         </button>
         {editModal.open && renderEditModal()}
@@ -4669,25 +4695,25 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
     const closeAllowed = !editSubmitting && !deleting;
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => closeAllowed && setEditModal({ open: false, id: null, isNew: false })}>
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-5 sm:p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-white dark:bg-card rounded-2xl shadow-xl w-full max-w-lg p-5 sm:p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-start justify-between mb-4">
-            <h3 className="text-lg font-bold text-slate-800">{editModal.isNew ? 'Agregar directiva' : 'Editar directiva'}</h3>
-            <button onClick={() => closeAllowed && setEditModal({ open: false, id: null, isNew: false })} className="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-foreground">{editModal.isNew ? 'Agregar directiva' : 'Editar directiva'}</h3>
+            <button onClick={() => closeAllowed && setEditModal({ open: false, id: null, isNew: false })} className="text-slate-400 dark:text-faint hover:text-slate-600 dark:hover:text-foreground-soft text-xl leading-none">×</button>
           </div>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Tipo</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Tipo</label>
                 <select value={editForm.tipo} onChange={(e) => set({ tipo: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300">
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong">
                   <option value="AD">AD (FAA)</option>
                   <option value="DA">DA (DGAC)</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Dominio</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Dominio</label>
                 <select value={editForm.dominio} onChange={(e) => set({ dominio: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300">
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong">
                   <option value="AIRFRAME">Célula (Airframe)</option>
                   <option value="ENGINE">Motor (Engine)</option>
                   <option value="PROPELLER">Hélice (Propeller)</option>
@@ -4696,100 +4722,100 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Número *</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Número *</label>
                 <input type="text" value={editForm.numero} onChange={(e) => set({ numero: e.target.value })} placeholder="ej. 2011-26-04"
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Enmienda</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Enmienda</label>
                 <input type="text" value={editForm.enmienda} onChange={(e) => set({ enmienda: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1">Descripción *</label>
+              <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Descripción *</label>
               <textarea value={editForm.descripcion} onChange={(e) => set({ descripcion: e.target.value })} rows={2}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 resize-none" />
+                className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong resize-none" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Aplicabilidad</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Aplicabilidad</label>
                 <select value={editForm.aplicabilidad} onChange={(e) => set({ aplicabilidad: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300">
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong">
                   <option value="APLICA">Aplica</option>
                   <option value="NO_APLICA">No aplica</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Periodicidad (texto)</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Periodicidad (texto)</label>
                 <input type="text" value={editForm.periodicidadRaw} onChange={(e) => set({ periodicidadRaw: e.target.value })} placeholder="ej. Cada 100 h"
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-4 py-1">
-              <label className="flex items-center gap-1.5 text-sm text-slate-600 cursor-pointer select-none">
-                <input type="checkbox" checked={editForm.recurrente} onChange={(e) => set({ recurrente: e.target.checked })} className="rounded border-slate-300" /> Recurrente
+              <label className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-foreground-soft cursor-pointer select-none">
+                <input type="checkbox" checked={editForm.recurrente} onChange={(e) => set({ recurrente: e.target.checked })} className="rounded border-slate-300 dark:border-edge-strong" /> Recurrente
               </label>
-              <label className="flex items-center gap-1.5 text-sm text-slate-600 cursor-pointer select-none">
-                <input type="checkbox" checked={editForm.alEvento} onChange={(e) => set({ alEvento: e.target.checked })} className="rounded border-slate-300" /> Al evento
+              <label className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-foreground-soft cursor-pointer select-none">
+                <input type="checkbox" checked={editForm.alEvento} onChange={(e) => set({ alEvento: e.target.checked })} className="rounded border-slate-300 dark:border-edge-strong" /> Al evento
               </label>
-              <label className="flex items-center gap-1.5 text-sm text-slate-600 cursor-pointer select-none">
-                <input type="checkbox" checked={editForm.esEmergencia} onChange={(e) => set({ esEmergencia: e.target.checked })} className="rounded border-slate-300" /> <Icon name="emergency" className="w-4 h-4 text-red-500" /> Emergency AD
+              <label className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-foreground-soft cursor-pointer select-none">
+                <input type="checkbox" checked={editForm.esEmergencia} onChange={(e) => set({ esEmergencia: e.target.checked })} className="rounded border-slate-300 dark:border-edge-strong" /> <Icon name="emergency" className="w-4 h-4 text-red-500" /> Emergency AD
               </label>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Intervalo horas</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Intervalo horas</label>
                 <input type="number" step="0.1" value={editForm.intervaloHoras} onChange={(e) => set({ intervaloHoras: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Intervalo meses</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Intervalo meses</label>
                 <input type="number" value={editForm.intervaloMeses} onChange={(e) => set({ intervaloMeses: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Efectividad fecha</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Efectividad fecha</label>
                 <input type="date" value={editForm.efectividadFecha} onChange={(e) => set({ efectividadFecha: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Efectividad horas</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Efectividad horas</label>
                 <input type="number" step="0.1" value={editForm.efectividadHoras} onChange={(e) => set({ efectividadHoras: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Último cumplimiento (fecha)</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Último cumplimiento (fecha)</label>
                 <input type="date" value={editForm.cumplimientoFecha} onChange={(e) => set({ cumplimientoFecha: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Último cumplimiento (horas)</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Último cumplimiento (horas)</label>
                 <input type="number" step="0.1" value={editForm.cumplimientoHoras} onChange={(e) => set({ cumplimientoHoras: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1">Responsable</label>
+              <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Responsable</label>
               <input type="text" value={editForm.responsable} onChange={(e) => set({ responsable: e.target.value })}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1">URL de referencia</label>
+              <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">URL de referencia</label>
               <input type="url" value={editForm.urlReferencia} onChange={(e) => set({ urlReferencia: e.target.value })} placeholder="https://…"
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1">Observación</label>
+              <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Observación</label>
               <textarea value={editForm.observacion} onChange={(e) => set({ observacion: e.target.value })} rows={2}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 resize-none" />
+                className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong resize-none" />
             </div>
             {editResult && (
-              <div className={`rounded-lg px-3 py-2 text-sm ${editResult.success ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+              <div className={`rounded-lg px-3 py-2 text-sm ${editResult.success ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-500/20' : 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border border-red-100 dark:border-red-500/20'}`}>
                 {editResult.success ? editResult.message : editResult.error}
               </div>
             )}
@@ -4797,16 +4823,16 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
           <div className="flex gap-2 mt-5">
             {!editModal.isNew && (
               <button onClick={handleDelete} disabled={editSubmitting || deleting}
-                className="px-3 py-2 rounded-lg text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50">
+                className="px-3 py-2 rounded-lg text-sm font-medium border border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 disabled:opacity-50">
                 {deleting ? 'Eliminando…' : 'Eliminar'}
               </button>
             )}
             <button onClick={() => closeAllowed && setEditModal({ open: false, id: null, isNew: false })} disabled={editSubmitting || deleting}
-              className="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+              className="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-edge text-slate-600 dark:text-foreground-soft hover:bg-slate-50 dark:hover:bg-muted disabled:opacity-50">
               Cancelar
             </button>
             <button onClick={handleEditSubmit} disabled={editSubmitting || deleting}
-              className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50">
+              className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 dark:bg-slate-700 text-white hover:bg-slate-700 dark:hover:bg-slate-600 disabled:opacity-50">
               {editSubmitting ? 'Guardando…' : editModal.isNew ? 'Crear' : 'Guardar'}
             </button>
           </div>
@@ -4820,13 +4846,13 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
       {/* Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Aplicables', value: summary.aplican, cls: 'text-slate-800', dot: 'bg-slate-400' },
-          { label: 'Vencidas', value: summary.vencido, cls: 'text-red-600', dot: 'bg-red-500' },
-          { label: 'Próximas', value: summary.proximo, cls: 'text-amber-600', dot: 'bg-amber-500' },
-          { label: 'Total', value: summary.total, cls: 'text-slate-800', dot: 'bg-slate-400' },
+          { label: 'Aplicables', value: summary.aplican, cls: 'text-slate-800 dark:text-foreground', dot: 'bg-slate-400' },
+          { label: 'Vencidas', value: summary.vencido, cls: 'text-red-600 dark:text-red-400', dot: 'bg-red-500' },
+          { label: 'Próximas', value: summary.proximo, cls: 'text-amber-600 dark:text-amber-400', dot: 'bg-amber-500' },
+          { label: 'Total', value: summary.total, cls: 'text-slate-800 dark:text-foreground', dot: 'bg-slate-400' },
         ].map((c) => (
-          <div key={c.label} className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm">
-            <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-slate-400 font-semibold">
+          <div key={c.label} className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl p-3.5 shadow-sm">
+            <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-slate-400 dark:text-faint font-semibold">
               <span className={`w-2 h-2 rounded-full ${c.dot}`} /> {c.label}
             </div>
             <div className={`text-2xl font-bold mt-1 ${c.cls}`}>{c.value}</div>
@@ -4835,26 +4861,26 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
       </div>
 
       {summary.emergencia > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700 font-medium flex items-center gap-2">
+        <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg px-3 py-2 text-sm text-red-700 dark:text-red-300 font-medium flex items-center gap-2">
           <Icon name="emergency" className="w-4 h-4 flex-shrink-0" /> {summary.emergencia} Emergency AD activa(s) — requieren atención inmediata.
         </div>
       )}
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex gap-1 bg-slate-100/80 p-1 rounded-lg">
+        <div className="flex gap-1 bg-slate-100/80 dark:bg-muted p-1 rounded-lg">
           {(['ALL', 'AD', 'DA'] as const).map((t) => (
             <button key={t} onClick={() => setTipoFilter(t)}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${tipoFilter === t ? 'bg-white text-slate-800 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${tipoFilter === t ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge' : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft'}`}>
               {t === 'ALL' ? 'Todas' : t === 'AD' ? 'AD (FAA)' : 'DA (DGAC)'}
             </button>
           ))}
         </div>
-        <label className="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer select-none ml-1">
-          <input type="checkbox" checked={soloAplican} onChange={(e) => setSoloAplican(e.target.checked)} className="rounded border-slate-300" />
+        <label className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-muted-foreground cursor-pointer select-none ml-1">
+          <input type="checkbox" checked={soloAplican} onChange={(e) => setSoloAplican(e.target.checked)} className="rounded border-slate-300 dark:border-edge-strong" />
           Solo aplicables
         </label>
-        <div className="text-xs text-slate-400 ml-auto">Tasa de uso: {rate > 0 ? `${rate.toFixed(2)} h/día` : 's/d'}</div>
+        <div className="text-xs text-slate-400 dark:text-faint ml-auto">Tasa de uso: {rate > 0 ? `${rate.toFixed(2)} h/día` : 's/d'}</div>
         <button onClick={handleAudit} disabled={auditing}
           className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap">
           {auditing ? (
@@ -4871,47 +4897,47 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
 
       {/* Audit report panel */}
       {auditReport && (
-        <div className={`rounded-xl border p-4 shadow-sm ${auditReport.error ? 'bg-red-50 border-red-200' : 'bg-slate-50 border-slate-200'}`}>
+        <div className={`rounded-xl border p-4 shadow-sm ${auditReport.error ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30' : 'bg-slate-50 dark:bg-muted border-slate-200 dark:border-edge'}`}>
           {auditReport.error ? (
-            <p className="text-sm text-red-700 flex items-center gap-1.5"><Icon name="warning" className="w-4 h-4 flex-shrink-0" /> {auditReport.error}</p>
+            <p className="text-sm text-red-700 dark:text-red-300 flex items-center gap-1.5"><Icon name="warning" className="w-4 h-4 flex-shrink-0" /> {auditReport.error}</p>
           ) : (
             <>
               <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
-                <h4 className="font-semibold text-slate-800 text-sm">Resultado de la auditoría</h4>
-                <button onClick={() => setAuditReport(null)} className="text-slate-400 hover:text-slate-600 text-lg leading-none">×</button>
+                <h4 className="font-semibold text-slate-800 dark:text-foreground text-sm">Resultado de la auditoría</h4>
+                <button onClick={() => setAuditReport(null)} className="text-slate-400 dark:text-faint hover:text-slate-600 dark:hover:text-foreground-soft text-lg leading-none">×</button>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm mb-3">
-                <div><div className="text-[11px] uppercase tracking-wide text-slate-400 font-semibold">FAA revisadas</div><div className="text-lg font-bold text-slate-700">{auditReport.faa?.scanned ?? 0}</div></div>
-                <div><div className="text-[11px] uppercase tracking-wide text-slate-400 font-semibold">FAA aplicables</div><div className="text-lg font-bold text-slate-700">{auditReport.faa?.applicable ?? 0}</div></div>
-                <div><div className="text-[11px] uppercase tracking-wide text-emerald-500 font-semibold">Nuevas agregadas</div><div className="text-lg font-bold text-emerald-600">{(auditReport.faa?.added ?? 0) + (auditReport.dgac?.added ?? 0)}</div></div>
+                <div><div className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-faint font-semibold">FAA revisadas</div><div className="text-lg font-bold text-slate-700 dark:text-foreground-soft">{auditReport.faa?.scanned ?? 0}</div></div>
+                <div><div className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-faint font-semibold">FAA aplicables</div><div className="text-lg font-bold text-slate-700 dark:text-foreground-soft">{auditReport.faa?.applicable ?? 0}</div></div>
+                <div><div className="text-[11px] uppercase tracking-wide text-emerald-500 font-semibold">Nuevas agregadas</div><div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{(auditReport.faa?.added ?? 0) + (auditReport.dgac?.added ?? 0)}</div></div>
                 <div>
-                  <div className="text-[11px] uppercase tracking-wide text-slate-400 font-semibold">DGAC (Chile)</div>
-                  <div className="text-lg font-bold text-slate-700" title="Aeronave de diseño EE.UU.: la aeronavegabilidad DGAC se cumple adoptando las AD del estado de diseño (FAA), ya revisadas. Principio OACI Anexo 8.">
+                  <div className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-faint font-semibold">DGAC (Chile)</div>
+                  <div className="text-lg font-bold text-slate-700 dark:text-foreground-soft" title="Aeronave de diseño EE.UU.: la aeronavegabilidad DGAC se cumple adoptando las AD del estado de diseño (FAA), ya revisadas. Principio OACI Anexo 8.">
                     {!auditReport.dgac?.enabled
                       ? '—'
                       : (auditReport.dgac?.added ?? 0) > 0
                         ? auditReport.dgac.added
-                        : <span className="text-emerald-600 inline-flex items-center gap-1" title="Cubierta vía estado de diseño (FAA)"><Icon name="check" className="w-4 h-4" /> Estado de diseño</span>}
+                        : <span className="text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1" title="Cubierta vía estado de diseño (FAA)"><Icon name="check" className="w-4 h-4" /> Estado de diseño</span>}
                   </div>
                 </div>
               </div>
               {Array.isArray(auditReport.added) && auditReport.added.length > 0 && (
                 <div className="space-y-1 mb-2">
-                  <div className="text-xs font-semibold text-slate-500">Directivas agregadas:</div>
+                  <div className="text-xs font-semibold text-slate-500 dark:text-muted-foreground">Directivas agregadas:</div>
                   {auditReport.added.map((a: any, i: number) => (
-                    <div key={i} className="text-xs text-slate-600 flex items-center gap-1.5">
+                    <div key={i} className="text-xs text-slate-600 dark:text-foreground-soft flex items-center gap-1.5">
                       {a.esEmergencia && <span title="Emergency AD" className="text-red-500 inline-flex"><Icon name="emergency" className="w-3.5 h-3.5" /></span>}
                       <span className="font-medium">{a.tipo} {a.numero}</span> — {a.descripcion}
-                      {a.url && <a href={a.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline ml-1">ver</a>}
+                      {a.url && <a href={a.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline ml-1">ver</a>}
                     </div>
                   ))}
                 </div>
               )}
               {(!auditReport.added || auditReport.added.length === 0) && (
-                <p className="text-xs text-slate-500 flex items-center gap-1.5"><Icon name="check" className="w-3.5 h-3.5 text-emerald-600" /> Sin directivas nuevas aplicables. Todo al día respecto a las fuentes consultadas.</p>
+                <p className="text-xs text-slate-500 dark:text-muted-foreground flex items-center gap-1.5"><Icon name="check" className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Sin directivas nuevas aplicables. Todo al día respecto a las fuentes consultadas.</p>
               )}
               {Array.isArray(auditReport.notes) && auditReport.notes.length > 0 && (
-                <div className="text-[11px] text-slate-400 mt-2 border-t border-slate-200 pt-2">{auditReport.notes.join(' · ')}</div>
+                <div className="text-[11px] text-slate-400 dark:text-faint mt-2 border-t border-slate-200 dark:border-edge pt-2">{auditReport.notes.join(' · ')}</div>
               )}
             </>
           )}
@@ -4920,16 +4946,16 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
 
       {/* Groups */}
       {grouped.map(({ tipo, items }) => (
-        <div key={tipo} className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-200">
-            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${tipo === 'AD' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-red-50 text-red-700 border-red-200'}`}>{tipo === 'AD' ? 'FAA' : 'DGAC'}</span>
-            <span className="font-semibold text-slate-700 text-sm">{tipo === 'AD' ? 'Airworthiness Directives (FAA)' : 'Directivas de Aeronavegabilidad (DGAC)'}</span>
-            <span className="text-xs text-slate-400">({items.length})</span>
+        <div key={tipo} className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 dark:bg-muted border-b border-slate-200 dark:border-edge">
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${tipo === 'AD' ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/30' : 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border-red-200 dark:border-red-500/30'}`}>{tipo === 'AD' ? 'FAA' : 'DGAC'}</span>
+            <span className="font-semibold text-slate-700 dark:text-foreground-soft text-sm">{tipo === 'AD' ? 'Airworthiness Directives (FAA)' : 'Directivas de Aeronavegabilidad (DGAC)'}</span>
+            <span className="text-xs text-slate-400 dark:text-faint">({items.length})</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wide text-slate-400 border-b border-slate-100">
+                <tr className="text-left text-[11px] uppercase tracking-wide text-slate-400 dark:text-faint border-b border-slate-100 dark:border-edge">
                   <th className="px-3 py-2 font-semibold">Estado</th>
                   <th className="px-3 py-2 font-semibold">N° · Enmienda</th>
                   <th className="px-3 py-2 font-semibold">Descripción</th>
@@ -4955,38 +4981,38 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
                         {d.esEmergencia && <span className="ml-1 text-red-500 inline-flex align-middle" title="Emergency AD"><Icon name="emergency" className="w-3.5 h-3.5" /></span>}
                       </td>
                       <td className="px-3 py-2.5 whitespace-nowrap">
-                        <div className="font-medium text-slate-800">
+                        <div className="font-medium text-slate-800 dark:text-foreground">
                           {d.urlReferencia ? (
-                            <a href={d.urlReferencia} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{d.numero}</a>
+                            <a href={d.urlReferencia} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">{d.numero}</a>
                           ) : d.numero}
                         </div>
-                        {d.enmienda && <div className="text-xs text-slate-400">{d.enmienda}</div>}
+                        {d.enmienda && <div className="text-xs text-slate-400 dark:text-faint">{d.enmienda}</div>}
                       </td>
                       <td className="px-3 py-2.5 max-w-xs">
-                        <div className="text-slate-700 truncate" title={d.descripcion}>{d.descripcion}</div>
-                        {d.observacion && <div className="text-xs text-slate-400 truncate" title={d.observacion}>{d.observacion}</div>}
+                        <div className="text-slate-700 dark:text-foreground-soft truncate" title={d.descripcion}>{d.descripcion}</div>
+                        {d.observacion && <div className="text-xs text-slate-400 dark:text-faint truncate" title={d.observacion}>{d.observacion}</div>}
                       </td>
-                      <td className="px-3 py-2.5 text-xs text-slate-500 whitespace-nowrap">{d.periodicidadRaw || (d.alEvento ? 'Al Evento' : '—')}</td>
-                      <td className="px-3 py-2.5 whitespace-nowrap text-slate-600">
+                      <td className="px-3 py-2.5 text-xs text-slate-500 dark:text-muted-foreground whitespace-nowrap">{d.periodicidadRaw || (d.alEvento ? 'Al Evento' : '—')}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap text-slate-600 dark:text-foreground-soft">
                         <div>{fmtDate(d.cumplimientoFecha)}</div>
-                        {d.cumplimientoHoras != null && <div className="text-xs text-slate-400">{fmtH(d.cumplimientoHoras)}</div>}
+                        {d.cumplimientoHoras != null && <div className="text-xs text-slate-400 dark:text-faint">{fmtH(d.cumplimientoHoras)}</div>}
                       </td>
                       <td className="px-3 py-2.5 text-right whitespace-nowrap">
                         {d.remanenteHoras != null && (
-                          <div className={`font-semibold ${horasNeg ? 'text-red-600' : d.estado === 'PROXIMO' ? 'text-amber-600' : 'text-slate-700'}`}>
+                          <div className={`font-semibold ${horasNeg ? 'text-red-600 dark:text-red-400' : d.estado === 'PROXIMO' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-700 dark:text-foreground-soft'}`}>
                             {horasNeg ? `−${fmtH(Math.abs(d.remanenteHoras))}` : fmtH(d.remanenteHoras)}
                           </div>
                         )}
                         {d.remanenteDias != null && (
-                          <div className={`text-xs ${diasNeg ? 'text-red-500' : 'text-slate-400'}`}>{fmtDays(d.remanenteDias)}</div>
+                          <div className={`text-xs ${diasNeg ? 'text-red-500' : 'text-slate-400 dark:text-faint'}`}>{fmtDays(d.remanenteDias)}</div>
                         )}
                         {d.remanenteHoras == null && d.remanenteDias == null && <span className="text-slate-300">—</span>}
                       </td>
                       <td className="px-3 py-2.5 whitespace-nowrap">
                         {d.fechaEfectiva ? (
                           <div>
-                            <div className={`font-medium ${d.estado === 'VENCIDO' ? 'text-red-600' : 'text-slate-700'}`}>{fmtDate(d.fechaEfectiva)}</div>
-                            {d.proximaHoras != null && <div className="text-xs text-slate-400">{fmtH(d.proximaHoras)}</div>}
+                            <div className={`font-medium ${d.estado === 'VENCIDO' ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-foreground-soft'}`}>{fmtDate(d.fechaEfectiva)}</div>
+                            {d.proximaHoras != null && <div className="text-xs text-slate-400 dark:text-faint">{fmtH(d.proximaHoras)}</div>}
                           </div>
                         ) : (
                           <span className="text-slate-300">—</span>
@@ -4996,12 +5022,12 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
                         <div className="flex items-center justify-center gap-1.5">
                           {canLog && (
                             <button onClick={() => openModal(d)}
-                              className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-800 text-white hover:bg-slate-700 transition-colors whitespace-nowrap">
+                              className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-800 dark:bg-slate-700 text-white hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors whitespace-nowrap">
                               Registrar cumpl.
                             </button>
                           )}
                           <button onClick={() => openEditModal(d)} title="Editar directiva"
-                            className="px-2 py-1 rounded-md text-xs font-medium border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors">
+                            className="px-2 py-1 rounded-md text-xs font-medium border border-slate-200 dark:border-edge text-slate-500 dark:text-muted-foreground hover:bg-slate-100 dark:hover:bg-muted hover:text-slate-700 dark:hover:text-foreground-soft transition-colors">
                             Editar
                           </button>
                         </div>
@@ -5018,40 +5044,40 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
       {/* Registrar cumplimiento modal */}
       {modal.open && modal.dir && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !submitting && setModal({ open: false, dir: null })}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white dark:bg-card rounded-2xl shadow-xl w-full max-w-md p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h3 className="text-lg font-bold text-slate-800">Registrar cumplimiento</h3>
-                <p className="text-sm text-slate-500 mt-0.5">{modal.dir.tipo} {modal.dir.numero} — {modal.dir.descripcion}</p>
+                <h3 className="text-lg font-bold text-slate-800 dark:text-foreground">Registrar cumplimiento</h3>
+                <p className="text-sm text-slate-500 dark:text-muted-foreground mt-0.5">{modal.dir.tipo} {modal.dir.numero} — {modal.dir.descripcion}</p>
               </div>
-              <button onClick={() => !submitting && setModal({ open: false, dir: null })} className="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
+              <button onClick={() => !submitting && setModal({ open: false, dir: null })} className="text-slate-400 dark:text-faint hover:text-slate-600 dark:hover:text-foreground-soft text-xl leading-none">×</button>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Fecha de cumplimiento</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Fecha de cumplimiento</label>
                 <input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Horas de la aeronave al cumplir</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Horas de la aeronave al cumplir</label>
                 <input type="number" step="0.1" value={form.horas} onChange={(e) => setForm({ ...form, horas: e.target.value })}
                   placeholder={modal.dir.domainHours != null ? `Actual: ${Number(modal.dir.domainHours).toFixed(1)} h` : ''}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">N° de Orden de Trabajo (opcional)</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">N° de Orden de Trabajo (opcional)</label>
                 <input type="text" value={form.ot} onChange={(e) => setForm({ ...form, ot: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Notas (opcional)</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Notas (opcional)</label>
                 <textarea value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} rows={2}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 resize-none" />
+                  className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong resize-none" />
               </div>
 
               {modal.dir.recurrente && form.fecha && (
-                <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 text-xs text-emerald-700">
+                <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-lg px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
                   {modal.dir.intervaloMeses != null && (
                     <>Próximo vencimiento calendario ≈ <strong>{fmtDate(new Date(new Date(form.fecha).setMonth(new Date(form.fecha).getMonth() + modal.dir.intervaloMeses)).toISOString())}</strong></>
                   )}
@@ -5062,7 +5088,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
               )}
 
               {result && (
-                <div className={`rounded-lg px-3 py-2 text-sm ${result.success ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                <div className={`rounded-lg px-3 py-2 text-sm ${result.success ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-500/20' : 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border border-red-100 dark:border-red-500/20'}`}>
                   {result.success ? result.message : result.error}
                 </div>
               )}
@@ -5070,11 +5096,11 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
 
             <div className="flex gap-2 mt-5">
               <button onClick={() => !submitting && setModal({ open: false, dir: null })} disabled={submitting}
-                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-edge text-slate-600 dark:text-foreground-soft hover:bg-slate-50 dark:hover:bg-muted disabled:opacity-50">
                 Cancelar
               </button>
               <button onClick={handleSubmit} disabled={submitting}
-                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50">
+                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 dark:bg-slate-700 text-white hover:bg-slate-700 dark:hover:bg-slate-600 disabled:opacity-50">
                 {submitting ? 'Guardando…' : 'Confirmar cumplimiento'}
               </button>
             </div>
@@ -5395,18 +5421,18 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
   }, [filtered, movements, localEdits]);
 
   const tipoColors: Record<string, string> = {
-    'Pago piloto': 'bg-emerald-100 text-emerald-800',
-    'Combustible': 'bg-amber-100 text-amber-800',
-    'Mantenimiento': 'bg-purple-100 text-purple-800',
-    'Repuestos': 'bg-pink-100 text-pink-800',
-    'Hangar': 'bg-cyan-100 text-cyan-800',
-    'Seguro': 'bg-sky-100 text-sky-800',
-    'Overhaul': 'bg-red-100 text-red-800',
-    'Inversión': 'bg-blue-100 text-blue-800',
-    'Impuesto': 'bg-rose-100 text-rose-800',
-    'Banco': 'bg-slate-100 text-slate-800',
-    'Operacional': 'bg-orange-100 text-orange-800',
-    'Sin clasificar': 'bg-gray-100 text-gray-800',
+    'Pago piloto': 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300',
+    'Combustible': 'bg-amber-100 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300',
+    'Mantenimiento': 'bg-purple-100 dark:bg-purple-500/15 text-purple-800 dark:text-purple-300',
+    'Repuestos': 'bg-pink-100 dark:bg-pink-500/15 text-pink-800 dark:text-pink-300',
+    'Hangar': 'bg-cyan-100 dark:bg-cyan-500/15 text-cyan-800 dark:text-cyan-300',
+    'Seguro': 'bg-sky-100 dark:bg-sky-500/15 text-sky-800 dark:text-sky-300',
+    'Overhaul': 'bg-red-100 dark:bg-red-500/15 text-red-800 dark:text-red-300',
+    'Inversión': 'bg-blue-100 dark:bg-blue-500/15 text-blue-800 dark:text-blue-300',
+    'Impuesto': 'bg-rose-100 dark:bg-rose-500/15 text-rose-800 dark:text-rose-300',
+    'Banco': 'bg-slate-100 dark:bg-muted text-slate-800 dark:text-foreground',
+    'Operacional': 'bg-orange-100 dark:bg-orange-500/15 text-orange-800 dark:text-orange-300',
+    'Sin clasificar': 'bg-gray-100 dark:bg-muted text-gray-800 dark:text-foreground',
   };
 
   const formatDate = (dateStr: string) => {
@@ -5424,11 +5450,11 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
       <div className={`${palette.card} rounded-xl p-4 sm:p-5 ${palette.shadow}`}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Subir Cartola Bancaria</h4>
-            <p className="text-xs text-slate-500 mt-1">Sube el archivo Excel de &quot;últimos movimientos&quot; del banco para agregar automáticamente los nuevos movimientos</p>
+            <h4 className="text-sm font-bold text-slate-700 dark:text-foreground-soft uppercase tracking-wider">Subir Cartola Bancaria</h4>
+            <p className="text-xs text-slate-500 dark:text-muted-foreground mt-1">Sube el archivo Excel de &quot;últimos movimientos&quot; del banco para agregar automáticamente los nuevos movimientos</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <label className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm cursor-pointer transition-all ${uploading ? 'bg-slate-200 text-slate-500 cursor-wait' : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl'}`}>
+            <label className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm cursor-pointer transition-all ${uploading ? 'bg-slate-200 dark:bg-white/10 text-slate-500 dark:text-muted-foreground cursor-wait' : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl'}`}>
               {uploading ? (
                 <>
                   <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -5447,7 +5473,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
               onClick={handleDeleteLastCartola}
               disabled={uploading}
               title="Borra todos los movimientos del último batch subido (últimos 5 minutos de createdAt)"
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all ${uploading ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : 'bg-red-600 text-white hover:bg-red-700 shadow-lg hover:shadow-xl'}`}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all ${uploading ? 'bg-slate-200 dark:bg-white/10 text-slate-500 dark:text-muted-foreground cursor-not-allowed' : 'bg-red-600 text-white hover:bg-red-700 shadow-lg hover:shadow-xl'}`}
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2" /></svg>
               Deshacer última carga
@@ -5460,50 +5486,50 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
           <div className={`mt-4 p-4 rounded-xl border-2 ${uploadResult.ok ? 'bg-green-500/10 border-green-300' : 'bg-red-500/10 border-red-300'}`}>
             <div className="flex items-start gap-3">
               {uploadResult.ok ? (
-                <svg className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2h-2a2 2 0 01-2-2v-1" /></svg>
+                <svg className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2h-2a2 2 0 01-2-2v-1" /></svg>
               ) : (
-                <svg className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <svg className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               )}
               <div className="flex-1">
-                <p className={`text-sm font-bold ${uploadResult.ok ? 'text-green-800' : 'text-red-800'}`}>
+                <p className={`text-sm font-bold ${uploadResult.ok ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'}`}>
                   {uploadResult.message || uploadResult.error}
                 </p>
                 {uploadResult.ok && uploadResult.added > 0 && (
                   <div className="mt-2 space-y-1">
-                    <p className="text-xs text-emerald-700 flex items-center gap-1">
+                    <p className="text-xs text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
                       <Icon name="checkCircle" className="w-3.5 h-3.5 flex-shrink-0" /> {uploadResult.added} nuevos movimientos agregados • {uploadResult.skipped} omitidos (duplicados)
                     </p>
-                    <p className="text-xs text-emerald-700">
+                    <p className="text-xs text-emerald-700 dark:text-emerald-300">
                       Último correlativo: #{uploadResult.lastCorrelativo} • Saldo final: ${formatCurrency(uploadResult.lastSaldo)}
                     </p>
                     {uploadResult.entries && uploadResult.entries.length > 0 && (
                       <details className="mt-2">
-                        <summary className="text-xs text-emerald-600 cursor-pointer font-medium hover:text-emerald-800">
+                        <summary className="text-xs text-emerald-600 dark:text-emerald-400 cursor-pointer font-medium hover:text-emerald-800 dark:hover:text-emerald-300">
                           Ver {uploadResult.entries.length} movimientos agregados
                         </summary>
-                        <div className="mt-2 max-h-60 overflow-y-auto rounded-lg border border-emerald-200 bg-white">
+                        <div className="mt-2 max-h-60 overflow-y-auto rounded-lg border border-emerald-200 dark:border-emerald-500/30 bg-white dark:bg-card">
                           <table className="w-full text-xs">
-                            <thead className="bg-emerald-50 sticky top-0">
+                            <thead className="bg-emerald-50 dark:bg-emerald-500/10 sticky top-0">
                               <tr>
-                                <th className="px-2 py-1.5 text-left font-bold text-emerald-700">#</th>
-                                <th className="px-2 py-1.5 text-left font-bold text-emerald-700">Fecha</th>
-                                <th className="px-2 py-1.5 text-left font-bold text-emerald-700">Descripción</th>
-                                <th className="px-2 py-1.5 text-right font-bold text-red-600 uppercase tracking-wider">Egreso</th>
-                                <th className="px-2 py-1.5 text-right font-bold text-emerald-600 uppercase tracking-wider">Ingreso</th>
-                                <th className="px-2 py-1.5 text-left font-bold text-emerald-700">Tipo</th>
-                                <th className="px-2 py-1.5 text-left font-bold text-emerald-700">Código</th>
+                                <th className="px-2 py-1.5 text-left font-bold text-emerald-700 dark:text-emerald-300">#</th>
+                                <th className="px-2 py-1.5 text-left font-bold text-emerald-700 dark:text-emerald-300">Fecha</th>
+                                <th className="px-2 py-1.5 text-left font-bold text-emerald-700 dark:text-emerald-300">Descripción</th>
+                                <th className="px-2 py-1.5 text-right font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">Egreso</th>
+                                <th className="px-2 py-1.5 text-right font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Ingreso</th>
+                                <th className="px-2 py-1.5 text-left font-bold text-emerald-700 dark:text-emerald-300">Tipo</th>
+                                <th className="px-2 py-1.5 text-left font-bold text-emerald-700 dark:text-emerald-300">Código</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-emerald-100">
                               {uploadResult.entries.map((e: any, i: number) => (
-                                <tr key={i} className="hover:bg-emerald-50/50">
-                                  <td className="px-2 py-1 text-slate-500 font-mono">{e.correlativo}</td>
-                                  <td className="px-2 py-1 text-slate-700 whitespace-nowrap">{e.fecha}</td>
-                                  <td className="px-2 py-1 text-slate-800 font-medium">{e.descripcion}</td>
-                                  <td className="px-2 py-1 text-right font-mono">{e.egreso ? <span className="text-red-600">-${formatCurrency(e.egreso)}</span> : ''}</td>
-                                  <td className="px-2 py-1 text-right font-mono">{e.ingreso ? <span className="text-emerald-600">+${formatCurrency(e.ingreso)}</span> : ''}</td>
-                                  <td className="px-2 py-1"><span className={`inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold ${tipoColors[e.tipo] || 'bg-gray-100 text-gray-800'}`}>{e.tipo}</span></td>
-                                  <td className="px-2 py-1 font-bold text-slate-600">{e.cliente || ''}</td>
+                                <tr key={i} className="hover:bg-emerald-50/50 dark:hover:bg-emerald-500/10">
+                                  <td className="px-2 py-1 text-slate-500 dark:text-muted-foreground font-mono">{e.correlativo}</td>
+                                  <td className="px-2 py-1 text-slate-700 dark:text-foreground-soft whitespace-nowrap">{e.fecha}</td>
+                                  <td className="px-2 py-1 text-slate-800 dark:text-foreground font-medium">{e.descripcion}</td>
+                                  <td className="px-2 py-1 text-right font-mono">{e.egreso ? <span className="text-red-600 dark:text-red-400">-${formatCurrency(e.egreso)}</span> : ''}</td>
+                                  <td className="px-2 py-1 text-right font-mono">{e.ingreso ? <span className="text-emerald-600 dark:text-emerald-400">+${formatCurrency(e.ingreso)}</span> : ''}</td>
+                                  <td className="px-2 py-1"><span className={`inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold ${tipoColors[e.tipo] || 'bg-gray-100 dark:bg-muted text-gray-800 dark:text-foreground'}`}>{e.tipo}</span></td>
+                                  <td className="px-2 py-1 font-bold text-slate-600 dark:text-foreground-soft">{e.cliente || ''}</td>
                                 </tr>
                               ))}
                             </tbody>
@@ -5511,11 +5537,11 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                         </div>
                       </details>
                     )}
-                    <p className="text-xs text-emerald-600 mt-2 italic">Recargando página en 3 segundos...</p>
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2 italic">Recargando página en 3 segundos...</p>
                   </div>
                 )}
               </div>
-              <button onClick={() => setUploadResult(null)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setUploadResult(null)} className="text-slate-400 dark:text-faint hover:text-slate-600 dark:hover:text-foreground-soft">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
@@ -5526,43 +5552,43 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className={`${palette.card} rounded-xl p-4 sm:p-5 ${palette.shadow}`}>
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Saldo Actual</p>
-          <p className="text-xl sm:text-2xl font-black text-slate-900 mt-1">${formatCurrency(Math.round(stats.lastSaldo))}</p>
+          <p className="text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Saldo Actual</p>
+          <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-foreground mt-1">${formatCurrency(Math.round(stats.lastSaldo))}</p>
         </div>
         <div className={`${palette.card} rounded-xl p-4 sm:p-5 ${palette.shadow}`}>
-          <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Total Ingresos</p>
-          <p className="text-xl sm:text-2xl font-black text-emerald-700 mt-1">${formatCurrency(Math.round(stats.totalIngresos))}</p>
-          <p className="text-xs text-slate-500 mt-1">{filtered.filter(m => m.ingreso).length} transacciones</p>
+          <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Total Ingresos</p>
+          <p className="text-xl sm:text-2xl font-black text-emerald-700 dark:text-emerald-300 mt-1">${formatCurrency(Math.round(stats.totalIngresos))}</p>
+          <p className="text-xs text-slate-500 dark:text-muted-foreground mt-1">{filtered.filter(m => m.ingreso).length} transacciones</p>
         </div>
         <div className={`${palette.card} rounded-xl p-4 sm:p-5 ${palette.shadow}`}>
-          <p className="text-xs font-semibold text-red-600 uppercase tracking-wider">Total Egresos</p>
-          <p className="text-xl sm:text-2xl font-black text-red-700 mt-1">${formatCurrency(Math.round(stats.totalEgresos))}</p>
-          <p className="text-xs text-slate-500 mt-1">{filtered.filter(m => m.egreso).length} transacciones</p>
+          <p className="text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-wider">Total Egresos</p>
+          <p className="text-xl sm:text-2xl font-black text-red-700 dark:text-red-300 mt-1">${formatCurrency(Math.round(stats.totalEgresos))}</p>
+          <p className="text-xs text-slate-500 dark:text-muted-foreground mt-1">{filtered.filter(m => m.egreso).length} transacciones</p>
         </div>
         <div className={`${palette.card} rounded-xl p-4 sm:p-5 ${palette.shadow}`}>
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Movimientos</p>
-          <p className="text-xl sm:text-2xl font-black text-slate-900 mt-1">{filtered.length}</p>
-          <p className="text-xs text-slate-500 mt-1">de {movements.length} total</p>
+          <p className="text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Movimientos</p>
+          <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-foreground mt-1">{filtered.length}</p>
+          <p className="text-xs text-slate-500 dark:text-muted-foreground mt-1">de {movements.length} total</p>
         </div>
       </div>
 
       {/* Breakdown by Tipo */}
       <div className={`${palette.card} rounded-xl p-4 sm:p-5 ${palette.shadow}`}>
-        <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3">Desglose por Tipo</h4>
+        <h4 className="text-sm font-bold text-slate-700 dark:text-foreground-soft uppercase tracking-wider mb-3">Desglose por Tipo</h4>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
           {Object.entries(stats.byTipo).sort((a, b) => (b[1].ingresos + b[1].egresos) - (a[1].ingresos + a[1].egresos)).map(([tipo, data]) => (
             <button
               key={tipo}
               onClick={() => setFilterTipo(filterTipo === tipo ? 'ALL' : tipo)}
-              className={`text-left p-3 rounded-lg border transition-all ${filterTipo === tipo ? 'ring-2 ring-blue-500 border-blue-300' : 'border-slate-200 hover:border-slate-300'}`}
+              className={`text-left p-3 rounded-lg border transition-all ${filterTipo === tipo ? 'ring-2 ring-blue-500 border-blue-300' : 'border-slate-200 dark:border-edge hover:border-slate-300 dark:hover:border-edge-strong'}`}
             >
-              <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${tipoColors[tipo] || 'bg-gray-100 text-gray-800'}`}>
+              <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${tipoColors[tipo] || 'bg-gray-100 dark:bg-muted text-gray-800 dark:text-foreground'}`}>
                 {tipo}
               </span>
-              <div className="mt-1.5 text-xs text-slate-600">
+              <div className="mt-1.5 text-xs text-slate-600 dark:text-foreground-soft">
                 {data.count} mov.
-                {data.ingresos > 0 && <span className="text-emerald-600 ml-1">+${formatCurrency(Math.round(data.ingresos))}</span>}
-                {data.egresos > 0 && <span className="text-red-600 ml-1">-${formatCurrency(Math.round(data.egresos))}</span>}
+                {data.ingresos > 0 && <span className="text-emerald-600 dark:text-emerald-400 ml-1">+${formatCurrency(Math.round(data.ingresos))}</span>}
+                {data.egresos > 0 && <span className="text-red-600 dark:text-red-400 ml-1">-${formatCurrency(Math.round(data.egresos))}</span>}
               </div>
             </button>
           ))}
@@ -5570,17 +5596,17 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
       </div>
 
       {/* Filters + Table */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl shadow-sm overflow-hidden">
         {/* Header */}
-        <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
+        <div className="px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-edge">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-                <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-muted flex items-center justify-center">
+                <svg className="w-5 h-5 text-slate-600 dark:text-foreground-soft" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h3 className="text-sm font-semibold text-slate-800">Bank Movements</h3>
+              <h3 className="text-sm font-semibold text-slate-800 dark:text-foreground">Bank Movements</h3>
             </div>
             <div className="flex items-center gap-2">
               {selectedMovements.size > 0 && (
@@ -5600,21 +5626,21 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
               {selectedMovements.size > 0 && (
                 <button
                   onClick={() => setSelectedMovements(new Set())}
-                  className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-md text-xs font-medium transition-colors border border-slate-200"
+                  className="px-2.5 py-1.5 bg-slate-100 dark:bg-muted hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-foreground-soft rounded-md text-xs font-medium transition-colors border border-slate-200 dark:border-edge"
                 >
                   Deseleccionar
                 </button>
               )}
               <button
                 onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
-                className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-md text-xs font-medium transition-colors border border-slate-200"
+                className="px-2.5 py-1.5 bg-slate-100 dark:bg-muted hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-foreground-soft rounded-md text-xs font-medium transition-colors border border-slate-200 dark:border-edge"
               >
                 {sortOrder === 'desc' ? '↓ Recent' : '↑ Oldest'}
               </button>
               {hasActiveFilters && (
                 <button
                   onClick={() => { setFilterTipo('ALL'); setFilterYear(''); setFilterMonth(''); setSearchText(''); setCurrentPage(1); }}
-                  className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md text-xs font-medium transition-colors border border-red-200"
+                  className="px-2.5 py-1.5 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/15 text-red-600 dark:text-red-400 rounded-md text-xs font-medium transition-colors border border-red-200 dark:border-red-500/30"
                 >
                   Clear filters
                 </button>
@@ -5624,18 +5650,18 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
         </div>
 
         {/* Filters Row */}
-        <div className="px-4 sm:px-6 py-3 bg-slate-50 border-b border-slate-200 flex flex-wrap gap-2 sm:gap-3 items-center">
+        <div className="px-4 sm:px-6 py-3 bg-slate-50 dark:bg-muted border-b border-slate-200 dark:border-edge flex flex-wrap gap-2 sm:gap-3 items-center">
           <input
             type="text"
             placeholder="Buscar..."
             value={searchText}
             onChange={e => { setSearchText(e.target.value); setCurrentPage(1); }}
-            className="px-3 py-2 border border-slate-300 rounded-lg text-sm w-40 sm:w-48 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="px-3 py-2 border border-slate-300 dark:border-edge-strong rounded-lg text-sm w-40 sm:w-48 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
           <select
             value={filterTipo}
             onChange={e => { setFilterTipo(e.target.value); setCurrentPage(1); }}
-            className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-slate-300 dark:border-edge-strong rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
           >
             <option value="ALL">Todos los tipos</option>
             {tipos.map(t => <option key={t} value={t}>{t}</option>)}
@@ -5643,7 +5669,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
           <select
             value={filterYear}
             onChange={e => { setFilterYear(e.target.value); setCurrentPage(1); }}
-            className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-slate-300 dark:border-edge-strong rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Todos los años</option>
             {years.map(y => <option key={y} value={y}>{y}</option>)}
@@ -5651,7 +5677,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
           <select
             value={filterMonth}
             onChange={e => { setFilterMonth(e.target.value); setCurrentPage(1); }}
-            className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-slate-300 dark:border-edge-strong rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Todos los meses</option>
             {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map((m, i) => (
@@ -5664,42 +5690,42 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
         <div className="overflow-x-auto">
           <table className="w-full text-[10px] sm:text-sm">
             <thead>
-              <tr className="bg-slate-100 border-b-2 border-slate-300">
+              <tr className="bg-slate-100 dark:bg-muted border-b-2 border-slate-300 dark:border-edge-strong">
                 <th className="px-1 sm:px-2 py-2 sm:py-3 text-center w-8">
                   <input
                     type="checkbox"
                     checked={paginated.length > 0 && paginated.every(m => selectedMovements.has(m.correlativo))}
                     onChange={toggleSelectAll}
-                    className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    className="w-3.5 h-3.5 rounded border-slate-300 dark:border-edge-strong text-blue-600 dark:text-blue-400 focus:ring-blue-500 cursor-pointer"
                     title="Seleccionar todos en esta página"
                   />
                 </th>
-                <th className="px-1 sm:px-3 py-2 sm:py-3 text-left text-[8px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">#</th>
-                <th className="px-1 sm:px-3 py-2 sm:py-3 text-left text-[8px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</th>
-                <th className="px-1 sm:px-3 py-2 sm:py-3 text-left text-[8px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Descripción</th>
-                <th className="px-1 sm:px-3 py-2 sm:py-3 text-right text-[8px] sm:text-xs font-bold text-red-600 uppercase tracking-wider">Egreso</th>
-                <th className="px-1 sm:px-3 py-2 sm:py-3 text-right text-[8px] sm:text-xs font-bold text-emerald-600 uppercase tracking-wider">Ingreso</th>
-                <th className="px-1 sm:px-3 py-2 sm:py-3 text-right text-[8px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Saldo</th>
-                <th className="px-1 sm:px-3 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Tipo</th>
-                <th className="px-1 sm:px-3 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Código</th>
-                <th className="px-1 sm:px-3 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Doc</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-left text-[8px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">#</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-left text-[8px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">Fecha</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-left text-[8px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">Descripción</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-right text-[8px] sm:text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">Egreso</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-right text-[8px] sm:text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Ingreso</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-right text-[8px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">Saldo</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">Tipo</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">Código</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">Doc</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200">
+            <tbody className="divide-y divide-slate-200 dark:divide-edge">
               {paginated.map((m, i) => (
-                <tr key={`${m.correlativo}-${i}`} className={`transition-colors group ${selectedMovements.has(m.correlativo) ? 'bg-red-50/60' : 'hover:bg-blue-50/50'}`}>
+                <tr key={`${m.correlativo}-${i}`} className={`transition-colors group ${selectedMovements.has(m.correlativo) ? 'bg-red-50/60 dark:bg-red-500/10' : 'hover:bg-blue-50/50 dark:hover:bg-blue-500/10'}`}>
                   <td className="px-1 sm:px-2 py-1.5 sm:py-2.5 text-center">
                     <input
                       type="checkbox"
                       checked={selectedMovements.has(m.correlativo)}
                       onChange={() => toggleSelect(m.correlativo)}
-                      className="w-3.5 h-3.5 rounded border-slate-300 text-red-600 focus:ring-red-500 cursor-pointer"
+                      className="w-3.5 h-3.5 rounded border-slate-300 dark:border-edge-strong text-red-600 dark:text-red-400 focus:ring-red-500 cursor-pointer"
                     />
                   </td>
-                  <td className="px-1 sm:px-3 py-1.5 sm:py-2.5 text-[9px] sm:text-xs text-slate-400 font-mono">{m.correlativo}</td>
-                  <td className="px-1 sm:px-3 py-1.5 sm:py-2.5 text-[9px] sm:text-xs font-medium text-slate-700 whitespace-nowrap">{formatDate(m.fecha)}</td>
+                  <td className="px-1 sm:px-3 py-1.5 sm:py-2.5 text-[9px] sm:text-xs text-slate-400 dark:text-faint font-mono">{m.correlativo}</td>
+                  <td className="px-1 sm:px-3 py-1.5 sm:py-2.5 text-[9px] sm:text-xs font-medium text-slate-700 dark:text-foreground-soft whitespace-nowrap">{formatDate(m.fecha)}</td>
                   {/* Descripción - editable on double click */}
-                  <td className={`px-1 sm:px-3 py-1.5 sm:py-2.5 text-[9px] sm:text-sm text-slate-800 font-medium ${expandedDescs.has(m.correlativo) ? '' : 'max-w-[100px] sm:max-w-[200px]'}`}>
+                  <td className={`px-1 sm:px-3 py-1.5 sm:py-2.5 text-[9px] sm:text-sm text-slate-800 dark:text-foreground font-medium ${expandedDescs.has(m.correlativo) ? '' : 'max-w-[100px] sm:max-w-[200px]'}`}>
                     {editingCell?.correlativo === m.correlativo && editingCell?.field === 'descripcion' ? (
                       <div className="flex items-center gap-1">
                         <input
@@ -5707,20 +5733,20 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                           value={editValue}
                           onChange={e => setEditValue(e.target.value)}
                           onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEditing(); }}
-                          className="w-full px-2 py-1 text-sm border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-blue-50"
+                          className="w-full px-2 py-1 text-sm border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-blue-50 dark:bg-blue-500/10"
                           autoFocus
                           disabled={saving}
                         />
-                        <button onClick={saveEdit} disabled={saving} className="p-1 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100 rounded">
+                        <button onClick={saveEdit} disabled={saving} className="p-1 text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/15 rounded">
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                         </button>
-                        <button onClick={cancelEditing} className="p-1 text-red-500 hover:text-red-700 hover:bg-red-100 rounded">
+                        <button onClick={cancelEditing} className="p-1 text-red-500 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-100 dark:hover:bg-red-500/15 rounded">
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                       </div>
                     ) : (
                       <span
-                        className={`block cursor-pointer hover:text-blue-600 transition-all ${expandedDescs.has(m.correlativo) ? 'whitespace-normal' : 'truncate'}`}
+                        className={`block cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-all ${expandedDescs.has(m.correlativo) ? 'whitespace-normal' : 'truncate'}`}
                         onClick={() => setExpandedDescs(prev => {
                           const next = new Set(prev);
                           if (next.has(m.correlativo)) next.delete(m.correlativo);
@@ -5735,12 +5761,12 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                     )}
                   </td>
                   <td className="px-1 sm:px-3 py-1.5 sm:py-2.5 text-[9px] sm:text-sm text-right font-mono whitespace-nowrap">
-                    {m.egreso ? <span className="text-red-600 font-semibold">-${formatCurrency(Math.round(m.egreso))}</span> : ''}
+                    {m.egreso ? <span className="text-red-600 dark:text-red-400 font-semibold">-${formatCurrency(Math.round(m.egreso))}</span> : ''}
                   </td>
                   <td className="px-1 sm:px-3 py-1.5 sm:py-2.5 text-[9px] sm:text-sm text-right font-mono whitespace-nowrap">
-                    {m.ingreso ? <span className="text-emerald-600 font-semibold">+${formatCurrency(Math.round(m.ingreso))}</span> : ''}
+                    {m.ingreso ? <span className="text-emerald-600 dark:text-emerald-400 font-semibold">+${formatCurrency(Math.round(m.ingreso))}</span> : ''}
                   </td>
-                  <td className="px-1 sm:px-3 py-1.5 sm:py-2.5 text-[9px] sm:text-sm text-right font-mono font-semibold text-slate-700 whitespace-nowrap">
+                  <td className="px-1 sm:px-3 py-1.5 sm:py-2.5 text-[9px] sm:text-sm text-right font-mono font-semibold text-slate-700 dark:text-foreground-soft whitespace-nowrap">
                     ${formatCurrency(Math.round(m.saldo))}
                   </td>
                   {/* Tipo - editable on click with dropdown */}
@@ -5751,24 +5777,24 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                           value={editValue}
                           onChange={e => setEditValue(e.target.value)}
                           onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEditing(); }}
-                          className="px-2 py-1 text-xs border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-blue-50 font-bold"
+                          className="px-2 py-1 text-xs border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-blue-50 dark:bg-blue-500/10 font-bold"
                           autoFocus
                           disabled={saving}
                         >
                           <option value="">— Sin tipo —</option>
                           {TIPO_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
                         </select>
-                        <button onClick={saveEdit} disabled={saving} className="p-1 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100 rounded">
+                        <button onClick={saveEdit} disabled={saving} className="p-1 text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/15 rounded">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                         </button>
-                        <button onClick={cancelEditing} className="p-1 text-red-500 hover:text-red-700 hover:bg-red-100 rounded">
+                        <button onClick={cancelEditing} className="p-1 text-red-500 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-100 dark:hover:bg-red-500/15 rounded">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                       </div>
                     ) : (
                       <span
                         onClick={() => startEditing(m.correlativo, 'tipo', getDisplayValue(m, 'tipo'))}
-                        className={`inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all ${tipoColors[getDisplayValue(m, 'tipo')] || 'bg-gray-100 text-gray-800'}`}
+                        className={`inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all ${tipoColors[getDisplayValue(m, 'tipo')] || 'bg-gray-100 dark:bg-muted text-gray-800 dark:text-foreground'}`}
                         title="Clic para cambiar tipo"
                       >
                         {getDisplayValue(m, 'tipo') || '—'}
@@ -5783,22 +5809,22 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                           value={editValue}
                           onChange={e => setEditValue(e.target.value.toUpperCase())}
                           onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEditing(); }}
-                          className="w-20 px-2 py-1 text-xs border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-blue-50 font-bold text-center uppercase"
+                          className="w-20 px-2 py-1 text-xs border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-blue-50 dark:bg-blue-500/10 font-bold text-center uppercase"
                           autoFocus
                           disabled={saving}
                           placeholder="Código"
                         />
-                        <button onClick={saveEdit} disabled={saving} className="p-1 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100 rounded">
+                        <button onClick={saveEdit} disabled={saving} className="p-1 text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/15 rounded">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                         </button>
-                        <button onClick={cancelEditing} className="p-1 text-red-500 hover:text-red-700 hover:bg-red-100 rounded">
+                        <button onClick={cancelEditing} className="p-1 text-red-500 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-100 dark:hover:bg-red-500/15 rounded">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                       </div>
                     ) : (
                       <span
                         onClick={() => startEditing(m.correlativo, 'cliente', getDisplayValue(m, 'cliente'))}
-                        className="text-[9px] sm:text-xs font-bold text-slate-600 cursor-pointer hover:text-blue-600 hover:bg-blue-50 px-1 sm:px-2 py-1 rounded transition-all"
+                        className="text-[9px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 px-1 sm:px-2 py-1 rounded transition-all"
                         title="Clic para editar código"
                       >
                         {getDisplayValue(m, 'cliente') || <span className="text-slate-300">—</span>}
@@ -5811,7 +5837,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                       <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() => setViewingAttachment({ url: m.attachmentUrl!, correlativo: m.correlativo })}
-                          className="p-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-900 rounded-lg transition-colors border border-blue-200 flex-shrink-0"
+                          className="p-1.5 bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 hover:bg-blue-200 hover:text-blue-900 dark:hover:text-blue-200 rounded-lg transition-colors border border-blue-200 dark:border-blue-500/30 flex-shrink-0"
                           title="Ver documento adjunto"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2h-2a2 2 0 01-2-2v-1" /></svg>
@@ -5819,14 +5845,14 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                         <button
                           onClick={() => handleDeleteAttachment(m.correlativo)}
                           disabled={uploading}
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                          className="p-1.5 text-slate-400 dark:text-faint hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors flex-shrink-0"
                           title="Eliminar documento"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                       </div>
                     ) : (
-                      <label className={`cursor-pointer inline-flex items-center justify-center p-1.5 border border-dashed border-slate-300 rounded-lg text-slate-400 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`} title="Subir documento (PDF o Imagen)">
+                      <label className={`cursor-pointer inline-flex items-center justify-center p-1.5 border border-dashed border-slate-300 dark:border-edge-strong rounded-lg text-slate-400 dark:text-faint hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`} title="Subir documento (PDF o Imagen)">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
                         <input type="file" accept="image/*,.pdf" className="hidden" disabled={uploading} onChange={(e) => handleAttachFile(m.correlativo, e)} />
                       </label>
@@ -5840,25 +5866,25 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="px-4 sm:px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
-            <span className="text-xs text-slate-500">
+          <div className="px-4 sm:px-6 py-3 bg-slate-50 dark:bg-muted border-t border-slate-200 dark:border-edge flex justify-between items-center">
+            <span className="text-xs text-slate-500 dark:text-muted-foreground">
               Mostrando {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, filtered.length)} de {filtered.length}
             </span>
             <div className="flex gap-1">
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 dark:border-edge-strong hover:bg-slate-100 dark:hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 ← Anterior
               </button>
-              <span className="px-3 py-1.5 text-xs font-bold text-slate-700">
+              <span className="px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-foreground-soft">
                 {currentPage} / {totalPages}
               </span>
               <button
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 dark:border-edge-strong hover:bg-slate-100 dark:hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Siguiente →
               </button>
@@ -5869,27 +5895,27 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
 
       {/* Attachment Viewer Modal */}
       {viewingAttachment && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-2 sm:p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden ring-1 ring-white/10 relative">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900 dark:bg-slate-800/80 backdrop-blur-sm p-2 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-card rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden ring-1 ring-white/10 relative">
 
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 bg-white/50 backdrop-blur-md sticky top-0 z-10 shrink-0">
+            <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 dark:border-edge bg-white/50 dark:bg-white/5 backdrop-blur-md sticky top-0 z-10 shrink-0">
               <div className="flex items-center gap-3">
-                <div className="p-2 sm:p-2.5 bg-blue-100/50 text-blue-600 rounded-lg sm:rounded-xl ring-1 ring-blue-100/50">
+                <div className="p-2 sm:p-2.5 bg-blue-100/50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 rounded-lg sm:rounded-xl ring-1 ring-blue-100/50">
                   <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2h-2a2 2 0 01-2-2v-1" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">Documento Adjunto</h3>
-                  <p className="text-xs sm:text-sm text-slate-500 font-medium">Movimiento #{viewingAttachment.correlativo}</p>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-foreground tracking-tight">Documento Adjunto</h3>
+                  <p className="text-xs sm:text-sm text-slate-500 dark:text-muted-foreground font-medium">Movimiento #{viewingAttachment.correlativo}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <a
                   href={viewingAttachment.url}
                   download
-                  className="hidden sm:flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-sm rounded-lg transition-colors"
+                  className="hidden sm:flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-muted hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-foreground-soft font-medium text-sm rounded-lg transition-colors"
                   title="Descargar"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -5899,7 +5925,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                 </a>
                 <button
                   onClick={() => setViewingAttachment(null)}
-                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+                  className="p-2 text-slate-400 dark:text-faint hover:text-slate-600 dark:hover:text-foreground-soft hover:bg-slate-100 dark:hover:bg-muted rounded-xl transition-all"
                   aria-label="Cerrar modal"
                 >
                   <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -5910,7 +5936,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
             </div>
 
             {/* Viewer Content */}
-            <div className="flex-1 bg-slate-50 relative overflow-hidden">
+            <div className="flex-1 bg-slate-50 dark:bg-muted relative overflow-hidden">
               <iframe
                 src={viewingAttachment.url}
                 className="w-full h-full border-0 absolute inset-0"
@@ -5920,11 +5946,11 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
             </div>
 
             {/* Mobile actions (bottom) */}
-            <div className="sm:hidden p-3 border-t border-slate-100 bg-white grid grid-cols-2 gap-2 shrink-0">
+            <div className="sm:hidden p-3 border-t border-slate-100 dark:border-edge bg-white dark:bg-card grid grid-cols-2 gap-2 shrink-0">
               <a
                 href={viewingAttachment.url}
                 download
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-700 font-medium text-sm rounded-xl"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 dark:bg-muted text-slate-700 dark:text-foreground-soft font-medium text-sm rounded-xl"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -5961,23 +5987,24 @@ function FinanceCharts({ flights, transactions, palette }: { flights: any[]; tra
   }, [flights]);
 
   const barRef = useRef<HTMLCanvasElement>(null);
+  const ct = useChartTheme();
   useEffect(() => {
     if (!barRef.current) return;
     const ctx = barRef.current.getContext("2d");
     if (!ctx) return;
     const g1 = ctx.createLinearGradient(0, 0, 0, 220);
-    g1.addColorStop(0, `${palette.accent}88`);
-    g1.addColorStop(1, `${palette.accent}22`);
+    g1.addColorStop(0, `${ct.accent}88`);
+    g1.addColorStop(1, `${ct.accent}22`);
     const g2 = ctx.createLinearGradient(0, 0, 0, 220);
-    g2.addColorStop(0, `${palette.accent2}88`);
-    g2.addColorStop(1, `${palette.accent2}22`);
+    g2.addColorStop(0, `${ct.accent2}88`);
+    g2.addColorStop(1, `${ct.accent2}22`);
     const chart = new Chart(ctx, {
       type: "bar",
       data: {
         labels: monthly.labels,
         datasets: [
-          { label: "Hours", data: monthly.hours, backgroundColor: g1, borderColor: palette.accent, borderRadius: 8, borderWidth: 2, maxBarThickness: 24 },
-          { label: "Revenue", data: monthly.revenue, backgroundColor: g2, borderColor: palette.accent2, borderRadius: 8, borderWidth: 2, maxBarThickness: 24 },
+          { label: "Hours", data: monthly.hours, backgroundColor: g1, borderColor: ct.accent, borderRadius: 8, borderWidth: 2, maxBarThickness: 24 },
+          { label: "Revenue", data: monthly.revenue, backgroundColor: g2, borderColor: ct.accent2, borderRadius: 8, borderWidth: 2, maxBarThickness: 24 },
         ],
       },
       options: {
@@ -5986,46 +6013,47 @@ function FinanceCharts({ flights, transactions, palette }: { flights: any[]; tra
           legend: {
             position: "top",
             labels: {
+              color: ct.ink,
               font: { size: 13, weight: 'bold' },
               padding: 15,
               usePointStyle: true
             }
           },
           tooltip: {
-            backgroundColor: '#0f172a',
-            titleColor: '#fff',
-            bodyColor: '#e2e8f0',
+            backgroundColor: ct.tooltipBg,
+            titleColor: ct.tooltipTitle,
+            bodyColor: ct.tooltipBody,
             padding: 12,
-            borderColor: palette.accent,
+            borderColor: ct.accent,
             borderWidth: 1,
             cornerRadius: 8
           }
         },
         scales: {
           x: {
-            grid: { color: palette.grid },
-            ticks: { font: { weight: 'bold' } }
+            grid: { color: ct.grid },
+            ticks: { color: ct.tick, font: { weight: 'bold' } }
           },
           y: {
-            grid: { color: palette.grid },
-            ticks: { font: { weight: 'bold' } }
+            grid: { color: ct.grid },
+            ticks: { color: ct.tick, font: { weight: 'bold' } }
           }
         }
       },
     });
     return () => chart.destroy();
-  }, [monthly]);
+  }, [monthly, ct.key]);
 
   return (
-    <div className={`${palette.card} rounded-xl shadow-sm border border-slate-200 overflow-hidden`}>
-      <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
+    <div className={`${palette.card} rounded-xl shadow-sm border border-slate-200 dark:border-edge overflow-hidden`}>
+      <div className="px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-edge">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-            <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-muted flex items-center justify-center">
+            <svg className="w-5 h-5 text-slate-600 dark:text-foreground-soft" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2v-1" />
             </svg>
           </div>
-          <h3 className="text-sm font-semibold text-slate-800">Financial Performance</h3>
+          <h3 className="text-sm font-semibold text-slate-800 dark:text-foreground">Financial Performance</h3>
         </div>
       </div>
       <div className="p-6">
@@ -6872,6 +6900,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   // Chart refs
   const donutRef = useRef<HTMLCanvasElement>(null);
   const barRef = useRef<HTMLCanvasElement>(null);
+  const ct = useChartTheme();
 
   // Fixed costs donut chart
   useEffect(() => {
@@ -6886,16 +6915,18 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
           data: computed.fixedBreakdown.map(b => b.value),
           backgroundColor: computed.fixedBreakdown.map(b => b.color),
           borderWidth: 2,
-          borderColor: '#fff',
+          borderColor: ct.donutBorder,
         }],
       },
       options: {
         responsive: true,
         cutout: '60%',
         plugins: {
-          legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12, usePointStyle: true } },
+          legend: { position: 'bottom', labels: { color: ct.ink, font: { size: 11 }, padding: 12, usePointStyle: true } },
           tooltip: {
-            backgroundColor: '#0f172a',
+            backgroundColor: ct.tooltipBg,
+            titleColor: ct.tooltipTitle,
+            bodyColor: ct.tooltipBody,
             padding: 10,
             cornerRadius: 8,
             callbacks: {
@@ -6906,7 +6937,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       },
     });
     return () => chart.destroy();
-  }, [computed.fixedBreakdown]);
+  }, [computed.fixedBreakdown, ct.key]);
 
   // Cost per hour bar chart
   useEffect(() => {
@@ -6918,7 +6949,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       { label: 'Fuel/hr', value: computed.combustibleHr, color: '#f59e0b' },
       { label: 'Oil/hr', value: computed.aceiteHr, color: '#8b5cf6' },
       { label: 'Maint./hr', value: computed.manttoHr, color: '#3b82f6' },
-      { label: 'TOTAL/hr', value: computed.totalCostoHr, color: '#0f172a' },
+      { label: 'TOTAL/hr', value: computed.totalCostoHr, color: ct.ink },
       { label: 'Revenue/hr', value: valorHoraCLP, color: '#10b981' },
     ];
     const chart = new Chart(ctx, {
@@ -6938,32 +6969,34 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#0f172a',
+            backgroundColor: ct.tooltipBg,
+            titleColor: ct.tooltipTitle,
+            bodyColor: ct.tooltipBody,
             padding: 10,
             cornerRadius: 8,
             callbacks: { label: (ctx: any) => ` $${formatCurrency(ctx.raw)} CLP/hr` },
           },
         },
         scales: {
-          x: { grid: { color: '#e2e8f0' }, ticks: { callback: (v: any) => '$' + formatCurrency(v) } },
-          y: { grid: { display: false }, ticks: { font: { size: 12, weight: 'bold' } } },
+          x: { grid: { color: ct.gridStrong }, ticks: { color: ct.tick, callback: (v: any) => '$' + formatCurrency(v) } },
+          y: { grid: { display: false }, ticks: { color: ct.ink, font: { size: 12, weight: 'bold' } } },
         },
       },
     });
     return () => chart.destroy();
-  }, [computed, valorHoraCLP]);
+  }, [computed, valorHoraCLP, ct.key]);
 
   // Helper for parameter inputs
   const ParamInput = ({ label, value, onChange, unit = 'CLP', small = false }: { label: string; value: number; onChange: (v: number) => void; unit?: string; small?: boolean }) => (
     <div className={`flex items-center justify-between gap-2 ${small ? 'py-1' : 'py-1.5'}`}>
-      <span className="text-xs text-slate-600 truncate">{label}</span>
+      <span className="text-xs text-slate-600 dark:text-foreground-soft truncate">{label}</span>
       <div className="flex items-center gap-1">
-        <span className="text-[10px] text-slate-400">{unit}</span>
+        <span className="text-[10px] text-slate-400 dark:text-faint">{unit}</span>
         <input
           type="number"
           value={value}
           onChange={e => onChange(Number(e.target.value) || 0)}
-          className="w-24 sm:w-28 text-right text-xs font-mono bg-slate-50 border border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
+          className="w-24 sm:w-28 text-right text-xs font-mono bg-slate-50 dark:bg-muted border border-slate-200 dark:border-edge rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
         />
       </div>
     </div>
@@ -6971,26 +7004,27 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
 
   // Stat card helper
   const StatCard = ({ label, value, sub, color = 'slate', icon }: { label: string; value: string; sub?: string; color?: string; icon: string }) => {
-    const colors: Record<string, string> = {
-      slate: 'bg-slate-50 text-slate-700',
-      green: 'bg-emerald-50 text-emerald-700',
-      red: 'bg-red-50 text-red-700',
-      blue: 'bg-blue-50 text-blue-700',
-      amber: 'bg-amber-50 text-amber-700',
-      indigo: 'bg-indigo-50 text-indigo-700',
+    const colors: Record<string, { bg: string; text: string }> = {
+      slate: { bg: 'bg-slate-50 dark:bg-white/5', text: 'text-slate-700 dark:text-slate-300' },
+      green: { bg: 'bg-emerald-50 dark:bg-emerald-500/15', text: 'text-emerald-700 dark:text-emerald-300' },
+      red: { bg: 'bg-red-50 dark:bg-red-500/15', text: 'text-red-700 dark:text-red-300' },
+      blue: { bg: 'bg-blue-50 dark:bg-blue-500/15', text: 'text-blue-700 dark:text-blue-300' },
+      amber: { bg: 'bg-amber-50 dark:bg-amber-500/15', text: 'text-amber-700 dark:text-amber-300' },
+      indigo: { bg: 'bg-indigo-50 dark:bg-indigo-500/15', text: 'text-indigo-700 dark:text-indigo-300' },
     };
+    const c = colors[color] || colors.slate;
     return (
-      <div className="bg-white border border-slate-200 rounded-lg p-3 sm:p-4">
+      <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-lg p-3 sm:p-4">
         <div className="flex items-start justify-between mb-2">
-          <div className={`w-8 h-8 rounded-lg ${colors[color]?.split(' ')[0] || 'bg-slate-50'} flex items-center justify-center`}>
-            <svg className={`w-4 h-4 ${colors[color]?.split(' ')[1] || 'text-slate-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className={`w-8 h-8 rounded-lg ${c.bg} flex items-center justify-center`}>
+            <svg className={`w-4 h-4 ${c.text}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={icon} />
             </svg>
           </div>
         </div>
-        <p className="text-lg sm:text-xl font-bold text-slate-900 font-mono">{value}</p>
-        <p className="text-[11px] text-slate-500 mt-0.5">{label}</p>
-        {sub && <p className="text-[10px] text-slate-400 mt-0.5">{sub}</p>}
+        <p className="text-lg sm:text-xl font-bold text-slate-900 dark:text-foreground font-mono">{value}</p>
+        <p className="text-[11px] text-slate-500 dark:text-muted-foreground mt-0.5">{label}</p>
+        {sub && <p className="text-[10px] text-slate-400 dark:text-faint mt-0.5">{sub}</p>}
       </div>
     );
   };
@@ -7001,21 +7035,21 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
+      <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl shadow-sm overflow-hidden">
+        <div className="px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-edge">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
-                <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center">
+                <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-slate-800">Cost Analysis — C-172 CC-AQI</h3>
-                <p className="text-xs text-slate-500 flex items-center gap-1.5 flex-wrap">
+                <h3 className="text-sm font-semibold text-slate-800 dark:text-foreground">Cost Analysis — C-172 CC-AQI</h3>
+                <p className="text-xs text-slate-500 dark:text-muted-foreground flex items-center gap-1.5 flex-wrap">
                   <span>Operating cost model · {horasAnuales} hobbs hrs/yr{!horasIsLive && <Icon name="edit" className="inline w-3 h-3 text-amber-500 ml-0.5 align-text-bottom" />}</span>
                   {(liveIndicators.uf || liveIndicators.usd || liveIndicators.fuel || liveIndicators.engine || liveIndicators.ipc || liveIndicators.cpi || liveIndicators.brent) && (
-                    <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">
+                    <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 rounded-full">
                       LIVE {[liveIndicators.uf && 'UF', liveIndicators.usd && 'USD', liveIndicators.fuel && 'AVGAS', liveIndicators.engine && 'ENGINE', liveIndicators.ipc && 'IPC', liveIndicators.cpi && 'CPI', liveIndicators.brent && 'BRENT'].filter(Boolean).join('+')}
                     </span>
                   )}
@@ -7024,7 +7058,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
             </div>
             <button
               onClick={() => setShowParams(!showParams)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${showParams ? 'bg-indigo-50 text-indigo-600 border-indigo-200' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${showParams ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30' : 'bg-slate-50 dark:bg-muted text-slate-600 dark:text-foreground-soft border-slate-200 dark:border-edge hover:bg-slate-100 dark:hover:bg-muted'}`}
             >
               {showParams ? 'Hide Parameters' : 'Edit Parameters'}
             </button>
@@ -7082,49 +7116,49 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
 
       {/* Editable Parameters Panel (collapsible) */}
       {showParams && (
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="px-4 sm:px-6 py-3 border-b border-slate-200 bg-slate-50">
-            <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Model Parameters</h4>
+        <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl shadow-sm overflow-hidden">
+          <div className="px-4 sm:px-6 py-3 border-b border-slate-200 dark:border-edge bg-slate-50 dark:bg-muted">
+            <h4 className="text-xs font-semibold text-slate-700 dark:text-foreground-soft uppercase tracking-wider">Model Parameters</h4>
           </div>
           <div className="p-4 sm:p-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {/* Economic rates */}
               <div>
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Economic Rates</p>
-                <div className="space-y-0.5 divide-y divide-slate-100">
+                <p className="text-[10px] font-semibold text-slate-400 dark:text-faint uppercase tracking-wider mb-2">Economic Rates</p>
+                <div className="space-y-0.5 divide-y divide-slate-100 dark:divide-edge">
                   <div className="flex items-center justify-between gap-2 py-1.5">
-                    <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">USD → CLP{liveIndicators.usd && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">LIVE</span>}</span>
+                    <span className="text-xs text-slate-600 dark:text-foreground-soft truncate flex items-center gap-1.5">USD → CLP{liveIndicators.usd && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 rounded-full">LIVE</span>}</span>
                     <div className="flex items-center gap-1">
-                      <span className="text-[10px] text-slate-400">CLP</span>
-                      <input type="number" value={usdRate} onChange={e => setUsdRate(Number(e.target.value) || 0)} className="w-24 sm:w-28 text-right text-xs font-mono bg-slate-50 border border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none" />
+                      <span className="text-[10px] text-slate-400 dark:text-faint">CLP</span>
+                      <input type="number" value={usdRate} onChange={e => setUsdRate(Number(e.target.value) || 0)} className="w-24 sm:w-28 text-right text-xs font-mono bg-slate-50 dark:bg-muted border border-slate-200 dark:border-edge rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none" />
                     </div>
                   </div>
                   <div className="flex items-center justify-between gap-2 py-1.5">
-                    <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">UF → CLP{liveIndicators.uf && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">LIVE</span>}</span>
+                    <span className="text-xs text-slate-600 dark:text-foreground-soft truncate flex items-center gap-1.5">UF → CLP{liveIndicators.uf && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 rounded-full">LIVE</span>}</span>
                     <div className="flex items-center gap-1">
-                      <span className="text-[10px] text-slate-400">CLP</span>
-                      <input type="number" value={ufRate} onChange={e => setUfRate(Number(e.target.value) || 0)} className="w-24 sm:w-28 text-right text-xs font-mono bg-slate-50 border border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none" />
+                      <span className="text-[10px] text-slate-400 dark:text-faint">CLP</span>
+                      <input type="number" value={ufRate} onChange={e => setUfRate(Number(e.target.value) || 0)} className="w-24 sm:w-28 text-right text-xs font-mono bg-slate-50 dark:bg-muted border border-slate-200 dark:border-edge rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none" />
                     </div>
                   </div>
                   <div className="flex items-center justify-between gap-2 py-1.5">
-                    <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">AVGAS / liter{liveIndicators.fuel && avgasSource && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">LIVE {avgasSource.label}</span>}</span>
+                    <span className="text-xs text-slate-600 dark:text-foreground-soft truncate flex items-center gap-1.5">AVGAS / liter{liveIndicators.fuel && avgasSource && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 rounded-full">LIVE {avgasSource.label}</span>}</span>
                     <div className="flex items-center gap-1">
-                      <span className="text-[10px] text-slate-400">CLP</span>
-                      <input type="number" value={avgasLiterCLP} onChange={e => setAvgasLiterCLP(Number(e.target.value) || 0)} className="w-24 sm:w-28 text-right text-xs font-mono bg-slate-50 border border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none" />
+                      <span className="text-[10px] text-slate-400 dark:text-faint">CLP</span>
+                      <input type="number" value={avgasLiterCLP} onChange={e => setAvgasLiterCLP(Number(e.target.value) || 0)} className="w-24 sm:w-28 text-right text-xs font-mono bg-slate-50 dark:bg-muted border border-slate-200 dark:border-edge rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none" />
                     </div>
                   </div>
                   {/* Fuel rate — read-only, from real flight data */}
                   <div className="flex items-center justify-between gap-2 py-1.5">
-                    <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">Fuel rate{overviewMetrics?.fuelRateLph && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">LIVE</span>}</span>
+                    <span className="text-xs text-slate-600 dark:text-foreground-soft truncate flex items-center gap-1.5">Fuel rate{overviewMetrics?.fuelRateLph && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 rounded-full">LIVE</span>}</span>
                     <div className="flex items-center gap-1">
-                      <span className="text-[11px] font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">{fuelLPH.toFixed(1)} LPH</span>
-                      <span className="text-[9px] text-slate-400">({(fuelLPH / 3.785).toFixed(1)} GPH)</span>
+                      <span className="text-[11px] font-mono font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded">{fuelLPH.toFixed(1)} LPH</span>
+                      <span className="text-[9px] text-slate-400 dark:text-faint">({(fuelLPH / 3.785).toFixed(1)} GPH)</span>
                     </div>
                   </div>
                   <ParamInput label="Oil / liter" value={aceiteLiterCLP} onChange={setAceiteLiterCLP} unit="CLP" />
                   {/* Revenue / hour — CLP ↔ UF toggle */}
                   <div className="flex items-center justify-between gap-2 py-1.5">
-                    <span className="text-xs text-slate-600 truncate">Revenue / hour</span>
+                    <span className="text-xs text-slate-600 dark:text-foreground-soft truncate">Revenue / hour</span>
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => {
@@ -7140,26 +7174,26 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                         }}
                         className={`px-1.5 py-0.5 text-[9px] font-bold rounded-full transition-colors ${
                           valorHoraUnit === 'UF'
-                            ? 'bg-indigo-100 text-indigo-700 ring-1 ring-indigo-300'
-                            : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                            ? 'bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-300'
+                            : 'bg-slate-100 dark:bg-muted text-slate-400 dark:text-faint hover:bg-slate-200 dark:hover:bg-white/10'
                         }`}
                         title="Click to toggle between CLP and UF"
                       >
                         UF
                       </button>
-                      <span className="text-[10px] text-slate-400">{valorHoraUnit}</span>
+                      <span className="text-[10px] text-slate-400 dark:text-faint">{valorHoraUnit}</span>
                       <input
                         type="number"
                         step={valorHoraUnit === 'UF' ? '0.01' : '1'}
                         value={valorHora}
                         onChange={e => setValorHora(Number(e.target.value) || 0)}
-                        className="w-24 sm:w-28 text-right text-xs font-mono bg-slate-50 border border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                        className="w-24 sm:w-28 text-right text-xs font-mono bg-slate-50 dark:bg-muted border border-slate-200 dark:border-edge rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
                       />
                     </div>
                   </div>
                   {/* Show converted value in the other unit */}
                   <div className="flex justify-end pr-1 -mt-1 mb-0.5">
-                    <span className="text-[9px] text-slate-400 font-mono">
+                    <span className="text-[9px] text-slate-400 dark:text-faint font-mono">
                       = {valorHoraUnit === 'UF'
                         ? `$${formatCurrency(valorHoraCLP)} CLP`
                         : `${(valorHora / ufRate).toFixed(2)} UF`
@@ -7170,24 +7204,24 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               </div>
               {/* Maintenance */}
               <div>
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Maintenance Costs</p>
-                <div className="space-y-0.5 divide-y divide-slate-100">
+                <p className="text-[10px] font-semibold text-slate-400 dark:text-faint uppercase tracking-wider mb-2">Maintenance Costs</p>
+                <div className="space-y-0.5 divide-y divide-slate-100 dark:divide-edge">
                   <ParamInput label="Oil change" value={cambioAceiteCLP} onChange={setCambioAceiteCLP} unit="CLP" />
                   <ParamInput label="100hr inspection" value={revision100CLP} onChange={setRevision100CLP} unit="CLP" />
                   {/* Hrs to TBO — read-only, computed live from ENGINE component */}
                   <div className="flex items-center justify-between gap-2 py-1.5">
-                    <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">Hrs to TBO (tach){engineComp && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">LIVE</span>}</span>
+                    <span className="text-xs text-slate-600 dark:text-foreground-soft truncate flex items-center gap-1.5">Hrs to TBO (tach){engineComp && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 rounded-full">LIVE</span>}</span>
                     <div className="flex items-center gap-1">
-                      <span className="text-[11px] font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">{overhaulCycleHrs.toFixed(1)} hrs</span>
-                      <span className="text-[9px] text-slate-400">(SMOH {engineComp ? Number(engineComp.horas_acumuladas).toFixed(1) : '?'})</span>
+                      <span className="text-[11px] font-mono font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded">{overhaulCycleHrs.toFixed(1)} hrs</span>
+                      <span className="text-[9px] text-slate-400 dark:text-faint">(SMOH {engineComp ? Number(engineComp.horas_acumuladas).toFixed(1) : '?'})</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between gap-2 py-1.5">
-                    <span className="text-xs text-slate-600 truncate flex items-center gap-1.5">
+                    <span className="text-xs text-slate-600 dark:text-foreground-soft truncate flex items-center gap-1.5">
                       Hours / year
                       {horasIsLive
-                        ? <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full">LIVE</span>
-                        : <button onClick={() => setHorasAnuales(liveHorasAnuales)} className="px-1.5 py-0.5 text-[9px] font-bold bg-amber-100 text-amber-700 rounded-full hover:bg-amber-200 transition-colors" title={`Reset to live: ${liveHorasAnuales} hrs`}>↺ LIVE {liveHorasAnuales}</button>
+                        ? <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 rounded-full">LIVE</span>
+                        : <button onClick={() => setHorasAnuales(liveHorasAnuales)} className="px-1.5 py-0.5 text-[9px] font-bold bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 rounded-full hover:bg-amber-200 transition-colors" title={`Reset to live: ${liveHorasAnuales} hrs`}>↺ LIVE {liveHorasAnuales}</button>
                       }
                     </span>
                     <div className="flex items-center gap-1">
@@ -7195,56 +7229,56 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                         type="number"
                         value={horasAnuales}
                         onChange={e => setHorasAnuales(Number(e.target.value) || 0)}
-                        className={`w-16 text-right text-[11px] font-mono font-bold px-2 py-0.5 rounded border-0 focus:ring-1 focus:ring-blue-400 ${horasIsLive ? 'text-blue-700 bg-blue-50' : 'text-amber-700 bg-amber-50'}`}
+                        className={`w-16 text-right text-[11px] font-mono font-bold px-2 py-0.5 rounded border-0 focus:ring-1 focus:ring-blue-400 ${horasIsLive ? 'text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-500/10' : 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10'}`}
                       />
-                      <span className="text-[9px] text-slate-400">hrs ({(overviewMetrics?.annualStats?.avgMonthlyHobbsThisYear ?? 0).toFixed(1)}/mo)</span>
+                      <span className="text-[9px] text-slate-400 dark:text-faint">hrs ({(overviewMetrics?.annualStats?.avgMonthlyHobbsThisYear ?? 0).toFixed(1)}/mo)</span>
                     </div>
                   </div>
                 </div>
               </div>
               {/* Overhaul cost model */}
               <div>
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Overhaul Cost (Ago 2022 + IPC Chile)</p>
-                <div className="space-y-0.5 divide-y divide-slate-100">
+                <p className="text-[10px] font-semibold text-slate-400 dark:text-faint uppercase tracking-wider mb-2">Overhaul Cost (Ago 2022 + IPC Chile)</p>
+                <div className="space-y-0.5 divide-y divide-slate-100 dark:divide-edge">
                   <ParamInput label="Eagle Copters (motor)" value={overhaulMotorCLP} onChange={setOverhaulMotorCLP} unit="CLP" />
                   <ParamInput label="Labor (installation)" value={overhaulLaborCLP} onChange={setOverhaulLaborCLP} unit="CLP" />
                   <div className="flex items-center gap-1">
                     <ParamInput label="IPC Chile cumul." value={clInflationPct} onChange={setClInflationPct} unit="%" />
-                    {liveIndicators.ipc && <span className="px-1.5 py-0.5 text-[8px] font-bold bg-emerald-100 text-emerald-700 rounded-full whitespace-nowrap">LIVE</span>}
+                    {liveIndicators.ipc && <span className="px-1.5 py-0.5 text-[8px] font-bold bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 rounded-full whitespace-nowrap">LIVE</span>}
                   </div>
                   {/* Computed total — read-only */}
                   <div className="flex items-center justify-between py-1.5">
-                    <span className="text-[11px] text-slate-600">IPC model</span>
+                    <span className="text-[11px] text-slate-600 dark:text-foreground-soft">IPC model</span>
                     <div className="flex items-center gap-1">
-                      <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded text-amber-700 bg-amber-50">${formatCurrency(overhaulCLP)}</span>
-                      <span className="text-[9px] text-slate-400">CLP</span>
+                      <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10">${formatCurrency(overhaulCLP)}</span>
+                      <span className="text-[9px] text-slate-400 dark:text-faint">CLP</span>
                     </div>
                   </div>
                   {/* Market motor price — read-only */}
                   <div className="flex items-center justify-between py-1.5">
-                    <span className="text-[11px] text-slate-600 flex items-center gap-1">Market{liveIndicators.engine && <span className="px-1 py-0.5 text-[8px] font-bold bg-emerald-100 text-emerald-700 rounded-full">LIVE</span>}</span>
+                    <span className="text-[11px] text-slate-600 dark:text-foreground-soft flex items-center gap-1">Market{liveIndicators.engine && <span className="px-1 py-0.5 text-[8px] font-bold bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 rounded-full">LIVE</span>}</span>
                     <div className="flex items-center gap-1">
-                      <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded text-blue-700 bg-blue-50">${formatCurrency(computed.marketReplacementCLP)}</span>
-                      <span className="text-[9px] text-slate-400">CLP</span>
+                      <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-500/10">${formatCurrency(computed.marketReplacementCLP)}</span>
+                      <span className="text-[9px] text-slate-400 dark:text-faint">CLP</span>
                     </div>
                   </div>
                   {/* Effective cost used — average of both methods */}
-                  <div className="flex items-center justify-between py-1.5 bg-slate-50 -mx-1 px-1 rounded">
-                    <span className="text-[11px] font-semibold text-slate-700 flex items-center gap-1">
+                  <div className="flex items-center justify-between py-1.5 bg-slate-50 dark:bg-muted -mx-1 px-1 rounded">
+                    <span className="text-[11px] font-semibold text-slate-700 dark:text-foreground-soft flex items-center gap-1">
                       Used in calcs
-                      <span className={`px-1 py-0.5 text-[8px] font-bold rounded-full ${computed.overhaulSource === 'market' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>MAX · {computed.overhaulSource === 'market' ? 'MARKET' : 'IPC'}</span>
+                      <span className={`px-1 py-0.5 text-[8px] font-bold rounded-full ${computed.overhaulSource === 'market' ? 'bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300' : 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300'}`}>MAX · {computed.overhaulSource === 'market' ? 'MARKET' : 'IPC'}</span>
                     </span>
                     <div className="flex items-center gap-1">
-                      <span className="text-[11px] font-mono font-bold text-slate-800 bg-white px-2 py-0.5 rounded ring-1 ring-slate-300">${formatCurrency(computed.effectiveOverhaulCLP)}</span>
-                      <span className="text-[9px] text-slate-400">CLP</span>
+                      <span className="text-[11px] font-mono font-bold text-slate-800 dark:text-foreground bg-white dark:bg-card px-2 py-0.5 rounded ring-1 ring-slate-300 dark:ring-edge-strong">${formatCurrency(computed.effectiveOverhaulCLP)}</span>
+                      <span className="text-[9px] text-slate-400 dark:text-faint">CLP</span>
                     </div>
                   </div>
                 </div>
               </div>
               {/* Fixed costs */}
               <div>
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Annual Fixed Costs</p>
-                <div className="space-y-0.5 divide-y divide-slate-100">
+                <p className="text-[10px] font-semibold text-slate-400 dark:text-faint uppercase tracking-wider mb-2">Annual Fixed Costs</p>
+                <div className="space-y-0.5 divide-y divide-slate-100 dark:divide-edge">
                   <ParamInput label="Insurance" value={seguroAnual} onChange={setSeguroAnual} />
                   <ParamInput label="Hangar" value={hangarAnual} onChange={setHangarAnual} />
                   <ParamInput label="TOA + Patents" value={toaPatentesAnual} onChange={setToaPatentesAnual} />
@@ -7255,8 +7289,8 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               </div>
             </div>
             {/* Overhaul funding row */}
-            <div className="mt-4 pt-4 border-t border-slate-100">
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Overhaul Funding</p>
+            <div className="mt-4 pt-4 border-t border-slate-100 dark:border-edge">
+              <p className="text-[10px] font-semibold text-slate-400 dark:text-faint uppercase tracking-wider mb-2">Overhaul Funding</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <ParamInput label="Recaudado (total)" value={recaudado} onChange={setRecaudado} />
               </div>
@@ -7272,10 +7306,10 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Fixed costs donut */}
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="px-4 sm:px-6 py-3 border-b border-slate-200">
-            <h4 className="text-xs font-semibold text-slate-700">Fixed Cost Breakdown</h4>
-            <p className="text-[10px] text-slate-400">Annual: ${formatCurrency(Math.round(computed.totalFijoAnual))} CLP · Monthly: ${formatCurrency(Math.round(computed.totalFijoMes))} CLP</p>
+        <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl shadow-sm overflow-hidden">
+          <div className="px-4 sm:px-6 py-3 border-b border-slate-200 dark:border-edge">
+            <h4 className="text-xs font-semibold text-slate-700 dark:text-foreground-soft">Fixed Cost Breakdown</h4>
+            <p className="text-[10px] text-slate-400 dark:text-faint">Annual: ${formatCurrency(Math.round(computed.totalFijoAnual))} CLP · Monthly: ${formatCurrency(Math.round(computed.totalFijoMes))} CLP</p>
           </div>
           <div className="p-4 flex justify-center">
             <div className="w-full max-w-[280px]">
@@ -7285,10 +7319,10 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         </div>
 
         {/* Cost per hour horizontal bar */}
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="px-4 sm:px-6 py-3 border-b border-slate-200">
-            <h4 className="text-xs font-semibold text-slate-700">Cost vs Revenue per Hour</h4>
-            <p className="text-[10px] text-slate-400">All values in CLP per flight hour</p>
+        <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl shadow-sm overflow-hidden">
+          <div className="px-4 sm:px-6 py-3 border-b border-slate-200 dark:border-edge">
+            <h4 className="text-xs font-semibold text-slate-700 dark:text-foreground-soft">Cost vs Revenue per Hour</h4>
+            <p className="text-[10px] text-slate-400 dark:text-faint">All values in CLP per flight hour</p>
           </div>
           <div className="p-4">
             <canvas ref={barRef} height={180} />
@@ -7297,63 +7331,63 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       </div>
 
       {/* Detailed Breakdown Table */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="px-4 sm:px-6 py-3 border-b border-slate-200">
-          <h4 className="text-xs font-semibold text-slate-700">Detailed Cost Breakdown</h4>
+      <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl shadow-sm overflow-hidden">
+        <div className="px-4 sm:px-6 py-3 border-b border-slate-200 dark:border-edge">
+          <h4 className="text-xs font-semibold text-slate-700 dark:text-foreground-soft">Detailed Cost Breakdown</h4>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-slate-50">
+            <thead className="bg-slate-50 dark:bg-muted">
               <tr>
-                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Category</th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Item</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Per Hour</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Per Month</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Per Year</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-500 uppercase tracking-wider">% Total</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Category</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Item</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Per Hour</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Per Month</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Per Year</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">% Total</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-edge">
               {/* Fixed section */}
               {computed.fixedBreakdown.map((item, i) => (
-                <tr key={`f-${i}`} className="hover:bg-slate-50">
-                  {i === 0 && <td rowSpan={computed.fixedBreakdown.length} className="px-4 py-2 text-xs font-semibold text-indigo-600 align-top border-r border-slate-100">Fixed</td>}
-                  <td className="px-4 py-2 text-xs text-slate-700">{item.name}</td>
-                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-600">${formatCurrency(Math.round(item.value / horasAnuales))}</td>
-                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-600">${formatCurrency(Math.round(item.value / 12))}</td>
-                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-600">${formatCurrency(Math.round(item.value))}</td>
-                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-400">{((item.value / horasAnuales / computed.totalCostoHr) * 100).toFixed(1)}%</td>
+                <tr key={`f-${i}`} className="hover:bg-slate-50 dark:hover:bg-muted">
+                  {i === 0 && <td rowSpan={computed.fixedBreakdown.length} className="px-4 py-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 align-top border-r border-slate-100 dark:border-edge">Fixed</td>}
+                  <td className="px-4 py-2 text-xs text-slate-700 dark:text-foreground-soft">{item.name}</td>
+                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-600 dark:text-foreground-soft">${formatCurrency(Math.round(item.value / horasAnuales))}</td>
+                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-600 dark:text-foreground-soft">${formatCurrency(Math.round(item.value / 12))}</td>
+                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-600 dark:text-foreground-soft">${formatCurrency(Math.round(item.value))}</td>
+                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-400 dark:text-faint">{((item.value / horasAnuales / computed.totalCostoHr) * 100).toFixed(1)}%</td>
                 </tr>
               ))}
-              <tr className="bg-indigo-50/50 font-semibold">
-                <td className="px-4 py-2 text-xs text-indigo-700 border-r border-slate-100"></td>
-                <td className="px-4 py-2 text-xs text-indigo-700">Subtotal Fixed</td>
-                <td className="px-4 py-2 text-xs text-right font-mono text-indigo-700">${formatCurrency(Math.round(computed.totalFijoHr))}</td>
-                <td className="px-4 py-2 text-xs text-right font-mono text-indigo-700">${formatCurrency(Math.round(computed.totalFijoMes))}</td>
-                <td className="px-4 py-2 text-xs text-right font-mono text-indigo-700">${formatCurrency(Math.round(computed.totalFijoAnual))}</td>
-                <td className="px-4 py-2 text-xs text-right font-mono text-indigo-700">{((computed.totalFijoHr / computed.totalCostoHr) * 100).toFixed(1)}%</td>
+              <tr className="bg-indigo-50/50 dark:bg-indigo-500/10 font-semibold">
+                <td className="px-4 py-2 text-xs text-indigo-700 dark:text-indigo-300 border-r border-slate-100 dark:border-edge"></td>
+                <td className="px-4 py-2 text-xs text-indigo-700 dark:text-indigo-300">Subtotal Fixed</td>
+                <td className="px-4 py-2 text-xs text-right font-mono text-indigo-700 dark:text-indigo-300">${formatCurrency(Math.round(computed.totalFijoHr))}</td>
+                <td className="px-4 py-2 text-xs text-right font-mono text-indigo-700 dark:text-indigo-300">${formatCurrency(Math.round(computed.totalFijoMes))}</td>
+                <td className="px-4 py-2 text-xs text-right font-mono text-indigo-700 dark:text-indigo-300">${formatCurrency(Math.round(computed.totalFijoAnual))}</td>
+                <td className="px-4 py-2 text-xs text-right font-mono text-indigo-700 dark:text-indigo-300">{((computed.totalFijoHr / computed.totalCostoHr) * 100).toFixed(1)}%</td>
               </tr>
               {/* Variable section */}
               {computed.variableBreakdown.map((item, i) => (
-                <tr key={`v-${i}`} className="hover:bg-slate-50">
-                  {i === 0 && <td rowSpan={computed.variableBreakdown.length} className="px-4 py-2 text-xs font-semibold text-emerald-600 align-top border-r border-slate-100">Variable</td>}
-                  <td className="px-4 py-2 text-xs text-slate-700">{item.name}</td>
-                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-600">${formatCurrency(Math.round(item.value))}</td>
-                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-600">${formatCurrency(Math.round(item.value * horasAnuales / 12))}</td>
-                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-600">${formatCurrency(Math.round(item.value * horasAnuales))}</td>
-                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-400">{((item.value / computed.totalCostoHr) * 100).toFixed(1)}%</td>
+                <tr key={`v-${i}`} className="hover:bg-slate-50 dark:hover:bg-muted">
+                  {i === 0 && <td rowSpan={computed.variableBreakdown.length} className="px-4 py-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 align-top border-r border-slate-100 dark:border-edge">Variable</td>}
+                  <td className="px-4 py-2 text-xs text-slate-700 dark:text-foreground-soft">{item.name}</td>
+                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-600 dark:text-foreground-soft">${formatCurrency(Math.round(item.value))}</td>
+                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-600 dark:text-foreground-soft">${formatCurrency(Math.round(item.value * horasAnuales / 12))}</td>
+                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-600 dark:text-foreground-soft">${formatCurrency(Math.round(item.value * horasAnuales))}</td>
+                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-400 dark:text-faint">{((item.value / computed.totalCostoHr) * 100).toFixed(1)}%</td>
                 </tr>
               ))}
-              <tr className="bg-emerald-50/50 font-semibold">
-                <td className="px-4 py-2 text-xs text-emerald-700 border-r border-slate-100"></td>
-                <td className="px-4 py-2 text-xs text-emerald-700">Subtotal Variable</td>
-                <td className="px-4 py-2 text-xs text-right font-mono text-emerald-700">${formatCurrency(Math.round(computed.totalVariableHr))}</td>
-                <td className="px-4 py-2 text-xs text-right font-mono text-emerald-700">${formatCurrency(Math.round(computed.totalVariableHr * horasAnuales / 12))}</td>
-                <td className="px-4 py-2 text-xs text-right font-mono text-emerald-700">${formatCurrency(Math.round(computed.totalVariableHr * horasAnuales))}</td>
-                <td className="px-4 py-2 text-xs text-right font-mono text-emerald-700">{((computed.totalVariableHr / computed.totalCostoHr) * 100).toFixed(1)}%</td>
+              <tr className="bg-emerald-50/50 dark:bg-emerald-500/10 font-semibold">
+                <td className="px-4 py-2 text-xs text-emerald-700 dark:text-emerald-300 border-r border-slate-100 dark:border-edge"></td>
+                <td className="px-4 py-2 text-xs text-emerald-700 dark:text-emerald-300">Subtotal Variable</td>
+                <td className="px-4 py-2 text-xs text-right font-mono text-emerald-700 dark:text-emerald-300">${formatCurrency(Math.round(computed.totalVariableHr))}</td>
+                <td className="px-4 py-2 text-xs text-right font-mono text-emerald-700 dark:text-emerald-300">${formatCurrency(Math.round(computed.totalVariableHr * horasAnuales / 12))}</td>
+                <td className="px-4 py-2 text-xs text-right font-mono text-emerald-700 dark:text-emerald-300">${formatCurrency(Math.round(computed.totalVariableHr * horasAnuales))}</td>
+                <td className="px-4 py-2 text-xs text-right font-mono text-emerald-700 dark:text-emerald-300">{((computed.totalVariableHr / computed.totalCostoHr) * 100).toFixed(1)}%</td>
               </tr>
               {/* Grand total */}
-              <tr className="bg-slate-800 text-white font-bold">
+              <tr className="bg-slate-800 dark:bg-slate-700 text-white font-bold">
                 <td className="px-4 py-3 text-xs" colSpan={2}>TOTAL COST</td>
                 <td className="px-4 py-3 text-xs text-right font-mono">${formatCurrency(Math.round(computed.totalCostoHr))}</td>
                 <td className="px-4 py-3 text-xs text-right font-mono">${formatCurrency(Math.round(computed.totalCostoHr * horasAnuales / 12))}</td>
@@ -7413,22 +7447,22 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         const monthlyFundingNeeded = monthsRemaining > 0 ? computed.faltaOverhaul / monthsRemaining : 0;
 
         return (
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-            <div className="px-4 sm:px-6 py-3 border-b border-slate-200">
+          <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl shadow-sm overflow-hidden">
+            <div className="px-4 sm:px-6 py-3 border-b border-slate-200 dark:border-edge">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <div className="w-7 h-7 rounded-lg bg-red-50 dark:bg-red-500/10 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
                   <div>
-                    <h4 className="text-xs font-semibold text-slate-700">Engine Overhaul Timeline</h4>
-                    <p className="text-[10px] text-slate-400">{usingOverride ? <span className="inline-flex items-center gap-1"><Icon name="edit" className="w-3 h-3" /> User projection</span> : 'Live data'} · TBO {tbo} hrs · SMOH {smoh.toFixed(1)} hrs · H/T Ratio {htRatio.toFixed(3)}{usingOverride && <span className="ml-1 text-amber-600 font-semibold">@ {horasAnuales} hobbs/yr</span>}</p>
+                    <h4 className="text-xs font-semibold text-slate-700 dark:text-foreground-soft">Engine Overhaul Timeline</h4>
+                    <p className="text-[10px] text-slate-400 dark:text-faint">{usingOverride ? <span className="inline-flex items-center gap-1"><Icon name="edit" className="w-3 h-3" /> User projection</span> : 'Live data'} · TBO {tbo} hrs · SMOH {smoh.toFixed(1)} hrs · H/T Ratio {htRatio.toFixed(3)}{usingOverride && <span className="ml-1 text-amber-600 dark:text-amber-400 font-semibold">@ {horasAnuales} hobbs/yr</span>}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${enginePct > 80 ? 'bg-red-100 text-red-700' : enginePct > 60 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${enginePct > 80 ? 'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300' : enginePct > 60 ? 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300' : 'bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-300'}`}>
                     {(100 - enginePct).toFixed(1)}% life remaining
                   </span>
                 </div>
@@ -7437,11 +7471,11 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
             <div className="p-4 sm:p-6">
               {/* Engine life progress bar */}
               <div className="mb-5">
-                <div className="flex justify-between text-[10px] text-slate-500 mb-1.5">
-                  <span>SMOH: <span className="font-mono font-bold text-slate-700">{smoh.toFixed(1)}</span> tach hrs</span>
-                  <span>TBO: <span className="font-mono font-bold text-slate-700">{tbo}</span> tach hrs</span>
+                <div className="flex justify-between text-[10px] text-slate-500 dark:text-muted-foreground mb-1.5">
+                  <span>SMOH: <span className="font-mono font-bold text-slate-700 dark:text-foreground-soft">{smoh.toFixed(1)}</span> tach hrs</span>
+                  <span>TBO: <span className="font-mono font-bold text-slate-700 dark:text-foreground-soft">{tbo}</span> tach hrs</span>
                 </div>
-                <div className="h-4 bg-slate-100 rounded-full overflow-hidden relative">
+                <div className="h-4 bg-slate-100 dark:bg-muted rounded-full overflow-hidden relative">
                   <div
                     className={`h-full rounded-full transition-all ${enginePct > 80 ? 'bg-gradient-to-r from-red-500 to-red-400' : enginePct > 60 ? 'bg-gradient-to-r from-amber-500 to-amber-400' : 'bg-gradient-to-r from-green-500 to-green-400'}`}
                     style={{ width: `${Math.min(100, enginePct)}%` }}
@@ -7450,61 +7484,61 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                     <span className="text-[10px] font-bold text-white drop-shadow-sm">{enginePct.toFixed(1)}%</span>
                   </div>
                 </div>
-                <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-                  <span>Remaining: <span className="font-mono font-bold text-slate-600">{tachRemaining.toFixed(1)}</span> tach hrs</span>
-                  <span>= <span className="font-mono font-bold text-blue-600">{hobbsRemaining.toFixed(1)}</span> hobbs hrs (×{htRatio.toFixed(3)})</span>
+                <div className="flex justify-between text-[10px] text-slate-400 dark:text-faint mt-1">
+                  <span>Remaining: <span className="font-mono font-bold text-slate-600 dark:text-foreground-soft">{tachRemaining.toFixed(1)}</span> tach hrs</span>
+                  <span>= <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{hobbsRemaining.toFixed(1)}</span> hobbs hrs (×{htRatio.toFixed(3)})</span>
                 </div>
               </div>
 
               {/* Prediction KPIs */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-                <div className="text-center p-3 bg-slate-50 rounded-lg">
-                  <p className="text-lg font-bold text-slate-900 font-mono">{tachRemaining.toFixed(1)}</p>
-                  <p className="text-[10px] text-slate-500">Tach hrs left</p>
+                <div className="text-center p-3 bg-slate-50 dark:bg-muted rounded-lg">
+                  <p className="text-lg font-bold text-slate-900 dark:text-foreground font-mono">{tachRemaining.toFixed(1)}</p>
+                  <p className="text-[10px] text-slate-500 dark:text-muted-foreground">Tach hrs left</p>
                 </div>
-                <div className="text-center p-3 bg-blue-50 rounded-lg">
-                  <p className="text-lg font-bold text-blue-700 font-mono">{hobbsRemaining.toFixed(1)}</p>
-                  <p className="text-[10px] text-slate-500">Hobbs hrs left</p>
+                <div className="text-center p-3 bg-blue-50 dark:bg-blue-500/10 rounded-lg">
+                  <p className="text-lg font-bold text-blue-700 dark:text-blue-300 font-mono">{hobbsRemaining.toFixed(1)}</p>
+                  <p className="text-[10px] text-slate-500 dark:text-muted-foreground">Hobbs hrs left</p>
                 </div>
-                <div className="text-center p-3 bg-amber-50 rounded-lg">
-                  <p className="text-lg font-bold text-amber-700 font-mono">{fmtTime(daysRemaining)}</p>
-                  <p className="text-[10px] text-slate-500">Time to overhaul</p>
-                  <p className="text-[9px] text-slate-400">{fmtTime(minDays)} – {fmtTime(maxDays)} range</p>
+                <div className="text-center p-3 bg-amber-50 dark:bg-amber-500/10 rounded-lg">
+                  <p className="text-lg font-bold text-amber-700 dark:text-amber-300 font-mono">{fmtTime(daysRemaining)}</p>
+                  <p className="text-[10px] text-slate-500 dark:text-muted-foreground">Time to overhaul</p>
+                  <p className="text-[9px] text-slate-400 dark:text-faint">{fmtTime(minDays)} – {fmtTime(maxDays)} range</p>
                 </div>
-                <div className="text-center p-3 bg-red-50 rounded-lg">
-                  <p className="text-lg font-bold text-red-700 font-mono">{fmtDate(estDate)}</p>
-                  <p className="text-[10px] text-slate-500">Estimated date</p>
-                  <p className="text-[9px] text-slate-400">{fmtDate(minDate)} – {fmtDate(maxDate)}</p>
+                <div className="text-center p-3 bg-red-50 dark:bg-red-500/10 rounded-lg">
+                  <p className="text-lg font-bold text-red-700 dark:text-red-300 font-mono">{fmtDate(estDate)}</p>
+                  <p className="text-[10px] text-slate-500 dark:text-muted-foreground">Estimated date</p>
+                  <p className="text-[9px] text-slate-400 dark:text-faint">{fmtDate(minDate)} – {fmtDate(maxDate)}</p>
                 </div>
               </div>
 
               {/* Flight rate details */}
-              <div className="bg-slate-50 rounded-lg p-3 mb-5">
-                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Flight Rate Analysis</p>
+              <div className="bg-slate-50 dark:bg-muted rounded-lg p-3 mb-5">
+                <p className="text-[10px] font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider mb-2">Flight Rate Analysis</p>
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                   <div>
-                    <p className="text-[10px] text-slate-400">30-day rate</p>
-                    <p className="text-sm font-bold text-slate-700 font-mono">{(rate30d * 30.44 * htRatio).toFixed(1)} <span className="text-[10px] font-normal text-slate-400">hobbs/mo</span></p>
-                    <p className="text-[9px] text-slate-400">{(rate30d * 30.44).toFixed(1)} tach/mo</p>
+                    <p className="text-[10px] text-slate-400 dark:text-faint">30-day rate</p>
+                    <p className="text-sm font-bold text-slate-700 dark:text-foreground-soft font-mono">{(rate30d * 30.44 * htRatio).toFixed(1)} <span className="text-[10px] font-normal text-slate-400 dark:text-faint">hobbs/mo</span></p>
+                    <p className="text-[9px] text-slate-400 dark:text-faint">{(rate30d * 30.44).toFixed(1)} tach/mo</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-slate-400">90-day rate</p>
-                    <p className="text-sm font-bold text-slate-700 font-mono">{(rate90d * 30.44 * htRatio).toFixed(1)} <span className="text-[10px] font-normal text-slate-400">hobbs/mo</span></p>
-                    <p className="text-[9px] text-slate-400">{(rate90d * 30.44).toFixed(1)} tach/mo</p>
+                    <p className="text-[10px] text-slate-400 dark:text-faint">90-day rate</p>
+                    <p className="text-sm font-bold text-slate-700 dark:text-foreground-soft font-mono">{(rate90d * 30.44 * htRatio).toFixed(1)} <span className="text-[10px] font-normal text-slate-400 dark:text-faint">hobbs/mo</span></p>
+                    <p className="text-[9px] text-slate-400 dark:text-faint">{(rate90d * 30.44).toFixed(1)} tach/mo</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-slate-400">Annual rate</p>
-                    <p className="text-sm font-bold text-slate-700 font-mono">{(rateAnnual * 30.44 * htRatio).toFixed(1)} <span className="text-[10px] font-normal text-slate-400">hobbs/mo</span></p>
-                    <p className="text-[9px] text-slate-400">{(rateAnnual * 30.44).toFixed(1)} tach/mo</p>
+                    <p className="text-[10px] text-slate-400 dark:text-faint">Annual rate</p>
+                    <p className="text-sm font-bold text-slate-700 dark:text-foreground-soft font-mono">{(rateAnnual * 30.44 * htRatio).toFixed(1)} <span className="text-[10px] font-normal text-slate-400 dark:text-faint">hobbs/mo</span></p>
+                    <p className="text-[9px] text-slate-400 dark:text-faint">{(rateAnnual * 30.44).toFixed(1)} tach/mo</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-slate-400">Weighted avg</p>
-                    <p className="text-sm font-bold text-blue-700 font-mono">{hobbsPerMonth.toFixed(1)} <span className="text-[10px] font-normal text-slate-400">hobbs/mo</span></p>
-                    <p className="text-[9px] text-slate-400">= {tachPerMonth.toFixed(1)} tach/mo</p>
+                    <p className="text-[10px] text-slate-400 dark:text-faint">Weighted avg</p>
+                    <p className="text-sm font-bold text-blue-700 dark:text-blue-300 font-mono">{hobbsPerMonth.toFixed(1)} <span className="text-[10px] font-normal text-slate-400 dark:text-faint">hobbs/mo</span></p>
+                    <p className="text-[9px] text-slate-400 dark:text-faint">= {tachPerMonth.toFixed(1)} tach/mo</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-slate-400">Trend</p>
-                    <p className={`text-sm font-bold font-mono ${trend > 0 ? 'text-emerald-600' : trend < 0 ? 'text-red-600' : 'text-slate-600'}`}>
+                    <p className="text-[10px] text-slate-400 dark:text-faint">Trend</p>
+                    <p className={`text-sm font-bold font-mono ${trend > 0 ? 'text-emerald-600 dark:text-emerald-400' : trend < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-foreground-soft'}`}>
                       {trend > 0 ? '+' : ''}{trend.toFixed(1)}%
                     </p>
                   </div>
@@ -7512,14 +7546,14 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               </div>
 
               {/* H/T Ratio explanation */}
-              <div className="bg-indigo-50 rounded-lg p-3 mb-5">
+              <div className="bg-indigo-50 dark:bg-indigo-500/10 rounded-lg p-3 mb-5">
                 <div className="flex items-start gap-2">
                   <svg className="w-4 h-4 text-indigo-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <div className="text-[11px] text-indigo-700">
+                  <div className="text-[11px] text-indigo-700 dark:text-indigo-300">
                     <p className="font-semibold mb-1">Hobbs/Tach Ratio: {htRatio.toFixed(3)}</p>
-                    <p className="text-indigo-600">For every 1 tach hour, you fly {htRatio.toFixed(3)} hobbs hours. This means {tachRemaining.toFixed(1)} remaining tach hrs = <span className="font-bold">{hobbsRemaining.toFixed(1)} actual hobbs hrs</span> of flying time. At the current weighted rate of {hobbsPerMonth.toFixed(1)} hobbs/mo, the engine reaches TBO around <span className="font-bold">{fmtDateFull(estDate)}</span>.</p>
+                    <p className="text-indigo-600 dark:text-indigo-400">For every 1 tach hour, you fly {htRatio.toFixed(3)} hobbs hours. This means {tachRemaining.toFixed(1)} remaining tach hrs = <span className="font-bold">{hobbsRemaining.toFixed(1)} actual hobbs hrs</span> of flying time. At the current weighted rate of {hobbsPerMonth.toFixed(1)} hobbs/mo, the engine reaches TBO around <span className="font-bold">{fmtDateFull(estDate)}</span>.</p>
                   </div>
                 </div>
               </div>
@@ -7529,25 +7563,25 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       })()}
 
       {/* Overhaul Funding Tracker — Redesigned */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl shadow-sm overflow-hidden">
         {/* Header */}
-        <div className="px-4 sm:px-6 py-3 border-b border-slate-200">
+        <div className="px-4 sm:px-6 py-3 border-b border-slate-200 dark:border-edge">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
-                <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center">
+                <svg className="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <div>
-                <h4 className="text-xs font-semibold text-slate-700">Overhaul Funding Tracker</h4>
-                <p className="text-[10px] text-slate-400">
+                <h4 className="text-xs font-semibold text-slate-700 dark:text-foreground-soft">Overhaul Funding Tracker</h4>
+                <p className="text-[10px] text-slate-400 dark:text-faint">
                   {formatCurrency(overhaulCycleHrs)} tach hrs · {computed.yearsToOverhaul.toFixed(1)} yrs @ {Math.round(computed.tachPerYear)} tach/yr ({horasAnuales} hobbs/yr)
-                  {!horasIsLive && <span className="ml-1 text-amber-600 font-semibold inline-flex align-middle"><Icon name="edit" className="w-3 h-3" /></span>}
+                  {!horasIsLive && <span className="ml-1 text-amber-600 dark:text-amber-400 font-semibold inline-flex align-middle"><Icon name="edit" className="w-3 h-3" /></span>}
                 </p>
               </div>
             </div>
-            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-200 text-slate-700 inline-flex items-center gap-1">
+            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-foreground-soft inline-flex items-center gap-1">
               <Icon name="smart" className="w-3 h-3" /> MAX · {computed.overhaulSource === 'market' ? 'MARKET' : 'IPC'}
             </span>
           </div>
@@ -7556,59 +7590,59 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         <div className="p-4 sm:p-6 space-y-4">
           {/* ── Row 1: Current Status ── */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
-              <p className="text-[9px] text-slate-400 uppercase tracking-wider mb-1">Total Cost</p>
-              <p className="text-lg font-bold text-slate-900 font-mono">${formatCurrency(Math.round(computed.effectiveOverhaulCLP))}</p>
-              <p className="text-[9px] text-slate-400">Max(IPC, Market) · planificación conservadora</p>
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-muted border border-slate-100 dark:border-edge">
+              <p className="text-[9px] text-slate-400 dark:text-faint uppercase tracking-wider mb-1">Total Cost</p>
+              <p className="text-lg font-bold text-slate-900 dark:text-foreground font-mono">${formatCurrency(Math.round(computed.effectiveOverhaulCLP))}</p>
+              <p className="text-[9px] text-slate-400 dark:text-faint">Max(IPC, Market) · planificación conservadora</p>
             </div>
-            <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-100">
-              <p className="text-[9px] text-emerald-600 uppercase tracking-wider mb-1">Funded</p>
-              <p className="text-lg font-bold text-emerald-700 font-mono">${formatCurrency(computed.currentFunds)}</p>
-              <div className="mt-1.5 h-1.5 bg-emerald-100 rounded-full overflow-hidden">
+            <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20">
+              <p className="text-[9px] text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1">Funded</p>
+              <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300 font-mono">${formatCurrency(computed.currentFunds)}</p>
+              <div className="mt-1.5 h-1.5 bg-emerald-100 dark:bg-emerald-500/15 rounded-full overflow-hidden">
                 <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(100, (recaudado / computed.effectiveOverhaulCLP) * 100)}%` }} />
               </div>
-              <p className="text-[9px] text-emerald-600 font-mono mt-0.5">{((recaudado / computed.effectiveOverhaulCLP) * 100).toFixed(1)}%</p>
+              <p className="text-[9px] text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">{((recaudado / computed.effectiveOverhaulCLP) * 100).toFixed(1)}%</p>
             </div>
-            <div className="p-3 rounded-lg bg-red-50 border border-red-100">
+            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20">
               <p className="text-[9px] text-red-500 uppercase tracking-wider mb-1">Gap</p>
-              <p className="text-lg font-bold text-red-700 font-mono">${formatCurrency(Math.round(computed.faltaOverhaul))}</p>
-              <p className="text-[9px] text-slate-400">{(computed.faltaOverhaul / computed.effectiveOverhaulCLP * 100).toFixed(0)}% remaining</p>
+              <p className="text-lg font-bold text-red-700 dark:text-red-300 font-mono">${formatCurrency(Math.round(computed.faltaOverhaul))}</p>
+              <p className="text-[9px] text-slate-400 dark:text-faint">{(computed.faltaOverhaul / computed.effectiveOverhaulCLP * 100).toFixed(0)}% remaining</p>
             </div>
-            <div className="p-3 rounded-lg bg-amber-50 border border-amber-100">
-              <p className="text-[9px] text-amber-600 uppercase tracking-wider mb-1">Time to TBO</p>
-              <p className="text-lg font-bold text-amber-700 font-mono">{computed.anosRemanentes.toFixed(1)} <span className="text-sm">yrs</span></p>
-              <p className="text-[9px] text-slate-400">{Math.round(computed.anosRemanentes * 12)} mo · {Math.round(computed.tachPerYear)} tach/yr</p>
+            <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20">
+              <p className="text-[9px] text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1">Time to TBO</p>
+              <p className="text-lg font-bold text-amber-700 dark:text-amber-300 font-mono">{computed.anosRemanentes.toFixed(1)} <span className="text-sm">yrs</span></p>
+              <p className="text-[9px] text-slate-400 dark:text-faint">{Math.round(computed.anosRemanentes * 12)} mo · {Math.round(computed.tachPerYear)} tach/yr</p>
             </div>
           </div>
 
           {/* ── Row 2: At TBO (Projected) ── */}
-          <div className="border border-slate-200 rounded-lg p-3">
-            <p className="text-[9px] text-slate-400 uppercase tracking-wider font-semibold mb-2 flex items-center gap-1.5">
+          <div className="border border-slate-200 dark:border-edge rounded-lg p-3">
+            <p className="text-[9px] text-slate-400 dark:text-faint uppercase tracking-wider font-semibold mb-2 flex items-center gap-1.5">
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
               At TBO · {interestRate}% int · {clForwardInflation}% IPC/yr
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="text-center">
-                <p className="text-base font-bold text-red-700 font-mono">${formatCurrency(Math.round(computed.inflatedOverhaulCost))}</p>
-                <p className="text-[9px] text-slate-400">Cost w/ inflation</p>
+                <p className="text-base font-bold text-red-700 dark:text-red-300 font-mono">${formatCurrency(Math.round(computed.inflatedOverhaulCost))}</p>
+                <p className="text-[9px] text-slate-400 dark:text-faint">Cost w/ inflation</p>
                 <p className="text-[8px] text-red-400 font-mono">+${formatCurrency(Math.round(computed.inflationIncrease))}</p>
               </div>
               <div className="text-center">
-                <p className="text-base font-bold text-emerald-700 font-mono">${formatCurrency(Math.round(computed.projectedFunds))}</p>
-                <p className="text-[9px] text-slate-400">Funds w/ interest</p>
+                <p className="text-base font-bold text-emerald-700 dark:text-emerald-300 font-mono">${formatCurrency(Math.round(computed.projectedFunds))}</p>
+                <p className="text-[9px] text-slate-400 dark:text-faint">Funds w/ interest</p>
                 <p className="text-[8px] text-emerald-500 font-mono">+${formatCurrency(Math.round(computed.interestEarned))}</p>
               </div>
               <div className="text-center">
-                <p className={`text-base font-bold font-mono ${computed.projectedGap > 0 ? 'text-red-700' : 'text-emerald-700'}`}>${formatCurrency(Math.abs(Math.round(computed.projectedGap)))}</p>
-                <p className="text-[9px] text-slate-400">{computed.projectedGap > 0 ? 'Gap' : 'Surplus'}</p>
-                <div className="mt-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <p className={`text-base font-bold font-mono ${computed.projectedGap > 0 ? 'text-red-700 dark:text-red-300' : 'text-emerald-700 dark:text-emerald-300'}`}>${formatCurrency(Math.abs(Math.round(computed.projectedGap)))}</p>
+                <p className="text-[9px] text-slate-400 dark:text-faint">{computed.projectedGap > 0 ? 'Gap' : 'Surplus'}</p>
+                <div className="mt-1 h-1.5 bg-slate-100 dark:bg-muted rounded-full overflow-hidden">
                   <div className={`h-full rounded-full ${computed.projectedFunds >= computed.inflatedOverhaulCost ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: `${Math.min(100, (computed.projectedFunds / computed.inflatedOverhaulCost) * 100)}%` }} />
                 </div>
-                <p className="text-[8px] text-slate-400 font-mono mt-0.5">{((computed.projectedFunds / computed.inflatedOverhaulCost) * 100).toFixed(1)}% funded</p>
+                <p className="text-[8px] text-slate-400 dark:text-faint font-mono mt-0.5">{((computed.projectedFunds / computed.inflatedOverhaulCost) * 100).toFixed(1)}% funded</p>
               </div>
-              <div className="text-center bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-2 border border-blue-200">
-                <p className="text-lg font-extrabold text-blue-700 font-mono">${formatCurrency(Math.round(computed.projectedMonthlyTarget))}</p>
-                <p className="text-[9px] text-blue-600 font-bold flex items-center justify-center gap-1"><Icon name="money" className="w-3 h-3" /> Monthly Target</p>
+              <div className="text-center bg-gradient-to-br from-blue-50 dark:from-blue-950/40 to-indigo-50 dark:to-indigo-950/40 rounded-lg p-2 border border-blue-200 dark:border-blue-500/30">
+                <p className="text-lg font-extrabold text-blue-700 dark:text-blue-300 font-mono">${formatCurrency(Math.round(computed.projectedMonthlyTarget))}</p>
+                <p className="text-[9px] text-blue-600 dark:text-blue-400 font-bold flex items-center justify-center gap-1"><Icon name="money" className="w-3 h-3" /> Monthly Target</p>
                 <p className="text-[8px] text-blue-400 font-mono">{Math.round(computed.monthsToOverhaul)} payments</p>
               </div>
             </div>
@@ -7617,13 +7651,13 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
           {/* ── Row 3: Cost Model (collapsible) ── */}
           <button
             onClick={() => setShowCostModel(!showCostModel)}
-            className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors"
+            className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 dark:bg-muted hover:bg-slate-100 dark:hover:bg-muted rounded-lg border border-slate-200 dark:border-edge transition-colors"
           >
-            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+            <span className="text-[10px] font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
               Cost Model Detail
             </span>
-            <svg className={`w-4 h-4 text-slate-400 transition-transform ${showCostModel ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className={`w-4 h-4 text-slate-400 dark:text-faint transition-transform ${showCostModel ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </button>
@@ -7631,48 +7665,48 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
           {showCostModel && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-in fade-in duration-200">
               {/* IPC Model */}
-              <div className={`rounded-lg p-3 border bg-amber-50 border-amber-200 ${computed.overhaulSource === 'ipc' ? 'ring-2 ring-amber-400' : ''}`}>
+              <div className={`rounded-lg p-3 border bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30 ${computed.overhaulSource === 'ipc' ? 'ring-2 ring-amber-400' : ''}`}>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider flex items-center gap-1"><Icon name="clipboard" className="w-3 h-3" /> IPC Chile (+{clInflationPct}%)</p>
-                  {computed.overhaulSource === 'ipc' && <span className="px-1.5 py-0.5 text-[8px] font-bold bg-amber-200 text-amber-800 rounded-full">USADO</span>}
+                  <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300 uppercase tracking-wider flex items-center gap-1"><Icon name="clipboard" className="w-3 h-3" /> IPC Chile (+{clInflationPct}%)</p>
+                  {computed.overhaulSource === 'ipc' && <span className="px-1.5 py-0.5 text-[8px] font-bold bg-amber-200 text-amber-800 dark:text-amber-300 rounded-full">USADO</span>}
                 </div>
                 <div className="space-y-1 text-[11px]">
                   <div className="flex justify-between">
-                    <span className="text-slate-500" title="Eagle Copters F.6941 (87.47% del CIF) × IPC">Motor FOB (Eagle)</span>
-                    <span className="font-mono text-slate-700">${formatCurrency(computed.ipcMotorFobTodayCLP)}</span>
+                    <span className="text-slate-500 dark:text-muted-foreground" title="Eagle Copters F.6941 (87.47% del CIF) × IPC">Motor FOB (Eagle)</span>
+                    <span className="font-mono text-slate-700 dark:text-foreground-soft">${formatCurrency(computed.ipcMotorFobTodayCLP)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500" title="Flete + seguro + aduana (12.53% del CIF Eagle) × IPC">COMEX</span>
-                    <span className="font-mono text-slate-700">${formatCurrency(computed.ipcMotorComexTodayCLP)}</span>
+                    <span className="text-slate-500 dark:text-muted-foreground" title="Flete + seguro + aduana (12.53% del CIF Eagle) × IPC">COMEX</span>
+                    <span className="font-mono text-slate-700 dark:text-foreground-soft">${formatCurrency(computed.ipcMotorComexTodayCLP)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500" title="IVA 19% factura Eagle × IPC">IVA 19%</span>
-                    <span className="font-mono text-slate-700">${formatCurrency(computed.ipcMotorIvaTodayCLP)}</span>
+                    <span className="text-slate-500 dark:text-muted-foreground" title="IVA 19% factura Eagle × IPC">IVA 19%</span>
+                    <span className="font-mono text-slate-700 dark:text-foreground-soft">${formatCurrency(computed.ipcMotorIvaTodayCLP)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500" title="Aeromundo Nº964: MO + repuestos + materiales + IVA">Labor (Aeromundo)</span>
-                    <span className="font-mono text-slate-700">${formatCurrency(computed.laborTodayCLP)}</span>
+                    <span className="text-slate-500 dark:text-muted-foreground" title="Aeromundo Nº964: MO + repuestos + materiales + IVA">Labor (Aeromundo)</span>
+                    <span className="font-mono text-slate-700 dark:text-foreground-soft">${formatCurrency(computed.laborTodayCLP)}</span>
                   </div>
-                  <div className="flex justify-between pt-1 border-t border-amber-200">
-                    <span className="text-slate-700 font-semibold">Total</span>
-                    <span className="font-mono font-bold text-amber-800">${formatCurrency(overhaulCLP)}</span>
+                  <div className="flex justify-between pt-1 border-t border-amber-200 dark:border-amber-500/30">
+                    <span className="text-slate-700 dark:text-foreground-soft font-semibold">Total</span>
+                    <span className="font-mono font-bold text-amber-800 dark:text-amber-300">${formatCurrency(overhaulCLP)}</span>
                   </div>
-                  <p className="text-[9px] text-slate-400">Base ago 2022: ${formatCurrency(overhaulMotorCLP + overhaulLaborCLP)}</p>
+                  <p className="text-[9px] text-slate-400 dark:text-faint">Base ago 2022: ${formatCurrency(overhaulMotorCLP + overhaulLaborCLP)}</p>
                 </div>
               </div>
 
               {/* Market Model */}
-              <div className={`rounded-lg p-3 border bg-blue-50 border-blue-200 ${computed.overhaulSource === 'market' ? 'ring-2 ring-blue-400' : ''}`}>
+              <div className={`rounded-lg p-3 border bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 ${computed.overhaulSource === 'market' ? 'ring-2 ring-blue-400' : ''}`}>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] font-semibold text-blue-700 uppercase tracking-wider flex items-center gap-1">
+                  <p className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wider flex items-center gap-1">
                     <Icon name="globe" className="w-3 h-3" /> Market
-                    {computed.overhaulSource === 'market' && <span className="px-1.5 py-0.5 text-[8px] font-bold bg-blue-200 text-blue-800 rounded-full">USADO</span>}
+                    {computed.overhaulSource === 'market' && <span className="px-1.5 py-0.5 text-[8px] font-bold bg-blue-200 text-blue-800 dark:text-blue-300 rounded-full">USADO</span>}
                   </p>
                   <a
                     href="https://www.airpowerinc.com/renpl-rt8164"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-1.5 py-0.5 text-[8px] font-medium bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition-colors"
+                    className="px-1.5 py-0.5 text-[8px] font-medium bg-blue-100 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 rounded-full hover:bg-blue-200 transition-colors"
                     title="Verificar precio en Air Power Inc"
                   >
                     Verificar ↗
@@ -7680,9 +7714,9 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 </div>
                 <div className="space-y-1 text-[11px]">
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-500">Motor FOB (Precio en USD)</span>
+                    <span className="text-slate-500 dark:text-muted-foreground">Motor FOB (Precio en USD)</span>
                     <div className="flex items-center gap-1">
-                      <span className="text-slate-400 text-[10px]">USD</span>
+                      <span className="text-slate-400 dark:text-faint text-[10px]">USD</span>
                       <input
                         type="text"
                         value={formatCurrency(engineMarketPriceUSD)}
@@ -7690,32 +7724,32 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                           const raw = e.target.value.replace(/[^0-9]/g, '');
                           if (raw) setEngineMarketPriceUSD(parseInt(raw));
                         }}
-                        className="w-[80px] text-right font-mono text-slate-700 bg-transparent border-b border-dashed border-slate-300 hover:border-blue-400 focus:border-blue-500 focus:outline-none text-[11px] px-0 py-0"
+                        className="w-[80px] text-right font-mono text-slate-700 dark:text-foreground-soft bg-transparent border-b border-dashed border-slate-300 dark:border-edge-strong hover:border-blue-400 focus:border-blue-500 focus:outline-none text-[11px] px-0 py-0"
                         title="Click para editar precio FOB"
                       />
                     </div>
                   </div>
                   <div className="flex justify-between text-[10px] -mt-0.5">
-                    <span className="text-slate-400 italic" title={`Conversión @ USD/CLP ${formatCurrency(Math.round(usdRate))}`}>
+                    <span className="text-slate-400 dark:text-faint italic" title={`Conversión @ USD/CLP ${formatCurrency(Math.round(usdRate))}`}>
                       ↳ Conversión a CLP (USD {formatCurrency(Math.round(usdRate))})
                     </span>
-                    <span className="font-mono text-slate-500">${formatCurrency(computed.motorFobCLP)}</span>
+                    <span className="font-mono text-slate-500 dark:text-muted-foreground">${formatCurrency(computed.motorFobCLP)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500" title={`Flete + seguro + aduana (cotización Eagle Copters Nº1475-2021: USD 4.857 base + CPI USA acumulado ${usCpiCumulPct.toFixed(1)}%)`}>COMEX (USD {Math.round(4856.84 * (1 + usCpiCumulPct / 100)).toLocaleString()})</span>
-                    <span className="font-mono text-slate-700">${formatCurrency(computed.comexCLP)}</span>
+                    <span className="text-slate-500 dark:text-muted-foreground" title={`Flete + seguro + aduana (cotización Eagle Copters Nº1475-2021: USD 4.857 base + CPI USA acumulado ${usCpiCumulPct.toFixed(1)}%)`}>COMEX (USD {Math.round(4856.84 * (1 + usCpiCumulPct / 100)).toLocaleString()})</span>
+                    <span className="font-mono text-slate-700 dark:text-foreground-soft">${formatCurrency(computed.comexCLP)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500" title="IVA 19% sobre CIF (FOB + COMEX)">IVA 19% s/CIF</span>
-                    <span className="font-mono text-slate-700">${formatCurrency(computed.ivaCLP)}</span>
+                    <span className="text-slate-500 dark:text-muted-foreground" title="IVA 19% sobre CIF (FOB + COMEX)">IVA 19% s/CIF</span>
+                    <span className="font-mono text-slate-700 dark:text-foreground-soft">${formatCurrency(computed.ivaCLP)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Labor (IPC)</span>
-                    <span className="font-mono text-slate-700">${formatCurrency(computed.laborTodayCLP)}</span>
+                    <span className="text-slate-500 dark:text-muted-foreground">Labor (IPC)</span>
+                    <span className="font-mono text-slate-700 dark:text-foreground-soft">${formatCurrency(computed.laborTodayCLP)}</span>
                   </div>
-                  <div className="flex justify-between pt-1 border-t border-blue-200">
-                    <span className="text-slate-700 font-semibold">Total</span>
-                    <span className="font-mono font-bold text-blue-800">${formatCurrency(computed.marketReplacementCLP)}</span>
+                  <div className="flex justify-between pt-1 border-t border-blue-200 dark:border-blue-500/30">
+                    <span className="text-slate-700 dark:text-foreground-soft font-semibold">Total</span>
+                    <span className="font-mono font-bold text-blue-800 dark:text-blue-300">${formatCurrency(computed.marketReplacementCLP)}</span>
                   </div>
                   <p className="text-[9px] text-red-500 font-semibold">+{computed.motorPriceInflationPct.toFixed(1)}% vs 2022 ({computed.motorAnnualInflation.toFixed(1)}%/yr)</p>
                 </div>
@@ -7724,16 +7758,16 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               {/* IPC vs Market bar */}
               <div className="sm:col-span-2">
                 <div className="flex items-center justify-between text-[9px] mb-1">
-                  <span className="text-amber-600 font-mono">${formatCurrency(overhaulCLP)}</span>
-                  <span className="text-slate-400">
+                  <span className="text-amber-600 dark:text-amber-400 font-mono">${formatCurrency(overhaulCLP)}</span>
+                  <span className="text-slate-400 dark:text-faint">
                     {computed.marketReplacementCLP > overhaulCLP
                       ? `Market +${(((computed.marketReplacementCLP / overhaulCLP) - 1) * 100).toFixed(0)}% over IPC`
                       : `IPC +${(((overhaulCLP / computed.marketReplacementCLP) - 1) * 100).toFixed(0)}% over Market`
                     }
                   </span>
-                  <span className="text-blue-600 font-mono">${formatCurrency(computed.marketReplacementCLP)}</span>
+                  <span className="text-blue-600 dark:text-blue-400 font-mono">${formatCurrency(computed.marketReplacementCLP)}</span>
                 </div>
-                <div className="flex h-2 rounded-full overflow-hidden bg-slate-100">
+                <div className="flex h-2 rounded-full overflow-hidden bg-slate-100 dark:bg-muted">
                   <div className="bg-amber-400" style={{ width: `${(overhaulCLP / (overhaulCLP + computed.marketReplacementCLP)) * 100}%` }} />
                   <div className="bg-blue-400" style={{ width: `${(computed.marketReplacementCLP / (overhaulCLP + computed.marketReplacementCLP)) * 100}%` }} />
                 </div>
@@ -7745,21 +7779,21 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
 
       {/* ===== FUEL PRICE TREND ANALYSIS ===== */}
       {fuelPriceAnalysis && (
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="px-4 sm:px-6 py-3 border-b border-slate-200">
+        <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl shadow-sm overflow-hidden">
+          <div className="px-4 sm:px-6 py-3 border-b border-slate-200 dark:border-edge">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
                 <div>
-                  <h4 className="text-xs font-semibold text-slate-700">AVGAS Price Trend Analysis</h4>
-                  <p className="text-[10px] text-slate-400">From {fuelPriceAnalysis.totalRecords} fuel records · CAGR {fuelPriceAnalysis.cagr.toFixed(1)}%/yr</p>
+                  <h4 className="text-xs font-semibold text-slate-700 dark:text-foreground-soft">AVGAS Price Trend Analysis</h4>
+                  <p className="text-[10px] text-slate-400 dark:text-faint">From {fuelPriceAnalysis.totalRecords} fuel records · CAGR {fuelPriceAnalysis.cagr.toFixed(1)}%/yr</p>
                 </div>
               </div>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
                 LIVE DATA
               </span>
             </div>
@@ -7774,10 +7808,10 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               ].map(item => {
                 const isWinner = avgasSource?.source === item.source;
                 return (
-                  <div key={item.source} className={`text-center p-3 rounded-lg ${isWinner ? 'bg-amber-50 ring-1 ring-amber-200' : 'bg-slate-50'}`}>
-                    <p className={`text-lg font-bold font-mono ${isWinner ? 'text-amber-700' : 'text-slate-700'}`}>${formatCurrency(item.price)}</p>
-                    <p className="text-[10px] text-slate-500">{item.label}</p>
-                    {isWinner && <p className="text-[9px] text-emerald-600 font-bold">← Used in model (MAX)</p>}
+                  <div key={item.source} className={`text-center p-3 rounded-lg ${isWinner ? 'bg-amber-50 dark:bg-amber-500/10 ring-1 ring-amber-200' : 'bg-slate-50 dark:bg-muted'}`}>
+                    <p className={`text-lg font-bold font-mono ${isWinner ? 'text-amber-700 dark:text-amber-300' : 'text-slate-700 dark:text-foreground-soft'}`}>${formatCurrency(item.price)}</p>
+                    <p className="text-[10px] text-slate-500 dark:text-muted-foreground">{item.label}</p>
+                    {isWinner && <p className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold">← Used in model (MAX)</p>}
                   </div>
                 );
               })}
@@ -7785,31 +7819,31 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
 
             {/* Brent spot indicator (if available) */}
             {brentData && (
-              <div className="mb-5 flex items-center gap-3 px-3 py-2 bg-orange-50 rounded-lg border border-orange-200">
-                <Icon name="oil" className="w-5 h-5 text-orange-600" />
-                <div className="text-xs text-slate-700">
+              <div className="mb-5 flex items-center gap-3 px-3 py-2 bg-orange-50 dark:bg-orange-500/10 rounded-lg border border-orange-200 dark:border-orange-500/30">
+                <Icon name="oil" className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                <div className="text-xs text-slate-700 dark:text-foreground-soft">
                   <span className="font-semibold">Brent Spot:</span>{' '}
-                  <span className="font-mono font-bold text-orange-700">US${brentData.currentBrentUSD.toFixed(1)}/bbl</span>
-                  <span className="text-[10px] text-slate-400 ml-2">({brentData.source} · {brentData.totalWeeks} weeks of data)</span>
+                  <span className="font-mono font-bold text-orange-700 dark:text-orange-300">US${brentData.currentBrentUSD.toFixed(1)}/bbl</span>
+                  <span className="text-[10px] text-slate-400 dark:text-faint ml-2">({brentData.source} · {brentData.totalWeeks} weeks of data)</span>
                 </div>
               </div>
             )}
 
             {/* ===== BRENT → AVGAS PREDICTIVE INTELLIGENCE ===== */}
             {brentAvgasCorrelation && (
-              <div className="mb-5 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-200 overflow-hidden">
-                <div className="px-4 py-3 border-b border-indigo-200/50 flex items-center justify-between">
+              <div className="mb-5 bg-gradient-to-br from-indigo-50 dark:from-indigo-950/40 to-purple-50 rounded-xl border border-indigo-200 dark:border-indigo-500/30 overflow-hidden">
+                <div className="px-4 py-3 border-b border-indigo-200/50 dark:border-indigo-500/30 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Icon name="brain" className="w-4 h-4 text-indigo-600" />
+                    <Icon name="brain" className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                     <div>
-                      <h5 className="text-xs font-bold text-indigo-800">Brent → AVGAS Predictive Intelligence</h5>
+                      <h5 className="text-xs font-bold text-indigo-800 dark:text-indigo-300">Brent → AVGAS Predictive Intelligence</h5>
                       <p className="text-[9px] text-indigo-500">WLS (λ={brentAvgasCorrelation.lambda}, t½={brentAvgasCorrelation.halfLife}m) · {brentAvgasCorrelation.totalWeeks} weeks · Lag {brentAvgasCorrelation.bestLag}m · R²={brentAvgasCorrelation.bestR2.toFixed(3)}</p>
                     </div>
                   </div>
                   <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                    brentAvgasCorrelation.confidence >= 70 ? 'bg-emerald-100 text-emerald-700' :
-                    brentAvgasCorrelation.confidence >= 40 ? 'bg-amber-100 text-amber-700' :
-                    'bg-red-100 text-red-700'
+                    brentAvgasCorrelation.confidence >= 70 ? 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' :
+                    brentAvgasCorrelation.confidence >= 40 ? 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300' :
+                    'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300'
                   }`}>
                     {brentAvgasCorrelation.confidence}% CONF
                   </span>
@@ -7817,106 +7851,106 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 <div className="p-4">
                   {/* Forecasts Row */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                    <div className="text-center p-2.5 bg-white/60 rounded-lg">
-                      <p className="text-sm font-bold font-mono text-indigo-700">${formatCurrency(Math.round(brentAvgasCorrelation.impliedNowCLP))}</p>
-                      <p className="text-[9px] text-slate-500">Implied Now $/L</p>
-                      <p className="text-[8px] text-slate-400">from Brent regression</p>
+                    <div className="text-center p-2.5 bg-white/60 dark:bg-white/5 rounded-lg">
+                      <p className="text-sm font-bold font-mono text-indigo-700 dark:text-indigo-300">${formatCurrency(Math.round(brentAvgasCorrelation.impliedNowCLP))}</p>
+                      <p className="text-[9px] text-slate-500 dark:text-muted-foreground">Implied Now $/L</p>
+                      <p className="text-[8px] text-slate-400 dark:text-faint">from Brent regression</p>
                     </div>
-                    <div className={`text-center p-2.5 rounded-lg ${avgasSource?.source === 'brentForecast3m' ? 'bg-amber-50 ring-1 ring-amber-300' : 'bg-white/60'}`}>
-                      <p className="text-sm font-bold font-mono text-purple-700">${formatCurrency(Math.round(brentAvgasCorrelation.forecast3m))}</p>
-                      <p className="text-[9px] text-slate-500">Forecast 3m $/L</p>
-                      {avgasSource?.source === 'brentForecast3m' && <p className="text-[8px] text-emerald-600 font-bold">← MAX winner</p>}
+                    <div className={`text-center p-2.5 rounded-lg ${avgasSource?.source === 'brentForecast3m' ? 'bg-amber-50 dark:bg-amber-500/10 ring-1 ring-amber-300' : 'bg-white/60 dark:bg-white/5'}`}>
+                      <p className="text-sm font-bold font-mono text-purple-700 dark:text-purple-300">${formatCurrency(Math.round(brentAvgasCorrelation.forecast3m))}</p>
+                      <p className="text-[9px] text-slate-500 dark:text-muted-foreground">Forecast 3m $/L</p>
+                      {avgasSource?.source === 'brentForecast3m' && <p className="text-[8px] text-emerald-600 dark:text-emerald-400 font-bold">← MAX winner</p>}
                     </div>
-                    <div className="text-center p-2.5 bg-white/60 rounded-lg">
-                      <p className="text-sm font-bold font-mono text-purple-700">${formatCurrency(Math.round(brentAvgasCorrelation.forecast6m))}</p>
-                      <p className="text-[9px] text-slate-500">Forecast 6m $/L</p>
+                    <div className="text-center p-2.5 bg-white/60 dark:bg-white/5 rounded-lg">
+                      <p className="text-sm font-bold font-mono text-purple-700 dark:text-purple-300">${formatCurrency(Math.round(brentAvgasCorrelation.forecast6m))}</p>
+                      <p className="text-[9px] text-slate-500 dark:text-muted-foreground">Forecast 6m $/L</p>
                     </div>
-                    <div className="text-center p-2.5 bg-white/60 rounded-lg">
-                      <p className="text-sm font-bold font-mono text-slate-700">US${brentAvgasCorrelation.brent3m.toFixed(1)}</p>
-                      <p className="text-[9px] text-slate-500">Brent 3m forecast</p>
-                      <p className="text-[8px] text-slate-400">6m: US${brentAvgasCorrelation.brent6m.toFixed(1)} · revert {brentAvgasCorrelation.brentTrend >= 0 ? '↑' : '↓'}{Math.abs(brentAvgasCorrelation.brentTrend).toFixed(1)}/mo</p>
+                    <div className="text-center p-2.5 bg-white/60 dark:bg-white/5 rounded-lg">
+                      <p className="text-sm font-bold font-mono text-slate-700 dark:text-foreground-soft">US${brentAvgasCorrelation.brent3m.toFixed(1)}</p>
+                      <p className="text-[9px] text-slate-500 dark:text-muted-foreground">Brent 3m forecast</p>
+                      <p className="text-[8px] text-slate-400 dark:text-faint">6m: US${brentAvgasCorrelation.brent6m.toFixed(1)} · revert {brentAvgasCorrelation.brentTrend >= 0 ? '↑' : '↓'}{Math.abs(brentAvgasCorrelation.brentTrend).toFixed(1)}/mo</p>
                     </div>
                   </div>
 
                   {/* Model Details Grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-1.5 text-[10px] mb-3">
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Best Lag</span>
-                      <span className="font-mono font-bold text-indigo-700">{brentAvgasCorrelation.bestLag} months</span>
+                      <span className="text-slate-500 dark:text-muted-foreground">Best Lag</span>
+                      <span className="font-mono font-bold text-indigo-700 dark:text-indigo-300">{brentAvgasCorrelation.bestLag} months</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-500">R² (fit)</span>
-                      <span className="font-mono font-bold text-indigo-700">{brentAvgasCorrelation.bestR2.toFixed(4)}</span>
+                      <span className="text-slate-500 dark:text-muted-foreground">R² (fit)</span>
+                      <span className="font-mono font-bold text-indigo-700 dark:text-indigo-300">{brentAvgasCorrelation.bestR2.toFixed(4)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Paired months</span>
-                      <span className="font-mono font-bold text-slate-700">{brentAvgasCorrelation.pairedMonths}</span>
+                      <span className="text-slate-500 dark:text-muted-foreground">Paired months</span>
+                      <span className="font-mono font-bold text-slate-700 dark:text-foreground-soft">{brentAvgasCorrelation.pairedMonths}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Effective N</span>
-                      <span className="font-mono font-bold text-indigo-600">{brentAvgasCorrelation.effectiveN}</span>
+                      <span className="text-slate-500 dark:text-muted-foreground">Effective N</span>
+                      <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">{brentAvgasCorrelation.effectiveN}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Slope (β)</span>
-                      <span className="font-mono font-bold text-slate-700">{brentAvgasCorrelation.slope.toFixed(2)}</span>
+                      <span className="text-slate-500 dark:text-muted-foreground">Slope (β)</span>
+                      <span className="font-mono font-bold text-slate-700 dark:text-foreground-soft">{brentAvgasCorrelation.slope.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Intercept (α)</span>
-                      <span className="font-mono font-bold text-slate-700">{formatCurrency(Math.round(brentAvgasCorrelation.intercept))}</span>
+                      <span className="text-slate-500 dark:text-muted-foreground">Intercept (α)</span>
+                      <span className="font-mono font-bold text-slate-700 dark:text-foreground-soft">{formatCurrency(Math.round(brentAvgasCorrelation.intercept))}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Current FX</span>
-                      <span className="font-mono font-bold text-slate-700">${formatCurrency(Math.round(brentAvgasCorrelation.currentFX))}</span>
+                      <span className="text-slate-500 dark:text-muted-foreground">Current FX</span>
+                      <span className="font-mono font-bold text-slate-700 dark:text-foreground-soft">${formatCurrency(Math.round(brentAvgasCorrelation.currentFX))}</span>
                     </div>
                   </div>
 
                   {/* Advanced Analytics Row */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {/* Volatility */}
-                    <div className="p-2.5 bg-white/50 rounded-lg border border-slate-200/50">
-                      <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1"><Icon name="chart" className="w-3 h-3" /> Volatility</p>
+                    <div className="p-2.5 bg-white/50 dark:bg-white/5 rounded-lg border border-slate-200/50 dark:border-edge">
+                      <p className="text-[9px] font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1"><Icon name="chart" className="w-3 h-3" /> Volatility</p>
                       <div className="space-y-1 text-[10px]">
                         <div className="flex justify-between">
-                          <span className="text-slate-500">8w σ (Brent)</span>
+                          <span className="text-slate-500 dark:text-muted-foreground">8w σ (Brent)</span>
                           <span className="font-mono font-bold">${brentAvgasCorrelation.brentVolatility8w.toFixed(2)}/bbl</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-500">95% CI (±6m)</span>
-                          <span className="font-mono font-bold text-indigo-600">
+                          <span className="text-slate-500 dark:text-muted-foreground">95% CI (±6m)</span>
+                          <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
                             ±${formatCurrency(Math.round(brentAvgasCorrelation.band6m))}
                           </span>
                         </div>
                       </div>
                     </div>
                     {/* FX Sensitivity */}
-                    <div className="p-2.5 bg-white/50 rounded-lg border border-slate-200/50">
-                      <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1"><Icon name="money" className="w-3 h-3" /> FX Sensitivity</p>
+                    <div className="p-2.5 bg-white/50 dark:bg-white/5 rounded-lg border border-slate-200/50 dark:border-edge">
+                      <p className="text-[9px] font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1"><Icon name="money" className="w-3 h-3" /> FX Sensitivity</p>
                       <div className="space-y-1 text-[10px]">
                         <div className="flex justify-between">
-                          <span className="text-slate-500">FX β (residual)</span>
+                          <span className="text-slate-500 dark:text-muted-foreground">FX β (residual)</span>
                           <span className="font-mono font-bold">{brentAvgasCorrelation.fxBeta.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-500">FX deviation</span>
-                          <span className={`font-mono font-bold ${brentAvgasCorrelation.fxDeviation > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                          <span className="text-slate-500 dark:text-muted-foreground">FX deviation</span>
+                          <span className={`font-mono font-bold ${brentAvgasCorrelation.fxDeviation > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                             {brentAvgasCorrelation.fxDeviation > 0 ? '+' : ''}{formatCurrency(Math.round(brentAvgasCorrelation.fxDeviation))} CLP
                           </span>
                         </div>
                       </div>
                     </div>
                     {/* Structural Break */}
-                    <div className="p-2.5 bg-white/50 rounded-lg border border-slate-200/50">
-                      <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1"><Icon name="lab" className="w-3 h-3" /> Regime / Break</p>
+                    <div className="p-2.5 bg-white/50 dark:bg-white/5 rounded-lg border border-slate-200/50 dark:border-edge">
+                      <p className="text-[9px] font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1"><Icon name="lab" className="w-3 h-3" /> Regime / Break</p>
                       <div className="space-y-1 text-[10px]">
                         <div className="flex justify-between">
-                          <span className="text-slate-500">Hard break</span>
-                          <span className={`font-mono font-bold ${brentAvgasCorrelation.structuralBreak?.detected ? 'text-orange-600' : 'text-emerald-600'}`}>
+                          <span className="text-slate-500 dark:text-muted-foreground">Hard break</span>
+                          <span className={`font-mono font-bold ${brentAvgasCorrelation.structuralBreak?.detected ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                             {brentAvgasCorrelation.structuralBreak?.detected ? <span className="inline-flex items-center gap-1"><Icon name="warning" className="w-3 h-3" /> YES</span> : <span className="inline-flex items-center gap-1"><Icon name="check" className="w-3 h-3" /> Stable</span>}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-500">Regime</span>
-                          <span className="font-mono font-bold text-slate-600">
+                          <span className="text-slate-500 dark:text-muted-foreground">Regime</span>
+                          <span className="font-mono font-bold text-slate-600 dark:text-foreground-soft">
                             {brentAvgasCorrelation.structuralBreak?.detected ? 'Recent-only' : 'WLS-adapted'}
                           </span>
                         </div>
@@ -7926,17 +7960,17 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
 
                   {/* Lag Discovery Table */}
                   <div className="mt-3">
-                    <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Lag Discovery (0–6 months)</p>
+                    <p className="text-[9px] font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider mb-1.5">Lag Discovery (0–6 months)</p>
                     <div className="flex gap-1.5 overflow-x-auto pb-1">
                       {brentAvgasCorrelation.allLags.map((lag: { lag: number; r2: number; pairs: number }) => (
-                        <div key={lag.lag} className={`flex-1 min-w-[52px] text-center p-1.5 rounded-lg ${lag.lag === brentAvgasCorrelation.bestLag ? 'bg-indigo-100 ring-1 ring-indigo-300' : 'bg-white/50'}`}>
-                          <p className="text-[10px] font-bold text-slate-700">{lag.lag}m</p>
-                          <p className={`text-[10px] font-mono font-bold ${lag.lag === brentAvgasCorrelation.bestLag ? 'text-indigo-700' : 'text-slate-500'}`}>
+                        <div key={lag.lag} className={`flex-1 min-w-[52px] text-center p-1.5 rounded-lg ${lag.lag === brentAvgasCorrelation.bestLag ? 'bg-indigo-100 dark:bg-indigo-500/15 ring-1 ring-indigo-300' : 'bg-white/50 dark:bg-white/5'}`}>
+                          <p className="text-[10px] font-bold text-slate-700 dark:text-foreground-soft">{lag.lag}m</p>
+                          <p className={`text-[10px] font-mono font-bold ${lag.lag === brentAvgasCorrelation.bestLag ? 'text-indigo-700 dark:text-indigo-300' : 'text-slate-500 dark:text-muted-foreground'}`}>
                             {lag.r2.toFixed(3)}
                           </p>
-                          <p className="text-[8px] text-slate-400">{lag.pairs} pts</p>
+                          <p className="text-[8px] text-slate-400 dark:text-faint">{lag.pairs} pts</p>
                           {/* Visual R² bar */}
-                          <div className="mt-1 h-1 bg-slate-200 rounded-full overflow-hidden">
+                          <div className="mt-1 h-1 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
                             <div className={`h-full rounded-full ${lag.lag === brentAvgasCorrelation.bestLag ? 'bg-indigo-500' : 'bg-slate-400'}`} style={{ width: `${Math.max(lag.r2 * 100, 2)}%` }} />
                           </div>
                         </div>
@@ -7946,14 +7980,14 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
 
                   {/* MAX Source Selection Indicator */}
                   {avgasSource?.breakdown && (
-                    <div className="mt-3 px-3 py-2 bg-white/60 rounded-lg border border-indigo-100">
-                      <p className="text-[9px] font-semibold text-indigo-600 uppercase tracking-wider mb-1">AVGAS = MAX(signals) — Highest price wins</p>
+                    <div className="mt-3 px-3 py-2 bg-white/60 dark:bg-white/5 rounded-lg border border-indigo-100 dark:border-indigo-500/20">
+                      <p className="text-[9px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-1">AVGAS = MAX(signals) — Highest price wins</p>
                       <div className="flex gap-2 flex-wrap">
                         {avgasSource.breakdown.map((b: { source: string; label: string; price: number; isWinner: boolean }) => (
                           <span key={b.source} className={`px-2 py-0.5 rounded text-[9px] font-mono ${
                             b.isWinner
-                              ? 'bg-amber-100 text-amber-800 font-bold ring-1 ring-amber-300'
-                              : 'bg-slate-100 text-slate-500'
+                              ? 'bg-amber-100 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 font-bold ring-1 ring-amber-300'
+                              : 'bg-slate-100 dark:bg-muted text-slate-500 dark:text-muted-foreground'
                           }`}>
                             {b.label}: ${formatCurrency(b.price)}
                             {b.isWinner && <Icon name="check" className="inline w-3 h-3 ml-0.5 align-text-bottom" />}
@@ -7980,18 +8014,18 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
 
       {/* Yearly Hours from actual flights */}
       {yearlyHours.length > 0 && (
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="px-4 sm:px-6 py-3 border-b border-slate-200">
-            <h4 className="text-xs font-semibold text-slate-700">Actual Yearly Hours (from flight records)</h4>
+        <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl shadow-sm overflow-hidden">
+          <div className="px-4 sm:px-6 py-3 border-b border-slate-200 dark:border-edge">
+            <h4 className="text-xs font-semibold text-slate-700 dark:text-foreground-soft">Actual Yearly Hours (from flight records)</h4>
           </div>
           <div className="p-4 overflow-x-auto">
             <div className="flex gap-2 min-w-0">
               {yearlyHours.map(yh => (
-                <div key={yh.year} className="flex-1 min-w-[60px] text-center p-2 bg-slate-50 rounded-lg">
-                  <p className="text-xs font-bold text-slate-800">{yh.year}</p>
-                  <p className="text-sm font-bold text-blue-700 font-mono">{yh.hours.toFixed(1)}</p>
-                  <p className="text-[9px] text-slate-400">hrs</p>
-                  <p className="text-[9px] text-slate-400 font-mono">{(yh.hours / 12).toFixed(1)}/mo</p>
+                <div key={yh.year} className="flex-1 min-w-[60px] text-center p-2 bg-slate-50 dark:bg-muted rounded-lg">
+                  <p className="text-xs font-bold text-slate-800 dark:text-foreground">{yh.year}</p>
+                  <p className="text-sm font-bold text-blue-700 dark:text-blue-300 font-mono">{yh.hours.toFixed(1)}</p>
+                  <p className="text-[9px] text-slate-400 dark:text-faint">hrs</p>
+                  <p className="text-[9px] text-slate-400 dark:text-faint font-mono">{(yh.hours / 12).toFixed(1)}/mo</p>
                 </div>
               ))}
             </div>
@@ -8068,30 +8102,30 @@ function DepositsTable({ depositsDetailsByCode, csvPilotNames }: { depositsDetai
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-      <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
+    <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl shadow-sm overflow-hidden">
+      <div className="px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-edge">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-              <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
+              <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2v-1" />
               </svg>
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-slate-800">All Deposits</h3>
-              <p className="text-xs text-slate-500">{allDeposits.length} records · Total: ${totalAmount.toLocaleString('es-CL')}</p>
+              <h3 className="text-sm font-semibold text-slate-800 dark:text-foreground">All Deposits</h3>
+              <p className="text-xs text-slate-500 dark:text-muted-foreground">{allDeposits.length} records · Total: ${totalAmount.toLocaleString('es-CL')}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setEditMode(!editMode)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${editMode ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${editMode ? 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/30 hover:bg-red-100 dark:hover:bg-red-500/15' : 'bg-slate-50 dark:bg-muted text-slate-600 dark:text-foreground-soft border-slate-200 dark:border-edge hover:bg-slate-100 dark:hover:bg-muted'}`}
             >
               {editMode ? 'Done' : 'Edit'}
             </button>
             <a
               href="/admin/deposits"
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-md text-xs font-medium transition-colors"
+              className="px-3 py-1.5 bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-800 text-white rounded-md text-xs font-medium transition-colors"
             >
               Fix Deposit
             </a>
@@ -8100,46 +8134,46 @@ function DepositsTable({ depositsDetailsByCode, csvPilotNames }: { depositsDetai
       </div>
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-slate-50">
+          <thead className="bg-slate-50 dark:bg-muted">
             <tr>
               <th
-                className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition"
+                className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-muted transition"
                 onClick={() => toggleSort("date")}
               >
                 Date {sortBy === "date" && (sortOrder === "desc" ? "↓" : "↑")}
               </th>
               <th
-                className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition"
+                className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-muted transition"
                 onClick={() => toggleSort("pilot")}
               >
                 Pilot {sortBy === "pilot" && (sortOrder === "desc" ? "↓" : "↑")}
               </th>
-              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">
                 Description
               </th>
               <th
-                className="px-3 sm:px-4 py-3 text-right text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition"
+                className="px-3 sm:px-4 py-3 text-right text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-muted transition"
                 onClick={() => toggleSort("amount")}
               >
                 Amount {sortBy === "amount" && (sortOrder === "desc" ? "↓" : "↑")}
               </th>
               {editMode && (
-                <th className="px-3 sm:px-4 py-3 text-center text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                <th className="px-3 sm:px-4 py-3 text-center text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">
                   Actions
                 </th>
               )}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100 dark:divide-edge">
             {allDeposits.map((d, idx) => (
-              <tr key={d.id || idx} className="hover:bg-slate-50 transition">
-                <td className="px-3 sm:px-4 py-2.5 text-xs sm:text-sm text-slate-600">{d.fecha}</td>
-                <td className="px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-800">
+              <tr key={d.id || idx} className="hover:bg-slate-50 dark:hover:bg-muted transition">
+                <td className="px-3 sm:px-4 py-2.5 text-xs sm:text-sm text-slate-600 dark:text-foreground-soft">{d.fecha}</td>
+                <td className="px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-800 dark:text-foreground">
                   {d.pilotName}
-                  <span className="ml-1.5 text-[10px] text-slate-400 font-normal">({d.code})</span>
+                  <span className="ml-1.5 text-[10px] text-slate-400 dark:text-faint font-normal">({d.code})</span>
                 </td>
-                <td className="px-3 sm:px-4 py-2.5 text-xs sm:text-sm text-slate-600">{d.descripcion}</td>
-                <td className="px-3 sm:px-4 py-2.5 text-right text-xs sm:text-sm text-emerald-600 font-semibold font-mono">
+                <td className="px-3 sm:px-4 py-2.5 text-xs sm:text-sm text-slate-600 dark:text-foreground-soft">{d.descripcion}</td>
+                <td className="px-3 sm:px-4 py-2.5 text-right text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 font-semibold font-mono">
                   ${d.monto.toLocaleString('es-CL')}
                 </td>
                 {editMode && (
@@ -8148,12 +8182,12 @@ function DepositsTable({ depositsDetailsByCode, csvPilotNames }: { depositsDetai
                       <button
                         onClick={() => handleDelete(d.id!, d.pilotName, d.monto)}
                         disabled={deletingId === d.id}
-                        className="px-2 py-1 rounded-md bg-red-50 text-red-600 hover:bg-red-100 text-[10px] sm:text-xs font-medium disabled:opacity-50 border border-red-200 transition-colors"
+                        className="px-2 py-1 rounded-md bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/15 text-[10px] sm:text-xs font-medium disabled:opacity-50 border border-red-200 dark:border-red-500/30 transition-colors"
                       >
                         {deletingId === d.id ? '...' : 'Delete'}
                       </button>
                     ) : (
-                      <span className="text-slate-400 text-xs">—</span>
+                      <span className="text-slate-400 dark:text-faint text-xs">—</span>
                     )}
                   </td>
                 )}

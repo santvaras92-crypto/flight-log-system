@@ -132,25 +132,25 @@ export default function LoginPage() {
   // Mostrar loading mientras intenta auto-login
   if (autoLoginLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-muted">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700 mx-auto mb-2"></div>
-          <p className="text-gray-500 text-sm">Verificando sesión...</p>
+          <p className="text-gray-500 dark:text-muted-foreground text-sm">Verificando sesión...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-muted p-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="flex justify-center">
           <div className="bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 rounded-xl p-4 shadow-lg">
             <img src="/logo.png" alt="CC-AQI" className="h-[8.162rem] w-auto" />
           </div>
         </div>
-        <form onSubmit={handleSubmit} className="bg-white shadow rounded p-6 space-y-4">
-          <h1 className="text-xl font-semibold text-gray-700">Ingreso</h1>
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-card shadow rounded p-6 space-y-4">
+          <h1 className="text-xl font-semibold text-gray-700 dark:text-foreground-soft">Ingreso</h1>
         <div className="space-y-2">
           <label className="block text-sm font-medium">Email</label>
           <input
@@ -171,16 +171,16 @@ export default function LoginPage() {
             required
           />
         </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         <div className="flex items-center gap-2">
           <input
             type="checkbox"
             id="rememberDevice"
             checked={rememberDevice}
             onChange={(e) => setRememberDevice(e.target.checked)}
-            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="rounded border-gray-300 dark:border-edge-strong text-blue-600 dark:text-blue-400 focus:ring-blue-500"
           />
-          <label htmlFor="rememberDevice" className="text-sm text-gray-600">
+          <label htmlFor="rememberDevice" className="text-sm text-gray-600 dark:text-foreground-soft">
             Recordar este dispositivo
           </label>
         </div>

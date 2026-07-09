@@ -51,6 +51,63 @@
   --border-accent: #2563EB;
 }
 
+/* ────────────────────────────────────────────────────────────
+   DARK THEME — professional layered palette (Apple/Google style)
+   Applied via <html class="dark"> by next-themes. Overrides the
+   same tokens above, so everything using var(--…) or the Tailwind
+   semantic tokens (bg-surface, text-foreground, border-edge…) flips
+   automatically. Near-black layered surfaces (not pure #000), soft
+   off-white text to avoid halation, desaturated hairline borders.
+   ──────────────────────────────────────────────────────────── */
+.dark {
+  /* Layered surfaces: page (deepest) → card → elevated */
+  --bg-primary: #0A0E14;
+  --bg-secondary: #141A22;
+  --bg-tertiary: #1B222B;
+  --bg-elevated: #141A22;
+  --bg-dark: #060A0F;
+
+  /* Aviation blues — brightened so brand pops on dark */
+  --aviation-blue-900: #1E3A5F;
+  --aviation-blue-800: #245084;
+  --aviation-blue-700: #2E63A3;
+  --aviation-blue-600: #3B82F6;
+  --aviation-blue-500: #60A5FA;
+  --aviation-blue-400: #93C5FD;
+
+  /* Neutral grays — inverted scale */
+  --gray-950: #E6EDF3;
+  --gray-900: #D6DEE7;
+  --gray-800: #B4C0CD;
+  --gray-700: #9BA8B7;
+  --gray-600: #7D8A99;
+  --gray-500: #616E7D;
+  --gray-400: #454F5B;
+  --gray-300: #2E3946;
+  --gray-200: #232C37;
+  --gray-100: #1B222B;
+
+  /* Accents — slightly brighter for AA contrast on dark */
+  --accent-success: #34D399;
+  --accent-warning: #FBBF24;
+  --accent-danger: #F87171;
+  --accent-info: #22D3EE;
+
+  /* Text — soft off-white, not pure #FFF */
+  --text-primary: #E6EDF3;
+  --text-secondary: #9BA8B7;
+  --text-tertiary: #7D8A99;
+  --text-muted: #616E7D;
+  --text-on-dark: #F8FAFC;
+
+  /* Borders — desaturated hairlines */
+  --border-primary: #232C37;
+  --border-secondary: #2E3946;
+  --border-accent: #3B82F6;
+
+  color-scheme: dark;
+}
+
 * {
   margin: 0;
   padding: 0;
