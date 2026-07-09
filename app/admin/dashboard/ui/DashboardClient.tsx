@@ -497,6 +497,10 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       const oilRemaining = overviewMetrics?.nextInspections?.oilChangeRemaining ?? 0;
       const hundredRemaining = overviewMetrics?.nextInspections?.hundredHourRemaining ?? 0;
       const weightedRate = stats?.weightedRate || 0;
+      const rateAnnual = stats?.rateAnnual || 0;
+      // Conservative: pick the faster consumption rate → earliest inspection date
+      // (reactive weighted vs. rolling-annual, whichever runs out sooner)
+      const predictRate = Math.max(weightedRate, rateAnnual);
       const stdDev = stats?.stdDev || 0;
       const trend = stats?.trend || 0;
       const hobbsTachRatio = overviewMetrics?.annualStats?.hobbsTachRatio || 1.25;
@@ -507,10 +511,10 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
 
       // Calculate predictions
       const calcPrediction = (hoursRemaining: number) => {
-        if (weightedRate <= 0) return { days: 0, minDays: 0, maxDays: 0, date: null, minDate: null, maxDate: null };
+        if (predictRate <= 0) return { days: 0, minDays: 0, maxDays: 0, date: null, minDate: null, maxDate: null };
 
-        const days = Math.round(hoursRemaining / weightedRate);
-        const uncertainty = 1.96 * stdDev * Math.sqrt(days) / weightedRate;
+        const days = Math.round(hoursRemaining / predictRate);
+        const uncertainty = 1.96 * stdDev * Math.sqrt(days) / predictRate;
         const minDays = Math.max(1, Math.round(days - uncertainty));
         const maxDays = Math.round(days + uncertainty);
 
@@ -3444,7 +3448,8 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
   const stats = overviewMetrics?.nextInspections?.usageStats;
   const weightedRate = stats?.weightedRate || 0;  // tach hrs/day
   const rateAnnual = stats?.rateAnnual || 0;  // tach hrs/day from rolling 365d
-  const effectiveRate = rateAnnual > 0 ? rateAnnual : weightedRate;  // prefer annual for consistency
+  // Conservative: pick the faster consumption rate → earliest inspection date
+  const effectiveRate = Math.max(weightedRate, rateAnnual);
   const stdDev = stats?.stdDev || 0;
   const trend = stats?.trend || 0;
   const rate30d = stats?.rate30d || 0;
@@ -7407,8 +7412,8 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         const stdDev = stats?.stdDev || 0;
         const trend = stats?.trend || 0;
 
-        // Time predictions: use rateAnnual when live, or derive from horasAnuales override
-        const liveRate = rateAnnual > 0 ? rateAnnual : weightedRate;
+        // Time predictions: use live rate (conservative: faster of reactive/annual) or horasAnuales override
+        const liveRate = Math.max(weightedRate, rateAnnual);
         const overrideRate = horasAnuales / (overviewMetrics?.annualStats?.hobbsTachRatio || 1.25) / 365;
         const effectiveRate = horasIsLive ? liveRate : overrideRate;
         const usingOverride = !horasIsLive;
