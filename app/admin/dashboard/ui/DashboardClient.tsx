@@ -569,7 +569,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </div>
-              <h3 className="text-slate-900 dark:text-foreground text-xs sm:text-sm font-bold uppercase tracking-wide">Inspecciones</h3>
+              <h3 className="text-slate-900 dark:text-foreground text-xs sm:text-sm font-bold uppercase tracking-wide">Inspections</h3>
             </div>
             <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300 text-[9px] sm:text-xs font-bold rounded-full inline-flex items-center gap-1"><Icon name="smart" className="w-3 h-3" /> SMART</span>
           </div>
@@ -577,7 +577,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           {/* Oil Change Section */}
           <div className="mb-2 sm:mb-3">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-foreground-soft inline-flex items-center gap-1"><Icon name="oil" className="w-3.5 h-3.5" /> ACEITE</span>
+              <span className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-foreground-soft inline-flex items-center gap-1"><Icon name="oil" className="w-3.5 h-3.5" /> OIL</span>
               <span className="text-[10px] sm:text-xs font-mono text-slate-600 dark:text-foreground-soft">{oilPct.toFixed(0)}%</span>
             </div>
             <div className={`w-full h-2 sm:h-2.5 rounded-full ${getProgressBg(oilRemaining, OIL_INTERVAL)} overflow-hidden`}>
@@ -601,7 +601,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           {/* 100hr Inspection Section */}
           <div className="mb-2 sm:mb-3">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-foreground-soft inline-flex items-center gap-1"><Icon name="wrench" className="w-3.5 h-3.5" /> 100 HORAS</span>
+              <span className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-foreground-soft inline-flex items-center gap-1"><Icon name="wrench" className="w-3.5 h-3.5" /> 100 HOURS</span>
               <span className="text-[10px] sm:text-xs font-mono text-slate-600 dark:text-foreground-soft">{hundredPct.toFixed(0)}%</span>
             </div>
             <div className={`w-full h-2 sm:h-2.5 rounded-full ${getProgressBg(hundredRemaining, HUNDRED_HR_INTERVAL)} overflow-hidden`}>
@@ -728,8 +728,8 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             </div>
             <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-purple-100 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300 text-[9px] sm:text-xs font-bold rounded-full">{activePilotsData.length}</span>
           </div>
-          <h3 className="text-slate-500 dark:text-muted-foreground text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Pilotos Activos</h3>
-          <p className="text-[9px] sm:text-xs text-slate-500 dark:text-muted-foreground mb-2">Últimos 60 días</p>
+          <h3 className="text-slate-500 dark:text-muted-foreground text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Active Pilots</h3>
+          <p className="text-[9px] sm:text-xs text-slate-500 dark:text-muted-foreground mb-2">Last 60 days</p>
           <div className="max-h-24 sm:max-h-32 overflow-y-auto space-y-0.5">
             {activePilotsData.map((pilot, i) => (
               <div key={i} className="flex items-center justify-between text-[10px] sm:text-xs">
@@ -738,12 +738,12 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                   {pilot.balance >= 0 ? '+' : '-'}${formatCurrency(Math.abs(pilot.balance))}
                 </span>
                 <span className={`ml-1.5 w-7 text-right font-mono text-[10px] sm:text-xs ${pilot.daysSince === 0 ? 'text-green-600 dark:text-green-400 font-bold' : pilot.daysSince <= 7 ? 'text-emerald-500' : pilot.daysSince <= 30 ? 'text-slate-500 dark:text-muted-foreground' : 'text-orange-500'}`}>
-                  {pilot.daysSince === 0 ? 'hoy' : `${pilot.daysSince}d`}
+                  {pilot.daysSince === 0 ? 'today' : `${pilot.daysSince}d`}
                 </span>
               </div>
             ))}
             {activePilotsData.length === 0 && (
-              <div className="text-[10px] sm:text-xs text-slate-400 dark:text-faint italic">Sin vuelos recientes</div>
+              <div className="text-[10px] sm:text-xs text-slate-400 dark:text-faint italic">No recent flights</div>
             )}
           </div>
         </div>
@@ -951,7 +951,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       {showBackupModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-card rounded-2xl shadow-2xl max-w-md w-full p-6">
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-foreground mb-4 flex items-center gap-2"><Icon name="save" className="w-6 h-6 text-slate-500 dark:text-muted-foreground" /> Generar Backup Completo</h3>
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-foreground mb-4 flex items-center gap-2"><Icon name="save" className="w-6 h-6 text-slate-500 dark:text-muted-foreground" /> Generate Full Backup</h3>
 
             {backupMessage && (
               <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${backupMessage.type === 'success' ? 'bg-green-100 dark:bg-green-500/15 text-green-800 dark:text-green-300' : 'bg-red-100 dark:bg-red-500/15 text-red-800 dark:text-red-300'}`}>
@@ -961,16 +961,16 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             )}
 
             <p className="text-slate-600 dark:text-foreground-soft mb-6">
-              Este backup incluye <strong>toda la información histórica</strong> desde el primer vuelo hasta hoy:
+              This backup includes <strong>all historical data</strong> from the first flight until today:
             </p>
 
             <ul className="text-sm text-slate-600 dark:text-foreground-soft space-y-2 mb-6">
-              <li className="flex items-center gap-2"><Icon name="airframe" className="w-4 h-4 text-slate-400 dark:text-faint" /> Todos los vuelos registrados</li>
-              <li className="flex items-center gap-2"><Icon name="money" className="w-4 h-4 text-slate-400 dark:text-faint" /> Depósitos completos (DB + CSV)</li>
-              <li className="flex items-center gap-2"><Icon name="fuel" className="w-4 h-4 text-slate-400 dark:text-faint" /> Combustible histórico</li>
-              <li className="flex items-center gap-2"><Icon name="people" className="w-4 h-4 text-slate-400 dark:text-faint" /> Pilotos con balances</li>
-              <li className="flex items-center gap-2"><Icon name="wrench" className="w-4 h-4 text-slate-400 dark:text-faint" /> Aeronaves y mantenimiento</li>
-              <li className="flex items-center gap-2"><Icon name="document" className="w-4 h-4 text-slate-400 dark:text-faint" /> Transacciones y pendientes</li>
+              <li className="flex items-center gap-2"><Icon name="airframe" className="w-4 h-4 text-slate-400 dark:text-faint" /> All recorded flights</li>
+              <li className="flex items-center gap-2"><Icon name="money" className="w-4 h-4 text-slate-400 dark:text-faint" /> Complete deposits (DB + CSV)</li>
+              <li className="flex items-center gap-2"><Icon name="fuel" className="w-4 h-4 text-slate-400 dark:text-faint" /> Fuel history</li>
+              <li className="flex items-center gap-2"><Icon name="people" className="w-4 h-4 text-slate-400 dark:text-faint" /> Pilots with balances</li>
+              <li className="flex items-center gap-2"><Icon name="wrench" className="w-4 h-4 text-slate-400 dark:text-faint" /> Aircraft and maintenance</li>
+              <li className="flex items-center gap-2"><Icon name="document" className="w-4 h-4 text-slate-400 dark:text-faint" /> Transactions and pending</li>
             </ul>
 
             <div className="space-y-3">
@@ -985,14 +985,14 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <span>Generando...</span>
+                    <span>Generating...</span>
                   </>
                 ) : (
                   <>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
-                    <span>Descargar Ahora</span>
+                    <span>Download Now</span>
                   </>
                 )}
               </button>
@@ -1008,14 +1008,14 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <span>Enviando...</span>
+                    <span>Sending...</span>
                   </>
                 ) : (
                   <>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
-                    <span>Enviar por Email</span>
+                    <span>Send by Email</span>
                   </>
                 )}
               </button>
@@ -1028,13 +1028,13 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                 disabled={backupLoading}
                 className="w-full px-6 py-3 bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-foreground-soft rounded-xl font-bold hover:bg-slate-300 transition-colors disabled:opacity-50"
               >
-                Cancelar
+                Cancel
               </button>
             </div>
 
             <p className="text-xs text-slate-500 dark:text-muted-foreground mt-4 text-center">
-              El backup se genera con todos los datos históricos.<br />
-              Tamaño estimado: 2-5 MB
+              The backup is generated with all historical data.<br />
+              Estimated size: 2-5 MB
             </p>
           </div>
         </div>
@@ -1086,7 +1086,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                 : 'bg-slate-200 dark:bg-white/10 hover:bg-slate-300 text-slate-700 dark:text-foreground-soft'
                 }`}
             >
-              {editMode ? <span className="inline-flex items-center gap-2"><Icon name="edit" className="w-4 h-4" /> Modo Edición ON</span> : <span className="inline-flex items-center gap-2"><Icon name="edit" className="w-4 h-4" /> Editar Celdas</span>}
+              {editMode ? <span className="inline-flex items-center gap-2"><Icon name="edit" className="w-4 h-4" /> Edit Mode ON</span> : <span className="inline-flex items-center gap-2"><Icon name="edit" className="w-4 h-4" /> Edit Cells</span>}
             </button>
           </div>
           <FlightsTable
@@ -1275,7 +1275,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                 : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
             >
-              <span className="hidden sm:inline">Plan de </span>Reemplazo
+              <span className="hidden sm:inline">Replacement </span>Plan
             </button>
             <button
               onClick={() => setMxSubTab("adda")}
@@ -1338,7 +1338,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
           </svg>
-          <span>Generar Backup Completo</span>
+          <span>Generate Full Backup</span>
         </button>
       </div>
     </div>
@@ -2221,7 +2221,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
       });
       const json = await res.json();
       if (!json.ok) {
-        alert(json.error || 'Error al guardar cambios');
+        alert(json.error || 'Error saving changes');
       } else {
         alert('Cambios guardados');
         setDrafts({});
@@ -2229,14 +2229,14 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
         location.reload();
       }
     } catch (e) {
-      alert('Error de red al guardar');
+      alert('Network error while saving');
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteFlight = async (flightId: number, pilotName: string, fecha: string, costo: number) => {
-    const confirmMsg = `¿Eliminar este vuelo?\n\nPiloto: ${pilotName}\nFecha: ${fecha}\nCosto: $${formatCurrency(costo)}\n\nEsto revertirá:\n• Saldo del piloto (+$${formatCurrency(costo)})\n• Contadores del avión\n• Horas de componentes`;
+    const confirmMsg = `Delete this flight?\n\nPilot: ${pilotName}\nDate: ${fecha}\nCost: $${formatCurrency(costo)}\n\nThis will revert:\n• Pilot balance (+$${formatCurrency(costo)})\n• Aircraft counters\n• Component hours`;
 
     if (!confirm(confirmMsg)) return;
 
@@ -2249,13 +2249,13 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
       });
       const json = await res.json();
       if (!json.ok) {
-        alert(json.error || 'Error al eliminar vuelo');
+        alert(json.error || 'Error deleting flight');
       } else {
-        alert(`Vuelo eliminado.\nSaldo revertido: +$${json.reverted?.balance ? formatCurrency(json.reverted.balance) : formatCurrency(costo)}`);
+        alert(`Flight deleted.\nBalance reverted: +$${json.reverted?.balance ? formatCurrency(json.reverted.balance) : formatCurrency(costo)}`);
         location.reload();
       }
     } catch (e) {
-      alert('Error de red al eliminar');
+      alert('Network error while deleting');
     } finally {
       setDeletingId(null);
     }
@@ -2318,7 +2318,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
               disabled={saving}
               className="ml-auto px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-bold disabled:opacity-50"
             >
-              {saving ? 'Guardando...' : 'Guardar cambios'}
+              {saving ? 'Saving...' : 'Save changes'}
             </button>
           )}
         </h3>
@@ -2534,13 +2534,13 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
         <table className="min-w-full divide-y divide-slate-200 dark:divide-edge" style={{ minWidth: '1400px' }}>
           <thead className="bg-slate-50 dark:bg-muted">
             <tr>
-              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Fecha</th>
+              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Date</th>
               <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Tac. 1</th>
               <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Tac. 2</th>
               <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Dif. Taco</th>
               <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Hobbs I</th>
               <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Hobbs F</th>
-              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Horas</th>
+              <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Hours</th>
               <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Piloto</th>
               <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Copiloto</th>
               <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">ID</th>
@@ -2552,11 +2552,11 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
               <th className="px-2 py-2 text-right text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">PROPELLER</th>
               <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">AD Sal</th>
               <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">AD Dest</th>
-              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">Detalle</th>
-              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Año</th>
-              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Mes</th>
+              <th className="px-2 py-2 text-left text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">Detail</th>
+              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Year</th>
+              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider whitespace-nowrap">Month</th>
               <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider whitespace-nowrap" title="Engine Monitor Analysis"><span className="inline-flex justify-center w-full"><Icon name="engine" className="w-4 h-4 text-blue-600 dark:text-blue-400" title="Engine Monitor Analysis" /></span></th>
-              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider whitespace-nowrap"><span className="inline-flex justify-center w-full"><Icon name="trash" className="w-4 h-4 text-red-600 dark:text-red-400" title="Eliminar" /></span></th>
+              <th className="px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider whitespace-nowrap"><span className="inline-flex justify-center w-full"><Icon name="trash" className="w-4 h-4 text-red-600 dark:text-red-400" title="Delete" /></span></th>
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-card divide-y divide-slate-100 dark:divide-edge">
@@ -2754,7 +2754,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
                       )}
                       disabled={deletingId === f.id}
                       className="px-2 py-1 text-[10px] sm:text-xs bg-red-100 dark:bg-red-500/15 hover:bg-red-200 text-red-700 dark:text-red-300 rounded-lg font-medium transition-colors disabled:opacity-50"
-                      title="Eliminar vuelo y revertir saldo/contadores"
+                      title="Delete flight and revert balance/counters"
                     >
                       {deletingId === f.id ? '...' : <Icon name="trash" className="w-3.5 h-3.5" />}
                     </button>
@@ -3136,7 +3136,7 @@ function FuelTable({ logs }: { logs: any[] }) {
       <ImagePreviewModal
         imageUrl={fuelImageModalUrl}
         onClose={() => setFuelImageModalUrl(null)}
-        alt="Boleta de combustible"
+        alt="Fuel receipt"
       />
     </div>
   );
@@ -3216,14 +3216,14 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
         }
       } catch (e) {
         errorCount++;
-        lastError = 'Error de conexión';
+        lastError = 'Connection error';
         console.error(`Error updating pilot ${id}:`, e);
       }
     }
 
     setSaving(false);
     if (successCount > 0 && errorCount === 0) {
-      setMessage(`✓ ${successCount} piloto(s) actualizado(s) correctamente`);
+      setMessage(`✓ ${successCount} pilot(s) updated successfully`);
       setEditedRows({});
       // Reload page to refresh data
       setTimeout(() => window.location.reload(), 1000);
@@ -3233,7 +3233,7 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
   };
 
   const handleDelete = async (id: number, name: string) => {
-    if (!confirm(`¿Estás seguro de eliminar al piloto "${name}"? Esta acción no se puede deshacer.`)) {
+    if (!confirm(`Are you sure you want to delete pilot "${name}"? This action cannot be undone.`)) {
       return;
     }
 
@@ -3249,15 +3249,15 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
       const data = await res.json();
 
       if (data.ok) {
-        setMessage(`✓ Piloto "${name}" eliminado correctamente`);
+        setMessage(`✓ Pilot "${name}" deleted successfully`);
         setDeletedIds(prev => new Set([...prev, id]));
         // Reload page after 1 second
         setTimeout(() => window.location.reload(), 1000);
       } else {
-        setMessage(`⚠ Error: ${data.error || 'No se pudo eliminar'}`);
+        setMessage(`⚠ Error: ${data.error || 'Could not delete'}`);
       }
     } catch (e) {
-      setMessage('⚠ Error de conexión al eliminar');
+      setMessage('⚠ Connection error while deleting');
       console.error('Error deleting pilot:', e);
     } finally {
       setDeletingId(null);
@@ -3485,14 +3485,14 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
   const inspectionItems = [
     {
       id: 'oil-change',
-      name: 'Cambio de Aceite',
+      name: 'Oil Change',
       interval: 50,
       remaining: overviewMetrics?.nextInspections?.oilChangeRemaining ?? 0,
       icon: 'oil' as IconName
     },
     {
       id: '100-hour',
-      name: 'Inspección 100 Horas',
+      name: '100-Hour Inspection',
       interval: 100,
       remaining: overviewMetrics?.nextInspections?.hundredHourRemaining ?? 0,
       icon: 'wrench' as IconName
@@ -3504,14 +3504,14 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
 
   // Format days remaining as human-readable: "X,Y años" / "X meses" / "X días"
   const formatTimeRemaining = (days: number): string => {
-    if (days <= 0) return '0 días';
-    if (days < 30) return `${days} días`;
+    if (days <= 0) return '0 days';
+    if (days < 30) return `${days} days`;
     if (days < 365) {
       const months = Math.floor(days / 30);
-      return `${months} ${months === 1 ? 'mes' : 'meses'}`;
+      return `${months} ${months === 1 ? 'month' : 'months'}`;
     }
     const years = days / 365;
-    return `${years.toFixed(1)} años`;
+    return `${years.toFixed(1)} years`;
   };
 
   const getUrgencyClass = (days: number) => {
@@ -3537,7 +3537,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
     const c = overhaulModal.component;
 
     if (!overhaulForm.airframeHours || !overhaulForm.date) {
-      setOverhaulResult({ success: false, error: 'Horas de airframe y fecha son requeridas' });
+      setOverhaulResult({ success: false, error: 'Airframe hours and date are required' });
       return;
     }
 
@@ -3550,7 +3550,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
 
       if (!componentDbId) {
         // We'll handle this in the server action - create component on the fly
-        setOverhaulResult({ success: false, error: 'Componente no encontrado en la base de datos. Ejecute el script de inicialización primero.' });
+        setOverhaulResult({ success: false, error: 'Component not found in the database. Run the initialization script first.' });
         setOverhaulSubmitting(false);
         return;
       }
@@ -3708,7 +3708,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
                 )}
 
                 {!pred && (
-                  <div className="text-sm text-slate-500 dark:text-muted-foreground italic mt-2">Sin datos suficientes para predicción</div>
+                  <div className="text-sm text-slate-500 dark:text-muted-foreground italic mt-2">Not enough data for prediction</div>
                 )}
               </div>
             );
@@ -3932,15 +3932,15 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
 // Plan de Reemplazo (life-limited parts) — dynamic monitoring
 // ─────────────────────────────────────────────────────────────
 const RAG_STYLE: Record<string, { badge: string; dot: string; label: string; row: string }> = {
-  VENCIDO: { badge: 'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300 border-red-200 dark:border-red-500/30', dot: 'bg-red-500', label: 'Vencido', row: 'bg-red-50/60 dark:bg-red-500/10 border-l-4 border-red-500' },
-  PROXIMO: { badge: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30', dot: 'bg-amber-500', label: 'Próximo', row: 'bg-amber-50/50 dark:bg-amber-500/10 border-l-4 border-amber-400' },
+  VENCIDO: { badge: 'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300 border-red-200 dark:border-red-500/30', dot: 'bg-red-500', label: 'Overdue', row: 'bg-red-50/60 dark:bg-red-500/10 border-l-4 border-red-500' },
+  PROXIMO: { badge: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30', dot: 'bg-amber-500', label: 'Upcoming', row: 'bg-amber-50/50 dark:bg-amber-500/10 border-l-4 border-amber-400' },
   OK: { badge: 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30', dot: 'bg-emerald-500', label: 'OK', row: 'hover:bg-slate-50 dark:hover:bg-muted' },
-  SIN_LIMITE: { badge: 'bg-slate-100 dark:bg-muted text-slate-500 dark:text-muted-foreground border-slate-200 dark:border-edge', dot: 'bg-slate-400', label: 'Sin límite', row: 'hover:bg-slate-50 dark:hover:bg-muted' },
+  SIN_LIMITE: { badge: 'bg-slate-100 dark:bg-muted text-slate-500 dark:text-muted-foreground border-slate-200 dark:border-edge', dot: 'bg-slate-400', label: 'No limit', row: 'hover:bg-slate-50 dark:hover:bg-muted' },
 };
 const DOMAIN_META: Record<string, { label: string; icon: IconName }> = {
-  AIRFRAME: { label: 'Célula · Airframe', icon: 'airframe' },
-  ENGINE: { label: 'Motor · Engine', icon: 'engine' },
-  PROPELLER: { label: 'Hélice · Propeller', icon: 'propeller' },
+  AIRFRAME: { label: 'Airframe', icon: 'airframe' },
+  ENGINE: { label: 'Engine', icon: 'engine' },
+  PROPELLER: { label: 'Propeller', icon: 'propeller' },
 };
 
 function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?: { weightedRate: number; rateAnnual: number } }) {
@@ -3966,10 +3966,10 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
     iso ? formatFecha(new Date(iso), { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
   const fmtDays = (days: number | null | undefined): string => {
     if (days == null) return '—';
-    if (days <= 0) return 'Vencido';
-    if (days < 30) return `${days} días`;
-    if (days < 365) { const m = Math.floor(days / 30); return `${m} ${m === 1 ? 'mes' : 'meses'}`; }
-    return `${(days / 365).toFixed(1)} años`;
+    if (days <= 0) return 'Overdue';
+    if (days < 30) return `${days} days`;
+    if (days < 365) { const m = Math.floor(days / 30); return `${m} ${m === 1 ? 'month' : 'months'}`; }
+    return `${(days / 365).toFixed(1)} years`;
   };
 
   // Summary counters.
@@ -4014,7 +4014,7 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
 
   const handleSubmit = async () => {
     if (!modal.part) return;
-    if (!form.fecha) { setResult({ success: false, error: 'La fecha es requerida' }); return; }
+    if (!form.fecha) { setResult({ success: false, error: 'Date is required' }); return; }
     setSubmitting(true);
     setResult(null);
     try {
@@ -4061,7 +4061,7 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
   };
 
   const handleEditSubmit = async () => {
-    if (!editForm.descripcion.trim()) { setEditResult({ success: false, error: 'La descripción es requerida' }); return; }
+    if (!editForm.descripcion.trim()) { setEditResult({ success: false, error: 'Description is required' }); return; }
     setEditSubmitting(true);
     setEditResult(null);
     try {
@@ -4092,7 +4092,7 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
 
   const handleDelete = async () => {
     if (!editModal.id) return;
-    if (!confirm('¿Eliminar este componente del Plan de Reemplazo? Esta acción no se puede deshacer.')) return;
+    if (!confirm('Delete this component from the Replacement Plan? This action cannot be undone.')) return;
     setDeleting(true);
     setEditResult(null);
     try {
@@ -4109,10 +4109,10 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
     return (
       <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl p-8 text-center text-slate-500 dark:text-muted-foreground shadow-sm">
         <div className="flex justify-center mb-3"><Icon name="plan" className="w-8 h-8 text-slate-300" /></div>
-        <p className="font-medium text-slate-700 dark:text-foreground-soft">Sin plan de reemplazo cargado</p>
-        <p className="text-sm mt-1 mb-4">No hay componentes de vida limitada registrados para esta aeronave.</p>
+        <p className="font-medium text-slate-700 dark:text-foreground-soft">No replacement plan loaded</p>
+        <p className="text-sm mt-1 mb-4">No life-limited components registered for this aircraft.</p>
         <button onClick={() => openEditModal(null)} className="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 dark:bg-slate-700 text-white hover:bg-slate-700 dark:hover:bg-slate-600">
-          + Agregar componente
+          + Add component
         </button>
         {editModal.open && renderEditModal()}
       </div>
@@ -4125,7 +4125,7 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !editSubmitting && !deleting && setEditModal({ open: false, id: null, isNew: false })}>
         <div className="bg-white dark:bg-card rounded-2xl shadow-xl w-full max-w-lg p-5 sm:p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-start justify-between mb-4">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-foreground">{editModal.isNew ? 'Agregar componente' : 'Editar componente'}</h3>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-foreground">{editModal.isNew ? 'Add component' : 'Edit component'}</h3>
             <button onClick={() => !editSubmitting && !deleting && setEditModal({ open: false, id: null, isNew: false })} className="text-slate-400 dark:text-faint hover:text-slate-600 dark:hover:text-foreground-soft text-xl leading-none">×</button>
           </div>
           <div className="space-y-3">
@@ -4134,9 +4134,9 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
                 <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Dominio</label>
                 <select value={editForm.dominio} onChange={(e) => setEditForm({ ...editForm, dominio: e.target.value })}
                   className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong">
-                  <option value="AIRFRAME">Célula (Airframe)</option>
-                  <option value="ENGINE">Motor (Engine)</option>
-                  <option value="PROPELLER">Hélice (Propeller)</option>
+                  <option value="AIRFRAME">Airframe</option>
+                  <option value="ENGINE">Engine</option>
+                  <option value="PROPELLER">Propeller</option>
                 </select>
               </div>
               <div>
@@ -4146,7 +4146,7 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Descripción *</label>
+              <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Description *</label>
               <input type="text" value={editForm.descripcion} onChange={(e) => setEditForm({ ...editForm, descripcion: e.target.value })}
                 className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
             </div>
@@ -4164,46 +4164,46 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">TBO Horas</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">TBO Hours</label>
                 <input type="number" step="0.1" value={editForm.tboHoras} onChange={(e) => setEditForm({ ...editForm, tboHoras: e.target.value })}
                   className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">TBO Meses</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">TBO Months</label>
                 <input type="number" value={editForm.tboMeses} onChange={(e) => setEditForm({ ...editForm, tboMeses: e.target.value })}
                   className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Vida Límite Horas</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Life Limit Hours</label>
                 <input type="number" step="0.1" value={editForm.vidaHoras} onChange={(e) => setEditForm({ ...editForm, vidaHoras: e.target.value })}
                   className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Vida Límite Meses</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Life Limit Months</label>
                 <input type="number" value={editForm.vidaMeses} onChange={(e) => setEditForm({ ...editForm, vidaMeses: e.target.value })}
                   className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
             </div>
             <div className="text-[11px] text-slate-400 dark:text-faint -mt-1">
-              El límite efectivo usa Vida Límite si está definida; si no, el TBO. {usaVida ? 'Actualmente se usará Vida Límite.' : ''}
+              The effective limit uses Life Limit if defined; otherwise TBO. {usaVida ? 'Life Limit will be used.' : ''}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Fecha instalación</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Install date</label>
                 <input type="date" value={editForm.installDate} onChange={(e) => setEditForm({ ...editForm, installDate: e.target.value })}
                   className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Horas del dominio al instalar</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Domain hours at install</label>
                 <input type="number" step="0.1" value={editForm.installHoras} onChange={(e) => setEditForm({ ...editForm, installHoras: e.target.value })}
                   className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Vencimiento del documento (opcional)</label>
+              <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Document expiry (optional)</label>
               <input type="date" value={editForm.proximaFecha} onChange={(e) => setEditForm({ ...editForm, proximaFecha: e.target.value })}
                 className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
-              <p className="text-[11px] text-slate-400 dark:text-faint mt-1">Fecha de reemplazo estampada/certificada (p. ej. batería ELT). Si se define y es posterior a la instalación, tiene prioridad sobre el cálculo instalación + meses. Se limpia al registrar un cambio.</p>
+              <p className="text-[11px] text-slate-400 dark:text-faint mt-1">Stamped/certified replacement date (e.g. ELT battery). If set and later than the install, it takes priority over the install + months calculation. Cleared when a change is recorded.</p>
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Notas</label>
@@ -4220,16 +4220,16 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
             {!editModal.isNew && (
               <button onClick={handleDelete} disabled={editSubmitting || deleting}
                 className="px-3 py-2 rounded-lg text-sm font-medium border border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 disabled:opacity-50">
-                {deleting ? 'Eliminando…' : 'Eliminar'}
+                {deleting ? 'Deleting…' : 'Delete'}
               </button>
             )}
             <button onClick={() => !editSubmitting && !deleting && setEditModal({ open: false, id: null, isNew: false })} disabled={editSubmitting || deleting}
               className="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-edge text-slate-600 dark:text-foreground-soft hover:bg-slate-50 dark:hover:bg-muted disabled:opacity-50">
-              Cancelar
+              Cancel
             </button>
             <button onClick={handleEditSubmit} disabled={editSubmitting || deleting}
               className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 dark:bg-slate-700 text-white hover:bg-slate-700 dark:hover:bg-slate-600 disabled:opacity-50">
-              {editSubmitting ? 'Guardando…' : editModal.isNew ? 'Crear' : 'Guardar'}
+              {editSubmitting ? 'Saving…' : editModal.isNew ? 'Create' : 'Save'}
             </button>
           </div>
         </div>
@@ -4241,12 +4241,12 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
     <div className="space-y-5">
       {/* Toolbar */}
       <div className="flex items-center justify-between">
-        <h3 className="text-base font-bold text-slate-800 dark:text-foreground">Plan de reemplazo de componentes</h3>
+        <h3 className="text-base font-bold text-slate-800 dark:text-foreground">Component replacement plan</h3>
         <button
           onClick={() => openEditModal(null)}
           className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-500 transition-colors whitespace-nowrap"
         >
-          + Agregar componente
+          + Add component
         </button>
       </div>
 
@@ -4255,7 +4255,7 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
         {[
           { label: 'Componentes', value: summary.total, cls: 'text-slate-800 dark:text-foreground', dot: 'bg-slate-400' },
           { label: 'Vencidos', value: summary.vencido, cls: 'text-red-600 dark:text-red-400', dot: 'bg-red-500' },
-          { label: 'Próximos', value: summary.proximo, cls: 'text-amber-600 dark:text-amber-400', dot: 'bg-amber-500' },
+          { label: 'Upcoming', value: summary.proximo, cls: 'text-amber-600 dark:text-amber-400', dot: 'bg-amber-500' },
           { label: 'En regla', value: summary.ok, cls: 'text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-500' },
         ].map((c) => (
           <div key={c.label} className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl p-3.5 shadow-sm">
@@ -4268,10 +4268,10 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
       </div>
 
       <div className="text-xs text-slate-500 dark:text-muted-foreground bg-blue-50/60 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 rounded-lg px-3 py-2">
-        Monitoreo dinámico: el remanente se recalcula en vivo contra el horómetro de cada dominio
-        (Célula / Motor TSMOH / Hélice) y contra el calendario. La <strong>fecha proyectada</strong> usa
-        la tasa de uso actual ({rate > 0 ? `${rate.toFixed(2)} h/día` : 's/d'}) y toma lo que ocurra primero
-        (horas o calendario).
+        Dynamic monitoring: remaining is recalculated live against each domain's hour meter
+        (Airframe / Engine TSMOH / Propeller) and against the calendar. The <strong>projected date</strong> uses
+        the current usage rate ({rate > 0 ? `${rate.toFixed(2)} h/day` : 'n/a'}) and takes whichever comes first
+        (hours or calendar).
       </div>
 
       {/* Domain groups */}
@@ -4286,14 +4286,14 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wide text-slate-400 dark:text-faint border-b border-slate-100 dark:border-edge">
-                  <th className="px-3 py-2 font-semibold">Estado</th>
-                  <th className="px-3 py-2 font-semibold">Componente</th>
+                  <th className="px-3 py-2 font-semibold">Status</th>
+                  <th className="px-3 py-2 font-semibold">Component</th>
                   <th className="px-3 py-2 font-semibold">P/N · S/N</th>
-                  <th className="px-3 py-2 font-semibold text-right">Límite</th>
-                  <th className="px-3 py-2 font-semibold text-right">Instalado</th>
-                  <th className="px-3 py-2 font-semibold text-right">Remanente</th>
-                  <th className="px-3 py-2 font-semibold">Fecha proyectada</th>
-                  <th className="px-3 py-2 font-semibold text-center">Acción</th>
+                  <th className="px-3 py-2 font-semibold text-right">Limit</th>
+                  <th className="px-3 py-2 font-semibold text-right">Installed</th>
+                  <th className="px-3 py-2 font-semibold text-right">Remaining</th>
+                  <th className="px-3 py-2 font-semibold">Projected date</th>
+                  <th className="px-3 py-2 font-semibold text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -4312,7 +4312,7 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
                         <div className="font-medium text-slate-800 dark:text-foreground flex items-center gap-1.5">
                           {p.descripcion}
                           {p.datosInconsistentes && (
-                            <span title="Horas de instalación fuera del marco actual del dominio (probablemente en horas de célula previas a un overhaul). Se monitorea solo por calendario; registre el cambio para corregir." className="text-amber-500 cursor-help inline-flex"><Icon name="warning" className="w-3.5 h-3.5" /></span>
+                            <span title="Install hours outside the domain's current frame (likely airframe hours prior to an overhaul). Monitored by calendar only; record the change to correct." className="text-amber-500 cursor-help inline-flex"><Icon name="warning" className="w-3.5 h-3.5" /></span>
                           )}
                         </div>
                         {p.marca && <div className="text-xs text-slate-400 dark:text-faint">{p.marca}</div>}
@@ -4357,14 +4357,14 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
                             onClick={() => openModal(p)}
                             className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-800 dark:bg-slate-700 text-white hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors whitespace-nowrap"
                           >
-                            Registrar cambio
+                            Record change
                           </button>
                           <button
                             onClick={() => openEditModal(p)}
-                            title="Editar componente"
+                            title="Edit component"
                             className="px-2 py-1 rounded-md text-xs font-medium border border-slate-200 dark:border-edge text-slate-500 dark:text-muted-foreground hover:bg-slate-100 dark:hover:bg-muted hover:text-slate-700 dark:hover:text-foreground-soft transition-colors"
                           >
-                            Editar
+                            Edit
                           </button>
                         </div>
                       </td>
@@ -4383,7 +4383,7 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
           <div className="bg-white dark:bg-card rounded-2xl shadow-xl w-full max-w-md p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h3 className="text-lg font-bold text-slate-800 dark:text-foreground">Registrar cambio</h3>
+                <h3 className="text-lg font-bold text-slate-800 dark:text-foreground">Record change</h3>
                 <p className="text-sm text-slate-500 dark:text-muted-foreground mt-0.5">{modal.part.descripcion}</p>
               </div>
               <button onClick={() => !submitting && setModal({ open: false, part: null })} className="text-slate-400 dark:text-faint hover:text-slate-600 dark:hover:text-foreground-soft text-xl leading-none">×</button>
@@ -4391,21 +4391,21 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Fecha del cambio</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Change date</label>
                 <input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })}
                   className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">
-                  Horas del {DOMAIN_META[modal.part.dominio]?.label.split(' · ')[0] || 'dominio'} al instalar
+                  {DOMAIN_META[modal.part.dominio]?.label.split(' · ')[0] || 'domain'} hours at install
                 </label>
                 <input type="number" step="0.1" value={form.horas} onChange={(e) => setForm({ ...form, horas: e.target.value })}
                   placeholder={modal.part.domainHours != null ? `Actual: ${Number(modal.part.domainHours).toFixed(1)} h` : ''}
                   className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
-                <p className="text-[11px] text-slate-400 dark:text-faint mt-1">Reinicia el conteo de vida útil desde este punto.</p>
+                <p className="text-[11px] text-slate-400 dark:text-faint mt-1">Resets the service-life count from this point.</p>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Nuevo serial (opcional)</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">New serial (optional)</label>
                 <input type="text" value={form.serial} onChange={(e) => setForm({ ...form, serial: e.target.value })}
                   placeholder={modal.part.serial || 'S/N del componente instalado'}
                   className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
@@ -4419,9 +4419,9 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
               {/* Preview */}
               {form.horas && modal.part.limitHoras != null && (
                 <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-lg px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
-                  Nuevo remanente ≈ <strong>{fmtH(modal.part.limitHoras)}</strong>
+                  New remaining ≈ <strong>{fmtH(modal.part.limitHoras)}</strong>
                   {modal.part.limitMeses != null && form.fecha && (
-                    <> · próxima fecha límite <strong>{fmtDate(new Date(new Date(form.fecha).setMonth(new Date(form.fecha).getMonth() + modal.part.limitMeses)).toISOString())}</strong></>
+                    <> · next deadline <strong>{fmtDate(new Date(new Date(form.fecha).setMonth(new Date(form.fecha).getMonth() + modal.part.limitMeses)).toISOString())}</strong></>
                   )}
                 </div>
               )}
@@ -4436,11 +4436,11 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
             <div className="flex gap-2 mt-5">
               <button onClick={() => !submitting && setModal({ open: false, part: null })} disabled={submitting}
                 className="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-edge text-slate-600 dark:text-foreground-soft hover:bg-slate-50 dark:hover:bg-muted disabled:opacity-50">
-                Cancelar
+                Cancel
               </button>
               <button onClick={handleSubmit} disabled={submitting}
                 className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 dark:bg-slate-700 text-white hover:bg-slate-700 dark:hover:bg-slate-600 disabled:opacity-50">
-                {submitting ? 'Guardando…' : 'Confirmar cambio'}
+                {submitting ? 'Saving…' : 'Confirm change'}
               </button>
             </div>
           </div>
@@ -4457,10 +4457,10 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
 // Cumplimiento AD/DA (airworthiness directives) — dynamic monitoring
 // ─────────────────────────────────────────────────────────────
 const CMP_STYLE: Record<string, { badge: string; dot: string; label: string; row: string }> = {
-  VENCIDO: { badge: 'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300 border-red-200 dark:border-red-500/30', dot: 'bg-red-500', label: 'Vencido', row: 'bg-red-50/60 dark:bg-red-500/10 border-l-4 border-red-500' },
-  PROXIMO: { badge: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30', dot: 'bg-amber-500', label: 'Próximo', row: 'bg-amber-50/50 dark:bg-amber-500/10 border-l-4 border-amber-400' },
+  VENCIDO: { badge: 'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300 border-red-200 dark:border-red-500/30', dot: 'bg-red-500', label: 'Overdue', row: 'bg-red-50/60 dark:bg-red-500/10 border-l-4 border-red-500' },
+  PROXIMO: { badge: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30', dot: 'bg-amber-500', label: 'Upcoming', row: 'bg-amber-50/50 dark:bg-amber-500/10 border-l-4 border-amber-400' },
   OK: { badge: 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30', dot: 'bg-emerald-500', label: 'Vigente', row: 'hover:bg-slate-50 dark:hover:bg-muted' },
-  AL_EVENTO: { badge: 'bg-sky-100 dark:bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-500/30', dot: 'bg-sky-500', label: 'Al evento', row: 'hover:bg-slate-50 dark:hover:bg-muted' },
+  AL_EVENTO: { badge: 'bg-sky-100 dark:bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-500/30', dot: 'bg-sky-500', label: 'On event', row: 'hover:bg-slate-50 dark:hover:bg-muted' },
   CUMPLIDO: { badge: 'bg-slate-100 dark:bg-muted text-slate-600 dark:text-foreground-soft border-slate-200 dark:border-edge', dot: 'bg-slate-400', label: 'Cumplido', row: 'hover:bg-slate-50 dark:hover:bg-muted' },
   NO_APLICA: { badge: 'bg-slate-50 dark:bg-muted text-slate-400 dark:text-faint border-slate-200 dark:border-edge', dot: 'bg-slate-300', label: 'No aplica', row: 'opacity-60 hover:bg-slate-50 dark:hover:bg-muted' },
 };
@@ -4509,7 +4509,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
           setTimeout(() => router.refresh(), 1600);
         }
       } else {
-        setAuditReport({ error: res.error || 'Error en la auditoría' });
+        setAuditReport({ error: res.error || 'Audit error' });
       }
     } catch (e: any) {
       setAuditReport({ error: e.message || 'Error desconocido' });
@@ -4521,10 +4521,10 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
   const fmtDate = (iso: string | null | undefined) => (iso ? formatFecha(new Date(iso), { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
   const fmtDays = (days: number | null | undefined): string => {
     if (days == null) return '—';
-    if (days <= 0) return 'Vencido';
-    if (days < 30) return `${days} días`;
-    if (days < 365) { const m = Math.floor(days / 30); return `${m} ${m === 1 ? 'mes' : 'meses'}`; }
-    return `${(days / 365).toFixed(1)} años`;
+    if (days <= 0) return 'Overdue';
+    if (days < 30) return `${days} days`;
+    if (days < 365) { const m = Math.floor(days / 30); return `${m} ${m === 1 ? 'month' : 'months'}`; }
+    return `${(days / 365).toFixed(1)} years`;
   };
 
   const summary = useMemo(() => {
@@ -4574,7 +4574,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
 
   const handleSubmit = async () => {
     if (!modal.dir) return;
-    if (!form.fecha) { setResult({ success: false, error: 'La fecha es requerida' }); return; }
+    if (!form.fecha) { setResult({ success: false, error: 'Date is required' }); return; }
     setSubmitting(true);
     setResult(null);
     try {
@@ -4625,8 +4625,8 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
   };
 
   const handleEditSubmit = async () => {
-    if (!editForm.numero.trim()) { setEditResult({ success: false, error: 'El número es requerido' }); return; }
-    if (!editForm.descripcion.trim()) { setEditResult({ success: false, error: 'La descripción es requerida' }); return; }
+    if (!editForm.numero.trim()) { setEditResult({ success: false, error: 'Number is required' }); return; }
+    if (!editForm.descripcion.trim()) { setEditResult({ success: false, error: 'Description is required' }); return; }
     setEditSubmitting(true);
     setEditResult(null);
     try {
@@ -4663,7 +4663,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
 
   const handleDelete = async () => {
     if (!editModal.id) return;
-    if (!confirm('¿Eliminar esta directiva AD/DA? Esta acción no se puede deshacer.')) return;
+    if (!confirm('Delete this AD/DA directive? This action cannot be undone.')) return;
     setDeleting(true);
     setEditResult(null);
     try {
@@ -4680,10 +4680,10 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
     return (
       <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl p-8 text-center text-slate-500 dark:text-muted-foreground shadow-sm">
         <div className="flex justify-center mb-3"><Icon name="compliance" className="w-8 h-8 text-slate-300" /></div>
-        <p className="font-medium text-slate-700 dark:text-foreground-soft">Sin directivas AD/DA cargadas</p>
-        <p className="text-sm mt-1 mb-4">No hay directivas de aeronavegabilidad registradas para esta aeronave.</p>
+        <p className="font-medium text-slate-700 dark:text-foreground-soft">No AD/DA directives loaded</p>
+        <p className="text-sm mt-1 mb-4">No airworthiness directives registered for this aircraft.</p>
         <button onClick={() => openEditModal(null)} className="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 dark:bg-slate-700 text-white hover:bg-slate-700 dark:hover:bg-slate-600">
-          + Agregar directiva
+          + Add directive
         </button>
         {editModal.open && renderEditModal()}
       </div>
@@ -4697,13 +4697,13 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => closeAllowed && setEditModal({ open: false, id: null, isNew: false })}>
         <div className="bg-white dark:bg-card rounded-2xl shadow-xl w-full max-w-lg p-5 sm:p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-start justify-between mb-4">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-foreground">{editModal.isNew ? 'Agregar directiva' : 'Editar directiva'}</h3>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-foreground">{editModal.isNew ? 'Add directive' : 'Edit directive'}</h3>
             <button onClick={() => closeAllowed && setEditModal({ open: false, id: null, isNew: false })} className="text-slate-400 dark:text-faint hover:text-slate-600 dark:hover:text-foreground-soft text-xl leading-none">×</button>
           </div>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Tipo</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Type</label>
                 <select value={editForm.tipo} onChange={(e) => set({ tipo: e.target.value })}
                   className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong">
                   <option value="AD">AD (FAA)</option>
@@ -4714,15 +4714,15 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
                 <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Dominio</label>
                 <select value={editForm.dominio} onChange={(e) => set({ dominio: e.target.value })}
                   className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong">
-                  <option value="AIRFRAME">Célula (Airframe)</option>
-                  <option value="ENGINE">Motor (Engine)</option>
-                  <option value="PROPELLER">Hélice (Propeller)</option>
+                  <option value="AIRFRAME">Airframe</option>
+                  <option value="ENGINE">Engine</option>
+                  <option value="PROPELLER">Propeller</option>
                 </select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Número *</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Number *</label>
                 <input type="text" value={editForm.numero} onChange={(e) => set({ numero: e.target.value })} placeholder="ej. 2011-26-04"
                   className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
@@ -4733,7 +4733,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Descripción *</label>
+              <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Description *</label>
               <textarea value={editForm.descripcion} onChange={(e) => set({ descripcion: e.target.value })} rows={2}
                 className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong resize-none" />
             </div>
@@ -4757,7 +4757,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
                 <input type="checkbox" checked={editForm.recurrente} onChange={(e) => set({ recurrente: e.target.checked })} className="rounded border-slate-300 dark:border-edge-strong" /> Recurrente
               </label>
               <label className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-foreground-soft cursor-pointer select-none">
-                <input type="checkbox" checked={editForm.alEvento} onChange={(e) => set({ alEvento: e.target.checked })} className="rounded border-slate-300 dark:border-edge-strong" /> Al evento
+                <input type="checkbox" checked={editForm.alEvento} onChange={(e) => set({ alEvento: e.target.checked })} className="rounded border-slate-300 dark:border-edge-strong" /> On event
               </label>
               <label className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-foreground-soft cursor-pointer select-none">
                 <input type="checkbox" checked={editForm.esEmergencia} onChange={(e) => set({ esEmergencia: e.target.checked })} className="rounded border-slate-300 dark:border-edge-strong" /> <Icon name="emergency" className="w-4 h-4 text-red-500" /> Emergency AD
@@ -4765,36 +4765,36 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Intervalo horas</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Interval hours</label>
                 <input type="number" step="0.1" value={editForm.intervaloHoras} onChange={(e) => set({ intervaloHoras: e.target.value })}
                   className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Intervalo meses</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Interval months</label>
                 <input type="number" value={editForm.intervaloMeses} onChange={(e) => set({ intervaloMeses: e.target.value })}
                   className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Efectividad fecha</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Effective date</label>
                 <input type="date" value={editForm.efectividadFecha} onChange={(e) => set({ efectividadFecha: e.target.value })}
                   className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Efectividad horas</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Effective hours</label>
                 <input type="number" step="0.1" value={editForm.efectividadHoras} onChange={(e) => set({ efectividadHoras: e.target.value })}
                   className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Último cumplimiento (fecha)</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Last compliance (date)</label>
                 <input type="date" value={editForm.cumplimientoFecha} onChange={(e) => set({ cumplimientoFecha: e.target.value })}
                   className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Último cumplimiento (horas)</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Last compliance (hours)</label>
                 <input type="number" step="0.1" value={editForm.cumplimientoHoras} onChange={(e) => set({ cumplimientoHoras: e.target.value })}
                   className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
@@ -4805,12 +4805,12 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
                 className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">URL de referencia</label>
+              <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Reference URL</label>
               <input type="url" value={editForm.urlReferencia} onChange={(e) => set({ urlReferencia: e.target.value })} placeholder="https://…"
                 className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Observación</label>
+              <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Remarks</label>
               <textarea value={editForm.observacion} onChange={(e) => set({ observacion: e.target.value })} rows={2}
                 className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong resize-none" />
             </div>
@@ -4824,16 +4824,16 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
             {!editModal.isNew && (
               <button onClick={handleDelete} disabled={editSubmitting || deleting}
                 className="px-3 py-2 rounded-lg text-sm font-medium border border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 disabled:opacity-50">
-                {deleting ? 'Eliminando…' : 'Eliminar'}
+                {deleting ? 'Deleting…' : 'Delete'}
               </button>
             )}
             <button onClick={() => closeAllowed && setEditModal({ open: false, id: null, isNew: false })} disabled={editSubmitting || deleting}
               className="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-edge text-slate-600 dark:text-foreground-soft hover:bg-slate-50 dark:hover:bg-muted disabled:opacity-50">
-              Cancelar
+              Cancel
             </button>
             <button onClick={handleEditSubmit} disabled={editSubmitting || deleting}
               className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 dark:bg-slate-700 text-white hover:bg-slate-700 dark:hover:bg-slate-600 disabled:opacity-50">
-              {editSubmitting ? 'Guardando…' : editModal.isNew ? 'Crear' : 'Guardar'}
+              {editSubmitting ? 'Saving…' : editModal.isNew ? 'Create' : 'Save'}
             </button>
           </div>
         </div>
@@ -4848,7 +4848,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
         {[
           { label: 'Aplicables', value: summary.aplican, cls: 'text-slate-800 dark:text-foreground', dot: 'bg-slate-400' },
           { label: 'Vencidas', value: summary.vencido, cls: 'text-red-600 dark:text-red-400', dot: 'bg-red-500' },
-          { label: 'Próximas', value: summary.proximo, cls: 'text-amber-600 dark:text-amber-400', dot: 'bg-amber-500' },
+          { label: 'Upcoming', value: summary.proximo, cls: 'text-amber-600 dark:text-amber-400', dot: 'bg-amber-500' },
           { label: 'Total', value: summary.total, cls: 'text-slate-800 dark:text-foreground', dot: 'bg-slate-400' },
         ].map((c) => (
           <div key={c.label} className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl p-3.5 shadow-sm">
@@ -4862,7 +4862,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
 
       {summary.emergencia > 0 && (
         <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg px-3 py-2 text-sm text-red-700 dark:text-red-300 font-medium flex items-center gap-2">
-          <Icon name="emergency" className="w-4 h-4 flex-shrink-0" /> {summary.emergencia} Emergency AD activa(s) — requieren atención inmediata.
+          <Icon name="emergency" className="w-4 h-4 flex-shrink-0" /> {summary.emergencia} active Emergency AD(s) — require immediate attention.
         </div>
       )}
 
@@ -4878,9 +4878,9 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
         </div>
         <label className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-muted-foreground cursor-pointer select-none ml-1">
           <input type="checkbox" checked={soloAplican} onChange={(e) => setSoloAplican(e.target.checked)} className="rounded border-slate-300 dark:border-edge-strong" />
-          Solo aplicables
+          Applicable only
         </label>
-        <div className="text-xs text-slate-400 dark:text-faint ml-auto">Tasa de uso: {rate > 0 ? `${rate.toFixed(2)} h/día` : 's/d'}</div>
+        <div className="text-xs text-slate-400 dark:text-faint ml-auto">Usage rate: {rate > 0 ? `${rate.toFixed(2)} h/day` : 's/d'}</div>
         <button onClick={handleAudit} disabled={auditing}
           className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap">
           {auditing ? (
@@ -4891,7 +4891,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
         </button>
         <button onClick={() => openEditModal(null)}
           className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-500 transition-colors whitespace-nowrap">
-          + Agregar directiva
+          + Add directive
         </button>
       </div>
 
@@ -4903,38 +4903,38 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
           ) : (
             <>
               <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
-                <h4 className="font-semibold text-slate-800 dark:text-foreground text-sm">Resultado de la auditoría</h4>
+                <h4 className="font-semibold text-slate-800 dark:text-foreground text-sm">Audit result</h4>
                 <button onClick={() => setAuditReport(null)} className="text-slate-400 dark:text-faint hover:text-slate-600 dark:hover:text-foreground-soft text-lg leading-none">×</button>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm mb-3">
-                <div><div className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-faint font-semibold">FAA revisadas</div><div className="text-lg font-bold text-slate-700 dark:text-foreground-soft">{auditReport.faa?.scanned ?? 0}</div></div>
-                <div><div className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-faint font-semibold">FAA aplicables</div><div className="text-lg font-bold text-slate-700 dark:text-foreground-soft">{auditReport.faa?.applicable ?? 0}</div></div>
-                <div><div className="text-[11px] uppercase tracking-wide text-emerald-500 font-semibold">Nuevas agregadas</div><div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{(auditReport.faa?.added ?? 0) + (auditReport.dgac?.added ?? 0)}</div></div>
+                <div><div className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-faint font-semibold">FAA reviewed</div><div className="text-lg font-bold text-slate-700 dark:text-foreground-soft">{auditReport.faa?.scanned ?? 0}</div></div>
+                <div><div className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-faint font-semibold">FAA applicable</div><div className="text-lg font-bold text-slate-700 dark:text-foreground-soft">{auditReport.faa?.applicable ?? 0}</div></div>
+                <div><div className="text-[11px] uppercase tracking-wide text-emerald-500 font-semibold">Newly added</div><div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{(auditReport.faa?.added ?? 0) + (auditReport.dgac?.added ?? 0)}</div></div>
                 <div>
                   <div className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-faint font-semibold">DGAC (Chile)</div>
-                  <div className="text-lg font-bold text-slate-700 dark:text-foreground-soft" title="Aeronave de diseño EE.UU.: la aeronavegabilidad DGAC se cumple adoptando las AD del estado de diseño (FAA), ya revisadas. Principio OACI Anexo 8.">
+                  <div className="text-lg font-bold text-slate-700 dark:text-foreground-soft" title="U.S. design aircraft: DGAC airworthiness is met by adopting the state-of-design (FAA) ADs, already reviewed. ICAO Annex 8 principle.">
                     {!auditReport.dgac?.enabled
                       ? '—'
                       : (auditReport.dgac?.added ?? 0) > 0
                         ? auditReport.dgac.added
-                        : <span className="text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1" title="Cubierta vía estado de diseño (FAA)"><Icon name="check" className="w-4 h-4" /> Estado de diseño</span>}
+                        : <span className="text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1" title="Covered via state of design (FAA)"><Icon name="check" className="w-4 h-4" /> State of design</span>}
                   </div>
                 </div>
               </div>
               {Array.isArray(auditReport.added) && auditReport.added.length > 0 && (
                 <div className="space-y-1 mb-2">
-                  <div className="text-xs font-semibold text-slate-500 dark:text-muted-foreground">Directivas agregadas:</div>
+                  <div className="text-xs font-semibold text-slate-500 dark:text-muted-foreground">Directives added:</div>
                   {auditReport.added.map((a: any, i: number) => (
                     <div key={i} className="text-xs text-slate-600 dark:text-foreground-soft flex items-center gap-1.5">
                       {a.esEmergencia && <span title="Emergency AD" className="text-red-500 inline-flex"><Icon name="emergency" className="w-3.5 h-3.5" /></span>}
                       <span className="font-medium">{a.tipo} {a.numero}</span> — {a.descripcion}
-                      {a.url && <a href={a.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline ml-1">ver</a>}
+                      {a.url && <a href={a.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline ml-1">view</a>}
                     </div>
                   ))}
                 </div>
               )}
               {(!auditReport.added || auditReport.added.length === 0) && (
-                <p className="text-xs text-slate-500 dark:text-muted-foreground flex items-center gap-1.5"><Icon name="check" className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Sin directivas nuevas aplicables. Todo al día respecto a las fuentes consultadas.</p>
+                <p className="text-xs text-slate-500 dark:text-muted-foreground flex items-center gap-1.5"><Icon name="check" className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> No new applicable directives. Up to date with the sources consulted.</p>
               )}
               {Array.isArray(auditReport.notes) && auditReport.notes.length > 0 && (
                 <div className="text-[11px] text-slate-400 dark:text-faint mt-2 border-t border-slate-200 dark:border-edge pt-2">{auditReport.notes.join(' · ')}</div>
@@ -4949,21 +4949,21 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
         <div key={tipo} className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl shadow-sm overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 dark:bg-muted border-b border-slate-200 dark:border-edge">
             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${tipo === 'AD' ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/30' : 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border-red-200 dark:border-red-500/30'}`}>{tipo === 'AD' ? 'FAA' : 'DGAC'}</span>
-            <span className="font-semibold text-slate-700 dark:text-foreground-soft text-sm">{tipo === 'AD' ? 'Airworthiness Directives (FAA)' : 'Directivas de Aeronavegabilidad (DGAC)'}</span>
+            <span className="font-semibold text-slate-700 dark:text-foreground-soft text-sm">{tipo === 'AD' ? 'Airworthiness Directives (FAA)' : 'Airworthiness Directives (DGAC)'}</span>
             <span className="text-xs text-slate-400 dark:text-faint">({items.length})</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wide text-slate-400 dark:text-faint border-b border-slate-100 dark:border-edge">
-                  <th className="px-3 py-2 font-semibold">Estado</th>
+                  <th className="px-3 py-2 font-semibold">Status</th>
                   <th className="px-3 py-2 font-semibold">N° · Enmienda</th>
-                  <th className="px-3 py-2 font-semibold">Descripción</th>
+                  <th className="px-3 py-2 font-semibold">Description</th>
                   <th className="px-3 py-2 font-semibold">Periodicidad</th>
-                  <th className="px-3 py-2 font-semibold">Último cumpl.</th>
-                  <th className="px-3 py-2 font-semibold text-right">Remanente</th>
-                  <th className="px-3 py-2 font-semibold">Próximo</th>
-                  <th className="px-3 py-2 font-semibold text-center">Acción</th>
+                  <th className="px-3 py-2 font-semibold">Last compl.</th>
+                  <th className="px-3 py-2 font-semibold text-right">Remaining</th>
+                  <th className="px-3 py-2 font-semibold">Next</th>
+                  <th className="px-3 py-2 font-semibold text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -4992,7 +4992,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
                         <div className="text-slate-700 dark:text-foreground-soft truncate" title={d.descripcion}>{d.descripcion}</div>
                         {d.observacion && <div className="text-xs text-slate-400 dark:text-faint truncate" title={d.observacion}>{d.observacion}</div>}
                       </td>
-                      <td className="px-3 py-2.5 text-xs text-slate-500 dark:text-muted-foreground whitespace-nowrap">{d.periodicidadRaw || (d.alEvento ? 'Al Evento' : '—')}</td>
+                      <td className="px-3 py-2.5 text-xs text-slate-500 dark:text-muted-foreground whitespace-nowrap">{d.periodicidadRaw || (d.alEvento ? 'On event' : '—')}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap text-slate-600 dark:text-foreground-soft">
                         <div>{fmtDate(d.cumplimientoFecha)}</div>
                         {d.cumplimientoHoras != null && <div className="text-xs text-slate-400 dark:text-faint">{fmtH(d.cumplimientoHoras)}</div>}
@@ -5023,12 +5023,12 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
                           {canLog && (
                             <button onClick={() => openModal(d)}
                               className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-800 dark:bg-slate-700 text-white hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors whitespace-nowrap">
-                              Registrar cumpl.
+                              Record compl.
                             </button>
                           )}
-                          <button onClick={() => openEditModal(d)} title="Editar directiva"
+                          <button onClick={() => openEditModal(d)} title="Edit directive"
                             className="px-2 py-1 rounded-md text-xs font-medium border border-slate-200 dark:border-edge text-slate-500 dark:text-muted-foreground hover:bg-slate-100 dark:hover:bg-muted hover:text-slate-700 dark:hover:text-foreground-soft transition-colors">
-                            Editar
+                            Edit
                           </button>
                         </div>
                       </td>
@@ -5047,7 +5047,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
           <div className="bg-white dark:bg-card rounded-2xl shadow-xl w-full max-w-md p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h3 className="text-lg font-bold text-slate-800 dark:text-foreground">Registrar cumplimiento</h3>
+                <h3 className="text-lg font-bold text-slate-800 dark:text-foreground">Record compliance</h3>
                 <p className="text-sm text-slate-500 dark:text-muted-foreground mt-0.5">{modal.dir.tipo} {modal.dir.numero} — {modal.dir.descripcion}</p>
               </div>
               <button onClick={() => !submitting && setModal({ open: false, dir: null })} className="text-slate-400 dark:text-faint hover:text-slate-600 dark:hover:text-foreground-soft text-xl leading-none">×</button>
@@ -5055,18 +5055,18 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Fecha de cumplimiento</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Compliance date</label>
                 <input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })}
                   className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Horas de la aeronave al cumplir</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Aircraft hours at compliance</label>
                 <input type="number" step="0.1" value={form.horas} onChange={(e) => setForm({ ...form, horas: e.target.value })}
                   placeholder={modal.dir.domainHours != null ? `Actual: ${Number(modal.dir.domainHours).toFixed(1)} h` : ''}
                   className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">N° de Orden de Trabajo (opcional)</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-muted-foreground mb-1">Work Order N° (optional)</label>
                 <input type="text" value={form.ot} onChange={(e) => setForm({ ...form, ot: e.target.value })}
                   className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong" />
               </div>
@@ -5079,10 +5079,10 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
               {modal.dir.recurrente && form.fecha && (
                 <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-lg px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
                   {modal.dir.intervaloMeses != null && (
-                    <>Próximo vencimiento calendario ≈ <strong>{fmtDate(new Date(new Date(form.fecha).setMonth(new Date(form.fecha).getMonth() + modal.dir.intervaloMeses)).toISOString())}</strong></>
+                    <>Next calendar due date ≈ <strong>{fmtDate(new Date(new Date(form.fecha).setMonth(new Date(form.fecha).getMonth() + modal.dir.intervaloMeses)).toISOString())}</strong></>
                   )}
                   {modal.dir.intervaloHoras != null && form.horas && (
-                    <> · por horas <strong>{fmtH(parseFloat(form.horas) + modal.dir.intervaloHoras)}</strong></>
+                    <> · by hours <strong>{fmtH(parseFloat(form.horas) + modal.dir.intervaloHoras)}</strong></>
                   )}
                 </div>
               )}
@@ -5097,11 +5097,11 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
             <div className="flex gap-2 mt-5">
               <button onClick={() => !submitting && setModal({ open: false, dir: null })} disabled={submitting}
                 className="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-edge text-slate-600 dark:text-foreground-soft hover:bg-slate-50 dark:hover:bg-muted disabled:opacity-50">
-                Cancelar
+                Cancel
               </button>
               <button onClick={handleSubmit} disabled={submitting}
                 className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 dark:bg-slate-700 text-white hover:bg-slate-700 dark:hover:bg-slate-600 disabled:opacity-50">
-                {submitting ? 'Guardando…' : 'Confirmar cumplimiento'}
+                {submitting ? 'Saving…' : 'Confirm compliance'}
               </button>
             </div>
           </div>
@@ -5168,7 +5168,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
         alert(`Error: ${data.error}`);
       }
     } catch (err: any) {
-      alert(`Error de red: ${err.message}`);
+      alert(`Network error: ${err.message}`);
     } finally {
       setSaving(false);
     }
@@ -5183,7 +5183,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
       return;
     }
 
-    if (!confirm(`¿Subir cartola "${file.name}" y agregar nuevos movimientos a Movimientos.xlsx?`)) {
+    if (!confirm(`Upload statement "${file.name}" and add new movements to Movimientos.xlsx?`)) {
       e.target.value = '';
       return;
     }
@@ -5200,7 +5200,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
         setTimeout(() => location.reload(), 3000);
       }
     } catch (err: any) {
-      setUploadResult({ ok: false, error: err.message || 'Error de red' });
+      setUploadResult({ ok: false, error: err.message || 'Network error' });
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -5214,20 +5214,20 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
       const previewRes = await fetch('/api/delete-last-cartola');
       const preview = await previewRes.json();
       if (!preview.ok) {
-        alert(`Error obteniendo preview: ${preview.error}`);
+        alert(`Error fetching preview: ${preview.error}`);
         return;
       }
       if (preview.count === 0) {
-        alert('No hay movimientos recientes para borrar.');
+        alert('No recent movements to delete.');
         return;
       }
 
       const uploadedAt = preview.uploadedAt ? new Date(preview.uploadedAt).toLocaleString('es-CL') : '—';
       const msg =
-        `Se borrarán ${preview.count} movimientos del último batch:\n\n` +
+        `${preview.count} movements from the last batch will be deleted:\n\n` +
         `Correlativos: #${preview.firstCorrelativo} – #${preview.lastCorrelativo}\n` +
-        `Subidos: ${uploadedAt}\n\n` +
-        `Esta acción NO se puede deshacer. ¿Continuar?`;
+        `Uploaded: ${uploadedAt}\n\n` +
+        `This action CANNOT be undone. Continue?`;
       if (!confirm(msg)) return;
 
       // 2) Delete
@@ -5239,7 +5239,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
         setTimeout(() => location.reload(), 1500);
       }
     } catch (err: any) {
-      setUploadResult({ ok: false, error: err.message || 'Error de red' });
+      setUploadResult({ ok: false, error: err.message || 'Network error' });
     } finally {
       setUploading(false);
     }
@@ -5250,7 +5250,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
     if (!file) return;
 
     if (file.size > 10 * 1024 * 1024) {
-      alert('El archivo no puede superar los 10MB');
+      alert('File cannot exceed 10MB');
       return;
     }
 
@@ -5272,7 +5272,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
         alert(`Error: ${data.error}`);
       }
     } catch (err: any) {
-      alert(`Error de red: ${err.message}`);
+      alert(`Network error: ${err.message}`);
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -5280,7 +5280,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
   };
 
   const handleDeleteAttachment = async (correlativo: number) => {
-    if (!confirm('¿Seguro que deseas eliminar este archivo adjunto?')) return;
+    if (!confirm('Are you sure you want to delete this attachment?')) return;
 
     setUploading(true);
     try {
@@ -5296,7 +5296,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
         alert(`Error: ${data.error}`);
       }
     } catch (err: any) {
-      alert(`Error de red: ${err.message}`);
+      alert(`Network error: ${err.message}`);
     } finally {
       setUploading(false);
     }
@@ -5328,7 +5328,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
   const handleDeleteMovements = async () => {
     if (selectedMovements.size === 0) return;
     const count = selectedMovements.size;
-    if (!confirm(`¿Eliminar ${count} movimiento${count > 1 ? 's' : ''} seleccionado${count > 1 ? 's' : ''}? Esta acción no se puede deshacer.`)) return;
+    if (!confirm(`Delete ${count} selected movement${count > 1 ? 's' : ''}? This action cannot be undone.`)) return;
     setDeleting(true);
     try {
       const res = await fetch('/api/update-movimiento', {
@@ -5345,7 +5345,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
         alert(`Error: ${data.error}`);
       }
     } catch (err: any) {
-      alert(`Error de red: ${err.message}`);
+      alert(`Network error: ${err.message}`);
     } finally {
       setDeleting(false);
     }
@@ -5450,8 +5450,8 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
       <div className={`${palette.card} rounded-xl p-4 sm:p-5 ${palette.shadow}`}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <h4 className="text-sm font-bold text-slate-700 dark:text-foreground-soft uppercase tracking-wider">Subir Cartola Bancaria</h4>
-            <p className="text-xs text-slate-500 dark:text-muted-foreground mt-1">Sube el archivo Excel de &quot;últimos movimientos&quot; del banco para agregar automáticamente los nuevos movimientos</p>
+            <h4 className="text-sm font-bold text-slate-700 dark:text-foreground-soft uppercase tracking-wider">Upload Bank Statement</h4>
+            <p className="text-xs text-slate-500 dark:text-muted-foreground mt-1">Upload the bank's &quot;latest movements&quot; Excel file to automatically add the new movements</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <label className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm cursor-pointer transition-all ${uploading ? 'bg-slate-200 dark:bg-white/10 text-slate-500 dark:text-muted-foreground cursor-wait' : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl'}`}>
@@ -5463,7 +5463,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
               ) : (
                 <>
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                  Subir Cartola (.xlsx)
+                  Upload Statement (.xlsx)
                 </>
               )}
               <input type="file" accept=".xlsx,.xls" onChange={handleCartolaUpload} className="hidden" disabled={uploading} />
@@ -5472,11 +5472,11 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
               type="button"
               onClick={handleDeleteLastCartola}
               disabled={uploading}
-              title="Borra todos los movimientos del último batch subido (últimos 5 minutos de createdAt)"
+              title="Deletes all movements from the last uploaded batch (last 5 minutes of createdAt)"
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all ${uploading ? 'bg-slate-200 dark:bg-white/10 text-slate-500 dark:text-muted-foreground cursor-not-allowed' : 'bg-red-600 text-white hover:bg-red-700 shadow-lg hover:shadow-xl'}`}
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2" /></svg>
-              Deshacer última carga
+              Undo last upload
             </button>
           </div>
         </div>
@@ -5497,27 +5497,27 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                 {uploadResult.ok && uploadResult.added > 0 && (
                   <div className="mt-2 space-y-1">
                     <p className="text-xs text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
-                      <Icon name="checkCircle" className="w-3.5 h-3.5 flex-shrink-0" /> {uploadResult.added} nuevos movimientos agregados • {uploadResult.skipped} omitidos (duplicados)
+                      <Icon name="checkCircle" className="w-3.5 h-3.5 flex-shrink-0" /> {uploadResult.added} new movements added • {uploadResult.skipped} skipped (duplicados)
                     </p>
                     <p className="text-xs text-emerald-700 dark:text-emerald-300">
-                      Último correlativo: #{uploadResult.lastCorrelativo} • Saldo final: ${formatCurrency(uploadResult.lastSaldo)}
+                      Last sequence: #{uploadResult.lastCorrelativo} • Final balance: ${formatCurrency(uploadResult.lastSaldo)}
                     </p>
                     {uploadResult.entries && uploadResult.entries.length > 0 && (
                       <details className="mt-2">
                         <summary className="text-xs text-emerald-600 dark:text-emerald-400 cursor-pointer font-medium hover:text-emerald-800 dark:hover:text-emerald-300">
-                          Ver {uploadResult.entries.length} movimientos agregados
+                          View {uploadResult.entries.length} added movements
                         </summary>
                         <div className="mt-2 max-h-60 overflow-y-auto rounded-lg border border-emerald-200 dark:border-emerald-500/30 bg-white dark:bg-card">
                           <table className="w-full text-xs">
                             <thead className="bg-emerald-50 dark:bg-emerald-500/10 sticky top-0">
                               <tr>
                                 <th className="px-2 py-1.5 text-left font-bold text-emerald-700 dark:text-emerald-300">#</th>
-                                <th className="px-2 py-1.5 text-left font-bold text-emerald-700 dark:text-emerald-300">Fecha</th>
-                                <th className="px-2 py-1.5 text-left font-bold text-emerald-700 dark:text-emerald-300">Descripción</th>
-                                <th className="px-2 py-1.5 text-right font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">Egreso</th>
-                                <th className="px-2 py-1.5 text-right font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Ingreso</th>
-                                <th className="px-2 py-1.5 text-left font-bold text-emerald-700 dark:text-emerald-300">Tipo</th>
-                                <th className="px-2 py-1.5 text-left font-bold text-emerald-700 dark:text-emerald-300">Código</th>
+                                <th className="px-2 py-1.5 text-left font-bold text-emerald-700 dark:text-emerald-300">Date</th>
+                                <th className="px-2 py-1.5 text-left font-bold text-emerald-700 dark:text-emerald-300">Description</th>
+                                <th className="px-2 py-1.5 text-right font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">Expense</th>
+                                <th className="px-2 py-1.5 text-right font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Income</th>
+                                <th className="px-2 py-1.5 text-left font-bold text-emerald-700 dark:text-emerald-300">Type</th>
+                                <th className="px-2 py-1.5 text-left font-bold text-emerald-700 dark:text-emerald-300">Code</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-emerald-100">
@@ -5537,7 +5537,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                         </div>
                       </details>
                     )}
-                    <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2 italic">Recargando página en 3 segundos...</p>
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2 italic">Reloading page in 3 seconds...</p>
                   </div>
                 )}
               </div>
@@ -5552,21 +5552,21 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className={`${palette.card} rounded-xl p-4 sm:p-5 ${palette.shadow}`}>
-          <p className="text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Saldo Actual</p>
+          <p className="text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Current Balance</p>
           <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-foreground mt-1">${formatCurrency(Math.round(stats.lastSaldo))}</p>
         </div>
         <div className={`${palette.card} rounded-xl p-4 sm:p-5 ${palette.shadow}`}>
-          <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Total Ingresos</p>
+          <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Total Income</p>
           <p className="text-xl sm:text-2xl font-black text-emerald-700 dark:text-emerald-300 mt-1">${formatCurrency(Math.round(stats.totalIngresos))}</p>
-          <p className="text-xs text-slate-500 dark:text-muted-foreground mt-1">{filtered.filter(m => m.ingreso).length} transacciones</p>
+          <p className="text-xs text-slate-500 dark:text-muted-foreground mt-1">{filtered.filter(m => m.ingreso).length} transactions</p>
         </div>
         <div className={`${palette.card} rounded-xl p-4 sm:p-5 ${palette.shadow}`}>
-          <p className="text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-wider">Total Egresos</p>
+          <p className="text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-wider">Total Expenses</p>
           <p className="text-xl sm:text-2xl font-black text-red-700 dark:text-red-300 mt-1">${formatCurrency(Math.round(stats.totalEgresos))}</p>
-          <p className="text-xs text-slate-500 dark:text-muted-foreground mt-1">{filtered.filter(m => m.egreso).length} transacciones</p>
+          <p className="text-xs text-slate-500 dark:text-muted-foreground mt-1">{filtered.filter(m => m.egreso).length} transactions</p>
         </div>
         <div className={`${palette.card} rounded-xl p-4 sm:p-5 ${palette.shadow}`}>
-          <p className="text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Movimientos</p>
+          <p className="text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Movements</p>
           <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-foreground mt-1">{filtered.length}</p>
           <p className="text-xs text-slate-500 dark:text-muted-foreground mt-1">de {movements.length} total</p>
         </div>
@@ -5574,7 +5574,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
 
       {/* Breakdown by Tipo */}
       <div className={`${palette.card} rounded-xl p-4 sm:p-5 ${palette.shadow}`}>
-        <h4 className="text-sm font-bold text-slate-700 dark:text-foreground-soft uppercase tracking-wider mb-3">Desglose por Tipo</h4>
+        <h4 className="text-sm font-bold text-slate-700 dark:text-foreground-soft uppercase tracking-wider mb-3">Breakdown by Type</h4>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
           {Object.entries(stats.byTipo).sort((a, b) => (b[1].ingresos + b[1].egresos) - (a[1].ingresos + a[1].egresos)).map(([tipo, data]) => (
             <button
@@ -5620,7 +5620,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                   ) : (
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                   )}
-                  Eliminar ({selectedMovements.size})
+                  Delete ({selectedMovements.size})
                 </button>
               )}
               {selectedMovements.size > 0 && (
@@ -5653,7 +5653,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
         <div className="px-4 sm:px-6 py-3 bg-slate-50 dark:bg-muted border-b border-slate-200 dark:border-edge flex flex-wrap gap-2 sm:gap-3 items-center">
           <input
             type="text"
-            placeholder="Buscar..."
+            placeholder="Search..."
             value={searchText}
             onChange={e => { setSearchText(e.target.value); setCurrentPage(1); }}
             className="px-3 py-2 border border-slate-300 dark:border-edge-strong rounded-lg text-sm w-40 sm:w-48 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -5663,7 +5663,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
             onChange={e => { setFilterTipo(e.target.value); setCurrentPage(1); }}
             className="px-3 py-2 border border-slate-300 dark:border-edge-strong rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
           >
-            <option value="ALL">Todos los tipos</option>
+            <option value="ALL">All types</option>
             {tipos.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
           <select
@@ -5671,7 +5671,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
             onChange={e => { setFilterYear(e.target.value); setCurrentPage(1); }}
             className="px-3 py-2 border border-slate-300 dark:border-edge-strong rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
           >
-            <option value="">Todos los años</option>
+            <option value="">All years</option>
             {years.map(y => <option key={y} value={y}>{y}</option>)}
           </select>
           <select
@@ -5679,9 +5679,9 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
             onChange={e => { setFilterMonth(e.target.value); setCurrentPage(1); }}
             className="px-3 py-2 border border-slate-300 dark:border-edge-strong rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
           >
-            <option value="">Todos los meses</option>
+            <option value="">All months</option>
             {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map((m, i) => (
-              <option key={m} value={m}>{['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'][i]}</option>
+              <option key={m} value={m}>{['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][i]}</option>
             ))}
           </select>
         </div>
@@ -5697,17 +5697,17 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                     checked={paginated.length > 0 && paginated.every(m => selectedMovements.has(m.correlativo))}
                     onChange={toggleSelectAll}
                     className="w-3.5 h-3.5 rounded border-slate-300 dark:border-edge-strong text-blue-600 dark:text-blue-400 focus:ring-blue-500 cursor-pointer"
-                    title="Seleccionar todos en esta página"
+                    title="Select all on this page"
                   />
                 </th>
                 <th className="px-1 sm:px-3 py-2 sm:py-3 text-left text-[8px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">#</th>
-                <th className="px-1 sm:px-3 py-2 sm:py-3 text-left text-[8px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">Fecha</th>
-                <th className="px-1 sm:px-3 py-2 sm:py-3 text-left text-[8px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">Descripción</th>
-                <th className="px-1 sm:px-3 py-2 sm:py-3 text-right text-[8px] sm:text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">Egreso</th>
-                <th className="px-1 sm:px-3 py-2 sm:py-3 text-right text-[8px] sm:text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Ingreso</th>
-                <th className="px-1 sm:px-3 py-2 sm:py-3 text-right text-[8px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">Saldo</th>
-                <th className="px-1 sm:px-3 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">Tipo</th>
-                <th className="px-1 sm:px-3 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">Código</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-left text-[8px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">Date</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-left text-[8px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">Description</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-right text-[8px] sm:text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">Expense</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-right text-[8px] sm:text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Income</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-right text-[8px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">Balance</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">Type</th>
+                <th className="px-1 sm:px-3 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">Code</th>
                 <th className="px-1 sm:px-3 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft uppercase tracking-wider">Doc</th>
               </tr>
             </thead>
@@ -5754,7 +5754,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                           return next;
                         })}
                         onDoubleClick={() => startEditing(m.correlativo, 'descripcion', getDisplayValue(m, 'descripcion'))}
-                        title={expandedDescs.has(m.correlativo) ? 'Clic para colapsar · Doble clic para editar' : 'Clic para expandir · Doble clic para editar'}
+                        title={expandedDescs.has(m.correlativo) ? 'Click to collapse · Double-click to edit' : 'Click to expand · Double-click to edit'}
                       >
                         {getDisplayValue(m, 'descripcion')}
                       </span>
@@ -5781,7 +5781,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                           autoFocus
                           disabled={saving}
                         >
-                          <option value="">— Sin tipo —</option>
+                          <option value="">— No type —</option>
                           {TIPO_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
                         </select>
                         <button onClick={saveEdit} disabled={saving} className="p-1 text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/15 rounded">
@@ -5795,7 +5795,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                       <span
                         onClick={() => startEditing(m.correlativo, 'tipo', getDisplayValue(m, 'tipo'))}
                         className={`inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all ${tipoColors[getDisplayValue(m, 'tipo')] || 'bg-gray-100 dark:bg-muted text-gray-800 dark:text-foreground'}`}
-                        title="Clic para cambiar tipo"
+                        title="Click to change type"
                       >
                         {getDisplayValue(m, 'tipo') || '—'}
                       </span>
@@ -5812,7 +5812,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                           className="w-20 px-2 py-1 text-xs border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-blue-50 dark:bg-blue-500/10 font-bold text-center uppercase"
                           autoFocus
                           disabled={saving}
-                          placeholder="Código"
+                          placeholder="Code"
                         />
                         <button onClick={saveEdit} disabled={saving} className="p-1 text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/15 rounded">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
@@ -5825,7 +5825,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                       <span
                         onClick={() => startEditing(m.correlativo, 'cliente', getDisplayValue(m, 'cliente'))}
                         className="text-[9px] sm:text-xs font-bold text-slate-600 dark:text-foreground-soft cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 px-1 sm:px-2 py-1 rounded transition-all"
-                        title="Clic para editar código"
+                        title="Click to edit code"
                       >
                         {getDisplayValue(m, 'cliente') || <span className="text-slate-300">—</span>}
                       </span>
@@ -5838,7 +5838,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                         <button
                           onClick={() => setViewingAttachment({ url: m.attachmentUrl!, correlativo: m.correlativo })}
                           className="p-1.5 bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 hover:bg-blue-200 hover:text-blue-900 dark:hover:text-blue-200 rounded-lg transition-colors border border-blue-200 dark:border-blue-500/30 flex-shrink-0"
-                          title="Ver documento adjunto"
+                          title="View attached document"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2h-2a2 2 0 01-2-2v-1" /></svg>
                         </button>
@@ -5846,13 +5846,13 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                           onClick={() => handleDeleteAttachment(m.correlativo)}
                           disabled={uploading}
                           className="p-1.5 text-slate-400 dark:text-faint hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors flex-shrink-0"
-                          title="Eliminar documento"
+                          title="Delete document"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                       </div>
                     ) : (
-                      <label className={`cursor-pointer inline-flex items-center justify-center p-1.5 border border-dashed border-slate-300 dark:border-edge-strong rounded-lg text-slate-400 dark:text-faint hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`} title="Subir documento (PDF o Imagen)">
+                      <label className={`cursor-pointer inline-flex items-center justify-center p-1.5 border border-dashed border-slate-300 dark:border-edge-strong rounded-lg text-slate-400 dark:text-faint hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`} title="Upload document (PDF or Image)">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
                         <input type="file" accept="image/*,.pdf" className="hidden" disabled={uploading} onChange={(e) => handleAttachFile(m.correlativo, e)} />
                       </label>
@@ -5907,7 +5907,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-foreground tracking-tight">Documento Adjunto</h3>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-foreground tracking-tight">Attached Document</h3>
                   <p className="text-xs sm:text-sm text-slate-500 dark:text-muted-foreground font-medium">Movimiento #{viewingAttachment.correlativo}</p>
                 </div>
               </div>
@@ -5926,7 +5926,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                 <button
                   onClick={() => setViewingAttachment(null)}
                   className="p-2 text-slate-400 dark:text-faint hover:text-slate-600 dark:hover:text-foreground-soft hover:bg-slate-100 dark:hover:bg-muted rounded-xl transition-all"
-                  aria-label="Cerrar modal"
+                  aria-label="Close modal"
                 >
                   <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -5961,7 +5961,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                 onClick={() => setViewingAttachment(null)}
                 className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white font-medium text-sm rounded-xl"
               >
-                Cerrar
+                Close
               </button>
             </div>
           </div>
@@ -7292,7 +7292,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
             <div className="mt-4 pt-4 border-t border-slate-100 dark:border-edge">
               <p className="text-[10px] font-semibold text-slate-400 dark:text-faint uppercase tracking-wider mb-2">Overhaul Funding</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <ParamInput label="Recaudado (total)" value={recaudado} onChange={setRecaudado} />
+                <ParamInput label="Collected (total)" value={recaudado} onChange={setRecaudado} />
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-2">
                 <ParamInput label="Interest on funds" value={interestRate} onChange={setInterestRate} unit="%/yr" />
@@ -7593,7 +7593,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
             <div className="p-3 rounded-lg bg-slate-50 dark:bg-muted border border-slate-100 dark:border-edge">
               <p className="text-[9px] text-slate-400 dark:text-faint uppercase tracking-wider mb-1">Total Cost</p>
               <p className="text-lg font-bold text-slate-900 dark:text-foreground font-mono">${formatCurrency(Math.round(computed.effectiveOverhaulCLP))}</p>
-              <p className="text-[9px] text-slate-400 dark:text-faint">Max(IPC, Market) · planificación conservadora</p>
+              <p className="text-[9px] text-slate-400 dark:text-faint">Max(CPI, Market) · conservative planning</p>
             </div>
             <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20">
               <p className="text-[9px] text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1">Funded</p>
@@ -7672,7 +7672,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 </div>
                 <div className="space-y-1 text-[11px]">
                   <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-muted-foreground" title="Eagle Copters F.6941 (87.47% del CIF) × IPC">Motor FOB (Eagle)</span>
+                    <span className="text-slate-500 dark:text-muted-foreground" title="Eagle Copters F.6941 (87.47% del CIF) × IPC">Engine FOB (Eagle)</span>
                     <span className="font-mono text-slate-700 dark:text-foreground-soft">${formatCurrency(computed.ipcMotorFobTodayCLP)}</span>
                   </div>
                   <div className="flex justify-between">
@@ -7714,7 +7714,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 </div>
                 <div className="space-y-1 text-[11px]">
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-500 dark:text-muted-foreground">Motor FOB (Precio en USD)</span>
+                    <span className="text-slate-500 dark:text-muted-foreground">Engine FOB (Price in USD)</span>
                     <div className="flex items-center gap-1">
                       <span className="text-slate-400 dark:text-faint text-[10px]">USD</span>
                       <input
@@ -7730,13 +7730,13 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                     </div>
                   </div>
                   <div className="flex justify-between text-[10px] -mt-0.5">
-                    <span className="text-slate-400 dark:text-faint italic" title={`Conversión @ USD/CLP ${formatCurrency(Math.round(usdRate))}`}>
-                      ↳ Conversión a CLP (USD {formatCurrency(Math.round(usdRate))})
+                    <span className="text-slate-400 dark:text-faint italic" title={`Conversion @ USD/CLP ${formatCurrency(Math.round(usdRate))}`}>
+                      ↳ Conversion to CLP (USD {formatCurrency(Math.round(usdRate))})
                     </span>
                     <span className="font-mono text-slate-500 dark:text-muted-foreground">${formatCurrency(computed.motorFobCLP)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-muted-foreground" title={`Flete + seguro + aduana (cotización Eagle Copters Nº1475-2021: USD 4.857 base + CPI USA acumulado ${usCpiCumulPct.toFixed(1)}%)`}>COMEX (USD {Math.round(4856.84 * (1 + usCpiCumulPct / 100)).toLocaleString()})</span>
+                    <span className="text-slate-500 dark:text-muted-foreground" title={`Freight + insurance + customs (Eagle Copters quote Nº1475-2021: USD 4,857 base + cumulative US CPI ${usCpiCumulPct.toFixed(1)}%)`}>COMEX (USD {Math.round(4856.84 * (1 + usCpiCumulPct / 100)).toLocaleString()})</span>
                     <span className="font-mono text-slate-700 dark:text-foreground-soft">${formatCurrency(computed.comexCLP)}</span>
                   </div>
                   <div className="flex justify-between">
@@ -8083,19 +8083,19 @@ function DepositsTable({ depositsDetailsByCode, csvPilotNames }: { depositsDetai
   };
 
   const handleDelete = async (depositId: number, pilotName: string, monto: number) => {
-    if (!confirm(`¿Eliminar este depósito?\n\nPiloto: ${pilotName}\nMonto: $${monto.toLocaleString('es-CL')}\n\nEsto también eliminará la transacción ABONO asociada y afectará el saldo del piloto.`)) return;
+    if (!confirm(`Delete this deposit?\n\nPilot: ${pilotName}\nAmount: $${monto.toLocaleString('es-CL')}\n\nThis will also delete the associated ABONO transaction and affect the pilot balance.`)) return;
     setDeletingId(depositId);
     try {
       const { deleteDeposit } = await import('../../../actions/delete-deposit');
       const result = await deleteDeposit(depositId);
       if (result.ok) {
-        alert('Depósito eliminado correctamente');
+        alert('Deposit deleted successfully');
         router.refresh();
       } else {
-        alert(result.error || 'Error al eliminar');
+        alert(result.error || 'Error deleting');
       }
     } catch (e) {
-      alert('Error al eliminar el depósito');
+      alert('Error deleting deposit');
     } finally {
       setDeletingId(null);
     }
