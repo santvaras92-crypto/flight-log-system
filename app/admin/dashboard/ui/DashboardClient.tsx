@@ -7004,19 +7004,20 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
 
   // Stat card helper
   const StatCard = ({ label, value, sub, color = 'slate', icon }: { label: string; value: string; sub?: string; color?: string; icon: string }) => {
-    const colors: Record<string, string> = {
-      slate: 'bg-slate-50 dark:bg-muted text-slate-700 dark:text-foreground-soft',
-      green: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-      red: 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300',
-      blue: 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300',
-      amber: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300',
-      indigo: 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300',
+    const colors: Record<string, { bg: string; text: string }> = {
+      slate: { bg: 'bg-slate-50 dark:bg-white/5', text: 'text-slate-700 dark:text-slate-300' },
+      green: { bg: 'bg-emerald-50 dark:bg-emerald-500/15', text: 'text-emerald-700 dark:text-emerald-300' },
+      red: { bg: 'bg-red-50 dark:bg-red-500/15', text: 'text-red-700 dark:text-red-300' },
+      blue: { bg: 'bg-blue-50 dark:bg-blue-500/15', text: 'text-blue-700 dark:text-blue-300' },
+      amber: { bg: 'bg-amber-50 dark:bg-amber-500/15', text: 'text-amber-700 dark:text-amber-300' },
+      indigo: { bg: 'bg-indigo-50 dark:bg-indigo-500/15', text: 'text-indigo-700 dark:text-indigo-300' },
     };
+    const c = colors[color] || colors.slate;
     return (
       <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-lg p-3 sm:p-4">
         <div className="flex items-start justify-between mb-2">
-          <div className={`w-8 h-8 rounded-lg ${colors[color]?.split(' ')[0] || 'bg-slate-50 dark:bg-muted'} flex items-center justify-center`}>
-            <svg className={`w-4 h-4 ${colors[color]?.split(' ')[1] || 'text-slate-600 dark:text-foreground-soft'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className={`w-8 h-8 rounded-lg ${c.bg} flex items-center justify-center`}>
+            <svg className={`w-4 h-4 ${c.text}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={icon} />
             </svg>
           </div>
