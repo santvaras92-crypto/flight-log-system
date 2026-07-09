@@ -528,14 +528,6 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       const formatDate = (d: Date | null) => d ? formatFecha(d, { day: 'numeric', month: 'short' }) : '-';
       const formatDateShort = (d: Date | null) => d ? formatFecha(d, { day: 'numeric', month: 'short' }).replace('.', '') : '-';
 
-      // Format days as human-readable: "X,Y a" / "Xm" / "Xd"
-      const fmtTime = (days: number): string => {
-        if (days <= 0) return '0d';
-        if (days < 30) return `${days}d`;
-        if (days < 365) return `${Math.floor(days / 30)}m`;
-        return `${(days / 365).toFixed(1)}a`;
-      };
-
       // Progress bar color based on remaining percentage
       const getProgressColor = (remaining: number, total: number) => {
         const pct = (remaining / total) * 100;
@@ -592,7 +584,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               </div>
               {weightedRate > 0 && (
                 <div className="text-[9px] sm:text-[11px] text-slate-900 dark:text-foreground font-bold flex items-center gap-1">
-                  <Icon name="timer" className="w-3 h-3" /> ~{fmtTime(oilPred.days)} <span className="hidden sm:inline text-slate-500 dark:text-muted-foreground">({fmtTime(oilPred.minDays)}-{fmtTime(oilPred.maxDays)})</span>
+                  <Icon name="timer" className="w-3 h-3" /> ~{oilPred.days}d <span className="text-slate-500 dark:text-muted-foreground font-semibold">· {formatDate(oilPred.date)}</span>
                 </div>
               )}
             </div>
@@ -616,7 +608,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               </div>
               {weightedRate > 0 && (
                 <div className="text-[9px] sm:text-[11px] text-slate-900 dark:text-foreground font-bold flex items-center gap-1">
-                  <Icon name="timer" className="w-3 h-3" /> ~{fmtTime(hundredPred.days)} <span className="hidden sm:inline text-slate-500 dark:text-muted-foreground">({fmtTime(hundredPred.minDays)}-{fmtTime(hundredPred.maxDays)})</span>
+                  <Icon name="timer" className="w-3 h-3" /> ~{hundredPred.days}d <span className="text-slate-500 dark:text-muted-foreground font-semibold">· {formatDate(hundredPred.date)}</span>
                 </div>
               )}
             </div>
