@@ -26,7 +26,7 @@ ChartJS.register(
 
 const FlightMap = dynamic(() => import("@/app/components/FlightMap"), {
   ssr: false,
-  loading: () => <div className="h-[350px] bg-slate-50 rounded-xl border border-slate-200 animate-pulse" />,
+  loading: () => <div className="h-[350px] bg-slate-50 dark:bg-muted rounded-xl border border-slate-200 dark:border-edge animate-pulse" />,
 });
 
 // Lycoming O-320-D2J limits
@@ -414,21 +414,21 @@ export default function PilotEngineDetail({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm overflow-y-auto">
-      <div className="w-full max-w-5xl mx-4 my-6 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+      <div className="w-full max-w-5xl mx-4 my-6 bg-white dark:bg-card rounded-2xl shadow-2xl border border-slate-200 dark:border-edge overflow-hidden">
         {/* Modal Header */}
-        <div className="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+        <div className="sticky top-0 z-10 bg-white dark:bg-card border-b border-slate-200 dark:border-edge px-4 py-3 flex items-center justify-between">
           <div>
-            <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
-              <Icon name="engine" className="w-5 h-5 text-slate-500" /> Engine Monitor — JPI EDM-830
-              {multiTramo && <span className="text-xs font-normal text-slate-500 bg-blue-100 text-blue-700 rounded-full px-2 py-0.5 ml-1">{engineFlightIds.length} tramos</span>}
+            <h2 className="text-base font-bold text-slate-800 dark:text-foreground flex items-center gap-2">
+              <Icon name="engine" className="w-5 h-5 text-slate-500 dark:text-muted-foreground" /> Engine Monitor — JPI EDM-830
+              {multiTramo && <span className="text-xs font-normal text-slate-500 dark:text-muted-foreground bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 rounded-full px-2 py-0.5 ml-1">{engineFlightIds.length} tramos</span>}
             </h2>
-            <p className="text-[11px] text-slate-500 mt-0.5">
+            <p className="text-[11px] text-slate-500 dark:text-muted-foreground mt-0.5">
               Lycoming O-320-D2J · S/N RL-7662-39E · CC-AQI
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-muted text-slate-400 dark:text-faint hover:text-slate-600 dark:hover:text-foreground-soft transition-colors"
             title="Cerrar (Esc)"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -447,7 +447,7 @@ export default function PilotEngineDetail({
                 className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                   activeTramo === idx
                     ? 'bg-blue-600 text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    : 'bg-slate-100 dark:bg-muted text-slate-600 dark:text-foreground-soft hover:bg-slate-200 dark:hover:bg-white/10'
                 }`}
               >
                 Tramo {idx + 1}
@@ -461,43 +461,43 @@ export default function PilotEngineDetail({
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600"></div>
-              <span className="ml-3 text-slate-500">Cargando datos del motor...</span>
+              <span className="ml-3 text-slate-500 dark:text-muted-foreground">Cargando datos del motor...</span>
             </div>
           ) : !flight ? (
-            <div className="text-center py-12 text-slate-400">
+            <div className="text-center py-12 text-slate-400 dark:text-faint">
               <div className="flex justify-center mb-3"><Icon name="warning" className="w-8 h-8 text-slate-300" /></div>
               <p>No se pudieron cargar los datos del motor.</p>
             </div>
           ) : (
             <>
               {/* Flight Header Stats */}
-              <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-edge p-4">
                 <div className="flex flex-wrap gap-4 items-center justify-between">
                   <div>
-                    <h3 className="text-base font-bold text-slate-800">
+                    <h3 className="text-base font-bold text-slate-800 dark:text-foreground">
                       Flight #{flight.flightNumber} — {formatDate(flight.flightDate)}
                     </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-xs text-slate-500 dark:text-muted-foreground mt-0.5">
                       {flight.engineModel || "O-320-D2J"} · S/N {flight.engineSerial || "RL-7662-39E"} · {flight.readings.length} data points
                     </p>
                   </div>
                   {detailStats && (
                     <div className="flex flex-wrap gap-3 text-xs">
-                      <div className="bg-slate-50 rounded-lg px-3 py-1.5">
-                        <span className="text-slate-500">EGT Spread</span>
-                        <span className="ml-1 font-bold text-slate-700">{detailStats.egt.maxSpread.toFixed(0)}°F max / {detailStats.egt.avgSpread.toFixed(0)}°F avg</span>
+                      <div className="bg-slate-50 dark:bg-muted rounded-lg px-3 py-1.5">
+                        <span className="text-slate-500 dark:text-muted-foreground">EGT Spread</span>
+                        <span className="ml-1 font-bold text-slate-700 dark:text-foreground-soft">{detailStats.egt.maxSpread.toFixed(0)}°F max / {detailStats.egt.avgSpread.toFixed(0)}°F avg</span>
                       </div>
-                      <div className="bg-slate-50 rounded-lg px-3 py-1.5">
-                        <span className="text-slate-500">Oil</span>
-                        <span className="ml-1 font-bold text-slate-700">{detailStats.oil.maxTemp.toFixed(0)}°F / {detailStats.oil.minPress.toFixed(0)} PSI</span>
+                      <div className="bg-slate-50 dark:bg-muted rounded-lg px-3 py-1.5">
+                        <span className="text-slate-500 dark:text-muted-foreground">Oil</span>
+                        <span className="ml-1 font-bold text-slate-700 dark:text-foreground-soft">{detailStats.oil.maxTemp.toFixed(0)}°F / {detailStats.oil.minPress.toFixed(0)} PSI</span>
                       </div>
-                      <div className="bg-slate-50 rounded-lg px-3 py-1.5">
-                        <span className="text-slate-500">Avg RPM</span>
-                        <span className="ml-1 font-bold text-slate-700">{detailStats.power.avgRPM.toFixed(0)}</span>
+                      <div className="bg-slate-50 dark:bg-muted rounded-lg px-3 py-1.5">
+                        <span className="text-slate-500 dark:text-muted-foreground">Avg RPM</span>
+                        <span className="ml-1 font-bold text-slate-700 dark:text-foreground-soft">{detailStats.power.avgRPM.toFixed(0)}</span>
                       </div>
-                      <div className="bg-slate-50 rounded-lg px-3 py-1.5">
-                        <span className="text-slate-500">Avg FF</span>
-                        <span className="ml-1 font-bold text-slate-700">{detailStats.power.avgFF.toFixed(1)} GPH</span>
+                      <div className="bg-slate-50 dark:bg-muted rounded-lg px-3 py-1.5">
+                        <span className="text-slate-500 dark:text-muted-foreground">Avg FF</span>
+                        <span className="ml-1 font-bold text-slate-700 dark:text-foreground-soft">{detailStats.power.avgFF.toFixed(1)} GPH</span>
                       </div>
                     </div>
                   )}
@@ -506,34 +506,34 @@ export default function PilotEngineDetail({
 
               {/* Linked Flight Info */}
               {flight.linkedFlight && (
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-3">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 dark:border-blue-500/30 p-3">
                   <div className="flex flex-wrap gap-3 items-center text-xs">
-                    <span className="font-bold text-blue-700 flex items-center gap-1">
+                    <span className="font-bold text-blue-700 dark:text-blue-300 flex items-center gap-1">
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.172 13.828a4 4 0 015.656 0l4-4a4 4 0 00-5.656-5.656l-1.102 1.101" /></svg>
                       Flight Log #{flight.linkedFlight.id}
                     </span>
                     {flight.linkedFlight.piloto && (
-                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-700 inline-flex items-center gap-1" title="Piloto"><Icon name="pilot" className="w-3 h-3" /> {flight.linkedFlight.piloto}</span>
+                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-700 dark:text-foreground-soft inline-flex items-center gap-1" title="Piloto"><Icon name="pilot" className="w-3 h-3" /> {flight.linkedFlight.piloto}</span>
                     )}
                     {flight.linkedFlight.copiloto && (
-                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-600" title="Copiloto">+{flight.linkedFlight.copiloto}</span>
+                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-600 dark:text-foreground-soft" title="Copiloto">+{flight.linkedFlight.copiloto}</span>
                     )}
                     {flight.linkedFlight.instructor && (
-                      <span className="bg-amber-50 rounded-md px-2 py-0.5 text-amber-700 border border-amber-200 inline-flex items-center gap-1" title="Instructor"><Icon name="graduation" className="w-3 h-3" /> {flight.linkedFlight.instructor}</span>
+                      <span className="bg-amber-50 dark:bg-amber-500/10 rounded-md px-2 py-0.5 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 inline-flex items-center gap-1" title="Instructor"><Icon name="graduation" className="w-3 h-3" /> {flight.linkedFlight.instructor}</span>
                     )}
                     {flight.linkedFlight.diffHobbs != null && (
-                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-700 font-mono">{flight.linkedFlight.diffHobbs.toFixed(1)}h hobbs</span>
+                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-700 dark:text-foreground-soft font-mono">{flight.linkedFlight.diffHobbs.toFixed(1)}h hobbs</span>
                     )}
                     {flight.linkedFlight.costo != null && (
-                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-green-700 font-mono">${flight.linkedFlight.costo.toLocaleString('es-CL')}</span>
+                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-green-700 dark:text-green-300 font-mono">${flight.linkedFlight.costo.toLocaleString('es-CL')}</span>
                     )}
                     {(flight.linkedFlight.aerodromoSalida || flight.linkedFlight.aerodromoDestino) && (
-                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-600">
+                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-600 dark:text-foreground-soft">
                         {flight.linkedFlight.aerodromoSalida || '?'} → {flight.linkedFlight.aerodromoDestino || '?'}
                       </span>
                     )}
                     {flight.linkedFlight.detalle && (
-                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-500 italic truncate max-w-[250px]" title={flight.linkedFlight.detalle}>
+                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-500 dark:text-muted-foreground italic truncate max-w-[250px]" title={flight.linkedFlight.detalle}>
                         {flight.linkedFlight.detalle}
                       </span>
                     )}
@@ -543,33 +543,33 @@ export default function PilotEngineDetail({
 
               {/* Per-Cylinder Analysis Table */}
               {detailStats && (
-                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                  <div className="px-4 py-2 border-b border-slate-100 bg-slate-50/50">
-                    <h4 className="text-xs font-semibold text-slate-600">Per-Cylinder Analysis</h4>
+                <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-edge overflow-hidden">
+                  <div className="px-4 py-2 border-b border-slate-100 dark:border-edge bg-slate-50 dark:bg-muted/50">
+                    <h4 className="text-xs font-semibold text-slate-600 dark:text-foreground-soft">Per-Cylinder Analysis</h4>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
-                      <thead className="bg-slate-50">
+                      <thead className="bg-slate-50 dark:bg-muted">
                         <tr>
-                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600">Cyl</th>
-                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600">Max EGT</th>
-                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600">Avg EGT</th>
-                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600">Max CHT</th>
-                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600">Avg CHT</th>
-                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600">CHT &gt;{ENGINE_LIMITS.cht_redline}°F</th>
+                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600 dark:text-foreground-soft">Cyl</th>
+                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600 dark:text-foreground-soft">Max EGT</th>
+                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600 dark:text-foreground-soft">Avg EGT</th>
+                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600 dark:text-foreground-soft">Max CHT</th>
+                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600 dark:text-foreground-soft">Avg CHT</th>
+                          <th className="px-3 py-1.5 text-left font-semibold text-slate-600 dark:text-foreground-soft">CHT &gt;{ENGINE_LIMITS.cht_redline}°F</th>
                         </tr>
                       </thead>
                       <tbody>
                         {[0, 1, 2, 3].map(i => (
-                          <tr key={i} className="border-t border-slate-100">
-                            <td className="px-3 py-1.5 font-bold text-slate-700">#{i + 1}</td>
+                          <tr key={i} className="border-t border-slate-100 dark:border-edge">
+                            <td className="px-3 py-1.5 font-bold text-slate-700 dark:text-foreground-soft">#{i + 1}</td>
                             <td className="px-3 py-1.5 font-mono">{detailStats.egt.maxPerCyl[i].toFixed(0)}°F</td>
-                            <td className="px-3 py-1.5 font-mono text-slate-500">{detailStats.egt.avgPerCyl[i].toFixed(0)}°F</td>
-                            <td className={`px-3 py-1.5 font-mono font-semibold ${detailStats.cht.maxPerCyl[i] >= ENGINE_LIMITS.cht_redline ? "text-red-600" : detailStats.cht.maxPerCyl[i] >= ENGINE_LIMITS.cht_caution ? "text-amber-600" : ""}`}>
+                            <td className="px-3 py-1.5 font-mono text-slate-500 dark:text-muted-foreground">{detailStats.egt.avgPerCyl[i].toFixed(0)}°F</td>
+                            <td className={`px-3 py-1.5 font-mono font-semibold ${detailStats.cht.maxPerCyl[i] >= ENGINE_LIMITS.cht_redline ? "text-red-600 dark:text-red-400" : detailStats.cht.maxPerCyl[i] >= ENGINE_LIMITS.cht_caution ? "text-amber-600 dark:text-amber-400" : ""}`}>
                               {detailStats.cht.maxPerCyl[i].toFixed(0)}°F
                             </td>
-                            <td className="px-3 py-1.5 font-mono text-slate-500">{detailStats.cht.avgPerCyl[i].toFixed(0)}°F</td>
-                            <td className={`px-3 py-1.5 font-mono ${detailStats.cht.exceedances[i] > 0 ? "text-red-600 font-semibold" : "text-slate-400"}`}>
+                            <td className="px-3 py-1.5 font-mono text-slate-500 dark:text-muted-foreground">{detailStats.cht.avgPerCyl[i].toFixed(0)}°F</td>
+                            <td className={`px-3 py-1.5 font-mono ${detailStats.cht.exceedances[i] > 0 ? "text-red-600 dark:text-red-400 font-semibold" : "text-slate-400 dark:text-faint"}`}>
                               {detailStats.cht.exceedances[i]}
                             </td>
                           </tr>
@@ -582,21 +582,21 @@ export default function PilotEngineDetail({
 
               {/* 4 Charts Grid */}
               {chartError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2 text-xs flex items-center gap-1.5">
+                <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-300 rounded-lg px-3 py-2 text-xs flex items-center gap-1.5">
                   <Icon name="warning" className="w-4 h-4 flex-shrink-0" /> No se pudieron dibujar los gráficos: {chartError}
                 </div>
               )}
               <div ref={chartsGridRef} className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300, position: "relative" }}>
+                <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-edge p-3" style={{ height: 300, position: "relative" }}>
                   <canvas ref={egtChartRef}></canvas>
                 </div>
-                <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300, position: "relative" }}>
+                <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-edge p-3" style={{ height: 300, position: "relative" }}>
                   <canvas ref={chtChartRef}></canvas>
                 </div>
-                <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300, position: "relative" }}>
+                <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-edge p-3" style={{ height: 300, position: "relative" }}>
                   <canvas ref={oilChartRef}></canvas>
                 </div>
-                <div className="bg-white rounded-xl border border-slate-200 p-3" style={{ height: 300, position: "relative" }}>
+                <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-edge p-3" style={{ height: 300, position: "relative" }}>
                   <canvas ref={powerChartRef}></canvas>
                 </div>
               </div>

@@ -35,14 +35,14 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-muted p-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="flex justify-center">
           <img src="/logo.png" alt="CC-AQI" className="h-[8.162rem] w-auto" />
         </div>
-        <form onSubmit={handleSubmit} className="bg-white shadow rounded p-6 space-y-4">
-          <h1 className="text-xl font-semibold text-gray-700">Recuperar Contraseña</h1>
-          <p className="text-sm text-gray-500">
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-card shadow rounded p-6 space-y-4">
+          <h1 className="text-xl font-semibold text-gray-700 dark:text-foreground-soft">Recuperar Contraseña</h1>
+          <p className="text-sm text-gray-500 dark:text-muted-foreground">
             Ingresa tu email y te enviaremos un link para restablecer tu contraseña.
           </p>
           <div className="space-y-2">
@@ -57,7 +57,7 @@ export default function ForgotPasswordPage() {
             />
           </div>
           {message && (
-            <p className={`text-sm ${message.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+            <p className={`text-sm ${message.type === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
               {message.text}
             </p>
           )}

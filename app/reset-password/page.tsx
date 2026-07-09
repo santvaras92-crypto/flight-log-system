@@ -81,22 +81,22 @@ function ResetPasswordContent() {
 
   if (verifying) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-        <div className="text-gray-500">Verificando link...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-muted p-4">
+        <div className="text-gray-500 dark:text-muted-foreground">Verificando link...</div>
       </div>
     );
   }
 
   if (!token || !tokenValid) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-muted p-4">
         <div className="w-full max-w-sm space-y-6">
           <div className="flex justify-center">
             <img src="/logo.png" alt="CC-AQI" className="h-[8.162rem] w-auto" />
           </div>
-          <div className="bg-white shadow rounded p-6 space-y-4 text-center">
-            <h1 className="text-xl font-semibold text-red-600">Link Inválido</h1>
-            <p className="text-sm text-gray-600">
+          <div className="bg-white dark:bg-card shadow rounded p-6 space-y-4 text-center">
+            <h1 className="text-xl font-semibold text-red-600 dark:text-red-400">Link Inválido</h1>
+            <p className="text-sm text-gray-600 dark:text-foreground-soft">
               El link ha expirado o no es válido. Por favor solicita uno nuevo.
             </p>
             <Link 
@@ -113,15 +113,15 @@ function ResetPasswordContent() {
 
   if (message?.type === 'success') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-muted p-4">
         <div className="w-full max-w-sm space-y-6">
           <div className="flex justify-center">
             <img src="/logo.png" alt="CC-AQI" className="h-[8.162rem] w-auto" />
           </div>
-          <div className="bg-white shadow rounded p-6 space-y-4 text-center">
+          <div className="bg-white dark:bg-card shadow rounded p-6 space-y-4 text-center">
             <div className="flex justify-center mb-2"><Icon name="checkCircle" className="w-16 h-16 text-green-500" /></div>
-            <h1 className="text-xl font-semibold text-green-600">¡Contraseña Actualizada!</h1>
-            <p className="text-sm text-gray-600">{message.text}</p>
+            <h1 className="text-xl font-semibold text-green-600 dark:text-green-400">¡Contraseña Actualizada!</h1>
+            <p className="text-sm text-gray-600 dark:text-foreground-soft">{message.text}</p>
             <Link 
               href="/login" 
               className="inline-block bg-[#003D82] text-white py-2 px-4 rounded text-sm hover:bg-[#0A2F5F]"
@@ -135,15 +135,15 @@ function ResetPasswordContent() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-muted p-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="flex justify-center">
           <img src="/logo.png" alt="CC-AQI" className="h-[8.162rem] w-auto" />
         </div>
-        <form onSubmit={handleSubmit} className="bg-white shadow rounded p-6 space-y-4">
-          <h1 className="text-xl font-semibold text-gray-700">Nueva Contraseña</h1>
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-card shadow rounded p-6 space-y-4">
+          <h1 className="text-xl font-semibold text-gray-700 dark:text-foreground-soft">Nueva Contraseña</h1>
           {userName && (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-muted-foreground">
               Hola <strong>{userName}</strong>, ingresa tu nueva contraseña.
             </p>
           )}
@@ -171,7 +171,7 @@ function ResetPasswordContent() {
             />
           </div>
           {message?.type === 'error' && (
-            <p className="text-sm text-red-600">{message.text}</p>
+            <p className="text-sm text-red-600 dark:text-red-400">{message.text}</p>
           )}
           <button
             type="submit"
@@ -188,8 +188,8 @@ function ResetPasswordContent() {
 
 function LoadingFallback() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-      <div className="text-gray-500">Cargando...</div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-muted p-4">
+      <div className="text-gray-500 dark:text-muted-foreground">Cargando...</div>
     </div>
   );
 }

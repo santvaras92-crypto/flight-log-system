@@ -185,7 +185,7 @@ export default function NewPilotPublicPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 dark:bg-muted">
       {/* Header */}
       <header className="bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
@@ -207,11 +207,11 @@ export default function NewPilotPublicPage() {
 
       {/* Content */}
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <div className="executive-card p-6 sm:p-8 shadow-lg bg-white rounded-2xl">
+        <div className="executive-card p-6 sm:p-8 shadow-lg bg-white dark:bg-card rounded-2xl">
           {/* Form Header */}
-          <div className="mb-6 pb-4 border-b-2 border-gray-200">
-            <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-wide text-gray-800">Pilot Registration</h2>
-            <p className="text-sm mt-1 text-gray-600">Complete the information to create a new pilot profile</p>
+          <div className="mb-6 pb-4 border-b-2 border-gray-200 dark:border-edge">
+            <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-wide text-gray-800 dark:text-foreground">Pilot Registration</h2>
+            <p className="text-sm mt-1 text-gray-600 dark:text-foreground-soft">Complete the information to create a new pilot profile</p>
           </div>
 
           {/* Indicador de búsqueda */}

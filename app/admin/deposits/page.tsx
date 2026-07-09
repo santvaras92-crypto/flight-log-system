@@ -41,7 +41,7 @@ export default function DepositsPage() {
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
           <form
-            className="bg-white p-6 rounded shadow-md flex flex-col gap-4"
+            className="bg-white dark:bg-card p-6 rounded shadow-md flex flex-col gap-4"
             onSubmit={handleSubmit}
           >
             <label className="font-semibold">Nuevo monto para el último depósito:</label>
@@ -52,8 +52,8 @@ export default function DepositsPage() {
               className="border px-2 py-1 rounded"
               required
             />
-            {formError && <div className="text-red-600">{formError}</div>}
-            {formSuccess && <div className="text-green-600">{formSuccess}</div>}
+            {formError && <div className="text-red-600 dark:text-red-400">{formError}</div>}
+            {formSuccess && <div className="text-green-600 dark:text-green-400">{formSuccess}</div>}
             <div className="flex gap-2 justify-end">
               <button
                 type="button"

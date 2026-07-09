@@ -302,7 +302,7 @@ export default function FlightMap({ points, className, gpsSource, calibration }:
 
   if (displayPoints.length < 2) {
     return (
-      <div className={`bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-center text-slate-400 text-sm ${className || ""}`} style={{ height: 200 }}>
+      <div className={`bg-slate-50 dark:bg-muted rounded-xl border border-slate-200 dark:border-edge flex items-center justify-center text-slate-400 dark:text-faint text-sm ${className || ""}`} style={{ height: 200 }}>
         <span className="inline-flex items-center gap-1"><Icon name="location" className="w-4 h-4" /> Sin datos GPS para este vuelo</span>
       </div>
     );
@@ -315,7 +315,7 @@ export default function FlightMap({ points, className, gpsSource, calibration }:
   return (
     <div className={`relative ${className || ""}`}>
       {/* GPS Stats Bar */}
-      <div className="flex items-center gap-4 px-3 py-1.5 bg-slate-800 text-white text-xs rounded-t-xl">
+      <div className="flex items-center gap-4 px-3 py-1.5 bg-slate-800 dark:bg-slate-700 text-white text-xs rounded-t-xl">
         <span className="font-semibold text-slate-300 inline-flex items-center gap-1"><Icon name="location" className="w-3.5 h-3.5" /> {gpsSource === "kml" ? "GPS desde KML" : hasCalibration ? "GPS JPI (calibrado)" : "GPS Track"}</span>
         <span>{displayPoints.length} pts</span>
         {gpsMaxAlt > 0 && <span>↑ {Math.round(gpsMaxAlt * 3.281)} ft</span>}
@@ -332,12 +332,12 @@ export default function FlightMap({ points, className, gpsSource, calibration }:
       {/* Map Container */}
       <div
         ref={mapRef}
-        className="rounded-b-xl border border-t-0 border-slate-200"
+        className="rounded-b-xl border border-t-0 border-slate-200 dark:border-edge"
         style={{ height: expanded ? 600 : 350, transition: "height 0.3s ease" }}
       />
       {/* Altitude legend */}
       {gpsMaxAlt > 0 && (
-        <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 text-[10px] text-slate-600 flex items-center gap-1.5 shadow-sm z-[1000]">
+        <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 text-[10px] text-slate-600 dark:text-foreground-soft flex items-center gap-1.5 shadow-sm z-[1000]">
           <span>Bajo</span>
           <div className="w-16 h-2 rounded" style={{ background: "linear-gradient(to right, rgb(0,50,220), rgb(110,150,50), rgb(220,50,0))" }} />
           <span>Alto</span>
