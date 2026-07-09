@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Head from "next/head";
 import { Icon } from "../components/Icon";
+import ThemeToggle from "../components/ThemeToggle";
 
 const DEVICE_TOKEN_KEY = "aqi_device_token";
 
@@ -127,6 +128,7 @@ export default function PilotLayout({ children }: { children: React.ReactNode })
                 <span className="sm:hidden"><Icon name="lock" className="w-4 h-4" title="Contraseña" /></span>
                 <span className="hidden sm:inline-flex items-center gap-1"><Icon name="lock" className="w-4 h-4" /> Contraseña</span>
               </button>
+              <ThemeToggle variant="nav" />
               <button
                 onClick={handleLogout}
                 className="bg-white/10 hover:bg-white/20 px-2 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors text-white"

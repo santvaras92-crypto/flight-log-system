@@ -25,6 +25,7 @@ import {
   Upload, FolderOpen, RefreshCw, Brain, FlaskConical, Globe,
   Lock, LogOut, Lightbulb, Plus, Check, CheckCircle2, X, TriangleAlert,
   Siren, Search, AlertCircle, Info, ChevronDown, ChevronRight, ExternalLink,
+  Sun, Moon, Monitor,
   type LucideIcon,
 } from "lucide-react";
 
@@ -98,6 +99,11 @@ const REGISTRY = {
   logout: LogOut,
   chevronDown: ChevronDown,
   chevronRight: ChevronRight,
+
+  // ── Theme ──
+  sun: Sun,
+  moon: Moon,
+  monitor: Monitor,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof REGISTRY;

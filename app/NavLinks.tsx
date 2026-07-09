@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { Icon } from './components/Icon'
+import ThemeToggle from './components/ThemeToggle'
 
 export default function NavLinks() {
   const pathname = usePathname()
@@ -67,6 +68,7 @@ export default function NavLinks() {
           </span>
         )}
       </Link>
+      <ThemeToggle variant="nav" />
       <button
         onClick={handleLogout}
         className="px-2 sm:px-4 py-2 text-[10px] sm:text-sm font-semibold text-red-200 hover:text-white hover:bg-red-500/30 rounded-lg transition-all"
