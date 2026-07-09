@@ -67,13 +67,6 @@ export default function NavLinks() {
           </span>
         )}
       </Link>
-      <Link 
-        href="/admin/counters" 
-        className="px-2 sm:px-4 py-2 text-[10px] sm:text-sm font-semibold text-blue-100 hover:text-white hover:bg-white/15 rounded-lg transition-all"
-      >
-        <span className="hidden sm:inline">Contadores</span>
-        <span className="sm:hidden"><Icon name="gauge" className="w-5 h-5" title="Contadores" /></span>
-      </Link>
       <button
         onClick={handleLogout}
         className="px-2 sm:px-4 py-2 text-[10px] sm:text-sm font-semibold text-red-200 hover:text-white hover:bg-red-500/30 rounded-lg transition-all"

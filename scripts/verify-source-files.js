@@ -30,7 +30,6 @@ const CRITICAL_FILES = [
   'app/actions/register-overhaul.ts',
   'app/actions/validate-fuel.ts',
   'app/actions/validate-deposit.ts',
-  'app/actions/update-counters.ts',
   'app/actions/manual-review.ts',
   'app/actions/process-ocr.ts',
   'app/actions/register-flight.ts',
