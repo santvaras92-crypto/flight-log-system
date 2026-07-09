@@ -3336,7 +3336,7 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
             {rows.filter(r => !deletedIds.has(r.id || 0)).map((r, idx) => {
               const canEdit = editMode && r.id !== null;
               return (
-                <tr key={`${r.code}-${idx}`} className={`transition-colors ${canEdit ? 'bg-amber-50 dark:bg-amber-500/10/30' : 'hover:bg-slate-50 dark:hover:bg-muted'}`}>
+                <tr key={`${r.code}-${idx}`} className={`transition-colors ${canEdit ? 'bg-amber-50/30 dark:bg-amber-500/10' : 'hover:bg-slate-50 dark:hover:bg-muted'}`}>
                   {editMode && (
                     <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-center">
                       {r.id !== null ? (
@@ -3932,8 +3932,8 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
 // Plan de Reemplazo (life-limited parts) — dynamic monitoring
 // ─────────────────────────────────────────────────────────────
 const RAG_STYLE: Record<string, { badge: string; dot: string; label: string; row: string }> = {
-  VENCIDO: { badge: 'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300 border-red-200 dark:border-red-500/30', dot: 'bg-red-500', label: 'Vencido', row: 'bg-red-50 dark:bg-red-500/10/60 border-l-4 border-red-500' },
-  PROXIMO: { badge: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30', dot: 'bg-amber-500', label: 'Próximo', row: 'bg-amber-50 dark:bg-amber-500/10/50 border-l-4 border-amber-400' },
+  VENCIDO: { badge: 'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300 border-red-200 dark:border-red-500/30', dot: 'bg-red-500', label: 'Vencido', row: 'bg-red-50/60 dark:bg-red-500/10 border-l-4 border-red-500' },
+  PROXIMO: { badge: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30', dot: 'bg-amber-500', label: 'Próximo', row: 'bg-amber-50/50 dark:bg-amber-500/10 border-l-4 border-amber-400' },
   OK: { badge: 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30', dot: 'bg-emerald-500', label: 'OK', row: 'hover:bg-slate-50 dark:hover:bg-muted' },
   SIN_LIMITE: { badge: 'bg-slate-100 dark:bg-muted text-slate-500 dark:text-muted-foreground border-slate-200 dark:border-edge', dot: 'bg-slate-400', label: 'Sin límite', row: 'hover:bg-slate-50 dark:hover:bg-muted' },
 };
@@ -4267,7 +4267,7 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
         ))}
       </div>
 
-      <div className="text-xs text-slate-500 dark:text-muted-foreground bg-blue-50 dark:bg-blue-500/10/60 border border-blue-100 dark:border-blue-500/20 rounded-lg px-3 py-2">
+      <div className="text-xs text-slate-500 dark:text-muted-foreground bg-blue-50/60 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 rounded-lg px-3 py-2">
         Monitoreo dinámico: el remanente se recalcula en vivo contra el horómetro de cada dominio
         (Célula / Motor TSMOH / Hélice) y contra el calendario. La <strong>fecha proyectada</strong> usa
         la tasa de uso actual ({rate > 0 ? `${rate.toFixed(2)} h/día` : 's/d'}) y toma lo que ocurra primero
@@ -4457,8 +4457,8 @@ function ReplacementPlanTable({ parts, usageStats }: { parts: any[]; usageStats?
 // Cumplimiento AD/DA (airworthiness directives) — dynamic monitoring
 // ─────────────────────────────────────────────────────────────
 const CMP_STYLE: Record<string, { badge: string; dot: string; label: string; row: string }> = {
-  VENCIDO: { badge: 'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300 border-red-200 dark:border-red-500/30', dot: 'bg-red-500', label: 'Vencido', row: 'bg-red-50 dark:bg-red-500/10/60 border-l-4 border-red-500' },
-  PROXIMO: { badge: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30', dot: 'bg-amber-500', label: 'Próximo', row: 'bg-amber-50 dark:bg-amber-500/10/50 border-l-4 border-amber-400' },
+  VENCIDO: { badge: 'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300 border-red-200 dark:border-red-500/30', dot: 'bg-red-500', label: 'Vencido', row: 'bg-red-50/60 dark:bg-red-500/10 border-l-4 border-red-500' },
+  PROXIMO: { badge: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30', dot: 'bg-amber-500', label: 'Próximo', row: 'bg-amber-50/50 dark:bg-amber-500/10 border-l-4 border-amber-400' },
   OK: { badge: 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30', dot: 'bg-emerald-500', label: 'Vigente', row: 'hover:bg-slate-50 dark:hover:bg-muted' },
   AL_EVENTO: { badge: 'bg-sky-100 dark:bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-500/30', dot: 'bg-sky-500', label: 'Al evento', row: 'hover:bg-slate-50 dark:hover:bg-muted' },
   CUMPLIDO: { badge: 'bg-slate-100 dark:bg-muted text-slate-600 dark:text-foreground-soft border-slate-200 dark:border-edge', dot: 'bg-slate-400', label: 'Cumplido', row: 'hover:bg-slate-50 dark:hover:bg-muted' },
@@ -5522,7 +5522,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
                             </thead>
                             <tbody className="divide-y divide-emerald-100">
                               {uploadResult.entries.map((e: any, i: number) => (
-                                <tr key={i} className="hover:bg-emerald-50 dark:hover:bg-emerald-500/10/50">
+                                <tr key={i} className="hover:bg-emerald-50/50 dark:hover:bg-emerald-500/10">
                                   <td className="px-2 py-1 text-slate-500 dark:text-muted-foreground font-mono">{e.correlativo}</td>
                                   <td className="px-2 py-1 text-slate-700 dark:text-foreground-soft whitespace-nowrap">{e.fecha}</td>
                                   <td className="px-2 py-1 text-slate-800 dark:text-foreground font-medium">{e.descripcion}</td>
@@ -5713,7 +5713,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-edge">
               {paginated.map((m, i) => (
-                <tr key={`${m.correlativo}-${i}`} className={`transition-colors group ${selectedMovements.has(m.correlativo) ? 'bg-red-50 dark:bg-red-500/10/60' : 'hover:bg-blue-50 dark:hover:bg-blue-500/10/50'}`}>
+                <tr key={`${m.correlativo}-${i}`} className={`transition-colors group ${selectedMovements.has(m.correlativo) ? 'bg-red-50/60 dark:bg-red-500/10' : 'hover:bg-blue-50/50 dark:hover:bg-blue-500/10'}`}>
                   <td className="px-1 sm:px-2 py-1.5 sm:py-2.5 text-center">
                     <input
                       type="checkbox"
@@ -5901,7 +5901,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
             {/* Modal Header */}
             <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 dark:border-edge bg-white/50 dark:bg-white/5 backdrop-blur-md sticky top-0 z-10 shrink-0">
               <div className="flex items-center gap-3">
-                <div className="p-2 sm:p-2.5 bg-blue-100 dark:bg-blue-500/15/50 text-blue-600 dark:text-blue-400 rounded-lg sm:rounded-xl ring-1 ring-blue-100/50">
+                <div className="p-2 sm:p-2.5 bg-blue-100/50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 rounded-lg sm:rounded-xl ring-1 ring-blue-100/50">
                   <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2h-2a2 2 0 01-2-2v-1" />
                   </svg>
@@ -7359,7 +7359,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                   <td className="px-4 py-2 text-xs text-right font-mono text-slate-400 dark:text-faint">{((item.value / horasAnuales / computed.totalCostoHr) * 100).toFixed(1)}%</td>
                 </tr>
               ))}
-              <tr className="bg-indigo-50 dark:bg-indigo-500/10/50 font-semibold">
+              <tr className="bg-indigo-50/50 dark:bg-indigo-500/10 font-semibold">
                 <td className="px-4 py-2 text-xs text-indigo-700 dark:text-indigo-300 border-r border-slate-100 dark:border-edge"></td>
                 <td className="px-4 py-2 text-xs text-indigo-700 dark:text-indigo-300">Subtotal Fixed</td>
                 <td className="px-4 py-2 text-xs text-right font-mono text-indigo-700 dark:text-indigo-300">${formatCurrency(Math.round(computed.totalFijoHr))}</td>
@@ -7378,7 +7378,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                   <td className="px-4 py-2 text-xs text-right font-mono text-slate-400 dark:text-faint">{((item.value / computed.totalCostoHr) * 100).toFixed(1)}%</td>
                 </tr>
               ))}
-              <tr className="bg-emerald-50 dark:bg-emerald-500/10/50 font-semibold">
+              <tr className="bg-emerald-50/50 dark:bg-emerald-500/10 font-semibold">
                 <td className="px-4 py-2 text-xs text-emerald-700 dark:text-emerald-300 border-r border-slate-100 dark:border-edge"></td>
                 <td className="px-4 py-2 text-xs text-emerald-700 dark:text-emerald-300">Subtotal Variable</td>
                 <td className="px-4 py-2 text-xs text-right font-mono text-emerald-700 dark:text-emerald-300">${formatCurrency(Math.round(computed.totalVariableHr))}</td>
@@ -7832,7 +7832,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
             {/* ===== BRENT → AVGAS PREDICTIVE INTELLIGENCE ===== */}
             {brentAvgasCorrelation && (
               <div className="mb-5 bg-gradient-to-br from-indigo-50 dark:from-indigo-950/40 to-purple-50 rounded-xl border border-indigo-200 dark:border-indigo-500/30 overflow-hidden">
-                <div className="px-4 py-3 border-b border-indigo-200 dark:border-indigo-500/30/50 flex items-center justify-between">
+                <div className="px-4 py-3 border-b border-indigo-200/50 dark:border-indigo-500/30 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Icon name="brain" className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                     <div>

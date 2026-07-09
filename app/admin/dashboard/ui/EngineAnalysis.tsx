@@ -908,7 +908,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
                       <tr
                         key={f.id}
                         onClick={() => { setTramoIds([f.id]); setActiveTramo(0); loadFlightDetail(f.id); }}
-                        className="border-t border-slate-100 dark:border-edge hover:bg-blue-50 dark:hover:bg-blue-500/10/50 cursor-pointer transition-colors"
+                        className="border-t border-slate-100 dark:border-edge hover:bg-blue-50/50 dark:hover:bg-blue-500/10 cursor-pointer transition-colors"
                       >
                         <td className="px-3 py-2 font-mono text-slate-500 dark:text-muted-foreground">{f.flightNumber}</td>
                         <td className="px-3 py-2 whitespace-nowrap">{formatDate(f.flightDate)}</td>
