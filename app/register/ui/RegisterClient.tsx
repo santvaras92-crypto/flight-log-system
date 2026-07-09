@@ -1143,7 +1143,7 @@ export default function RegisterClient({
       {showSuccessModal && flightData && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
           <div className="bg-white dark:bg-card rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-green-200 dark:border-green-500/30 bg-gradient-to-r from-green-50 to-emerald-50">
+            <div className="p-6 border-b border-green-200 dark:border-green-500/30 bg-gradient-to-r from-green-50 to-emerald-50 dark:to-emerald-950/40">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center">
                   <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">

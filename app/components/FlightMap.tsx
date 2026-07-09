@@ -337,7 +337,7 @@ export default function FlightMap({ points, className, gpsSource, calibration }:
       />
       {/* Altitude legend */}
       {gpsMaxAlt > 0 && (
-        <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 text-[10px] text-slate-600 dark:text-foreground-soft flex items-center gap-1.5 shadow-sm z-[1000]">
+        <div className="absolute bottom-3 left-3 bg-white/90 dark:bg-card backdrop-blur-sm rounded-lg px-2 py-1 text-[10px] text-slate-600 dark:text-foreground-soft flex items-center gap-1.5 shadow-sm z-[1000]">
           <span>Bajo</span>
           <div className="w-16 h-2 rounded" style={{ background: "linear-gradient(to right, rgb(0,50,220), rgb(110,150,50), rgb(220,50,0))" }} />
           <span>Alto</span>

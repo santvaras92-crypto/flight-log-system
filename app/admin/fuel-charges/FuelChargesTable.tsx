@@ -35,9 +35,9 @@ export default function FuelChargesTable({ logs }: FuelChargesTableProps) {
   return (
     <>
       <div className="overflow-x-auto">
-        <table className="min-w-full border border-gray-200 text-sm">
+        <table className="min-w-full border border-gray-200 dark:border-edge text-sm">
           <thead>
-            <tr className="bg-gray-50">
+            <tr className="bg-gray-50 dark:bg-muted">
               <th className="px-3 py-2 border">ID</th>
               <th className="px-3 py-2 border">Fecha</th>
               <th className="px-3 py-2 border">Piloto</th>
@@ -71,7 +71,7 @@ export default function FuelChargesTable({ logs }: FuelChargesTableProps) {
                     {l.imageUrl ? (
                       <button
                         onClick={() => setImageModalUrl(getImageUrl(l.imageUrl!))}
-                        className="underline text-blue-600 hover:text-blue-800"
+                        className="underline text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                       >
                         Ver
                       </button>

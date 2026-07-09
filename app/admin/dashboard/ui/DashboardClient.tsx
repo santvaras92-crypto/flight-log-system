@@ -218,8 +218,8 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
   }, [initialData.submissions, initialData.users, filterPilot]);
 
   const palette = {
-    bg: 'bg-gradient-to-br from-slate-50 dark:from-slate-950 via-blue-50/30 to-slate-100 dark:to-slate-950',
-    card: 'bg-white/95 dark:bg-card/95 backdrop-blur-sm border border-slate-200 dark:border-edge',
+    bg: 'bg-gradient-to-br from-slate-50 dark:from-slate-950 via-blue-50/30 dark:via-slate-900/30 to-slate-100 dark:to-slate-950',
+    card: 'bg-white/95 dark:bg-card backdrop-blur-sm border border-slate-200 dark:border-edge',
     text: 'text-slate-900 dark:text-foreground',
     subtext: 'text-slate-600 dark:text-foreground-soft',
     border: 'border-slate-200 dark:border-edge',
@@ -877,7 +877,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                 </div>
               </div>
               {/* FLIGHTS */}
-              <div className="flex items-center justify-between pt-1.5 border-t border-dashed border-slate-200 dark:border-edge/60">
+              <div className="flex items-center justify-between pt-1.5 border-t border-dashed border-slate-200/60 dark:border-edge">
                 <div className="flex items-center gap-1">
                   {planeIcon('w-3 h-3 text-violet-500')}
                   <span className="text-[11px] font-bold text-slate-900 dark:text-foreground">{(stats.avgMonthlyFlightsThisYear * 12).toFixed(0)}</span>
@@ -891,7 +891,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             {/* DESKTOP: Vertical list layout — tighter to fit lg:h-[280px] without scroll */}
             <div className="hidden sm:flex flex-col gap-1.5 flex-1 justify-end">
               {/* HOBBS Row */}
-              <div className="flex items-center justify-between border-b border-dashed border-slate-200 dark:border-edge/50 pb-1.5">
+              <div className="flex items-center justify-between border-b border-dashed border-slate-200/50 dark:border-edge pb-1.5">
                 <div>
                   <div className="flex items-center gap-1 mb-px">
                     {clockIcon('w-3.5 h-3.5 text-violet-500')}
@@ -907,7 +907,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                 </div>
               </div>
               {/* TACH Row */}
-              <div className="flex items-center justify-between border-b border-dashed border-slate-200 dark:border-edge/50 pb-1.5">
+              <div className="flex items-center justify-between border-b border-dashed border-slate-200/50 dark:border-edge pb-1.5">
                 <div>
                   <div className="flex items-center gap-1 mb-px">
                     {gaugeIcon('w-3.5 h-3.5 text-violet-500')}
@@ -1042,7 +1042,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
 
       {/* Navigation Tabs - Mobile Responsive */}
       <div className="mb-6 sm:mb-8 space-y-3">
-        <nav className="flex gap-1 sm:gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-xl border border-slate-200 dark:border-edge shadow-sm">
+        <nav className="flex gap-1 sm:gap-2 bg-white/90 dark:bg-card backdrop-blur-sm p-2 rounded-xl border border-slate-200 dark:border-edge shadow-sm">
           {[
             { id: "overview", label: "Overview", icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
             { id: "flights", label: "Flights", icon: "M12 19l9 2-9-18-9 18 9-2zm0 0v-8" },
@@ -1226,7 +1226,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               onClick={() => setPilotSubTab("accounts")}
               className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${pilotSubTab === "accounts"
                 ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
-                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50'
+                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
             >
               <span className="hidden sm:inline">Pilot </span>Accounts
@@ -1235,7 +1235,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               onClick={() => setPilotSubTab("directory")}
               className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${pilotSubTab === "directory"
                 ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
-                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50'
+                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
             >
               <span className="hidden sm:inline">Pilot </span>Directory
@@ -1244,7 +1244,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               onClick={() => setPilotSubTab("deposits")}
               className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${pilotSubTab === "deposits"
                 ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
-                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50'
+                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
             >
               Deposits
@@ -1258,12 +1258,12 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       {tab === "fuel" && <FuelTable logs={initialData.fuelLogs || []} />}
       {tab === "maintenance" && (
         <>
-          <div className="flex gap-1 bg-slate-100 dark:bg-muted/80 p-1 rounded-lg mb-4 max-w-2xl">
+          <div className="flex gap-1 bg-slate-100/80 dark:bg-muted p-1 rounded-lg mb-4 max-w-2xl">
             <button
               onClick={() => setMxSubTab("components")}
               className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${mxSubTab === "components"
                 ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
-                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50'
+                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
             >
               Components
@@ -1272,7 +1272,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               onClick={() => setMxSubTab("reemplazo")}
               className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${mxSubTab === "reemplazo"
                 ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
-                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50'
+                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
             >
               <span className="hidden sm:inline">Plan de </span>Reemplazo
@@ -1281,7 +1281,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               onClick={() => setMxSubTab("adda")}
               className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${mxSubTab === "adda"
                 ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
-                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50'
+                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
             >
               AD/DA
@@ -1290,7 +1290,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               onClick={() => setMxSubTab("engine")}
               className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${mxSubTab === "engine"
                 ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
-                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50'
+                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
             >
               Engine<span className="hidden sm:inline"> Monitor</span>
@@ -1304,12 +1304,12 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       )}
       {tab === "finance" && (
         <>
-          <div className="flex gap-1 bg-slate-100 dark:bg-muted/80 p-1 rounded-lg mb-4 max-w-md">
+          <div className="flex gap-1 bg-slate-100/80 dark:bg-muted p-1 rounded-lg mb-4 max-w-md">
             <button
               onClick={() => setFinanceSubTab("movements")}
               className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${financeSubTab === "movements"
                 ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
-                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50'
+                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
             >
               <span className="hidden sm:inline">Bank </span>Movements
@@ -1318,7 +1318,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               onClick={() => setFinanceSubTab("costs")}
               className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${financeSubTab === "costs"
                 ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
-                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50'
+                : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
             >
               Cost Analysis
@@ -2302,7 +2302,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
   }, [filterClient, filteredFlights, depositsByCode, fuelByCode, depositsDetailsByCode, fuelDetailsByCode, csvPilotNames]);
 
   return (
-    <div className="bg-white/95 backdrop-blur-lg border-2 border-slate-200 dark:border-edge rounded-2xl shadow-2xl overflow-hidden">
+    <div className="bg-white/95 dark:bg-card backdrop-blur-lg border-2 border-slate-200 dark:border-edge rounded-2xl shadow-2xl overflow-hidden">
       <div className="bg-gradient-to-r from-slate-800 to-blue-900 px-8 py-6">
         <h3 className="text-xl font-bold text-white uppercase tracking-wide flex items-center gap-3">
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -2412,7 +2412,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
 
       {/* Pilot Balance Summary Preview */}
       {pilotBalanceSummary && (
-        <div className="bg-gradient-to-br from-slate-50 dark:from-slate-950 to-blue-50 px-6 py-6 border-b-2 border-blue-200 dark:border-blue-500/30">
+        <div className="bg-gradient-to-br from-slate-50 dark:from-slate-950 to-blue-50 dark:to-blue-950/40 px-6 py-6 border-b-2 border-blue-200 dark:border-blue-500/30">
           <div className="mb-4">
             <h4 className="text-lg font-bold text-slate-900 dark:text-foreground mb-1">{pilotBalanceSummary.name}</h4>
             <p className="text-sm text-slate-600 dark:text-foreground-soft">Pilot ID: {pilotBalanceSummary.code}</p>
@@ -2499,7 +2499,7 @@ function FlightsTable({ flights, allFlightsComplete, users, editMode = false, cl
             </div>
 
             {/* Account Summary */}
-            <div className="bg-gradient-to-br from-slate-100 dark:from-slate-900 to-blue-100 rounded-lg p-4 border-2 border-blue-300 shadow-md">
+            <div className="bg-gradient-to-br from-slate-100 dark:from-slate-900 to-blue-100 dark:to-blue-950/50 rounded-lg p-4 border-2 border-blue-300 shadow-md">
               <h5 className="text-sm font-bold text-slate-800 dark:text-foreground mb-3">Account Summary</h5>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
@@ -3038,7 +3038,7 @@ function FuelTable({ logs }: { logs: any[] }) {
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-edge">
               {paginatedLogs.map((l) => (
-                <tr key={l.id} className={`hover:bg-slate-50 dark:hover:bg-muted transition-colors ${l.source === 'CSV' ? 'bg-slate-50 dark:bg-muted/30' : ''}`}>
+                <tr key={l.id} className={`hover:bg-slate-50 dark:hover:bg-muted transition-colors ${l.source === 'CSV' ? 'bg-slate-50/30 dark:bg-muted' : ''}`}>
                   <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 dark:text-foreground-soft">
                     {formatFecha(l.fecha)}
                   </td>
@@ -3689,7 +3689,7 @@ function MaintenanceTable({ components, aircraft, aircraftYearlyStats, overviewM
                 </div>
 
                 {pred && (
-                  <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-2 pt-2 border-t border-slate-200 dark:border-edge/60">
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-2 pt-2 border-t border-slate-200/60 dark:border-edge">
                     <div className="bg-slate-50 dark:bg-muted rounded-md p-2 sm:p-3">
                       <div className="text-[10px] text-slate-500 dark:text-muted-foreground mb-0.5">Time Left</div>
                       <div className={`font-semibold text-sm ${urgency.text}`}>{formatTimeRemaining(pred.days)}</div>
@@ -4868,7 +4868,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex gap-1 bg-slate-100 dark:bg-muted/80 p-1 rounded-lg">
+        <div className="flex gap-1 bg-slate-100/80 dark:bg-muted p-1 rounded-lg">
           {(['ALL', 'AD', 'DA'] as const).map((t) => (
             <button key={t} onClick={() => setTipoFilter(t)}
               className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${tipoFilter === t ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge' : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft'}`}>
@@ -5899,7 +5899,7 @@ function FinanzasTable({ movements, palette }: { movements: BankMovement[]; pale
           <div className="bg-white dark:bg-card rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden ring-1 ring-white/10 relative">
 
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 dark:border-edge bg-white/50 backdrop-blur-md sticky top-0 z-10 shrink-0">
+            <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 dark:border-edge bg-white/50 dark:bg-white/5 backdrop-blur-md sticky top-0 z-10 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="p-2 sm:p-2.5 bg-blue-100 dark:bg-blue-500/15/50 text-blue-600 dark:text-blue-400 rounded-lg sm:rounded-xl ring-1 ring-blue-100/50">
                   <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -7639,7 +7639,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 </div>
                 <p className="text-[8px] text-slate-400 dark:text-faint font-mono mt-0.5">{((computed.projectedFunds / computed.inflatedOverhaulCost) * 100).toFixed(1)}% funded</p>
               </div>
-              <div className="text-center bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-2 border border-blue-200 dark:border-blue-500/30">
+              <div className="text-center bg-gradient-to-br from-blue-50 dark:from-blue-950/40 to-indigo-50 dark:to-indigo-950/40 rounded-lg p-2 border border-blue-200 dark:border-blue-500/30">
                 <p className="text-lg font-extrabold text-blue-700 dark:text-blue-300 font-mono">${formatCurrency(Math.round(computed.projectedMonthlyTarget))}</p>
                 <p className="text-[9px] text-blue-600 dark:text-blue-400 font-bold flex items-center justify-center gap-1"><Icon name="money" className="w-3 h-3" /> Monthly Target</p>
                 <p className="text-[8px] text-blue-400 font-mono">{Math.round(computed.monthsToOverhaul)} payments</p>
@@ -7830,7 +7830,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
 
             {/* ===== BRENT → AVGAS PREDICTIVE INTELLIGENCE ===== */}
             {brentAvgasCorrelation && (
-              <div className="mb-5 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-200 dark:border-indigo-500/30 overflow-hidden">
+              <div className="mb-5 bg-gradient-to-br from-indigo-50 dark:from-indigo-950/40 to-purple-50 rounded-xl border border-indigo-200 dark:border-indigo-500/30 overflow-hidden">
                 <div className="px-4 py-3 border-b border-indigo-200 dark:border-indigo-500/30/50 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Icon name="brain" className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
@@ -7850,21 +7850,21 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 <div className="p-4">
                   {/* Forecasts Row */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                    <div className="text-center p-2.5 bg-white/60 rounded-lg">
+                    <div className="text-center p-2.5 bg-white/60 dark:bg-white/5 rounded-lg">
                       <p className="text-sm font-bold font-mono text-indigo-700 dark:text-indigo-300">${formatCurrency(Math.round(brentAvgasCorrelation.impliedNowCLP))}</p>
                       <p className="text-[9px] text-slate-500 dark:text-muted-foreground">Implied Now $/L</p>
                       <p className="text-[8px] text-slate-400 dark:text-faint">from Brent regression</p>
                     </div>
-                    <div className={`text-center p-2.5 rounded-lg ${avgasSource?.source === 'brentForecast3m' ? 'bg-amber-50 dark:bg-amber-500/10 ring-1 ring-amber-300' : 'bg-white/60'}`}>
+                    <div className={`text-center p-2.5 rounded-lg ${avgasSource?.source === 'brentForecast3m' ? 'bg-amber-50 dark:bg-amber-500/10 ring-1 ring-amber-300' : 'bg-white/60 dark:bg-white/5'}`}>
                       <p className="text-sm font-bold font-mono text-purple-700 dark:text-purple-300">${formatCurrency(Math.round(brentAvgasCorrelation.forecast3m))}</p>
                       <p className="text-[9px] text-slate-500 dark:text-muted-foreground">Forecast 3m $/L</p>
                       {avgasSource?.source === 'brentForecast3m' && <p className="text-[8px] text-emerald-600 dark:text-emerald-400 font-bold">← MAX winner</p>}
                     </div>
-                    <div className="text-center p-2.5 bg-white/60 rounded-lg">
+                    <div className="text-center p-2.5 bg-white/60 dark:bg-white/5 rounded-lg">
                       <p className="text-sm font-bold font-mono text-purple-700 dark:text-purple-300">${formatCurrency(Math.round(brentAvgasCorrelation.forecast6m))}</p>
                       <p className="text-[9px] text-slate-500 dark:text-muted-foreground">Forecast 6m $/L</p>
                     </div>
-                    <div className="text-center p-2.5 bg-white/60 rounded-lg">
+                    <div className="text-center p-2.5 bg-white/60 dark:bg-white/5 rounded-lg">
                       <p className="text-sm font-bold font-mono text-slate-700 dark:text-foreground-soft">US${brentAvgasCorrelation.brent3m.toFixed(1)}</p>
                       <p className="text-[9px] text-slate-500 dark:text-muted-foreground">Brent 3m forecast</p>
                       <p className="text-[8px] text-slate-400 dark:text-faint">6m: US${brentAvgasCorrelation.brent6m.toFixed(1)} · revert {brentAvgasCorrelation.brentTrend >= 0 ? '↑' : '↓'}{Math.abs(brentAvgasCorrelation.brentTrend).toFixed(1)}/mo</p>
@@ -7906,7 +7906,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                   {/* Advanced Analytics Row */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {/* Volatility */}
-                    <div className="p-2.5 bg-white/50 rounded-lg border border-slate-200 dark:border-edge/50">
+                    <div className="p-2.5 bg-white/50 dark:bg-white/5 rounded-lg border border-slate-200/50 dark:border-edge">
                       <p className="text-[9px] font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1"><Icon name="chart" className="w-3 h-3" /> Volatility</p>
                       <div className="space-y-1 text-[10px]">
                         <div className="flex justify-between">
@@ -7922,7 +7922,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                       </div>
                     </div>
                     {/* FX Sensitivity */}
-                    <div className="p-2.5 bg-white/50 rounded-lg border border-slate-200 dark:border-edge/50">
+                    <div className="p-2.5 bg-white/50 dark:bg-white/5 rounded-lg border border-slate-200/50 dark:border-edge">
                       <p className="text-[9px] font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1"><Icon name="money" className="w-3 h-3" /> FX Sensitivity</p>
                       <div className="space-y-1 text-[10px]">
                         <div className="flex justify-between">
@@ -7938,7 +7938,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                       </div>
                     </div>
                     {/* Structural Break */}
-                    <div className="p-2.5 bg-white/50 rounded-lg border border-slate-200 dark:border-edge/50">
+                    <div className="p-2.5 bg-white/50 dark:bg-white/5 rounded-lg border border-slate-200/50 dark:border-edge">
                       <p className="text-[9px] font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1"><Icon name="lab" className="w-3 h-3" /> Regime / Break</p>
                       <div className="space-y-1 text-[10px]">
                         <div className="flex justify-between">
@@ -7962,7 +7962,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                     <p className="text-[9px] font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider mb-1.5">Lag Discovery (0–6 months)</p>
                     <div className="flex gap-1.5 overflow-x-auto pb-1">
                       {brentAvgasCorrelation.allLags.map((lag: { lag: number; r2: number; pairs: number }) => (
-                        <div key={lag.lag} className={`flex-1 min-w-[52px] text-center p-1.5 rounded-lg ${lag.lag === brentAvgasCorrelation.bestLag ? 'bg-indigo-100 dark:bg-indigo-500/15 ring-1 ring-indigo-300' : 'bg-white/50'}`}>
+                        <div key={lag.lag} className={`flex-1 min-w-[52px] text-center p-1.5 rounded-lg ${lag.lag === brentAvgasCorrelation.bestLag ? 'bg-indigo-100 dark:bg-indigo-500/15 ring-1 ring-indigo-300' : 'bg-white/50 dark:bg-white/5'}`}>
                           <p className="text-[10px] font-bold text-slate-700 dark:text-foreground-soft">{lag.lag}m</p>
                           <p className={`text-[10px] font-mono font-bold ${lag.lag === brentAvgasCorrelation.bestLag ? 'text-indigo-700 dark:text-indigo-300' : 'text-slate-500 dark:text-muted-foreground'}`}>
                             {lag.r2.toFixed(3)}
@@ -7979,7 +7979,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
 
                   {/* MAX Source Selection Indicator */}
                   {avgasSource?.breakdown && (
-                    <div className="mt-3 px-3 py-2 bg-white/60 rounded-lg border border-indigo-100 dark:border-indigo-500/20">
+                    <div className="mt-3 px-3 py-2 bg-white/60 dark:bg-white/5 rounded-lg border border-indigo-100 dark:border-indigo-500/20">
                       <p className="text-[9px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-1">AVGAS = MAX(signals) — Highest price wins</p>
                       <div className="flex gap-2 flex-wrap">
                         {avgasSource.breakdown.map((b: { source: string; label: string; price: number; isWinner: boolean }) => (
