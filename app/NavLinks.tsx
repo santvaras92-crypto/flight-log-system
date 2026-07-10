@@ -6,6 +6,7 @@ import { signOut } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { Icon } from './components/Icon'
 import ThemeToggle from './components/ThemeToggle'
+import PrepareFlightButton from './components/PrepareFlightButton'
 
 export default function NavLinks() {
   const pathname = usePathname()
@@ -68,6 +69,7 @@ export default function NavLinks() {
           </span>
         )}
       </Link>
+      <PrepareFlightButton />
       <ThemeToggle variant="nav" />
       <button
         onClick={handleLogout}
