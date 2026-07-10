@@ -241,35 +241,25 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
     e.preventDefault();
   };
 
-  const handleDrop = (targetCardId: string) => {
-    if (!draggedCard || draggedCard === targetCardId) {
-      setDraggedCard(null);
-      setDragOverCard(null);
-      return;
-    }
-
-    const newOrder = [...cardOrder];
-    const draggedIndex = newOrder.indexOf(draggedCard);
-    const targetIndex = newOrder.indexOf(targetCardId);
-
-    if (draggedIndex === -1 || targetIndex === -1) {
-      setDraggedCard(null);
-      setDragOverCard(null);
-      return;
-    }
-
-    newOrder.splice(draggedIndex, 1);
-    newOrder.splice(targetIndex, 0, draggedCard);
-
-    setCardOrder(newOrder);
-    localStorage.setItem('overview-card-order', JSON.stringify(newOrder));
+  const handleDragEnd = () => {
     setDraggedCard(null);
     setDragOverCard(null);
   };
 
-  const handleDragEnd = () => {
-    setDraggedCard(null);
-    setDragOverCard(null);
+  // iOS-style live reorder: move the dragged card to the target's slot
+  // immediately as the finger/cursor passes over it, so the grid reflows in
+  // real time (like rearranging apps on the iPhone home screen).
+  const reorderLive = (targetCardId: string) => {
+    if (!draggedCard || draggedCard === targetCardId) return;
+    setCardOrder((prev) => {
+      const from = prev.indexOf(draggedCard);
+      const to = prev.indexOf(targetCardId);
+      if (from === -1 || to === -1 || from === to) return prev;
+      const next = [...prev];
+      next.splice(from, 1);
+      next.splice(to, 0, draggedCard);
+      return next;
+    });
   };
 
   // Backup functions
@@ -324,6 +314,10 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
   // --- Mobile long-press drag-and-drop system ---
   const dragActivatedRef = useRef(false);
   const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Track the initial touch point so small finger jitter doesn't cancel the
+  // long-press. Only movement beyond a tolerance (interpreted as a scroll
+  // intent) cancels activation.
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   // Find which card is under a touch point
   const findCardUnderTouch = (clientX: number, clientY: number): string | null => {
@@ -351,20 +345,29 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
 
     const onTouchMove = (e: TouchEvent) => {
       if (!dragActivatedRef.current) {
-        // If finger moves before long-press completes, cancel the timer
-        if (longPressTimeoutRef.current) {
-          clearTimeout(longPressTimeoutRef.current);
-          longPressTimeoutRef.current = null;
+        // Before long-press completes: only cancel if the finger travels beyond
+        // a tolerance (a real scroll intent). Small jitter is ignored so the
+        // press can still activate while the finger rests on the card.
+        if (longPressTimeoutRef.current && touchStartRef.current) {
+          const t = e.touches[0];
+          const dx = t.clientX - touchStartRef.current.x;
+          const dy = t.clientY - touchStartRef.current.y;
+          const MOVE_TOLERANCE = 12; // px
+          if (Math.hypot(dx, dy) > MOVE_TOLERANCE) {
+            clearTimeout(longPressTimeoutRef.current);
+            longPressTimeoutRef.current = null;
+          }
         }
         return; // Allow normal scroll
       }
       // Drag is active — block scroll
       e.preventDefault();
-      // Track which card is under the finger for visual feedback
+      // Live-reorder as the finger passes over another card (iOS style)
       const touch = e.touches[0];
       const cardId = findCardUnderTouch(touch.clientX, touch.clientY);
       if (cardId && cardId !== draggedCard) {
         setDragOverCard(cardId);
+        reorderLive(cardId);
       } else {
         setDragOverCard(null);
       }
@@ -374,11 +377,35 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
     return () => grid.removeEventListener('touchmove', onTouchMove);
   }, [draggedCard]);
 
-  const MOBILE_REORDER_LONG_PRESS_MS = 3000;
+  const MOBILE_REORDER_LONG_PRESS_MS = 2000;
+
+  // Detect whether a touch started inside a scrollable inner area (e.g. the
+  // Active Pilots / Next Inspections lists). If so, we must NOT start the drag
+  // long-press, otherwise scrolling that list would trigger a reorder.
+  const touchStartedInScrollable = (target: EventTarget | null, cardEl: HTMLElement): boolean => {
+    let el = target as HTMLElement | null;
+    while (el && el !== cardEl) {
+      const style = window.getComputedStyle(el);
+      const canScrollY =
+        (style.overflowY === 'auto' || style.overflowY === 'scroll') &&
+        el.scrollHeight > el.clientHeight + 1;
+      if (canScrollY) return true;
+      el = el.parentElement;
+    }
+    return false;
+  };
 
   // Long press touch start
   const handleTouchStartLongPress = (e: React.TouchEvent, cardId: string) => {
     dragActivatedRef.current = false;
+    // If the press began inside a scrollable list, let the user scroll and
+    // don't arm the drag timer at all.
+    if (touchStartedInScrollable(e.target, e.currentTarget as HTMLElement)) {
+      touchStartRef.current = null;
+      return;
+    }
+    const t = e.touches[0];
+    touchStartRef.current = { x: t.clientX, y: t.clientY };
     longPressTimeoutRef.current = setTimeout(() => {
       dragActivatedRef.current = true;
       lockScroll();
@@ -388,31 +415,30 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
     }, MOBILE_REORDER_LONG_PRESS_MS);
   };
 
-  // Long press touch end — find drop target and commit reorder
+  // Long press touch end — persist the already-live-reordered order
   const handleTouchEndLongPress = (e: React.TouchEvent, cardId: string) => {
     if (longPressTimeoutRef.current) {
       clearTimeout(longPressTimeoutRef.current);
       longPressTimeoutRef.current = null;
     }
     if (dragActivatedRef.current) {
-      // Find which card the finger landed on
-      const touch = e.changedTouches[0];
-      const targetCardId = findCardUnderTouch(touch.clientX, touch.clientY);
       unlockScroll();
-      if (targetCardId && targetCardId !== draggedCard) {
-        handleDrop(targetCardId);
-      } else {
-        handleDragEnd();
-      }
+      // Order was updated live during the drag — just save it.
+      setCardOrder((prev) => {
+        localStorage.setItem('overview-card-order', JSON.stringify(prev));
+        return prev;
+      });
+      if (navigator.vibrate) navigator.vibrate(20);
+      handleDragEnd();
     }
     dragActivatedRef.current = false;
+    touchStartRef.current = null;
     setDragOverCard(null);
   };
 
   // Render individual metric card with drag-and-drop
   const renderCard = (cardId: string, content: JSX.Element) => {
     const isDragging = draggedCard === cardId;
-    const isDropTarget = dragOverCard === cardId && draggedCard !== cardId;
     const isComplexCard = cardId === 'nextInspections' || cardId === 'activePilots';
 
     return (
@@ -422,11 +448,33 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
         draggable
         onDragStart={() => { lockScroll(); handleDragStart(cardId); }}
         onDragOver={handleDragOver}
-        onDrop={() => { unlockScroll(); handleDrop(cardId); }}
+        onDragEnter={() => reorderLive(cardId)}
+        onDrop={() => {
+          unlockScroll();
+          setCardOrder((prev) => {
+            localStorage.setItem('overview-card-order', JSON.stringify(prev));
+            return prev;
+          });
+          handleDragEnd();
+        }}
         onDragEnd={() => { unlockScroll(); handleDragEnd(); }}
         onTouchStart={(e) => handleTouchStartLongPress(e, cardId)}
         onTouchEnd={(e) => handleTouchEndLongPress(e, cardId)}
-        className={`${isDragging ? 'opacity-50 scale-105 shadow-lg' : 'opacity-100'} ${isDropTarget ? 'ring-2 ring-blue-400 ring-offset-2 scale-[1.02]' : ''} ${isComplexCard ? 'col-span-2 lg:col-span-1' : ''} transition-all duration-150 cursor-move select-none`}
+        onTouchCancel={() => {
+          if (longPressTimeoutRef.current) {
+            clearTimeout(longPressTimeoutRef.current);
+            longPressTimeoutRef.current = null;
+          }
+          if (dragActivatedRef.current) unlockScroll();
+          dragActivatedRef.current = false;
+          touchStartRef.current = null;
+          handleDragEnd();
+        }}
+        className={`${isComplexCard ? 'col-span-2 lg:col-span-1' : ''} ${
+          isDragging
+            ? 'z-30 scale-[1.06] opacity-90 shadow-2xl shadow-black/25 rotate-[0.6deg]'
+            : 'z-0 scale-100'
+        } transition-transform duration-200 ease-out cursor-move select-none will-change-transform`}
         style={{
           WebkitUserSelect: 'none',
           WebkitTouchCallout: 'none',
