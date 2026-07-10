@@ -1053,27 +1053,27 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
                       Flight Log #{selectedFlight.linkedFlight.id}
                     </span>
                     {selectedFlight.linkedFlight.piloto && (
-                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-700 dark:text-foreground-soft inline-flex items-center gap-1" title="Piloto"><Icon name="pilot" className="w-3 h-3" /> {selectedFlight.linkedFlight.piloto}</span>
+                      <span className="bg-white/80 dark:bg-slate-800 dark:border dark:border-white/10 rounded-md px-2 py-0.5 text-slate-700 dark:text-slate-200 inline-flex items-center gap-1" title="Piloto"><Icon name="pilot" className="w-3 h-3" /> {selectedFlight.linkedFlight.piloto}</span>
                     )}
                     {selectedFlight.linkedFlight.copiloto && (
-                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-600 dark:text-foreground-soft" title="Copiloto">+{selectedFlight.linkedFlight.copiloto}</span>
+                      <span className="bg-white/80 dark:bg-slate-800 dark:border dark:border-white/10 rounded-md px-2 py-0.5 text-slate-600 dark:text-slate-300" title="Copiloto">+{selectedFlight.linkedFlight.copiloto}</span>
                     )}
                     {selectedFlight.linkedFlight.instructor && (
                       <span className="bg-amber-50 dark:bg-amber-500/10 rounded-md px-2 py-0.5 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 inline-flex items-center gap-1" title="Instructor"><Icon name="graduation" className="w-3 h-3" /> {selectedFlight.linkedFlight.instructor}</span>
                     )}
                     {selectedFlight.linkedFlight.diffHobbs != null && (
-                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-700 dark:text-foreground-soft font-mono">{selectedFlight.linkedFlight.diffHobbs.toFixed(1)}h hobbs</span>
+                      <span className="bg-white/80 dark:bg-slate-800 dark:border dark:border-white/10 rounded-md px-2 py-0.5 text-slate-700 dark:text-slate-200 font-mono">{selectedFlight.linkedFlight.diffHobbs.toFixed(1)}h hobbs</span>
                     )}
                     {selectedFlight.linkedFlight.costo != null && (
-                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-green-700 dark:text-green-300 font-mono">${selectedFlight.linkedFlight.costo.toLocaleString('es-CL')}</span>
+                      <span className="bg-white/80 dark:bg-emerald-500/20 dark:border dark:border-emerald-400/30 rounded-md px-2 py-0.5 text-green-700 dark:text-emerald-300 font-mono font-semibold">${selectedFlight.linkedFlight.costo.toLocaleString('es-CL')}</span>
                     )}
                     {(selectedFlight.linkedFlight.aerodromoSalida || selectedFlight.linkedFlight.aerodromoDestino) && (
-                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-600 dark:text-foreground-soft">
+                      <span className="bg-white/80 dark:bg-slate-800 dark:border dark:border-white/10 rounded-md px-2 py-0.5 text-slate-600 dark:text-slate-300">
                         {selectedFlight.linkedFlight.aerodromoSalida || '?'} → {selectedFlight.linkedFlight.aerodromoDestino || '?'}
                       </span>
                     )}
                     {selectedFlight.linkedFlight.detalle && (
-                      <span className="bg-white/80 rounded-md px-2 py-0.5 text-slate-500 dark:text-muted-foreground italic truncate max-w-[200px]" title={selectedFlight.linkedFlight.detalle}>
+                      <span className="bg-white/80 dark:bg-slate-800 dark:border dark:border-white/10 rounded-md px-2 py-0.5 text-slate-500 dark:text-slate-400 italic truncate max-w-[200px]" title={selectedFlight.linkedFlight.detalle}>
                         {selectedFlight.linkedFlight.detalle}
                       </span>
                     )}
