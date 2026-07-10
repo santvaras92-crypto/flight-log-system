@@ -6,7 +6,6 @@ import { Icon } from "./Icon";
 // Key in-app routes to make available offline. Fetching each one through the
 // active service worker populates its runtime caches (HTML + data + assets).
 const ROUTES_TO_CACHE = [
-  "/app.html",
   "/",
   "/admin/dashboard",
   "/admin/validacion",
