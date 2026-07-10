@@ -1268,7 +1268,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           <div className="mb-4 flex gap-1 p-1 bg-slate-100 dark:bg-muted rounded-lg">
             <button
               onClick={() => setPilotSubTab("accounts")}
-              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${pilotSubTab === "accounts"
+              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-[color] duration-100 ${pilotSubTab === "accounts"
                 ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
                 : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
@@ -1277,7 +1277,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             </button>
             <button
               onClick={() => setPilotSubTab("directory")}
-              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${pilotSubTab === "directory"
+              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-[color] duration-100 ${pilotSubTab === "directory"
                 ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
                 : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
@@ -1286,7 +1286,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             </button>
             <button
               onClick={() => setPilotSubTab("deposits")}
-              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${pilotSubTab === "deposits"
+              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-[color] duration-100 ${pilotSubTab === "deposits"
                 ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
                 : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
@@ -1305,7 +1305,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           <div className="flex gap-1 bg-slate-100/80 dark:bg-muted p-1 rounded-lg mb-4 max-w-2xl">
             <button
               onClick={() => setMxSubTab("components")}
-              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${mxSubTab === "components"
+              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-[color] duration-100 ${mxSubTab === "components"
                 ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
                 : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
@@ -1314,7 +1314,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             </button>
             <button
               onClick={() => setMxSubTab("reemplazo")}
-              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${mxSubTab === "reemplazo"
+              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-[color] duration-100 ${mxSubTab === "reemplazo"
                 ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
                 : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
@@ -1323,7 +1323,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             </button>
             <button
               onClick={() => setMxSubTab("adda")}
-              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${mxSubTab === "adda"
+              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-[color] duration-100 ${mxSubTab === "adda"
                 ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
                 : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
@@ -1332,7 +1332,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             </button>
             <button
               onClick={() => setMxSubTab("engine")}
-              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${mxSubTab === "engine"
+              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-[color] duration-100 ${mxSubTab === "engine"
                 ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
                 : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
@@ -1351,7 +1351,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           <div className="flex gap-1 bg-slate-100/80 dark:bg-muted p-1 rounded-lg mb-4 max-w-md">
             <button
               onClick={() => setFinanceSubTab("movements")}
-              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${financeSubTab === "movements"
+              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-[color] duration-100 ${financeSubTab === "movements"
                 ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
                 : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
@@ -1360,7 +1360,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
             </button>
             <button
               onClick={() => setFinanceSubTab("costs")}
-              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${financeSubTab === "costs"
+              className={`flex-1 px-3 sm:px-5 py-2 rounded-md text-xs sm:text-sm font-medium transition-[color] duration-100 ${financeSubTab === "costs"
                 ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge'
                 : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
