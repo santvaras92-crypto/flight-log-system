@@ -513,27 +513,27 @@ export default function PilotEngineDetail({
                       Flight Log #{flight.linkedFlight.id}
                     </span>
                     {flight.linkedFlight.piloto && (
-                      <span className="bg-white/80 dark:bg-white/10 rounded-md px-2 py-0.5 text-slate-700 dark:text-foreground-soft inline-flex items-center gap-1" title="Piloto"><Icon name="pilot" className="w-3 h-3" /> {flight.linkedFlight.piloto}</span>
+                      <span className="bg-white/80 dark:bg-slate-800 dark:border dark:border-white/10 rounded-md px-2 py-0.5 text-slate-700 dark:text-slate-200 inline-flex items-center gap-1" title="Piloto"><Icon name="pilot" className="w-3 h-3" /> {flight.linkedFlight.piloto}</span>
                     )}
                     {flight.linkedFlight.copiloto && (
-                      <span className="bg-white/80 dark:bg-white/10 rounded-md px-2 py-0.5 text-slate-600 dark:text-foreground-soft" title="Copiloto">+{flight.linkedFlight.copiloto}</span>
+                      <span className="bg-white/80 dark:bg-slate-800 dark:border dark:border-white/10 rounded-md px-2 py-0.5 text-slate-600 dark:text-slate-300" title="Copiloto">+{flight.linkedFlight.copiloto}</span>
                     )}
                     {flight.linkedFlight.instructor && (
                       <span className="bg-amber-50 dark:bg-amber-500/10 rounded-md px-2 py-0.5 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 inline-flex items-center gap-1" title="Instructor"><Icon name="graduation" className="w-3 h-3" /> {flight.linkedFlight.instructor}</span>
                     )}
                     {flight.linkedFlight.diffHobbs != null && (
-                      <span className="bg-white/80 dark:bg-white/10 rounded-md px-2 py-0.5 text-slate-700 dark:text-foreground-soft font-mono">{flight.linkedFlight.diffHobbs.toFixed(1)}h hobbs</span>
+                      <span className="bg-white/80 dark:bg-slate-800 dark:border dark:border-white/10 rounded-md px-2 py-0.5 text-slate-700 dark:text-slate-200 font-mono">{flight.linkedFlight.diffHobbs.toFixed(1)}h hobbs</span>
                     )}
                     {flight.linkedFlight.costo != null && (
-                      <span className="bg-white/80 dark:bg-emerald-500/15 rounded-md px-2 py-0.5 text-green-700 dark:text-emerald-300 font-mono">${flight.linkedFlight.costo.toLocaleString('es-CL')}</span>
+                      <span className="bg-white/80 dark:bg-emerald-500/20 dark:border dark:border-emerald-400/30 rounded-md px-2 py-0.5 text-green-700 dark:text-emerald-300 font-mono font-semibold">${flight.linkedFlight.costo.toLocaleString('es-CL')}</span>
                     )}
                     {(flight.linkedFlight.aerodromoSalida || flight.linkedFlight.aerodromoDestino) && (
-                      <span className="bg-white/80 dark:bg-white/10 rounded-md px-2 py-0.5 text-slate-600 dark:text-foreground-soft">
+                      <span className="bg-white/80 dark:bg-slate-800 dark:border dark:border-white/10 rounded-md px-2 py-0.5 text-slate-600 dark:text-slate-300">
                         {flight.linkedFlight.aerodromoSalida || '?'} → {flight.linkedFlight.aerodromoDestino || '?'}
                       </span>
                     )}
                     {flight.linkedFlight.detalle && (
-                      <span className="bg-white/80 dark:bg-white/10 rounded-md px-2 py-0.5 text-slate-500 dark:text-muted-foreground italic truncate max-w-[250px]" title={flight.linkedFlight.detalle}>
+                      <span className="bg-white/80 dark:bg-slate-800 dark:border dark:border-white/10 rounded-md px-2 py-0.5 text-slate-500 dark:text-slate-400 italic truncate max-w-[250px]" title={flight.linkedFlight.detalle}>
                         {flight.linkedFlight.detalle}
                       </span>
                     )}
