@@ -47,6 +47,55 @@ const formatCurrency = (value: number): string => {
   return value.toLocaleString('es-CL', { maximumFractionDigits: 0 });
 };
 
+// Stable, module-level numeric input for the settings/parameters panel.
+// Keeping it OUT of the parent component prevents React from remounting the
+// <input> on every parent re-render (which used to steal focus and only let
+// you type one digit at a time). It holds its own text state so you can type
+// the full figure freely and commits the parsed number to the parent.
+function ParamInput({ label, value, onChange, unit = 'CLP', small = false }: { label: string; value: number; onChange: (v: number) => void; unit?: string; small?: boolean }) {
+  const [text, setText] = useState<string>(String(value));
+  const focusedRef = useRef(false);
+
+  // Keep local text in sync when the value changes from the outside
+  // (e.g. LIVE updates), but never while the user is actively editing.
+  useEffect(() => {
+    if (!focusedRef.current) setText(String(value));
+  }, [value]);
+
+  return (
+    <div className={`flex items-center justify-between gap-2 ${small ? 'py-1' : 'py-1.5'}`}>
+      <span className="text-xs text-slate-600 dark:text-foreground-soft truncate">{label}</span>
+      <div className="flex items-center gap-1">
+        <span className="text-[10px] text-slate-400 dark:text-faint">{unit}</span>
+        <input
+          type="text"
+          inputMode="decimal"
+          value={text}
+          onFocus={() => { focusedRef.current = true; }}
+          onChange={e => {
+            const raw = e.target.value;
+            setText(raw);
+            const n = Number(raw.replace(',', '.'));
+            if (raw.trim() !== '' && !Number.isNaN(n)) onChange(n);
+          }}
+          onBlur={() => {
+            focusedRef.current = false;
+            const n = Number(text.replace(',', '.'));
+            const clean = text.trim() === '' || Number.isNaN(n) ? 0 : n;
+            onChange(clean);
+            setText(String(clean));
+          }}
+          className="w-24 sm:w-28 text-right text-xs font-mono bg-slate-50 dark:bg-muted border border-slate-200 dark:border-edge rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
+        />
+      </div>
+    </div>
+  );
+}
+
+function raw_isEmptyOrNaN(text: string, n: number): boolean {
+  return text.trim() === '' || Number.isNaN(n);
+}
+
 type InitialData = {
   users: any[];
   aircraft: any[];
@@ -7032,21 +7081,6 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   }, [computed, valorHoraCLP, ct.key]);
 
   // Helper for parameter inputs
-  const ParamInput = ({ label, value, onChange, unit = 'CLP', small = false }: { label: string; value: number; onChange: (v: number) => void; unit?: string; small?: boolean }) => (
-    <div className={`flex items-center justify-between gap-2 ${small ? 'py-1' : 'py-1.5'}`}>
-      <span className="text-xs text-slate-600 dark:text-foreground-soft truncate">{label}</span>
-      <div className="flex items-center gap-1">
-        <span className="text-[10px] text-slate-400 dark:text-faint">{unit}</span>
-        <input
-          type="number"
-          value={value}
-          onChange={e => onChange(Number(e.target.value) || 0)}
-          className="w-24 sm:w-28 text-right text-xs font-mono bg-slate-50 dark:bg-muted border border-slate-200 dark:border-edge rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
-        />
-      </div>
-    </div>
-  );
-
   // Stat card helper
   const StatCard = ({ label, value, sub, color = 'slate', icon }: { label: string; value: string; sub?: string; color?: string; icon: string }) => {
     const colors: Record<string, { bg: string; text: string }> = {
