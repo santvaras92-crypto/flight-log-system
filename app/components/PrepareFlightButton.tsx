@@ -34,9 +34,17 @@ export default function PrepareFlightButton() {
     setProgress(0);
 
     try {
-      // Ensure the service worker is active before we warm the caches.
+      // Ensure the service worker is active before we warm the caches, but
+      // never block on it: `navigator.serviceWorker.ready` never resolves when
+      // no SW is registered (e.g. dev builds where PWA is disabled, or before
+      // the very first activation). Race it against a short timeout so the
+      // prep always proceeds — the direct Cache Storage writes below still work
+      // without a service worker.
       if ("serviceWorker" in navigator) {
-        await navigator.serviceWorker.ready;
+        await Promise.race([
+          navigator.serviceWorker.ready,
+          new Promise((resolve) => setTimeout(resolve, 2500)),
+        ]);
       }
 
       const total = ROUTES_TO_CACHE.length;
@@ -49,7 +57,7 @@ export default function PrepareFlightButton() {
             credentials: "include",
             cache: "reload",
           });
-          // Also store explicitly in the SW pages cache as a safety net.
+          // Also store explicitly in the pages cache as a safety net.
           if (res.ok && "caches" in window) {
             try {
               const cache = await caches.open("pages-cache");
