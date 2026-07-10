@@ -1,6 +1,12 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class',
+  // Only apply `hover:` styles on devices that actually support hover (mouse).
+  // Prevents "sticky hover" on touchscreens where a tapped button keeps its
+  // hover background until you tap elsewhere (made two tabs look selected).
+  future: {
+    hoverOnlyWhenSupported: true,
+  },
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
