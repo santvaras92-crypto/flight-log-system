@@ -6,10 +6,12 @@ const withPWA = require('next-pwa')({
   // Take control of the page as soon as the SW activates so a cold offline
   // launch is handled by the SW without needing a prior reload.
   clientsClaim: true,
-  // Precache the offline shell so reopening the app with no connection always
-  // renders something useful even if the requested route was never cached.
+  // Precache the offline shell + static launch trampoline so reopening the app
+  // with no connection always renders something useful even if the requested
+  // route was never cached.
   additionalManifestEntries: [
     { url: '/offline.html', revision: 'offline-v2' },
+    { url: '/app.html', revision: 'app-v1' },
   ],
   // When a navigation request can't be served (offline + not cached), fall back
   // to the last cached page if available, otherwise the offline shell.

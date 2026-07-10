@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>AQI Flight Log</title>
+  <link rel="icon" href="/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0A2540 0%, #0D3A65 50%, #1E4976 100%);
+      color: #F8FAFC;
+      padding: 24px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container { text-align: center; max-width: 400px; width: 100%; }
+    .logo { height: 88px; width: auto; margin-bottom: 28px; filter: brightness(1.1); }
+    .spinner {
+      width: 44px; height: 44px; margin: 0 auto 20px;
+      border: 3px solid rgba(255,255,255,0.15);
+      border-top-color: #60A5FA;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    h1 { font-size: 20px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.3px; }
+    p { font-size: 14px; color: #94A3B8; line-height: 1.6; margin-bottom: 24px; }
+    .links { display: none; flex-direction: column; gap: 10px; margin-top: 8px; }
+    .links.show { display: flex; }
+    .link-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #F8FAFC; text-decoration: none;
+      padding: 14px 20px; border-radius: 10px;
+      font-size: 15px; font-weight: 600;
+      transition: background 0.15s ease;
+    }
+    .link-btn:active { background: rgba(255,255,255,0.16); }
+    .link-btn.primary {
+      background: linear-gradient(135deg, #2563EB 0%, #1E4976 100%);
+      border: none;
+    }
+    .offline-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-bottom: 16px; padding: 6px 12px;
+      background: rgba(245,158,11,0.15);
+      border: 1px solid rgba(245,158,11,0.3);
+      border-radius: 999px;
+      font-size: 12px; font-weight: 600; color: #FCD34D;
+    }
+    .offline-tag .dot { width: 7px; height: 7px; border-radius: 50%; background: #F59E0B; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img class="logo" src="/logo-white.png" alt="CC-AQI" onerror="this.style.display='none'">
+
+    <!-- Loading state (online, redirecting) -->
+    <div id="loading">
+      <div class="spinner"></div>
+      <h1>AQI Flight Log</h1>
+      <p>Abriendo…</p>
+    </div>
+
+    <!-- Offline menu (shown if redirect can't proceed) -->
+    <div id="offline" class="hidden">
+      <div class="offline-tag"><span class="dot"></span> Sin conexión</div>
+      <h1>Modo offline</h1>
+      <p>Estás sin internet. Abre las secciones que guardaste antes del vuelo:</p>
+      <div class="links show">
+        <a class="link-btn primary" href="/admin/dashboard">Dashboard</a>
+        <a class="link-btn" href="/admin/validacion">Validación</a>
+        <a class="link-btn" href="/">Registro</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var loading = document.getElementById('loading');
+      var offline = document.getElementById('offline');
+
+      function showOffline() {
+        loading.classList.add('hidden');
+        offline.classList.remove('hidden');
+      }
+
+      function go() {
+        // If clearly offline, don't even try — show the cached menu.
+        if (navigator.onLine === false) {
+          showOffline();
+          return;
+        }
+        // Try to reach the real app. Use a HEAD-ish fetch with a short timeout;
+        // if the network is actually down, fall back to the offline menu.
+        var done = false;
+        var timer = setTimeout(function () {
+          if (!done) { done = true; showOffline(); }
+        }, 3500);
+
+        fetch('/admin/dashboard', { method: 'GET', cache: 'no-store' })
+          .then(function () {
+            if (done) return;
+            done = true;
+            clearTimeout(timer);
+            window.location.replace('/admin/dashboard');
+          })
+          .catch(function () {
+            if (done) return;
+            done = true;
+            clearTimeout(timer);
+            showOffline();
+          });
+      }
+
+      // Give the service worker a brief moment to take control on cold start.
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller == null) {
+        var waited = false;
+        var fallback = setTimeout(function () { if (!waited) { waited = true; go(); } }, 800);
+        navigator.serviceWorker.ready.then(function () {
+          if (!waited) { waited = true; clearTimeout(fallback); go(); }
+        }).catch(function () {
+          if (!waited) { waited = true; clearTimeout(fallback); go(); }
+        });
+      } else {
+        go();
+      }
+
+      // If connection returns while on this page, retry the redirect.
+      window.addEventListener('online', go);
+    })();
+  </script>
+</body>
+</html>
