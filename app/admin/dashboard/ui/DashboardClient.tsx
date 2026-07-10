@@ -726,14 +726,14 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           </div>
           <h3 className="text-slate-500 dark:text-muted-foreground text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Active Pilots</h3>
           <p className="text-[9px] sm:text-xs text-slate-500 dark:text-muted-foreground mb-2">Last 60 days</p>
-          <div className="max-h-24 sm:max-h-32 overflow-y-auto space-y-0.5">
+          <div className="max-h-24 sm:max-h-32 overflow-y-auto overflow-x-hidden space-y-0.5">
             {activePilotsData.map((pilot, i) => (
-              <div key={i} className="flex items-center justify-between text-[10px] sm:text-xs">
-                <span className="text-slate-700 dark:text-foreground-soft truncate flex-1 min-w-0">{pilot.name}</span>
-                <span className={`ml-1 text-right font-mono tabular-nums text-[9px] sm:text-[11px] ${pilot.balance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
+              <div key={i} className="flex items-center gap-1.5 text-[10px] sm:text-xs">
+                <span className="text-slate-700 dark:text-foreground-soft truncate min-w-0 flex-1">{pilot.name}</span>
+                <span className={`text-right font-mono tabular-nums text-[9px] sm:text-[11px] shrink-0 ${pilot.balance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
                   {pilot.balance >= 0 ? '+' : '-'}${formatCurrency(Math.abs(pilot.balance))}
                 </span>
-                <span className={`ml-1.5 w-7 text-right font-mono text-[10px] sm:text-xs ${pilot.daysSince === 0 ? 'text-green-600 dark:text-green-400 font-bold' : pilot.daysSince <= 7 ? 'text-emerald-500' : pilot.daysSince <= 30 ? 'text-slate-500 dark:text-muted-foreground' : 'text-orange-500'}`}>
+                <span className={`text-right font-mono text-[10px] sm:text-xs shrink-0 ${pilot.daysSince === 0 ? 'text-green-600 dark:text-green-400 font-bold' : pilot.daysSince <= 7 ? 'text-emerald-500' : pilot.daysSince <= 30 ? 'text-slate-500 dark:text-muted-foreground' : 'text-orange-500'}`}>
                   {pilot.daysSince === 0 ? 'today' : `${pilot.daysSince}d`}
                 </span>
               </div>
