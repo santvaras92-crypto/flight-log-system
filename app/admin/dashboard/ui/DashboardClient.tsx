@@ -2981,6 +2981,7 @@ function FuelTable({ logs }: { logs: any[] }) {
   const [filterMonth, setFilterMonth] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [fuelImageModalUrl, setFuelImageModalUrl] = useState<string | null>(null);
+  const [editLog, setEditLog] = useState<any | null>(null);
   const pageSize = 50;
 
   // Get unique pilots for filter dropdown
@@ -3180,12 +3181,21 @@ function FuelTable({ logs }: { logs: any[] }) {
                   </td>
                   <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm">
                     {l.source === 'DB' && typeof l.id === 'number' ? (
-                      <form action={require('../../../actions/delete-fuel-log').deleteFuelLog} onSubmit={(e) => { if (!confirm(`Delete record ${l.id}?`)) { e.preventDefault(); } }}>
-                        <input type="hidden" name="fuelLogId" value={l.id} />
-                        <button type="submit" className="px-2 py-1 rounded-md bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/15 text-[10px] sm:text-xs font-medium border border-red-200 dark:border-red-500/30 transition-colors">
-                          Delete
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setEditLog(l)}
+                          className="px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/15 text-[10px] sm:text-xs font-medium border border-blue-200 dark:border-blue-500/30 transition-colors"
+                        >
+                          Edit
                         </button>
-                      </form>
+                        <form action={require('../../../actions/delete-fuel-log').deleteFuelLog} onSubmit={(e) => { if (!confirm(`Delete record ${l.id}?`)) { e.preventDefault(); } }}>
+                          <input type="hidden" name="fuelLogId" value={l.id} />
+                          <button type="submit" className="px-2 py-1 rounded-md bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/15 text-[10px] sm:text-xs font-medium border border-red-200 dark:border-red-500/30 transition-colors">
+                            Delete
+                          </button>
+                        </form>
+                      </div>
                     ) : (
                       <span className="text-slate-400 dark:text-faint text-xs">-</span>
                     )}
@@ -3231,6 +3241,95 @@ function FuelTable({ logs }: { logs: any[] }) {
         onClose={() => setFuelImageModalUrl(null)}
         alt="Fuel receipt"
       />
+
+      {/* Edit Fuel Record Modal */}
+      {editLog && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={() => setEditLog(null)}
+        >
+          <div
+            className="w-full max-w-md bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-2xl shadow-2xl p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-11 h-11 rounded-xl bg-amber-100 dark:bg-amber-500/15 flex items-center justify-center">
+                <svg className="w-6 h-6 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-foreground">Edit fuel record</h3>
+                <p className="text-xs text-slate-500 dark:text-muted-foreground">{editLog.pilotName} · #{editLog.id}</p>
+              </div>
+            </div>
+
+            <form action={require('../../../actions/update-fuel-log').updateFuelLog}>
+              <input type="hidden" name="fuelLogId" value={editLog.id} />
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-foreground-soft mb-1">Date</label>
+                  <input
+                    type="date"
+                    name="fecha"
+                    defaultValue={toDateString(editLog.fecha)}
+                    className="w-full text-sm bg-slate-50 dark:bg-muted border border-slate-200 dark:border-edge rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none text-slate-800 dark:text-foreground"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-foreground-soft mb-1">Liters</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      name="litros"
+                      defaultValue={Number(editLog.litros).toFixed(1)}
+                      className="w-full text-sm font-mono text-right bg-slate-50 dark:bg-muted border border-slate-200 dark:border-edge rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none text-slate-800 dark:text-foreground"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-foreground-soft mb-1">Amount (CLP)</label>
+                    <input
+                      type="number"
+                      step="1"
+                      name="monto"
+                      defaultValue={Math.round(Number(editLog.monto))}
+                      className="w-full text-sm font-mono text-right bg-slate-50 dark:bg-muted border border-slate-200 dark:border-edge rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none text-slate-800 dark:text-foreground"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-foreground-soft mb-1">Detail</label>
+                  <input
+                    type="text"
+                    name="detalle"
+                    defaultValue={editLog.detalle || ''}
+                    placeholder="Optional note"
+                    className="w-full text-sm bg-slate-50 dark:bg-muted border border-slate-200 dark:border-edge rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none text-slate-800 dark:text-foreground"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-5">
+                <button
+                  type="button"
+                  onClick={() => setEditLog(null)}
+                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-600 dark:text-foreground-soft bg-slate-100 dark:bg-muted hover:bg-slate-200 dark:hover:bg-edge-strong transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  onClick={() => setEditLog(null)}
+                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                >
+                  Save changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
