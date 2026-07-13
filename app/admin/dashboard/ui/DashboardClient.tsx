@@ -13,6 +13,7 @@ import { registrarCumplimiento } from "../../../actions/registrar-cumplimiento";
 import { guardarComponente, eliminarComponente } from "../../../actions/gestionar-componente";
 import { guardarDirectiva, eliminarDirectiva } from "../../../actions/gestionar-directiva";
 import { runAuditNow } from "../../../actions/run-audit";
+import { updateFuelLog } from "../../../actions/update-fuel-log";
 import EngineAnalysis from "./EngineAnalysis";
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, BarController, BarElement, Legend, Tooltip, Filler, DoughnutController, ArcElement);
@@ -3264,7 +3265,12 @@ function FuelTable({ logs }: { logs: any[] }) {
               </div>
             </div>
 
-            <form action={require('../../../actions/update-fuel-log').updateFuelLog}>
+            <form
+              action={async (fd) => {
+                await updateFuelLog(fd);
+                setEditLog(null);
+              }}
+            >
               <input type="hidden" name="fuelLogId" value={editLog.id} />
               <div className="space-y-3">
                 <div>
@@ -3320,7 +3326,6 @@ function FuelTable({ logs }: { logs: any[] }) {
                 </button>
                 <button
                   type="submit"
-                  onClick={() => setEditLog(null)}
                   className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors"
                 >
                   Save changes
