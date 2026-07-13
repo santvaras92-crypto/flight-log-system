@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Providers from "./providers";
 import MainNav from "./MainNav";
-import OfflineIndicator from "./components/OfflineIndicator";
+import ServiceWorkerCleanup from "./components/ServiceWorkerCleanup";
 
 export const metadata: Metadata = {
   title: "Flight Log System · CC-AQI",
@@ -36,7 +36,7 @@ export default function RootLayout({
         <Providers>
           <MainNav />
           {children}
-          <OfflineIndicator />
+          <ServiceWorkerCleanup />
         </Providers>
       </body>
     </html>
