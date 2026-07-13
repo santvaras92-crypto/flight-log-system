@@ -7851,7 +7851,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               <div className={`rounded-lg p-3 border bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30 ${computed.overhaulSource === 'ipc' ? 'ring-2 ring-amber-400' : ''}`}>
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300 uppercase tracking-wider flex items-center gap-1"><Icon name="clipboard" className="w-3 h-3" /> IPC Chile (+{clInflationPct}%)</p>
-                  {computed.overhaulSource === 'ipc' && <span className="px-1.5 py-0.5 text-[8px] font-bold bg-amber-200 text-amber-800 dark:text-amber-300 rounded-full">USADO</span>}
+                  {computed.overhaulSource === 'ipc' && <span className="px-1.5 py-0.5 text-[8px] font-bold bg-amber-200 dark:bg-amber-500/20 dark:border dark:border-amber-400/30 text-amber-800 dark:text-amber-300 rounded-full">USADO</span>}
                 </div>
                 <div className="space-y-1 text-[11px]">
                   <div className="flex justify-between">
@@ -7883,7 +7883,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wider flex items-center gap-1">
                     <Icon name="globe" className="w-3 h-3" /> Market
-                    {computed.overhaulSource === 'market' && <span className="px-1.5 py-0.5 text-[8px] font-bold bg-blue-200 text-blue-800 dark:text-blue-300 rounded-full">USADO</span>}
+                    {computed.overhaulSource === 'market' && <span className="px-1.5 py-0.5 text-[8px] font-bold bg-blue-200 dark:bg-blue-500/20 dark:border dark:border-blue-400/30 text-blue-800 dark:text-blue-300 rounded-full">USADO</span>}
                   </p>
                   <a
                     href="https://www.airpowerinc.com/renpl-rt8164"
