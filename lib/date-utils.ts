@@ -101,3 +101,41 @@ export function getDateYear(dateStr: string | Date): number {
 export function getDateMonth(dateStr: string | Date): number {
   return parseLocalDate(dateStr).getMonth();
 }
+
+/**
+ * Anchor any date (string "YYYY-MM-DD", ISO string, or Date) to NOON UTC of its
+ * calendar day, i.e. `YYYY-MM-DDT12:00:00.000Z`.
+ *
+ * Why noon UTC is the canonical anchor for Flight.fecha:
+ *   Flight logs store a *calendar day*, not a precise instant. The engine↔flight
+ *   matcher groups records by their local Chile date (UTC-3/-4). If a flight is
+ *   stored at midnight UTC (`new Date("2026-07-12")` → T00:00:00Z), Chile time
+ *   rolls it back to the *previous* day, so it falls out of the correct day
+ *   group and never links to its engine data.
+ *
+ *   Noon UTC is safe for every timezone from UTC-11 to UTC+11: the calendar day
+ *   never shifts. Always run flight dates through this before persisting.
+ */
+export function anchorNoonUTC(dateStr: string | Date): Date {
+  let y: number, m: number, d: number;
+  if (dateStr instanceof Date) {
+    // Use the date's own local calendar parts (matches how it's displayed).
+    y = dateStr.getFullYear();
+    m = dateStr.getMonth() + 1;
+    d = dateStr.getDate();
+  } else {
+    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      y = Number(match[1]);
+      m = Number(match[2]);
+      d = Number(match[3]);
+    } else {
+      const parsed = new Date(dateStr);
+      y = parsed.getFullYear();
+      m = parsed.getMonth() + 1;
+      d = parsed.getDate();
+    }
+  }
+  return new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+}
+

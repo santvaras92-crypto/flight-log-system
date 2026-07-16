@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { anchorNoonUTC } from '@/lib/date-utils';
 
 type Input = {
   pilotoId: number;
@@ -211,9 +212,10 @@ export async function createFlightSubmission(input: Input) {
     throw new Error('HOBBS F y TACH F son obligatorios.');
   }
 
-  // Parse fecha as local date at noon to avoid timezone issues
-  const [year, month, day] = input.fecha.split('-').map(Number);
-  const fechaVuelo = new Date(year, month - 1, day, 12, 0, 0);
+  // Parse fecha and anchor to noon UTC so the calendar day never shifts across
+  // timezones (a midnight-UTC date rolls back a day in Chile and breaks the
+  // engine↔flight matcher, which groups by local Chile date).
+  const fechaVuelo = anchorNoonUTC(input.fecha);
 
   // Get pilot info including email
   const piloto = await prisma.user.findUnique({

@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { extractMeterValue } from "@/lib/ocr-service";
+import { anchorNoonUTC } from "@/lib/date-utils";
 
 /**
  * Paso 2: Procesa las imágenes con OCR usando GPT-4o Vision
@@ -155,7 +156,7 @@ async function autoRegisterFlight(submissionId: number) {
     const flight = await tx.flight.create({
       data: {
         submissionId,
-        fecha: submission.fechaVuelo || new Date(),
+        fecha: submission.fechaVuelo ? anchorNoonUTC(submission.fechaVuelo) : anchorNoonUTC(new Date()),
         hobbs_inicio: lastHobbs,
         hobbs_fin: nuevoHobbs,
         tach_inicio: lastTach,

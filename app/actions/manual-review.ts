@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { anchorNoonUTC } from "@/lib/date-utils";
 
 /**
  * Permite a un ADMIN validar manualmente los valores de OCR
@@ -116,7 +117,7 @@ async function autoRegisterFlightForReview(submissionId: number) {
     const flight = await tx.flight.create({
       data: {
         submissionId,
-        fecha: submission.fechaVuelo || new Date(),
+        fecha: submission.fechaVuelo ? anchorNoonUTC(submission.fechaVuelo) : anchorNoonUTC(new Date()),
         hobbs_inicio: lastHobbs,
         hobbs_fin: nuevoHobbs,
         tach_inicio: lastTach,

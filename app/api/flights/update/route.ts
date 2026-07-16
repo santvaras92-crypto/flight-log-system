@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { anchorNoonUTC } from "@/lib/date-utils";
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,7 +19,9 @@ export async function POST(req: NextRequest) {
       if (!flight) continue;
 
       // Prepare fields (permit nulls and explicit diffs)
-      const fecha = up.fecha ? new Date(up.fecha) : undefined;
+      // Anchor to noon UTC so the calendar day never shifts across timezones
+      // (a midnight-UTC date rolls back a day in Chile and breaks engine linking).
+      const fecha = up.fecha ? anchorNoonUTC(up.fecha) : undefined;
       const tach_inicio = up.tach_inicio === '' ? null : (up.tach_inicio !== undefined ? Number(up.tach_inicio) : undefined);
       const tach_fin = up.tach_fin === '' ? null : (up.tach_fin !== undefined ? Number(up.tach_fin) : undefined);
       const hobbs_inicio = up.hobbs_inicio === '' ? null : (up.hobbs_inicio !== undefined ? Number(up.hobbs_inicio) : undefined);

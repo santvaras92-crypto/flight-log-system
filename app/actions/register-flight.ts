@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import Decimal from "decimal.js-light";
+import { anchorNoonUTC } from "@/lib/date-utils";
 
 /**
  * Registra un vuelo y actualiza los contadores y transacciones asociadas.
@@ -70,7 +71,7 @@ export async function registerFlight(
     // 5. Crear el registro del vuelo
     const flight = await tx.flight.create({
       data: {
-        fecha: fechaVuelo || new Date(),
+        fecha: fechaVuelo ? anchorNoonUTC(fechaVuelo) : anchorNoonUTC(new Date()),
         hobbs_inicio: lastHobbs,
         hobbs_fin: nuevoHobbsDec,
         tach_inicio: lastTach,
