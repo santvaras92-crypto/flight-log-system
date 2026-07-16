@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from '@/lib/auth-guard';
 import { Prisma } from "@prisma/client";
 
 /**
@@ -16,6 +17,7 @@ export async function approveFlightSubmission(
   rate: number,
   instructorRate: number
 ): Promise<{ success: boolean; error?: string; flightId?: number }> {
+  await requireAdmin();
   try {
     return await prisma.$transaction(async (tx) => {
       // 1. Obtener el submission con todos sus datos y el Flight asociado

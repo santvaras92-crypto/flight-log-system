@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireSession } from '@/lib/auth-guard';
 import { extractMeterValue } from "@/lib/ocr-service";
 import { anchorNoonUTC } from "@/lib/date-utils";
 
@@ -8,6 +9,7 @@ import { anchorNoonUTC } from "@/lib/date-utils";
  * Paso 2: Procesa las imágenes con OCR usando GPT-4o Vision
  */
 export async function processOCR(submissionId: number) {
+  await requireSession();
   try {
     await prisma.flightSubmission.update({
       where: { id: submissionId },

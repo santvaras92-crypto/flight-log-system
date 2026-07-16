@@ -1,11 +1,13 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { requireSession } from '@/lib/auth-guard';
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';
 
 export async function findOrCreatePilotByCode(code: string): Promise<number> {
+  await requireSession();
   const upperCode = code.toUpperCase();
   
   // First, try to find existing user by code

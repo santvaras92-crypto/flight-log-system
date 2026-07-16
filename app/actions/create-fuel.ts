@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { requireSession } from '@/lib/auth-guard';
 import { saveUpload, PlainUpload } from './_utils/save-upload';
 
 // Helper to format date as DD-MM-AA
@@ -150,6 +151,7 @@ type Input = {
 };
 
 export async function createFuel(input: Input): Promise<{ ok: boolean; id?: number; error?: string }> {
+  await requireSession();
   // Validaciones básicas
   if (!input.pilotoId || isNaN(input.pilotoId)) {
     return { ok: false, error: 'ID de piloto inválido' };

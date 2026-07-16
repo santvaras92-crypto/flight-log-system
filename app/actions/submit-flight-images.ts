@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireSession } from '@/lib/auth-guard';
 
 /**
  * Paso 1: El piloto envía las fotos de Hobbs y Tach
@@ -15,6 +16,7 @@ export async function submitFlightImages(
   tachLocalPath?: string,
   fechaVuelo?: Date
 ) {
+  await requireSession();
   try {
     const submission = await prisma.flightSubmission.create({
       data: {

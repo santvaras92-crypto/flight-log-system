@@ -1,9 +1,11 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { requireAdmin } from '@/lib/auth-guard';
 import { revalidatePath } from 'next/cache';
 
 export async function deleteDeposit(depositId: number): Promise<{ ok: boolean; error?: string }> {
+  await requireAdmin();
   if (!depositId || isNaN(depositId)) {
     return { ok: false, error: 'ID de depósito inválido' };
   }

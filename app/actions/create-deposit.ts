@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { requireSession } from '@/lib/auth-guard';
 import { saveUpload, PlainUpload } from './_utils/save-upload';
 
 // Helper to format date as DD-MM-AA
@@ -135,6 +136,7 @@ type Input = {
 };
 
 export async function createDeposit(input: Input): Promise<{ ok: boolean; id?: number; error?: string }> {
+  await requireSession();
   console.log('[createDeposit] start', {
     pilotoId: input.pilotoId,
     fecha: input.fecha,

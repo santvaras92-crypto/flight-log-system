@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { requireAdmin } from '@/lib/auth-guard';
 import { revalidatePath } from 'next/cache';
 
 interface RegistrarCumplimientoInput {
@@ -22,6 +23,7 @@ interface RegistrarCumplimientoInput {
  *  - Guarda un registro histórico en ComplianceEvent.
  */
 export async function registrarCumplimiento(input: RegistrarCumplimientoInput) {
+  await requireAdmin();
   try {
     const { directiveId, fecha, horas, ordenTrabajo, notas } = input;
 

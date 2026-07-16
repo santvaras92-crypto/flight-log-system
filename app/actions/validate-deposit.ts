@@ -1,9 +1,11 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { requireAdmin } from '@/lib/auth-guard';
 import { revalidatePath } from 'next/cache';
 
 export async function approveDeposit(formData: FormData): Promise<void> {
+  await requireAdmin();
   const depositId = Number(formData.get('depositId'));
   if (!depositId || isNaN(depositId)) {
     throw new Error('ID de depósito inválido');
@@ -43,6 +45,7 @@ export async function approveDeposit(formData: FormData): Promise<void> {
 }
 
 export async function rejectDeposit(formData: FormData): Promise<void> {
+  await requireAdmin();
   const depositId = Number(formData.get('depositId'));
   if (!depositId || isNaN(depositId)) {
     throw new Error('ID de depósito inválido');

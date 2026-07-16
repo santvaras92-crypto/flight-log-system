@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { requireSession } from '@/lib/auth-guard';
 import { anchorNoonUTC } from '@/lib/date-utils';
 
 type Input = {
@@ -201,6 +202,26 @@ async function sendPilotConfirmationEmail(
 }
 
 export async function createFlightSubmission(input: Input) {
+  // Identity enforcement: pilots can only submit flights as THEMSELVES.
+  // The pilotoId from the client is only trusted for ADMIN sessions.
+  const session = await requireSession();
+  const isAdmin = session.role === 'ADMIN';
+  if (!isAdmin) {
+    // The register flow may resolve the pilot via CSV code to a different
+    // user row than the session's, so accept a match by id OR by codigo.
+    const target = await prisma.user.findUnique({
+      where: { id: input.pilotoId },
+      select: { codigo: true },
+    });
+    const sameId = session.userId && input.pilotoId === session.userId;
+    const sameCode =
+      session.codigo && target?.codigo &&
+      target.codigo.toUpperCase() === session.codigo.toUpperCase();
+    if (!sameId && !sameCode) {
+      throw new Error('Solo puedes registrar vuelos a tu propio nombre.');
+    }
+  }
+
   if (
     !input.pilotoId ||
     !input.fecha ||

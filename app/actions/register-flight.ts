@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from '@/lib/auth-guard';
 import Decimal from "decimal.js-light";
 import { anchorNoonUTC } from "@/lib/date-utils";
 
@@ -20,6 +21,7 @@ export async function registerFlight(
   nuevoTach: number,
   fechaVuelo?: Date
 ) {
+  await requireAdmin();
   return await prisma.$transaction(async (tx: any) => {
     // 1. Obtener datos actuales del avión y del piloto
     const aircraft = await tx.aircraft.findUnique({

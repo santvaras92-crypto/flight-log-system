@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { requireAdmin } from '@/lib/auth-guard';
 import { revalidatePath } from 'next/cache';
 
 interface RegistrarCambioInput {
@@ -22,6 +23,7 @@ interface RegistrarCambioInput {
  *  - Si se entrega un serial nuevo, actualiza el serial de la parte.
  */
 export async function registrarCambioComponente(input: RegistrarCambioInput) {
+  await requireAdmin();
   try {
     const { partId, fecha, horas, serialNuevo, notas } = input;
 

@@ -1,12 +1,14 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { requireAdmin } from '@/lib/auth-guard';
 import { DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { r2Client } from '@/lib/r2-storage';
 import { promises as fs } from 'fs';
 import path from 'path';
 
 export async function deleteFuelLog(formData: FormData) {
+  await requireAdmin();
   const idRaw = formData.get('fuelLogId');
   const id = typeof idRaw === 'string' ? parseInt(idRaw) : Number(idRaw);
   if (!id || isNaN(id)) {

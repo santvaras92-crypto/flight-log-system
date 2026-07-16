@@ -1,9 +1,11 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { requireAdmin } from '@/lib/auth-guard';
 import { revalidatePath } from 'next/cache';
 
 export async function approveFuel(formData: FormData): Promise<void> {
+  await requireAdmin();
   const fuelLogId = Number(formData.get('fuelLogId'));
   if (!fuelLogId || isNaN(fuelLogId)) {
     throw new Error('ID de registro inválido');
@@ -46,6 +48,7 @@ export async function approveFuel(formData: FormData): Promise<void> {
 }
 
 export async function rejectFuel(formData: FormData): Promise<void> {
+  await requireAdmin();
   const fuelLogId = Number(formData.get('fuelLogId'));
   if (!fuelLogId || isNaN(fuelLogId)) {
     throw new Error('ID de registro inválido');

@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { requireAdmin } from '@/lib/auth-guard';
 import { revalidatePath } from 'next/cache';
 
 /**
@@ -10,6 +11,7 @@ import { revalidatePath } from 'next/cache';
  * matched (same user, tipo FUEL, within a +/- 1 day window of the old date).
  */
 export async function updateFuelLog(formData: FormData) {
+  await requireAdmin();
   const idRaw = formData.get('fuelLogId');
   const id = typeof idRaw === 'string' ? parseInt(idRaw) : Number(idRaw);
   if (!id || isNaN(id)) {

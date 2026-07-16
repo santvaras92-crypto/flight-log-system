@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from '@/lib/auth-guard';
 import { anchorNoonUTC } from "@/lib/date-utils";
 
 /**
@@ -12,6 +13,7 @@ export async function manualReviewAndApprove(
   tachValue: number,
   adminId: number
 ) {
+  await requireAdmin();
   try {
     const admin = await prisma.user.findUnique({
       where: { id: adminId },

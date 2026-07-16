@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { requireAdmin } from '@/lib/auth-guard';
 
 interface RegisterOverhaulInput {
   componentId: number;          // Component DB id
@@ -20,6 +21,7 @@ interface RegisterOverhaulInput {
  * También recalcula propeller_hours en todos los vuelos posteriores al overhaul.
  */
 export async function registerOverhaul(input: RegisterOverhaulInput) {
+  await requireAdmin();
   try {
     const { componentId, tipo, aircraftId, overhaulAirframeHours, overhaulDate, notes } = input;
 
