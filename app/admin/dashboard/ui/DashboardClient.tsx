@@ -2952,6 +2952,7 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
               <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Spent</th>
               <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Fuel</th>
               <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">Deposits</th>
+              <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider">View</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-edge">
@@ -2966,6 +2967,23 @@ function PilotsTable({ users, flights, transactions, fuelByCode, depositsByCode,
                 <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 dark:text-foreground-soft font-mono">${Number(-p.spent).toLocaleString("es-CL")}</td>
                 <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 dark:text-foreground-soft font-mono">${Number(p.fuel || 0).toLocaleString("es-CL")}</td>
                 <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 dark:text-foreground-soft font-mono">${Number(p.deposits).toLocaleString("es-CL")}</td>
+                <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm">
+                  {p.id != null ? (
+                    <a
+                      href={`/pilot/dashboard?viewAs=${p.id}`}
+                      title={`View dashboard as ${p.nombre}`}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/15 text-[10px] sm:text-xs font-medium border border-blue-200 dark:border-blue-500/30 transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      View
+                    </a>
+                  ) : (
+                    <span className="text-slate-400 dark:text-faint text-xs" title="No registered account">-</span>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

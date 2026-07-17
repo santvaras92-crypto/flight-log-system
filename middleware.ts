@@ -65,9 +65,10 @@ export async function middleware(req: NextRequest) {
       loginUrl.searchParams.set("callbackUrl", req.nextUrl.pathname);
       return NextResponse.redirect(loginUrl);
     }
-    // Solo pilotos pueden acceder a /pilot/* (acepta PILOTO o PILOT)
+    // Pilotos pueden acceder a /pilot/*; ADMIN también (para "View as pilot").
     const isPilot = token.role === "PILOTO" || token.role === "PILOT";
-    if (!isPilot) {
+    const isAdmin = token.role === "ADMIN";
+    if (!isPilot && !isAdmin) {
       return NextResponse.json({ error: "Acceso restringido a pilotos" }, { status: 403 });
     }
   }

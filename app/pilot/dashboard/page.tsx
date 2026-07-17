@@ -8,14 +8,29 @@ import path from "path";
 
 export const revalidate = 0;
 
-export default async function PilotDashboardPage() {
+export default async function PilotDashboardPage({
+  searchParams,
+}: {
+  searchParams?: { viewAs?: string };
+}) {
   const session = await getServerSession(authOptions);
-  
-  if (!session || (session as any).role !== "PILOTO") {
+  const role = (session as any)?.role;
+  const isAdmin = role === "ADMIN";
+
+  if (!session || (role !== "PILOTO" && !isAdmin)) {
     redirect("/login");
   }
 
-  const userId = parseInt((session as any).userId);
+  // "View as pilot": an ADMIN can inspect any pilot's dashboard (read-only
+  // context — all mutations remain admin-gated server-side). Pilots always
+  // see themselves; the viewAs param is ignored for non-admins.
+  const viewAsId = isAdmin && searchParams?.viewAs ? parseInt(searchParams.viewAs) : NaN;
+  if (isAdmin && (!viewAsId || isNaN(viewAsId))) {
+    // Admin without a target — nothing to show here.
+    redirect("/admin/dashboard");
+  }
+
+  const userId = isAdmin ? viewAsId : parseInt((session as any).userId);
   
   // Get the logged-in pilot's data
   const pilot = await prisma.user.findUnique({
@@ -501,5 +516,5 @@ export default async function PilotDashboardPage() {
     }
   };
 
-  return <PilotDashboardClient data={data} />;
+  return <PilotDashboardClient data={data} viewingAsAdmin={isAdmin} />;
 }

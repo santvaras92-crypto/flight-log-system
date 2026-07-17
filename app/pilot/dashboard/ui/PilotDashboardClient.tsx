@@ -109,7 +109,7 @@ const palette = {
 const defaultCardOrder = ['totalHours', 'totalFlights', 'thisMonth', 'avgFlightTime', 'myActivity', 'lastFlight', 'fuelRate', 'deposits', 'flightCost', 'balance', 'fuel', 'nextInspections'];
 const MOBILE_REORDER_LONG_PRESS_MS = 3000;
 
-export default function PilotDashboardClient({ data }: { data: PilotData }) {
+export default function PilotDashboardClient({ data, viewingAsAdmin = false }: { data: PilotData; viewingAsAdmin?: boolean }) {
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [showAllFlights, setShowAllFlights] = useState(false);
   const [expandedEngineIds, setExpandedEngineIds] = useState<number[] | null>(null);
@@ -699,6 +699,25 @@ export default function PilotDashboardClient({ data }: { data: PilotData }) {
   return (
     <>
     <div className="space-y-6">
+      {/* Admin "View as pilot" banner */}
+      {viewingAsAdmin && (
+        <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/30">
+          <div className="flex items-center gap-2 text-sm font-semibold text-amber-800 dark:text-amber-300">
+            <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            Viewing as {data.pilot.nombre} — admin mode (read-only view)
+          </div>
+          <a
+            href="/admin/dashboard?tab=pilots"
+            className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold text-amber-900 dark:text-amber-200 bg-amber-200/70 dark:bg-amber-500/20 hover:bg-amber-300/70 dark:hover:bg-amber-500/30 transition-colors"
+          >
+            ← Back to admin
+          </a>
+        </div>
+      )}
+
       {/* Overview Cards - Same style as admin */}
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
         {cardOrder.map(cardId => overviewCards[cardId] ? renderCard(cardId, overviewCards[cardId]) : null)}
