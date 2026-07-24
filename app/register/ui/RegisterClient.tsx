@@ -220,6 +220,17 @@ export default function RegisterClient({
     fetchExpectedRatio();
   }, [deltaTach]);
 
+  // En modo HOBBS con falla: sugerir el tiempo de vuelo automáticamente
+  // en base al avance del tacómetro y el ratio esperado Hobbs/Tach.
+  const tiempoVueloEditedRef = useRef(false);
+  useEffect(() => {
+    if (!hobbsStuck) { tiempoVueloEditedRef.current = false; return; }
+    if (tiempoVueloEditedRef.current) return;
+    if (deltaTach === null || deltaTach <= 0 || !expectedRatioData) return;
+    const suggested = deltaTach * expectedRatioData.expectedRatio;
+    setHobbsTiempoVuelo(suggested.toFixed(1));
+  }, [hobbsStuck, deltaTach, expectedRatioData]);
+
   // Validar ratio con rangos específicos por bucket
   const ratioWarning = useMemo(() => {
     if (hobbsTachRatio === null || !expectedRatioData) return null;
@@ -751,12 +762,15 @@ export default function RegisterClient({
                             step="0.1"
                             min="0.1"
                             value={hobbsTiempoVuelo}
-                            onChange={(e) => setHobbsTiempoVuelo(e.target.value)}
+                            onChange={(e) => {
+                              tiempoVueloEditedRef.current = true;
+                              setHobbsTiempoVuelo(e.target.value);
+                            }}
                             placeholder="Ej: 1.4"
                             required
                             className="w-full rounded-xl border border-amber-300 dark:border-amber-500/40 px-3 py-3 bg-white dark:bg-card font-mono font-bold text-lg"
                           />
-                          <p className="text-[11px] text-amber-700 dark:text-amber-300">Este tiempo se usará como Δ Hobbs para la bitácora y el cobro. En HOBBS Final anota lo que marque el medidor (si no avanzó, déjalo vacío).</p>
+                          <p className="text-[11px] text-amber-700 dark:text-amber-300">Sugerido automáticamente según el avance del tacómetro (puedes ajustarlo). Se usará como Δ Hobbs para la bitácora y el cobro. En HOBBS Final anota lo que marque el medidor (si no avanzó, déjalo vacío).</p>
                         </div>
                       )}
                     </div>
