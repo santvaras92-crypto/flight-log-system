@@ -285,13 +285,17 @@ export async function createFlightSubmission(input: Input) {
   const hobbs_inicio = lastCounters.hobbs;
   const tach_inicio = lastCounters.tach;
 
-  // Stuck-hobbs mode: the meter doesn't advance, so hobbs_fin stays at the
-  // stuck reading and the real flight time comes directly from the pilot.
+  // Faulty-hobbs mode: the meter is stuck or advances only partially, so the
+  // real flight time comes directly from the pilot (hobbsTiempoVuelo).
+  // hobbs_fin records whatever the meter shows (>= previous reading), which
+  // may be the same value (fully stuck) or a partial advance.
   const isStuck = input.hobbsStuck === true;
   if (isStuck && (typeof input.hobbsTiempoVuelo !== 'number' || isNaN(input.hobbsTiempoVuelo) || input.hobbsTiempoVuelo <= 0)) {
-    throw new Error('Con HOBBS pegado debes ingresar el tiempo de vuelo (horas).');
+    throw new Error('Con HOBBS con falla debes ingresar el tiempo de vuelo (horas).');
   }
-  const effectiveHobbsFin = isStuck ? hobbs_inicio : input.hobbs_fin;
+  const effectiveHobbsFin = isStuck
+    ? (Number.isFinite(input.hobbs_fin) && input.hobbs_fin >= hobbs_inicio ? input.hobbs_fin : hobbs_inicio)
+    : input.hobbs_fin;
   const diffHobbs = isStuck ? Number(input.hobbsTiempoVuelo) : input.hobbs_fin - hobbs_inicio;
   const diffTach = input.tach_fin - tach_inicio;
 

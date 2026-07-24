@@ -318,11 +318,16 @@ export default function RegisterClient({
       const hobbsVal = Number(hobbsFin);
       const tachVal = Number(tachFin);
 
-      // HOBBS pegado: se requiere tiempo de vuelo manual
+      // HOBBS con falla: se requiere tiempo de vuelo manual; la lectura del
+      // medidor es opcional (puede quedar igual o avanzar parcialmente)
       if (hobbsStuck) {
         const tv = parseFloat(hobbsTiempoVuelo);
         if (isNaN(tv) || tv <= 0) {
-          setFormError('Ingresa el tiempo de vuelo (hrs) — el HOBBS está marcado como pegado');
+          setFormError('Ingresa el tiempo de vuelo (hrs) — el HOBBS está marcado con falla');
+          return;
+        }
+        if (hobbsFin && currentCounters.hobbs !== null && hobbsVal < currentCounters.hobbs) {
+          setFormError(`La lectura del HOBBS no puede ser menor a ${currentCounters.hobbs.toFixed(1)} (último registrado)`);
           return;
         }
       } else if (currentCounters.hobbs !== null && hobbsVal < currentCounters.hobbs) {
@@ -381,7 +386,9 @@ export default function RegisterClient({
         const result = await createFlightSubmission({
           pilotoId: resolvedPilotId,
           fecha,
-          hobbs_fin: hobbsStuck && currentCounters.hobbs !== null ? currentCounters.hobbs : (hobbsVal || NaN),
+          hobbs_fin: hobbsStuck
+            ? (hobbsFin && !isNaN(hobbsVal) ? hobbsVal : (currentCounters.hobbs ?? NaN))
+            : (hobbsVal || NaN),
           tach_fin: tachVal || NaN,
           hobbsStuck,
           hobbsTiempoVuelo: hobbsStuck ? parseFloat(hobbsTiempoVuelo) : undefined,
@@ -681,13 +688,16 @@ export default function RegisterClient({
                         <input
                           type="number"
                           step="0.1"
-                          value={hobbsStuck && currentCounters.hobbs !== null ? currentCounters.hobbs.toFixed(1) : hobbsFin}
+                          value={hobbsFin}
                           onChange={(e) => setHobbsFin(e.target.value)}
                           min={currentCounters.hobbs !== null ? currentCounters.hobbs : 0}
-                          placeholder={currentCounters.hobbs !== null ? `≥ ${currentCounters.hobbs.toFixed(1)}` : "Ej: 2058.5"}
+                          placeholder={
+                            hobbsStuck && currentCounters.hobbs !== null
+                              ? `Lectura del medidor (vacío = ${currentCounters.hobbs.toFixed(1)})`
+                              : currentCounters.hobbs !== null ? `≥ ${currentCounters.hobbs.toFixed(1)}` : "Ej: 2058.5"
+                          }
                           required={!hobbsStuck}
-                          disabled={hobbsStuck}
-                          className={`flex-1 rounded-xl border px-3 py-3 bg-white dark:bg-card font-mono font-bold text-lg ${hobbsStuck ? 'opacity-60 cursor-not-allowed' : ''}`}
+                          className="flex-1 rounded-xl border px-3 py-3 bg-white dark:bg-card font-mono font-bold text-lg"
                         />
                         <button
                           type="button"
@@ -725,12 +735,11 @@ export default function RegisterClient({
                           checked={hobbsStuck}
                           onChange={(e) => {
                             setHobbsStuck(e.target.checked);
-                            if (e.target.checked) setHobbsFin('');
-                            else setHobbsTiempoVuelo('');
+                            if (!e.target.checked) setHobbsTiempoVuelo('');
                           }}
                           className="w-4 h-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
                         />
-                        <span className="text-xs font-bold text-amber-700 dark:text-amber-300">HOBBS pegado (no avanza)</span>
+                        <span className="text-xs font-bold text-amber-700 dark:text-amber-300">HOBBS con falla (pegado o avanza parcial)</span>
                       </label>
                       {hobbsStuck && (
                         <div className="space-y-1 p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/30">
@@ -747,7 +756,7 @@ export default function RegisterClient({
                             required
                             className="w-full rounded-xl border border-amber-300 dark:border-amber-500/40 px-3 py-3 bg-white dark:bg-card font-mono font-bold text-lg"
                           />
-                          <p className="text-[11px] text-amber-700 dark:text-amber-300">El HOBBS final quedará igual al actual; este tiempo se usará como Δ Hobbs para la bitácora y el cobro.</p>
+                          <p className="text-[11px] text-amber-700 dark:text-amber-300">Este tiempo se usará como Δ Hobbs para la bitácora y el cobro. En HOBBS Final anota lo que marque el medidor (si no avanzó, déjalo vacío).</p>
                         </div>
                       )}
                     </div>
