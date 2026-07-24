@@ -131,6 +131,8 @@ export default function RegisterClient({
   const [fecha, setFecha] = useState<string>(todayLocalString());
   const [hobbsFin, setHobbsFin] = useState<string>('');
   const [tachFin, setTachFin] = useState<string>('');
+  const [hobbsStuck, setHobbsStuck] = useState<boolean>(false);
+  const [hobbsTiempoVuelo, setHobbsTiempoVuelo] = useState<string>('');
   const [copiloto, setCopiloto] = useState<string>('');
   const [detalle, setDetalle] = useState<string>('');
   const [aerodromoSalida, setAerodromoSalida] = useState<string>(lastAerodromoDestino);
@@ -165,10 +167,15 @@ export default function RegisterClient({
 
   // Calcular deltas en tiempo real para modo flight
   const deltaHobbs = useMemo(() => {
-    if (mode !== 'flight' || !hobbsFin || currentCounters.hobbs === null) return null;
+    if (mode !== 'flight') return null;
+    if (hobbsStuck) {
+      const val = parseFloat(hobbsTiempoVuelo);
+      return isNaN(val) || val <= 0 ? null : Number(val.toFixed(1));
+    }
+    if (!hobbsFin || currentCounters.hobbs === null) return null;
     const val = parseFloat(hobbsFin) - currentCounters.hobbs;
     return isNaN(val) || val <= 0 ? null : Number(val.toFixed(1));
-  }, [mode, hobbsFin, currentCounters.hobbs]);
+  }, [mode, hobbsFin, hobbsStuck, hobbsTiempoVuelo, currentCounters.hobbs]);
 
   const deltaTach = useMemo(() => {
     if (mode !== 'flight' || !tachFin || currentCounters.tach === null) return null;
@@ -311,8 +318,15 @@ export default function RegisterClient({
       const hobbsVal = Number(hobbsFin);
       const tachVal = Number(tachFin);
 
-      // HOBBS: puede ser igual o mayor al último registrado
-      if (currentCounters.hobbs !== null && hobbsVal < currentCounters.hobbs) {
+      // HOBBS pegado: se requiere tiempo de vuelo manual
+      if (hobbsStuck) {
+        const tv = parseFloat(hobbsTiempoVuelo);
+        if (isNaN(tv) || tv <= 0) {
+          setFormError('Ingresa el tiempo de vuelo (hrs) — el HOBBS está marcado como pegado');
+          return;
+        }
+      } else if (currentCounters.hobbs !== null && hobbsVal < currentCounters.hobbs) {
+        // HOBBS: puede ser igual o mayor al último registrado
         setFormError(`HOBBS Final debe ser mayor o igual a ${currentCounters.hobbs.toFixed(1)} (último registrado)`);
         return;
       }
@@ -367,8 +381,10 @@ export default function RegisterClient({
         const result = await createFlightSubmission({
           pilotoId: resolvedPilotId,
           fecha,
-          hobbs_fin: hobbsVal || NaN,
+          hobbs_fin: hobbsStuck && currentCounters.hobbs !== null ? currentCounters.hobbs : (hobbsVal || NaN),
           tach_fin: tachVal || NaN,
+          hobbsStuck,
+          hobbsTiempoVuelo: hobbsStuck ? parseFloat(hobbsTiempoVuelo) : undefined,
           copiloto: copiloto || undefined,
           detalle: detalle || undefined,
           aerodromoSalida: aerodromoSalida || 'SCCV',
@@ -665,12 +681,13 @@ export default function RegisterClient({
                         <input
                           type="number"
                           step="0.1"
-                          value={hobbsFin}
+                          value={hobbsStuck && currentCounters.hobbs !== null ? currentCounters.hobbs.toFixed(1) : hobbsFin}
                           onChange={(e) => setHobbsFin(e.target.value)}
                           min={currentCounters.hobbs !== null ? currentCounters.hobbs : 0}
                           placeholder={currentCounters.hobbs !== null ? `≥ ${currentCounters.hobbs.toFixed(1)}` : "Ej: 2058.5"}
-                          required
-                          className="flex-1 rounded-xl border px-3 py-3 bg-white dark:bg-card font-mono font-bold text-lg"
+                          required={!hobbsStuck}
+                          disabled={hobbsStuck}
+                          className={`flex-1 rounded-xl border px-3 py-3 bg-white dark:bg-card font-mono font-bold text-lg ${hobbsStuck ? 'opacity-60 cursor-not-allowed' : ''}`}
                         />
                         <button
                           type="button"
@@ -700,6 +717,37 @@ export default function RegisterClient({
                         <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-100 dark:bg-blue-500/15">
                           <span className="text-xs font-bold uppercase text-blue-700 dark:text-blue-300">Δ Hobbs:</span>
                           <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{deltaHobbs.toFixed(1)} hrs</span>
+                        </div>
+                      )}
+                      <label className="flex items-center gap-2 cursor-pointer select-none pt-1">
+                        <input
+                          type="checkbox"
+                          checked={hobbsStuck}
+                          onChange={(e) => {
+                            setHobbsStuck(e.target.checked);
+                            if (e.target.checked) setHobbsFin('');
+                            else setHobbsTiempoVuelo('');
+                          }}
+                          className="w-4 h-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                        />
+                        <span className="text-xs font-bold text-amber-700 dark:text-amber-300">HOBBS pegado (no avanza)</span>
+                      </label>
+                      {hobbsStuck && (
+                        <div className="space-y-1 p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/30">
+                          <label className="block text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200">
+                            Tiempo de vuelo (hrs) *
+                          </label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0.1"
+                            value={hobbsTiempoVuelo}
+                            onChange={(e) => setHobbsTiempoVuelo(e.target.value)}
+                            placeholder="Ej: 1.4"
+                            required
+                            className="w-full rounded-xl border border-amber-300 dark:border-amber-500/40 px-3 py-3 bg-white dark:bg-card font-mono font-bold text-lg"
+                          />
+                          <p className="text-[11px] text-amber-700 dark:text-amber-300">El HOBBS final quedará igual al actual; este tiempo se usará como Δ Hobbs para la bitácora y el cobro.</p>
                         </div>
                       )}
                     </div>

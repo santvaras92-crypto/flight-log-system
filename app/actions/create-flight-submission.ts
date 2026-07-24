@@ -13,6 +13,11 @@ type Input = {
   detalle?: string;    // optional
   aerodromoSalida?: string;  // default SCCV
   aerodromoDestino?: string; // default SCCV
+  // Stuck-hobbs mode: the physical HOBBS meter is jammed and no longer
+  // advances. The pilot still logs real flight time, entered directly as
+  // hobbsTiempoVuelo. hobbs_fin is forced to stay at the stuck reading.
+  hobbsStuck?: boolean;
+  hobbsTiempoVuelo?: number; // real flight time in hours (required when hobbsStuck)
 };
 
 // Helper to format date as DD-MM-AA
@@ -244,10 +249,12 @@ export async function createFlightSubmission(input: Input) {
     select: { nombre: true, codigo: true, email: true }
   });
 
-  // Get last flight to calculate baselines (by highest hobbs_fin, not fecha)
+  // Get last flight to calculate baselines (by highest hobbs_fin, not fecha).
+  // Tie-break by fecha+id: with a stuck hobbs meter many flights share the
+  // same hobbs_fin, so we need the chronologically latest one.
   const lastFlight = await prisma.flight.findFirst({
     where: { aircraftId: 'CC-AQI', hobbs_fin: { not: null } },
-    orderBy: { hobbs_fin: 'desc' },
+    orderBy: [{ hobbs_fin: 'desc' }, { fecha: 'desc' }, { id: 'desc' }],
     select: { 
       hobbs_fin: true, 
       tach_fin: true,
@@ -277,7 +284,15 @@ export async function createFlightSubmission(input: Input) {
   // Calcular diferencias y nuevas horas de componentes
   const hobbs_inicio = lastCounters.hobbs;
   const tach_inicio = lastCounters.tach;
-  const diffHobbs = input.hobbs_fin - hobbs_inicio;
+
+  // Stuck-hobbs mode: the meter doesn't advance, so hobbs_fin stays at the
+  // stuck reading and the real flight time comes directly from the pilot.
+  const isStuck = input.hobbsStuck === true;
+  if (isStuck && (typeof input.hobbsTiempoVuelo !== 'number' || isNaN(input.hobbsTiempoVuelo) || input.hobbsTiempoVuelo <= 0)) {
+    throw new Error('Con HOBBS pegado debes ingresar el tiempo de vuelo (horas).');
+  }
+  const effectiveHobbsFin = isStuck ? hobbs_inicio : input.hobbs_fin;
+  const diffHobbs = isStuck ? Number(input.hobbsTiempoVuelo) : input.hobbs_fin - hobbs_inicio;
   const diffTach = input.tach_fin - tach_inicio;
 
   const newAirframe = lastComponents.airframe !== null ? Number((lastComponents.airframe + diffTach).toFixed(1)) : null;
@@ -291,7 +306,7 @@ export async function createFlightSubmission(input: Input) {
       data: {
         fecha: fechaVuelo,
         hobbs_inicio: hobbs_inicio,
-        hobbs_fin: input.hobbs_fin,
+        hobbs_fin: effectiveHobbsFin,
         tach_inicio: tach_inicio,
         tach_fin: input.tach_fin,
         diff_hobbs: diffHobbs,
@@ -322,7 +337,7 @@ export async function createFlightSubmission(input: Input) {
         fechaVuelo,
         copiloto: input.copiloto,
         detalle: input.detalle,
-        hobbsFinal: input.hobbs_fin,
+        hobbsFinal: effectiveHobbsFin,
         tachFinal: input.tach_fin,
         aerodromoSalida: input.aerodromoSalida || 'SCCV',
         aerodromoDestino: input.aerodromoDestino || 'SCCV',
@@ -340,7 +355,7 @@ export async function createFlightSubmission(input: Input) {
     await tx.aircraft.update({
       where: { matricula: 'CC-AQI' },
       data: {
-        hobbs_actual: input.hobbs_fin,
+        hobbs_actual: effectiveHobbsFin,
         tach_actual: input.tach_fin,
       },
     });
@@ -373,7 +388,7 @@ export async function createFlightSubmission(input: Input) {
   // Send emails
   const submissionData = {
     fechaVuelo,
-    hobbsFinal: input.hobbs_fin,
+    hobbsFinal: effectiveHobbsFin,
     tachFinal: input.tach_fin,
     copiloto: input.copiloto,
     detalle: input.detalle,
@@ -381,10 +396,17 @@ export async function createFlightSubmission(input: Input) {
     aerodromoDestino: input.aerodromoDestino || 'SCCV',
   };
 
+  // In stuck-hobbs mode the meter doesn't advance; adjust the baseline so the
+  // email helpers (which compute diff = hobbsFinal - lastCounters.hobbs) show
+  // the real flight time instead of 0.0.
+  const emailCounters = isStuck
+    ? { ...lastCounters, hobbs: Number((effectiveHobbsFin - diffHobbs).toFixed(1)) }
+    : lastCounters;
+
   // Send both emails in parallel
   await Promise.all([
-    sendAdminNotificationEmail(submissionData, piloto, lastCounters, lastComponents),
-    sendPilotConfirmationEmail(submissionData, piloto, lastCounters, lastComponents)
+    sendAdminNotificationEmail(submissionData, piloto, emailCounters, lastComponents),
+    sendPilotConfirmationEmail(submissionData, piloto, emailCounters, lastComponents)
   ]);
 
   // Return complete flight data for PDF generation
@@ -399,7 +421,7 @@ export async function createFlightSubmission(input: Input) {
       },
       fecha: input.fecha,
       hobbs_inicio: hobbs_inicio,
-      hobbs_fin: input.hobbs_fin,
+      hobbs_fin: effectiveHobbsFin,
       diff_hobbs: diffHobbs,
       tach_inicio: tach_inicio,
       tach_fin: input.tach_fin,
