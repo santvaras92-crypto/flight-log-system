@@ -45,6 +45,7 @@ interface FlightItem {
   instructorRate: string | null;
   createdAt: string;
   lastHobbs: string;
+  diffHobbs?: string | null;
   lastTach: string;
   imageLogs: {
     id: number;
@@ -223,7 +224,8 @@ export default function ValidacionClient({
                 const lastHobbs = parseFloat(flight.lastHobbs || '0');
                 const tachFinal = parseFloat(flight.tachFinal || '0');
                 const lastTach = parseFloat(flight.lastTach || '0');
-                const diffHobbs = hobbsFinal - lastHobbs;
+                const diffHobbsRaw = flight.diffHobbs != null ? parseFloat(flight.diffHobbs) : NaN;
+                const diffHobbs = !isNaN(diffHobbsRaw) && diffHobbsRaw > 0 ? diffHobbsRaw : hobbsFinal - lastHobbs;
                 const diffTach = tachFinal - lastTach;
                 const rate = parseFloat(getRate(flight.id, flight.defaultRate));
                 const instRate = parseFloat(instructorRates[flight.id] ?? (flight.copiloto ? flight.defaultInstructorRate.toString() : '0'));

@@ -87,6 +87,9 @@ export default async function ValidacionPage() {
       fechaVuelo: s.fechaVuelo?.toISOString() || null,
       hobbsFinal: s.hobbsFinal?.toString() || null,
       tachFinal: s.tachFinal?.toString() || null,
+      // Real Δ Hobbs from the Flight record. In stuck-hobbs mode the meter
+      // doesn't advance, so hobbsFinal - lastHobbs would wrongly show 0.0.
+      diffHobbs: s.Flight?.diff_hobbs?.toString() || null,
       cliente: s.cliente,
       copiloto: s.copiloto,
       detalle: s.detalle,
