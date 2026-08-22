@@ -122,6 +122,32 @@ export async function POST(req: NextRequest) {
       await prisma.flight.update({ where: { id }, data });
     }
 
+    // Sync aircraft counters with the latest flight so the register form
+    // (which reads the max hobbs_fin / aircraft counters) reflects edits.
+    const affectedAircraft = new Set<string>();
+    for (const up of updates) {
+      const id = Number(up.id);
+      if (!id) continue;
+      const f = await prisma.flight.findUnique({ where: { id }, select: { aircraftId: true } });
+      if (f?.aircraftId) affectedAircraft.add(f.aircraftId);
+    }
+    for (const aircraftId of Array.from(affectedAircraft)) {
+      const latest = await prisma.flight.findFirst({
+        where: { aircraftId, hobbs_fin: { not: null } },
+        orderBy: [{ hobbs_fin: 'desc' }, { fecha: 'desc' }, { id: 'desc' }],
+        select: { hobbs_fin: true, tach_fin: true },
+      });
+      if (latest?.hobbs_fin != null) {
+        await prisma.aircraft.update({
+          where: { matricula: aircraftId },
+          data: {
+            hobbs_actual: Number(latest.hobbs_fin),
+            ...(latest.tach_fin != null ? { tach_actual: Number(latest.tach_fin) } : {}),
+          },
+        });
+      }
+    }
+
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     console.error("Error updating flights:", e);

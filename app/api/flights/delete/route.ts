@@ -48,8 +48,22 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // 3. Revert aircraft counters (subtract the diff)
-      if (diffHobbs > 0 || diffTach > 0) {
+      // 3. Revert aircraft counters: resync from the latest remaining flight
+      // (a plain decrement propagates errors if the deleted flight had bad values)
+      const latest = await tx.flight.findFirst({
+        where: { aircraftId: flight.aircraftId, hobbs_fin: { not: null }, id: { not: flightId } },
+        orderBy: [{ hobbs_fin: 'desc' }, { fecha: 'desc' }, { id: 'desc' }],
+        select: { hobbs_fin: true, tach_fin: true },
+      });
+      if (latest?.hobbs_fin != null) {
+        await tx.aircraft.update({
+          where: { matricula: flight.aircraftId },
+          data: {
+            hobbs_actual: Number(latest.hobbs_fin),
+            ...(latest.tach_fin != null ? { tach_actual: Number(latest.tach_fin) } : {}),
+          }
+        });
+      } else if (diffHobbs > 0 || diffTach > 0) {
         await tx.aircraft.update({
           where: { matricula: flight.aircraftId },
           data: {

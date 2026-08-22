@@ -8,7 +8,9 @@ export async function GET() {
     // Obtener el último vuelo por hobbs_fin DESC
     const lastFlight = await prisma.flight.findFirst({
       where: { aircraftId: "CC-AQI", hobbs_fin: { not: null } },
-      orderBy: { hobbs_fin: "desc" },
+      // Tie-break by fecha+id: with a stuck hobbs meter many flights share the
+      // same hobbs_fin, so we need the chronologically latest one.
+      orderBy: [{ hobbs_fin: "desc" }, { fecha: "desc" }, { id: "desc" }],
       select: { 
         hobbs_fin: true, 
         tach_fin: true,
