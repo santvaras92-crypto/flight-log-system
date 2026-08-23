@@ -71,6 +71,7 @@ interface FlightDetail {
   engineModel: string;
   engineSerial: string;
   gpsSource?: string;
+  isGroundRun?: boolean;
   readings: Reading[];
   linkedFlight?: {
     id: number;
@@ -121,6 +122,8 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
   // Multi-tramo state
   const [tramoIds, setTramoIds] = useState<number[]>([]);
   const [activeTramo, setActiveTramo] = useState(0);
+  const [linkCandidates, setLinkCandidates] = useState<any[] | null>(null);
+  const [loadingCandidates, setLoadingCandidates] = useState(false);
 
   // Chart refs
   const egtChartRef = useRef<HTMLCanvasElement>(null);
@@ -1045,6 +1048,68 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
               )}
 
               {/* Linked Flight Record Info */}
+              {!selectedFlight.linkedFlight && !selectedFlight.isGroundRun && (
+                <div className="bg-amber-50 dark:bg-amber-500/10 rounded-xl border border-amber-200 dark:border-amber-500/30 p-3">
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="font-semibold text-amber-700 dark:text-amber-300">Sin vuelo vinculado</span>
+                    <button
+                      onClick={async () => {
+                        if (linkCandidates) { setLinkCandidates(null); return; }
+                        setLoadingCandidates(true);
+                        try {
+                          const res = await fetch(`/api/admin/relink-engine?engineFlightId=${selectedFlight.id}`);
+                          const json = await res.json();
+                          setLinkCandidates(json.candidates || []);
+                        } catch (err) {
+                          console.error('Failed to load link candidates:', err);
+                        } finally {
+                          setLoadingCandidates(false);
+                        }
+                      }}
+                      className="px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
+                    >
+                      {loadingCandidates ? 'Buscando...' : linkCandidates ? 'Ocultar candidatos' : 'Vincular a vuelo'}
+                    </button>
+                  </div>
+                  {linkCandidates && (
+                    <div className="mt-2 space-y-1">
+                      {linkCandidates.length === 0 && (
+                        <div className="text-[11px] text-amber-600 dark:text-amber-400">No hay vuelos registrados ±1 día de este tramo.</div>
+                      )}
+                      {linkCandidates.map((c: any) => (
+                        <button
+                          key={c.flightId}
+                          onClick={async () => {
+                            if (!confirm(`¿Vincular este tramo al vuelo #${c.flightId} (${c.pilot}, ${c.diffHobbs != null ? c.diffHobbs.toFixed(1) + 'h' : 's/h'})?`)) return;
+                            try {
+                              const res = await fetch(`/api/admin/relink-engine?engineFlightId=${selectedFlight.id}&flightId=${c.flightId}`, { method: 'POST' });
+                              if (res.ok) {
+                                setLinkCandidates(null);
+                                loadFlightDetail(selectedFlight.id);
+                              } else {
+                                const j = await res.json().catch(() => ({}));
+                                alert(j.error || 'Error al vincular');
+                              }
+                            } catch (err) {
+                              console.error('Failed to relink:', err);
+                            }
+                          }}
+                          className="w-full text-left px-2 py-1.5 rounded-lg bg-white/80 dark:bg-slate-800 border border-amber-200 dark:border-amber-500/20 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors text-[11px] flex flex-wrap gap-2 items-center"
+                        >
+                          <span className="font-bold text-blue-700 dark:text-blue-300">#{c.flightId}</span>
+                          <span className="text-slate-600 dark:text-slate-300">{new Date(c.fecha).toLocaleDateString('es-CL')}</span>
+                          <span className="text-slate-700 dark:text-slate-200">{c.pilot}</span>
+                          {c.diffHobbs != null && <span className="font-mono text-slate-600 dark:text-slate-300">{c.diffHobbs.toFixed(1)}h hobbs</span>}
+                          <span className="text-slate-500 dark:text-slate-400">{c.route}</span>
+                          {c.linkedEngineIds.length > 0 && (
+                            <span className="text-[10px] text-amber-600 dark:text-amber-400">({c.linkedEngineIds.length} tramo(s) ya vinculado(s), {c.linkedEngineHours}h engine)</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               {selectedFlight.linkedFlight && (
                 <div className="bg-gradient-to-r from-blue-50 dark:from-blue-950/40 to-indigo-50 dark:to-indigo-950/40 rounded-xl border border-blue-200 dark:border-blue-500/30 p-3">
                   <div className="flex flex-wrap gap-3 items-center text-xs">
