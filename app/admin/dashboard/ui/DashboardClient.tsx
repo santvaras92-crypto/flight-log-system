@@ -7631,6 +7631,15 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         const minDate = new Date(today.getTime() + minDays * 86400000);
         const maxDate = new Date(today.getTime() + maxDays * 86400000);
 
+        // Calendar TBO: Lycoming SI 1009BF — 12 years from in-service date.
+        // Engine (Factory Rebuilt O-320-D2J) entered service 3 Nov 2022.
+        const ENGINE_IN_SERVICE = new Date('2022-11-03T12:00:00Z');
+        const calendarTboDate = new Date(ENGINE_IN_SERVICE);
+        calendarTboDate.setFullYear(calendarTboDate.getFullYear() + 12); // 3 Nov 2034
+        const calendarDaysRemaining = Math.max(0, Math.round((calendarTboDate.getTime() - today.getTime()) / 86400000));
+        const calendarGoverns = calendarTboDate.getTime() < estDate.getTime();
+        const governingDate = calendarGoverns ? calendarTboDate : estDate;
+
         const fmtDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
         const fmtDateFull = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         const fmtTime = (days: number) => {
@@ -7741,6 +7750,26 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                     <p className="text-[10px] text-slate-400 dark:text-faint">Trend</p>
                     <p className={`text-sm font-bold font-mono ${trend > 0 ? 'text-emerald-600 dark:text-emerald-400' : trend < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-foreground-soft'}`}>
                       {trend > 0 ? '+' : ''}{trend.toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Calendar TBO (SI 1009BF: 12 years) */}
+              <div className={`rounded-lg p-3 mb-5 ${calendarGoverns ? 'bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30' : 'bg-slate-50 dark:bg-muted border border-slate-200 dark:border-edge'}`}>
+                <div className="flex items-start gap-2">
+                  <svg className={`w-4 h-4 mt-0.5 flex-shrink-0 ${calendarGoverns ? 'text-red-500' : 'text-slate-400 dark:text-faint'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <div className="text-[11px] flex-1">
+                    <p className={`font-semibold mb-1 ${calendarGoverns ? 'text-red-700 dark:text-red-300' : 'text-slate-600 dark:text-foreground-soft'}`}>
+                      Calendar TBO (SI 1009BF): 12 años — vence {calendarTboDate.toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </p>
+                    <p className={calendarGoverns ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-muted-foreground'}>
+                      Motor Factory Rebuilt en servicio desde el 3 nov 2022. Quedan {fmtTime(calendarDaysRemaining)} de límite calendario.{' '}
+                      {calendarGoverns
+                        ? <>El límite calendario vence <span className="font-bold">antes</span> que las horas proyectadas ({fmtDate(estDate)}) — el overhaul lo gobierna el calendario: <span className="font-bold">{fmtDateFull(governingDate)}</span>. Puede excederse solo con certificación de mecánico habilitado y concurrencia DGAC.</>
+                        : <>Las horas proyectadas ({fmtDate(estDate)}) vencen antes que el calendario — gobierna el límite de horas.</>}
                     </p>
                   </div>
                 </div>
