@@ -511,7 +511,7 @@ export default function PilotDashboardClient({ data, viewingAsAdmin = false }: {
         </div>
         <h3 className="text-slate-500 dark:text-muted-foreground text-[10px] sm:text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2">Tu Saldo</h3>
         <div className={`text-lg sm:text-3xl font-bold ${data.metrics.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'} mb-0.5 sm:mb-1`}>
-          {formatCurrency(Math.abs(data.metrics.balance))}
+          {data.metrics.balance < 0 ? '-' : ''}{formatCurrency(Math.abs(data.metrics.balance))}
         </div>
         <p className="text-xs sm:text-sm text-slate-600 dark:text-foreground-soft font-medium">{data.metrics.balance >= 0 ? 'a favor' : 'pendiente'}</p>
       </div>
