@@ -6976,7 +6976,15 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const overhaulCycleHobbs = overhaulCycleHrs * htRatio; // for display only
     const liveTachPerYear = overviewMetrics?.annualStats?.tachThisYear || 195;
     const tachPerYear = horasIsLive ? liveTachPerYear : (horasAnuales / htRatio);
-    const anosRemanentes = tachPerYear > 0 ? overhaulCycleHrs / tachPerYear : overhaulCycleHrs / 195;
+    const anosRemanentesHoras = tachPerYear > 0 ? overhaulCycleHrs / tachPerYear : overhaulCycleHrs / 195;
+
+    // Calendar TBO cap (Lycoming SI 1009BF): 12 years from in-service date.
+    // Engine (Factory Rebuilt O-320-D2J) entered service 3 Nov 2022 → limit 3 Nov 2034.
+    const CALENDAR_TBO_DATE = new Date('2034-11-03T12:00:00Z');
+    const calendarYearsRemaining = Math.max(0.01, (CALENDAR_TBO_DATE.getTime() - Date.now()) / (365.25 * 86400000));
+    // The overhaul happens at whichever limit comes FIRST: hours or calendar.
+    const calendarCapped = calendarYearsRemaining < anosRemanentesHoras;
+    const anosRemanentes = Math.min(anosRemanentesHoras, calendarYearsRemaining);
 
     // ===== FINANCIAL PROJECTIONS (computed early — needed for overhaul reserve) =====
     const r = interestRate / 100;
@@ -7081,6 +7089,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       combustibleHr, aceiteHr, manttoHr, mantto100hr, manttoOil, manttoOverhaul,
       totalVariableHr, overhaulProvisionAnual, totalFijoAnual, totalFijoMes, totalFijoHr,
       totalCostoHr, gananciaHr, margen, faltaOverhaul, anosRemanentes,
+      calendarCapped, calendarYearsRemaining, anosRemanentesHoras,
       effectiveOverhaulCLP, overhaulSource, ipcOverhaulCLP,
       fixedBreakdown, variableBreakdown, costPerHourBreakdown,
       // Financial projections (CLP single-currency model)
@@ -7839,9 +7848,12 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               <p className="text-[9px] text-slate-400 dark:text-faint">{(computed.faltaOverhaul / computed.effectiveOverhaulCLP * 100).toFixed(0)}% remaining</p>
             </div>
             <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20">
-              <p className="text-[9px] text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1">Time to TBO</p>
+              <p className="text-[9px] text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1">Time to TBO{computed.calendarCapped ? ' · CALENDAR' : ''}</p>
               <p className="text-lg font-bold text-amber-700 dark:text-amber-300 font-mono">{computed.anosRemanentes.toFixed(1)} <span className="text-sm">yrs</span></p>
               <p className="text-[9px] text-slate-400 dark:text-faint">{Math.round(computed.anosRemanentes * 12)} mo · {Math.round(computed.tachPerYear)} tach/yr</p>
+              {computed.calendarCapped && (
+                <p className="text-[9px] text-red-500 dark:text-red-400 font-semibold mt-0.5">12-yr calendar TBO (nov 2034) gobierna · horas: {computed.anosRemanentesHoras.toFixed(1)} yrs</p>
+              )}
             </div>
           </div>
 
