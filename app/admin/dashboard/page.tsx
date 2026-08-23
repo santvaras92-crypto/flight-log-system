@@ -692,7 +692,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
 
       return [
         { id: `${a.matricula}-AF`, dbId: airframeOverhaul?.dbId || null, aircraftId: a.matricula, tipo: 'AIRFRAME', horas_acumuladas: airframeHours, limite_tbo: 30000, overhaul_airframe: airframeOverhaul?.airframe || null, overhaul_date: airframeOverhaul?.date || null, overhaul_notes: airframeOverhaul?.notes || null },
-        { id: `${a.matricula}-EN`, dbId: engineOverhaul?.dbId || null, aircraftId: a.matricula, tipo: 'ENGINE', horas_acumuladas: engineHours, limite_tbo: 2000, overhaul_airframe: engineOverhaul?.airframe || null, overhaul_date: engineOverhaul?.date || null, overhaul_notes: engineOverhaul?.notes || null },
+        { id: `${a.matricula}-EN`, dbId: engineOverhaul?.dbId || null, aircraftId: a.matricula, tipo: 'ENGINE', horas_acumuladas: engineHours, limite_tbo: 2600, overhaul_airframe: engineOverhaul?.airframe || null, overhaul_date: engineOverhaul?.date || null, overhaul_notes: engineOverhaul?.notes || null },
         { id: `${a.matricula}-PR`, dbId: propellerOverhaul?.dbId || null, aircraftId: a.matricula, tipo: 'PROPELLER', horas_acumuladas: propellerHours, limite_tbo: 2000, overhaul_airframe: propellerOverhaul?.airframe || null, overhaul_date: propellerOverhaul?.date || null, overhaul_notes: propellerOverhaul?.notes || null },
       ];
     })

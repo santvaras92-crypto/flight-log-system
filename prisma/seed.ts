@@ -91,7 +91,7 @@ async function main() {
     data: {
       tipo: "ENGINE",
       horas_acumuladas: 987.3,
-      limite_tbo: 2000.0, // 2,000 horas TBO para motor Lycoming
+      limite_tbo: 2600.0, // 2,600 horas TBO — Lycoming O-320-D2J Factory Rebuilt (SI 1009BF, Table 1)
       aircraftId: aircraft.matricula,
     },
   });

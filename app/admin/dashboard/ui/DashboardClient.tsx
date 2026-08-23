@@ -7604,7 +7604,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       {(() => {
         const engineComp = components?.find((c: any) => c.tipo === 'ENGINE');
         const smoh = engineComp ? Number(engineComp.horas_acumuladas) : 0;
-        const tbo = engineComp ? Number(engineComp.limite_tbo) : 2000;
+        const tbo = engineComp ? Number(engineComp.limite_tbo) : 2600;
         const tachRemaining = Math.max(0, tbo - smoh);
         const htRatio = overviewMetrics?.annualStats?.hobbsTachRatio || 1.25;
         const hobbsRemaining = tachRemaining * htRatio; // for display only
