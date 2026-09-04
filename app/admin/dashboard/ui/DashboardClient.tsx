@@ -6336,6 +6336,10 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   const [fuelTrendRate, setFuelTrendRate] = useState(stored?.fuelTrendRate ?? 10);
   // Live engine market price (from airpowerinc.com scraping)
   const [engineMarketPriceUSD, setEngineMarketPriceUSD] = useState(stored?.engineMarketPriceUSD ?? 47415);
+  // When true the user has manually overridden the scraped market price and
+  // we must not overwrite it with the background fetch. Persisted to
+  // localStorage as `engineMarketPriceOverride` so it survives refresh.
+  const [engineMarketPriceOverride, setEngineMarketPriceOverride] = useState(stored?.engineMarketPriceOverride ?? false);
   // Brent oil historical data (weekly + monthly from EIA + mindicador)
   const [brentData, setBrentData] = useState<{
     currentBrentUSD: number;
@@ -6356,7 +6360,8 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         horasAnuales, seguroAnual, hangarAnual,
         toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual,
         recaudado, valorHora, valorHoraUnit, interestRate, clForwardInflation, fuelTrendRate,
-        engineMarketPriceUSD,
+          engineMarketPriceUSD,
+          engineMarketPriceOverride,
         // clInflationPct excluded — always fetched live from /api/ipc-chile
         // usCpiCumulPct excluded — always fetched live from /api/cpi-usa
       }));
@@ -6897,7 +6902,10 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       .then(data => {
         if (!data) return;
         if (data.price > 0) {
-          setEngineMarketPriceUSD(data.price);
+          // Don't overwrite a user override.
+          if (!engineMarketPriceOverride) {
+            setEngineMarketPriceUSD(data.price);
+          }
           setEnginePriceSource(data.source || (data.fallback ? 'hardcoded' : 'scraped'));
           // Show as live if we got a price (even from hardcoded fallback, since
           // the fallback price is manually verified and kept up-to-date)
@@ -6905,7 +6913,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         }
       })
       .catch(() => {}); // Silent fail, keeps defaults
-  }, []);
+  }, [engineMarketPriceOverride]);
 
   // Consumption rates — use real fuel rate from flight data when available
   const fuelLPH = overviewMetrics?.fuelRateLph || 26.5; // fallback: 7 GPH × 3.785
@@ -7964,7 +7972,11 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                         value={formatCurrency(engineMarketPriceUSD)}
                         onChange={(e) => {
                           const raw = e.target.value.replace(/[^0-9]/g, '');
-                          if (raw) setEngineMarketPriceUSD(parseInt(raw));
+                          if (raw) {
+                            setEngineMarketPriceUSD(parseInt(raw));
+                            // Mark as user override so background fetch won't clobber it
+                            setEngineMarketPriceOverride(true);
+                          }
                         }}
                         className="w-[80px] text-right font-mono text-slate-700 dark:text-foreground-soft bg-transparent border-b border-dashed border-slate-300 dark:border-edge-strong hover:border-blue-400 focus:border-blue-500 focus:outline-none text-[11px] px-0 py-0"
                         title="Click para editar precio FOB"
