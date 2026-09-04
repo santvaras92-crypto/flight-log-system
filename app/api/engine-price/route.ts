@@ -7,9 +7,9 @@ let cachedAt = 0;
 const CACHE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 const FALLBACK_PRICES = {
-  price: 47415.0,
-  core: 29500.0,
-  total: 76915.0,
+  price: 51168.0,   // verified manually on airpowerinc.com — Sep 3, 2026
+  core: 23000.0,    // refundable core charge
+  total: 74168.0,   // price + core
   fetchedAt: null as string | null,
   fallback: true,
 };
