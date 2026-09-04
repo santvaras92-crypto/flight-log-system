@@ -74,6 +74,15 @@ interface FlightItem {
   ufValor: number;
   defaultRate: number;
   defaultInstructorRate: number;
+  recentRates?: {
+    id: number;
+    fecha: string | null;
+    tarifa: number | null;
+    instructorRate: number | null;
+    diffHobbs: number | null;
+    costo: number | null;
+    copiloto: string | null;
+  }[];
 }
 
 type Tab = 'flights' | 'deposits' | 'fuel';
@@ -318,6 +327,28 @@ export default function ValidacionClient({
                             Instructor: 1.3 UF × ${formatUFDisplay(flight.ufValor)} = <span className="font-semibold">${flight.defaultInstructorRate.toLocaleString('es-CL')}</span>/hora
                           </div>
                         </div>
+
+                        {/* Recent rates charged to this pilot (last 3 flights) */}
+                        {flight.recentRates && flight.recentRates.length > 0 && (
+                          <div className="mb-4 pb-3 border-b border-slate-200 dark:border-edge">
+                            <p className="text-[10px] font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider mb-1.5">
+                              Tarifas cobradas a {flight.piloto.nombre?.split(' ')[0] || 'este piloto'} — últimos {flight.recentRates.length} vuelos
+                            </p>
+                            <div className="space-y-1">
+                              {flight.recentRates.map(r => (
+                                <div key={r.id} className="flex flex-wrap items-center gap-2 text-[11px] bg-white dark:bg-card rounded-md px-2 py-1 border border-slate-200 dark:border-edge">
+                                  <span className="text-slate-400 dark:text-faint font-mono">{r.fecha ? new Date(r.fecha).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: '2-digit' }) : '—'}</span>
+                                  <span className="font-mono font-semibold text-slate-700 dark:text-foreground-soft">Avión: ${r.tarifa != null ? r.tarifa.toLocaleString('es-CL') : '—'}/hr</span>
+                                  <span className={`font-mono ${r.instructorRate ? 'font-semibold text-amber-700 dark:text-amber-300' : 'text-slate-400 dark:text-faint'}`}>
+                                    Instructor: {r.instructorRate ? `$${r.instructorRate.toLocaleString('es-CL')}/hr` : '—'}
+                                  </span>
+                                  {r.copiloto && <span className="text-slate-400 dark:text-faint">({r.copiloto})</span>}
+                                  {r.diffHobbs != null && <span className="text-slate-400 dark:text-faint ml-auto font-mono">{r.diffHobbs.toFixed(1)}h · ${r.costo != null ? r.costo.toLocaleString('es-CL') : '—'}</span>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
                         {/* Rate Inputs Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

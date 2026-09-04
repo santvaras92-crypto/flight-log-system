@@ -80,6 +80,28 @@ export default async function ValidacionPage() {
     const defaultRate = calculateUFRate(4.5, uf.valor);
     const defaultInstructorRate = calculateUFRate(1.3, uf.valor);
 
+    // Last 3 validated flights of this pilot — shows the admin what rates were
+    // actually charged recently (airplane rate + instructor rate).
+    const recentFlights = await prisma.flight.findMany({
+      where: {
+        pilotoId: s.User.id,
+        tarifa: { not: null },
+        ...(s.Flight ? { id: { not: s.Flight.id } } : {}),
+      },
+      orderBy: [{ fecha: 'desc' }, { id: 'desc' }],
+      take: 3,
+      select: { id: true, fecha: true, tarifa: true, instructor_rate: true, diff_hobbs: true, costo: true, copiloto: true },
+    });
+    const recentRates = recentFlights.map(f => ({
+      id: f.id,
+      fecha: f.fecha?.toISOString() || null,
+      tarifa: f.tarifa != null ? Number(f.tarifa) : null,
+      instructorRate: f.instructor_rate != null ? Number(f.instructor_rate) : null,
+      diffHobbs: f.diff_hobbs != null ? Number(f.diff_hobbs) : null,
+      costo: f.costo != null ? Number(f.costo) : null,
+      copiloto: f.copiloto,
+    }));
+
     return {
       id: s.id,
       estado: s.estado,
@@ -124,6 +146,7 @@ export default async function ValidacionPage() {
       ufValor: uf.valor,
       defaultRate,
       defaultInstructorRate,
+      recentRates,
     };
   }));
 
