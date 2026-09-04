@@ -7966,6 +7966,18 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                   <div className="flex justify-between items-center">
                     <span className="text-slate-500 dark:text-muted-foreground">Engine FOB (Price in USD)</span>
                     <div className="flex items-center gap-1">
+                      {engineMarketPriceOverride && (
+                        <button
+                          onClick={() => {
+                            // Clear override → the fetch effect re-runs and restores the market price
+                            setEngineMarketPriceOverride(false);
+                          }}
+                          className="px-1.5 py-0.5 text-[8px] font-medium bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 rounded-full hover:bg-amber-200 dark:hover:bg-amber-500/25 transition-colors"
+                          title="Volver al precio de mercado (descarta el valor editado manualmente)"
+                        >
+                          ↺ Market
+                        </button>
+                      )}
                       <span className="text-slate-400 dark:text-faint text-[10px]">USD</span>
                       <input
                         type="text"
@@ -7978,8 +7990,8 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                             setEngineMarketPriceOverride(true);
                           }
                         }}
-                        className="w-[80px] text-right font-mono text-slate-700 dark:text-foreground-soft bg-transparent border-b border-dashed border-slate-300 dark:border-edge-strong hover:border-blue-400 focus:border-blue-500 focus:outline-none text-[11px] px-0 py-0"
-                        title="Click para editar precio FOB"
+                        className={`w-[80px] text-right font-mono bg-transparent border-b border-dashed hover:border-blue-400 focus:border-blue-500 focus:outline-none text-[11px] px-0 py-0 ${engineMarketPriceOverride ? 'text-amber-700 dark:text-amber-300 border-amber-400 dark:border-amber-500/50' : 'text-slate-700 dark:text-foreground-soft border-slate-300 dark:border-edge-strong'}`}
+                        title={engineMarketPriceOverride ? 'Valor editado manualmente — click en ↺ Market para volver al precio scrapeado' : 'Click para editar precio FOB'}
                       />
                     </div>
                   </div>
