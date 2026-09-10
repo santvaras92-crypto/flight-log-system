@@ -6313,9 +6313,9 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   const liveHorasAnuales = Math.round(overviewMetrics?.annualStats?.hobbsThisYear ?? 220);
   const [horasAnuales, setHorasAnuales] = useState(stored?.horasAnuales ?? liveHorasAnuales);
   const horasIsLive = horasAnuales === liveHorasAnuales;
-  // Owner (free) hours per year — SUBSET of horasAnuales. The owner flies these
-  // at no charge; their variable cost is absorbed as a fixed cost spread over
-  // the remaining paying hours.
+  // Operational (non-revenue) hours per year — SUBSET of horasAnuales (owner
+  // flights, maintenance, ferry). Flown at no charge; their variable cost is
+  // absorbed as a fixed cost spread over the remaining paying hours.
   const [horasPropietario, setHorasPropietario] = useState(stored?.horasPropietario ?? 50);
   // TBO calendar extension: when true the model assumes an on-condition extension
   // beyond the 12-yr Lycoming SI 1009BF calendar limit (Nov 2034) — but NEVER
@@ -7043,18 +7043,18 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const aceiteHr = oilLPH * aceiteLiterCLP;
     const mantto100hr = revision100CLP / maintInterval;
     const manttoOil = cambioAceiteCLP / maintInterval;
-    // Owner (free) hours: subset of horasAnuales. Paying hours carry the load.
+    // Operational (non-revenue) hours: subset of horasAnuales. Paying hours carry the load.
     const horasProp = Math.max(0, Math.min(horasPropietario, horasAnuales - 1));
     const horasPagadas = Math.max(1, horasAnuales - horasProp);
     // Overhaul reserve linked to PMT sinking fund:
     // PMT × 12 = annual savings needed → ÷ horasPagadas = reserve per PAYING hour
-    // (owner hours consume TBO too, but their reserve share is absorbed by payers)
+    // (operational hours consume TBO too, but their reserve share is absorbed by payers)
     const overhaulProvisionAnual = projectedMonthlyTarget * 12;
     const manttoOverhaul = overhaulProvisionAnual / horasPagadas;
     const manttoHr = mantto100hr + manttoOil + manttoOverhaul;
     const totalVariableHr = combustibleHr + aceiteHr + manttoHr;
-    // Owner flying cost: the direct variable cost (fuel + oil + maintenance wear)
-    // of the owner's free hours, absorbed as an annual fixed cost.
+    // Operational-hours cost: the direct variable cost (fuel + oil + maintenance wear)
+    // of the non-revenue hours, absorbed as an annual fixed cost.
     const costoPropietarioAnual = horasProp * (combustibleHr + aceiteHr + mantto100hr + manttoOil);
     const totalFijoAnual = seguroAnual + hangarAnual + toaPatentesAnual + contingenciasAnual + impuestoContadorAnual + limpiezaAnual + costoPropietarioAnual;
     const totalFijoMes = totalFijoAnual / 12;
@@ -7097,7 +7097,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       { name: 'Contingencies', value: contingenciasAnual, color: '#f59e0b' },
       { name: 'Tax + Accountant', value: impuestoContadorAnual, color: '#ef4444' },
       { name: 'Cleaning', value: limpiezaAnual, color: '#10b981' },
-      ...(costoPropietarioAnual > 0 ? [{ name: `Owner flying (${horasProp}h)`, value: costoPropietarioAnual, color: '#ec4899' }] : []),
+      ...(costoPropietarioAnual > 0 ? [{ name: `Operational hours (${horasProp}h)`, value: costoPropietarioAnual, color: '#ec4899' }] : []),
     ];
 
     const variableBreakdown = [
@@ -7473,11 +7473,11 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                       <span className="text-[9px] text-slate-400 dark:text-faint">hrs ({(overviewMetrics?.annualStats?.avgMonthlyHobbsThisYear ?? 0).toFixed(1)}/mo)</span>
                     </div>
                   </div>
-                  {/* Owner free hours — subset of Hours/year, flown at no charge */}
+                  {/* Operational hours — subset of Hours/year, flown at no charge (owner, maintenance, ferry) */}
                   <div className="flex items-center justify-between gap-2 py-1.5">
                     <span className="text-xs text-slate-600 dark:text-foreground-soft truncate flex items-center gap-1.5">
-                      Owner hours (free)
-                      <span className="px-1.5 py-0.5 text-[9px] font-bold bg-pink-100 dark:bg-pink-500/15 text-pink-700 dark:text-pink-300 rounded-full">OWNER</span>
+                      Operational hours
+                      <span className="px-1.5 py-0.5 text-[9px] font-bold bg-pink-100 dark:bg-pink-500/15 text-pink-700 dark:text-pink-300 rounded-full">OPS</span>
                     </span>
                     <div className="flex items-center gap-1">
                       <input
