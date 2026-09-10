@@ -6744,14 +6744,32 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const fxDeviation = currentFX - historicalMeanFX;
     const fxAdjCLP = fxBeta * fxDeviation; // Additional CLP/L from FX deviation
 
+    // ── FX FORWARD PROJECTION ──
+    // Instead of freezing today's spot FX for 3–6 month forecasts, project the
+    // USD/CLP with the same Ornstein–Uhlenbeck soft mean reversion used for Brent:
+    // anchor on spot, mild pull toward the 12-month mean. This is a pragmatic proxy
+    // for the forward curve (full covered-interest parity needs a rates feed).
+    const longRunMeanFX = brentMonthly.length > 0
+      ? brentMonthly.slice(-12).reduce((s, b) => s + b.usdCLP, 0) / Math.min(12, brentMonthly.length)
+      : currentFX;
+    const projectFX = (horizonMonths: number): number => {
+      let x = currentFX;
+      for (let i = 0; i < horizonMonths; i++) x += THETA * (longRunMeanFX - x);
+      return Math.max(1, x);
+    };
+    const fx3m = projectFX(3);
+    const fx6m = projectFX(6);
+    const fxAdj3m = fxBeta * (fx3m - historicalMeanFX);
+    const fxAdj6m = fxBeta * (fx6m - historicalMeanFX);
+
     // ── Central forecasts in CLP/L (UNBIASED) ──
     // Volatility no longer shifts the central estimate — it is symmetric and has no
     // direction, so inflating the center by volatility was a bias: it pushed the
     // forecast UP precisely when a price crash spiked volatility. Volatility (and
     // model error) now feed the confidence band below instead.
     const impliedNowCLP = Math.round(Math.max(0, impliedNowUSD * currentFX + fxAdjCLP));
-    const forecast3m = Math.round(Math.max(0, implied3mUSD * currentFX + fxAdjCLP));
-    const forecast6m = Math.round(Math.max(0, implied6mUSD * currentFX + fxAdjCLP));
+    const forecast3m = Math.round(Math.max(0, implied3mUSD * fx3m + fxAdj3m));
+    const forecast6m = Math.round(Math.max(0, implied6mUSD * fx6m + fxAdj6m));
 
     // ── CONFIDENCE BAND (95%, ±1.96σ) ──
     // Grounded in the model's own historical prediction error (WLS residual σ in
@@ -6798,6 +6816,8 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       band6m,
       brentTrend: Math.round(brentTrend * 100) / 100,
       brent3m: Math.round(brent3m * 10) / 10,
+      fx3m: Math.round(fx3m),
+      fx6m: Math.round(fx6m),
       brent6m: Math.round(brent6m * 10) / 10,
       // Volatility
       brentVolatility8w: Math.round(brentVolatility8w * 100) / 100,
@@ -8154,6 +8174,16 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
             </div>
           </div>
           <div className="p-4 sm:p-6">
+            {/* ★ OPERATIVE PRICE — the number the model actually uses */}
+            {avgasSource && (
+              <div className="mb-5 flex items-center justify-between gap-3 px-4 py-3 bg-amber-50 dark:bg-amber-500/10 rounded-xl border-2 border-amber-300 dark:border-amber-500/40">
+                <div>
+                  <p className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Operative price · used in Cost Analysis</p>
+                  <p className="text-[10px] text-slate-600 dark:text-foreground-soft">MAX of {avgasSource.breakdown.length} signals → {avgasSource.label}</p>
+                </div>
+                <p className="text-3xl font-bold font-mono text-amber-700 dark:text-amber-300">${formatCurrency(avgasSource.price)}<span className="text-sm font-semibold text-amber-600 dark:text-amber-400">/L</span></p>
+              </div>
+            )}
             {/* Weighted Averages */}
             <div className="grid grid-cols-3 gap-3 mb-5">
               {[
@@ -8192,7 +8222,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                     <Icon name="brain" className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                     <div>
                       <h5 className="text-xs font-bold text-indigo-800 dark:text-indigo-300">Brent → AVGAS Predictive Intelligence</h5>
-                      <p className="text-[9px] text-indigo-500">WLS (λ={brentAvgasCorrelation.lambda}, t½={brentAvgasCorrelation.halfLife}m) · {brentAvgasCorrelation.totalWeeks} weeks · Lag {brentAvgasCorrelation.bestLag}m · R²={brentAvgasCorrelation.bestR2.toFixed(3)}</p>
+                      <p className="text-[10px] text-indigo-700 dark:text-indigo-400">WLS (λ={brentAvgasCorrelation.lambda}, t½={brentAvgasCorrelation.halfLife}m) · {brentAvgasCorrelation.totalWeeks} weeks · Lag {brentAvgasCorrelation.bestLag}m · R²={brentAvgasCorrelation.bestR2.toFixed(3)}</p>
                     </div>
                   </div>
                   <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
@@ -8254,8 +8284,12 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                       <span className="font-mono font-bold text-slate-700 dark:text-foreground-soft">{formatCurrency(Math.round(brentAvgasCorrelation.intercept))}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-500 dark:text-muted-foreground">Current FX</span>
+                      <span className="text-slate-600 dark:text-muted-foreground">Current FX</span>
                       <span className="font-mono font-bold text-slate-700 dark:text-foreground-soft">${formatCurrency(Math.round(brentAvgasCorrelation.currentFX))}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600 dark:text-muted-foreground">FX fwd 3m / 6m</span>
+                      <span className="font-mono font-bold text-slate-700 dark:text-foreground-soft">${formatCurrency(brentAvgasCorrelation.fx3m)} / ${formatCurrency(brentAvgasCorrelation.fx6m)}</span>
                     </div>
                   </div>
 
