@@ -6313,6 +6313,10 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   const liveHorasAnuales = Math.round(overviewMetrics?.annualStats?.hobbsThisYear ?? 220);
   const [horasAnuales, setHorasAnuales] = useState(stored?.horasAnuales ?? liveHorasAnuales);
   const horasIsLive = horasAnuales === liveHorasAnuales;
+  // Owner (free) hours per year — SUBSET of horasAnuales. The owner flies these
+  // at no charge; their variable cost is absorbed as a fixed cost spread over
+  // the remaining paying hours.
+  const [horasPropietario, setHorasPropietario] = useState(stored?.horasPropietario ?? 50);
   // overhaulCycleHrs is now computed live from ENGINE component (TBO - SMOH)
   const engineComp = components?.find((c: any) => c.tipo === 'ENGINE');
   const overhaulCycleHrs = engineComp ? Math.max(0, Number(engineComp.limite_tbo) - Number(engineComp.horas_acumuladas)) : 1379.1;
@@ -6362,6 +6366,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         recaudado, valorHora, valorHoraUnit, interestRate, clForwardInflation, fuelTrendRate,
           engineMarketPriceUSD,
           engineMarketPriceOverride,
+          horasPropietario,
         // clInflationPct excluded — always fetched live from /api/ipc-chile
         // usCpiCumulPct excluded — always fetched live from /api/cpi-usa
       }));
@@ -6371,7 +6376,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     horasAnuales, seguroAnual, hangarAnual,
     toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual,
     recaudado, valorHora, valorHoraUnit, interestRate, clForwardInflation, fuelTrendRate,
-    engineMarketPriceUSD]);
+    engineMarketPriceUSD, horasPropietario]);
 
   // Computed overhaul cost: inflate total CLP cost from Aug 2022 by Chilean IPC
   const overhaulCLP = useMemo(() => {
@@ -7030,16 +7035,22 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const aceiteHr = oilLPH * aceiteLiterCLP;
     const mantto100hr = revision100CLP / maintInterval;
     const manttoOil = cambioAceiteCLP / maintInterval;
+    // Owner (free) hours: subset of horasAnuales. Paying hours carry the load.
+    const horasProp = Math.max(0, Math.min(horasPropietario, horasAnuales - 1));
+    const horasPagadas = Math.max(1, horasAnuales - horasProp);
     // Overhaul reserve linked to PMT sinking fund:
-    // PMT × 12 = annual savings needed → ÷ horasAnuales = reserve per flight hour
-    // This is lower than linear (gap/hrs) because invested savings earn compound interest
+    // PMT × 12 = annual savings needed → ÷ horasPagadas = reserve per PAYING hour
+    // (owner hours consume TBO too, but their reserve share is absorbed by payers)
     const overhaulProvisionAnual = projectedMonthlyTarget * 12;
-    const manttoOverhaul = overhaulProvisionAnual / horasAnuales;
+    const manttoOverhaul = overhaulProvisionAnual / horasPagadas;
     const manttoHr = mantto100hr + manttoOil + manttoOverhaul;
     const totalVariableHr = combustibleHr + aceiteHr + manttoHr;
-    const totalFijoAnual = seguroAnual + hangarAnual + toaPatentesAnual + contingenciasAnual + impuestoContadorAnual + limpiezaAnual;
+    // Owner flying cost: the direct variable cost (fuel + oil + maintenance wear)
+    // of the owner's free hours, absorbed as an annual fixed cost.
+    const costoPropietarioAnual = horasProp * (combustibleHr + aceiteHr + mantto100hr + manttoOil);
+    const totalFijoAnual = seguroAnual + hangarAnual + toaPatentesAnual + contingenciasAnual + impuestoContadorAnual + limpiezaAnual + costoPropietarioAnual;
     const totalFijoMes = totalFijoAnual / 12;
-    const totalFijoHr = totalFijoAnual / horasAnuales;
+    const totalFijoHr = totalFijoAnual / horasPagadas;
 
     // Total
     const totalCostoHr = totalFijoHr + totalVariableHr;
@@ -7078,6 +7089,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       { name: 'Contingencies', value: contingenciasAnual, color: '#f59e0b' },
       { name: 'Tax + Accountant', value: impuestoContadorAnual, color: '#ef4444' },
       { name: 'Cleaning', value: limpiezaAnual, color: '#10b981' },
+      ...(costoPropietarioAnual > 0 ? [{ name: `Owner flying (${horasProp}h)`, value: costoPropietarioAnual, color: '#ec4899' }] : []),
     ];
 
     const variableBreakdown = [
@@ -7096,6 +7108,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     return {
       combustibleHr, aceiteHr, manttoHr, mantto100hr, manttoOil, manttoOverhaul,
       totalVariableHr, overhaulProvisionAnual, totalFijoAnual, totalFijoMes, totalFijoHr,
+      horasPagadas, horasProp, costoPropietarioAnual,
       totalCostoHr, gananciaHr, margen, faltaOverhaul, anosRemanentes,
       calendarCapped, calendarYearsRemaining, anosRemanentesHoras,
       effectiveOverhaulCLP, overhaulSource, ipcOverhaulCLP,
@@ -7116,7 +7129,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       // H/T ratio used
       htRatio, maintInterval, tachPerYear,
     };
-  }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD, cambioAceiteCLP, revision100CLP, overhaulCLP, overhaulCycleHrs, seguroAnual, hangarAnual, toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual, recaudado, valorHoraCLP, interestRate, clForwardInflation, fuelTrendRate, overviewMetrics, overhaulMotorCLP, overhaulLaborCLP, clInflationPct, engineMarketPriceUSD, components, horasAnuales]);
+  }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD, cambioAceiteCLP, revision100CLP, overhaulCLP, overhaulCycleHrs, seguroAnual, hangarAnual, toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual, recaudado, valorHoraCLP, interestRate, clForwardInflation, fuelTrendRate, overviewMetrics, overhaulMotorCLP, overhaulLaborCLP, clInflationPct, engineMarketPriceUSD, components, horasAnuales, horasPropietario]);
 
   // Actual data from flights (yearly hours)
   const yearlyHours = useMemo(() => {
@@ -7452,6 +7465,23 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                       <span className="text-[9px] text-slate-400 dark:text-faint">hrs ({(overviewMetrics?.annualStats?.avgMonthlyHobbsThisYear ?? 0).toFixed(1)}/mo)</span>
                     </div>
                   </div>
+                  {/* Owner free hours — subset of Hours/year, flown at no charge */}
+                  <div className="flex items-center justify-between gap-2 py-1.5">
+                    <span className="text-xs text-slate-600 dark:text-foreground-soft truncate flex items-center gap-1.5">
+                      Owner hours (free)
+                      <span className="px-1.5 py-0.5 text-[9px] font-bold bg-pink-100 dark:bg-pink-500/15 text-pink-700 dark:text-pink-300 rounded-full">OWNER</span>
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min={0}
+                        value={horasPropietario}
+                        onChange={e => setHorasPropietario(Math.max(0, Number(e.target.value) || 0))}
+                        className="w-16 text-right text-[11px] font-mono font-bold px-2 py-0.5 rounded border-0 focus:ring-1 focus:ring-pink-400 text-pink-700 dark:text-pink-300 bg-pink-50 dark:bg-pink-500/10"
+                      />
+                      <span className="text-[9px] text-slate-400 dark:text-faint">hrs · {computed.horasPagadas.toFixed(0)} paying</span>
+                    </div>
+                  </div>
                 </div>
               </div>
               {/* Overhaul cost model */}
@@ -7571,10 +7601,10 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 <tr key={`f-${i}`} className="hover:bg-slate-50 dark:hover:bg-muted">
                   {i === 0 && <td rowSpan={computed.fixedBreakdown.length} className="px-4 py-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 align-top border-r border-slate-100 dark:border-edge">Fixed</td>}
                   <td className="px-4 py-2 text-xs text-slate-700 dark:text-foreground-soft">{item.name}</td>
-                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-600 dark:text-foreground-soft">${formatCurrency(Math.round(item.value / horasAnuales))}</td>
+                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-600 dark:text-foreground-soft">${formatCurrency(Math.round(item.value / computed.horasPagadas))}</td>
                   <td className="px-4 py-2 text-xs text-right font-mono text-slate-600 dark:text-foreground-soft">${formatCurrency(Math.round(item.value / 12))}</td>
                   <td className="px-4 py-2 text-xs text-right font-mono text-slate-600 dark:text-foreground-soft">${formatCurrency(Math.round(item.value))}</td>
-                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-400 dark:text-faint">{((item.value / horasAnuales / computed.totalCostoHr) * 100).toFixed(1)}%</td>
+                  <td className="px-4 py-2 text-xs text-right font-mono text-slate-400 dark:text-faint">{((item.value / computed.horasPagadas / computed.totalCostoHr) * 100).toFixed(1)}%</td>
                 </tr>
               ))}
               <tr className="bg-indigo-50/50 dark:bg-indigo-500/10 font-semibold">
