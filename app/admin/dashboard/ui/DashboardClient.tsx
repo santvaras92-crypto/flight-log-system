@@ -6317,6 +6317,10 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   // at no charge; their variable cost is absorbed as a fixed cost spread over
   // the remaining paying hours.
   const [horasPropietario, setHorasPropietario] = useState(stored?.horasPropietario ?? 50);
+  // TBO calendar extension: when true the model assumes an on-condition extension
+  // beyond the 12-yr Lycoming SI 1009BF calendar limit (Nov 2034) — but NEVER
+  // beyond the hours limit (2600h SMOH).
+  const [extenderTboCalendario, setExtenderTboCalendario] = useState(stored?.extenderTboCalendario ?? false);
   // overhaulCycleHrs is now computed live from ENGINE component (TBO - SMOH)
   const engineComp = components?.find((c: any) => c.tipo === 'ENGINE');
   const overhaulCycleHrs = engineComp ? Math.max(0, Number(engineComp.limite_tbo) - Number(engineComp.horas_acumuladas)) : 1379.1;
@@ -6367,6 +6371,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
           engineMarketPriceUSD,
           engineMarketPriceOverride,
           horasPropietario,
+          extenderTboCalendario,
         // clInflationPct excluded — always fetched live from /api/ipc-chile
         // usCpiCumulPct excluded — always fetched live from /api/cpi-usa
       }));
@@ -6376,7 +6381,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     horasAnuales, seguroAnual, hangarAnual,
     toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual,
     recaudado, valorHora, valorHoraUnit, interestRate, clForwardInflation, fuelTrendRate,
-    engineMarketPriceUSD, horasPropietario]);
+    engineMarketPriceUSD, horasPropietario, extenderTboCalendario]);
 
   // Computed overhaul cost: inflate total CLP cost from Aug 2022 by Chilean IPC
   const overhaulCLP = useMemo(() => {
@@ -6996,8 +7001,11 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const CALENDAR_TBO_DATE = new Date('2034-11-03T12:00:00Z');
     const calendarYearsRemaining = Math.max(0.01, (CALENDAR_TBO_DATE.getTime() - Date.now()) / (365.25 * 86400000));
     // The overhaul happens at whichever limit comes FIRST: hours or calendar.
-    const calendarCapped = calendarYearsRemaining < anosRemanentesHoras;
-    const anosRemanentes = Math.min(anosRemanentesHoras, calendarYearsRemaining);
+    // If the user enables the calendar extension (on-condition), only the hours
+    // limit governs — the hours limit is never extended.
+    const calendarCapped = !extenderTboCalendario && calendarYearsRemaining < anosRemanentesHoras;
+    const calendarExtended = extenderTboCalendario && calendarYearsRemaining < anosRemanentesHoras;
+    const anosRemanentes = extenderTboCalendario ? anosRemanentesHoras : Math.min(anosRemanentesHoras, calendarYearsRemaining);
 
     // ===== FINANCIAL PROJECTIONS (computed early — needed for overhaul reserve) =====
     const r = interestRate / 100;
@@ -7110,7 +7118,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       totalVariableHr, overhaulProvisionAnual, totalFijoAnual, totalFijoMes, totalFijoHr,
       horasPagadas, horasProp, costoPropietarioAnual,
       totalCostoHr, gananciaHr, margen, faltaOverhaul, anosRemanentes,
-      calendarCapped, calendarYearsRemaining, anosRemanentesHoras,
+      calendarCapped, calendarExtended, calendarYearsRemaining, anosRemanentesHoras,
       effectiveOverhaulCLP, overhaulSource, ipcOverhaulCLP,
       fixedBreakdown, variableBreakdown, costPerHourBreakdown,
       // Financial projections (CLP single-currency model)
@@ -7129,7 +7137,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       // H/T ratio used
       htRatio, maintInterval, tachPerYear,
     };
-  }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD, cambioAceiteCLP, revision100CLP, overhaulCLP, overhaulCycleHrs, seguroAnual, hangarAnual, toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual, recaudado, valorHoraCLP, interestRate, clForwardInflation, fuelTrendRate, overviewMetrics, overhaulMotorCLP, overhaulLaborCLP, clInflationPct, engineMarketPriceUSD, components, horasAnuales, horasPropietario]);
+  }, [usdRate, ufRate, avgasLiterCLP, aceiteLiterCLP, toaCLP, seguroUSD, cambioAceiteCLP, revision100CLP, overhaulCLP, overhaulCycleHrs, seguroAnual, hangarAnual, toaPatentesAnual, contingenciasAnual, impuestoContadorAnual, limpiezaAnual, recaudado, valorHoraCLP, interestRate, clForwardInflation, fuelTrendRate, overviewMetrics, overhaulMotorCLP, overhaulLaborCLP, clInflationPct, engineMarketPriceUSD, components, horasAnuales, horasPropietario, extenderTboCalendario]);
 
   // Actual data from flights (yearly hours)
   const yearlyHours = useMemo(() => {
@@ -7482,6 +7490,22 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                       <span className="text-[9px] text-slate-400 dark:text-faint">hrs · {computed.horasPagadas.toFixed(0)} paying</span>
                     </div>
                   </div>
+                  {/* TBO calendar extension toggle */}
+                  <div className="flex items-center justify-between gap-2 py-1.5">
+                    <span className="text-xs text-slate-600 dark:text-foreground-soft truncate flex items-center gap-1.5">
+                      TBO calendar extension
+                      {extenderTboCalendario && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 rounded-full">EXT</span>}
+                    </span>
+                    <label className="flex items-center gap-1.5 cursor-pointer" title="Asume extensión on-condition del límite calendario de 12 años (SI 1009BF, nov 2034). El límite de horas (2600h SMOH) siempre gobierna.">
+                      <input
+                        type="checkbox"
+                        checked={extenderTboCalendario}
+                        onChange={e => setExtenderTboCalendario(e.target.checked)}
+                        className="w-3.5 h-3.5 rounded border-slate-300 dark:border-edge text-amber-600 focus:ring-amber-400 cursor-pointer"
+                      />
+                      <span className="text-[9px] text-slate-400 dark:text-faint">ignore 12-yr cap</span>
+                    </label>
+                  </div>
                 </div>
               </div>
               {/* Overhaul cost model */}
@@ -7684,7 +7708,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         const calendarTboDate = new Date(ENGINE_IN_SERVICE);
         calendarTboDate.setFullYear(calendarTboDate.getFullYear() + 12); // 3 Nov 2034
         const calendarDaysRemaining = Math.max(0, Math.round((calendarTboDate.getTime() - today.getTime()) / 86400000));
-        const calendarGoverns = calendarTboDate.getTime() < estDate.getTime();
+        const calendarGoverns = !extenderTboCalendario && calendarTboDate.getTime() < estDate.getTime();
         const governingDate = calendarGoverns ? calendarTboDate : estDate;
 
         const fmtDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
@@ -7891,6 +7915,9 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               <p className="text-[9px] text-slate-400 dark:text-faint">{Math.round(computed.anosRemanentes * 12)} mo · {Math.round(computed.tachPerYear)} tach/yr</p>
               {computed.calendarCapped && (
                 <p className="text-[9px] text-red-500 dark:text-red-400 font-semibold mt-0.5">12-yr calendar TBO (nov 2034) gobierna · horas: {computed.anosRemanentesHoras.toFixed(1)} yrs</p>
+              )}
+              {computed.calendarExtended && (
+                <p className="text-[9px] text-amber-600 dark:text-amber-400 font-semibold mt-0.5">⚠ Extensión calendario asumida (on-condition) · límite de horas gobierna</p>
               )}
             </div>
           </div>
