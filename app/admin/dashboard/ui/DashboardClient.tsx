@@ -6596,10 +6596,28 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       allLags.push({ lag, ...wls, pairs: pairs.length });
     }
 
-    // Select lag with highest weighted R² (minimum 6 paired months, effective N ≥ 4)
+    // Select lag: FUEL MODEL V2 — frozen 2026-09-10
+    // · Brent forecast: spot / persistence (θ=0) — OU removed, spot won walk-forward
+    // · FX forecast: OU mean reversion θ=0.10 — beat spot FX consistently OOS
+    // · Brent→AVGAS lag: FIXED 1 month (dynamic discovery chose 1m in 95% of
+    //   walk-forward windows; discovery kept as DIAGNOSTIC only — never auto-switches)
+    // · WLS λ=0.03; α/β/fxβ re-estimated as new data arrives (allowed)
+    // · 3M/6M uncertainty: empirical Q90 of |relative forecast error| from backtest
+    // · Planning price: MAX overlay, independent of this forecast
+    // · Architecture frozen: changes require a new model version + new prospective cohort
+    // Backtest (walk-forward, scripts/backtest-fuel-model.ts, N3=36/N6=33):
+    //   3m: MAE $126/L · skill +19% vs persistence · +16% vs avg3m
+    //   6m: MAE $150/L · skill +11% vs persistence · +7% vs avg3m
+    //   These are BACKTEST skill values (same sample selected the architecture);
+    //   prospective validation pending — operative criterion: skill ≥ +8% after 12
+    //   realized 3m origins, positive vs both naives, no material bias deterioration.
     const validLags = allLags.filter(l => l.pairs >= 6 && l.effectiveN >= 4);
     if (validLags.length === 0) return null;
-    const bestLag = validLags.reduce((best, l) => l.r2 > best.r2 ? l : best, validLags[0]);
+    const FIXED_LAG = 1;
+    const dynBest = validLags.reduce((best, l) => l.r2 > best.r2 ? l : best, validLags[0]);
+    const bestLag = validLags.find(l => l.lag === FIXED_LAG) ?? dynBest;
+    // Lag Stability Warning (diagnostic only — model keeps fixed 1m regardless)
+    const lagStabilityWarning = dynBest.lag !== FIXED_LAG;
 
     // ── LAYER 2: Volatility Adjustment ──
     // High Brent volatility → distributors add risk premium → AVGAS rises more than linear model predicts
@@ -6721,7 +6739,9 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const longRunMeanBrent = brentWeekly.length > 0
       ? brentWeekly.slice(-52).reduce((s, w) => s + w.brentUSD, 0) / Math.min(52, brentWeekly.length)
       : currentBrent;
-    const THETA = 0.10; // monthly reversion speed toward the long-run mean
+    // V2: θ=0 — walk-forward backtest showed spot/persistence beats OU reversion
+    // for Brent at 3-6m (OU θ=0.20 degraded skill to 0%). Spot is the forecast.
+    const THETA = 0; // frozen V2 — do not change without a new model version
     const projectBrent = (horizonMonths: number): number => {
       let x = currentBrent;
       for (let i = 0; i < horizonMonths; i++) x += THETA * (longRunMeanBrent - x);
@@ -6732,10 +6752,23 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     // Implied monthly drift of the projection (telemetry / display only)
     const brentTrend = (brent6m - currentBrent) / 6;
 
-    // Apply regression to get AVGAS USD/L, then convert to CLP
-    const impliedNowUSD = effectiveSlope * currentBrent + effectiveIntercept;
-    const implied3mUSD = effectiveSlope * brent3m + effectiveIntercept;
-    const implied6mUSD = effectiveSlope * brent6m + effectiveIntercept;
+    // Apply regression to get AVGAS USD/L, then convert to CLP.
+    // LAG ALIGNMENT: the model is AVGAS_t = f(Brent_{t-lag}). Therefore:
+    //   · AVGAS now       ← Brent_{t-lag}  (already OBSERVED — use actual data, not spot)
+    //   · AVGAS at t+3    ← Brent_{t+3-lag} (project only 3-lag months ahead)
+    //   · AVGAS at t+6    ← Brent_{t+6-lag}
+    const lagM = bestLag.lag;
+    // Observed Brent lag months ago (falls back to spot if month missing)
+    const nowKey = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, '0')}`;
+    const lagMonthKey = shiftMonth(nowKey, -lagM);
+    const observedLagBrent = brentByMonth[lagMonthKey]?.brentUSD ?? currentBrent;
+    const brentForNow = lagM > 0 ? observedLagBrent : currentBrent;
+    const brentFor3m = projectBrent(Math.max(0, 3 - lagM));
+    const brentFor6m = projectBrent(Math.max(0, 6 - lagM));
+
+    const impliedNowUSD = effectiveSlope * brentForNow + effectiveIntercept;
+    const implied3mUSD = effectiveSlope * brentFor3m + effectiveIntercept;
+    const implied6mUSD = effectiveSlope * brentFor6m + effectiveIntercept;
 
     // Apply FX adjustment for current deviation from mean
     const historicalMeanFX = brentMonthly.length > 0
@@ -6744,17 +6777,18 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const fxDeviation = currentFX - historicalMeanFX;
     const fxAdjCLP = fxBeta * fxDeviation; // Additional CLP/L from FX deviation
 
-    // ── FX FORWARD PROJECTION ──
-    // Instead of freezing today's spot FX for 3–6 month forecasts, project the
-    // USD/CLP with the same Ornstein–Uhlenbeck soft mean reversion used for Brent:
-    // anchor on spot, mild pull toward the 12-month mean. This is a pragmatic proxy
-    // for the forward curve (full covered-interest parity needs a rates feed).
+    // ── FX FORECAST (MEAN REVERSION) ──
+    // NOT a market forward curve: a mean-reversion forecast. Project USD/CLP with
+    // the same Ornstein–Uhlenbeck soft pull used for Brent: anchor on spot, mild
+    // reversion toward the 12-month mean. (Full covered-interest parity would need
+    // a rates feed.) Note: FX applies at delivery time, so NO lag compensation here.
     const longRunMeanFX = brentMonthly.length > 0
       ? brentMonthly.slice(-12).reduce((s, b) => s + b.usdCLP, 0) / Math.min(12, brentMonthly.length)
       : currentFX;
+    const THETA_FX = 0.10; // V2 frozen: FX OU beat spot FX in all 16 paired walk-forward comparisons
     const projectFX = (horizonMonths: number): number => {
       let x = currentFX;
-      for (let i = 0; i < horizonMonths; i++) x += THETA * (longRunMeanFX - x);
+      for (let i = 0; i < horizonMonths; i++) x += THETA_FX * (longRunMeanFX - x);
       return Math.max(1, x);
     };
     const fx3m = projectFX(3);
@@ -6771,25 +6805,36 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const forecast3m = Math.round(Math.max(0, implied3mUSD * fx3m + fxAdj3m));
     const forecast6m = Math.round(Math.max(0, implied6mUSD * fx6m + fxAdj6m));
 
-    // ── CONFIDENCE BAND (95%, ±1.96σ) ──
-    // Grounded in the model's own historical prediction error (WLS residual σ in
-    // USD/L → CLP/L), widened gently with the forecast horizon (more Brent
-    // uncertainty further out) and capped at ±25% so an extreme-volatility regime
-    // can't render an uninformative band.
-    const residualCLP = bestLag.residualStdDev * currentFX; // σ of AVGAS in CLP/L
-    const bandCLP = (centerCLP: number, horizonMonths: number): number => {
-      const horizonInflation = Math.sqrt(1 + horizonMonths / 3); // 0m→1x, 3m→1.41x, 6m→1.73x
-      const raw = 1.96 * residualCLP * horizonInflation;
-      const cap = 0.25 * centerCLP; // sanity cap: band never exceeds ±25% of center
-      return Math.round(Math.min(raw, cap));
-    };
-    const bandNow = bandCLP(impliedNowCLP, 0);
-    const band3m = bandCLP(forecast3m, 3);
-    const band6m = bandCLP(forecast6m, 6);
+    // ── 90% EMPIRICAL UNCERTAINTY BAND — backtest calibrated ──
+    // Q90 of |relative forecast error| from the walk-forward backtest, per horizon.
+    // Replaces the old ±1.96σ(WLS residual) + ±25% cap: in-sample residual σ ignores
+    // driver-projection error and discrete distributor repricing, giving only ~78%
+    // coverage. The legacy ±25% cap is REMOVED (it never activated historically and
+    // would systematically truncate the 6m band since Q90_6m = 26% > 25%).
+    // Note: the 6M band is strongly influenced by the April 2026 distributor
+    // repricing event — excluding forecasts exposed to it, Q90 falls from 26.0% to
+    // 10.4%. Those observations remain included because discrete repricing is a real
+    // operational risk, but the sample contains too few independent repricing events
+    // to estimate their frequency reliably. In-sample coverage ~91-92%; prospective
+    // coverage pending.
+    const BAND_REL_3M = 0.172; // Q90 |rel err| 3m, backtest N=36
+    const BAND_REL_6M = 0.260; // Q90 |rel err| 6m, backtest N=33
+    const residualCLP = bestLag.residualStdDev * currentFX; // kept for diagnostics
+    const bandNow = Math.round(1.96 * residualCLP); // "now" is not a forecast — residual-based, no cap
+    const band3m = Math.round(BAND_REL_3M * forecast3m);
+    const band6m = Math.round(BAND_REL_6M * forecast6m);
 
-    // Confidence score (0-100) based on weighted R², effective N, and data span
-    const effectiveNScore = Math.min(bestLag.effectiveN / 20, 1); // 20 effective months = 100%
-    const dataSpanScore = Math.min(bestLag.pairs / 40, 1); // 40 raw months = 100%
+    // Backtest metrics (frozen V2 constants — shown in UI instead of the old
+    // composite "confidence" score, which looked like a probability but wasn't)
+    const backtest = {
+      skill3mPersist: 19, skill3mAvg3m: 16, mae3m: 126, n3: 36,
+      skill6mPersist: 11, skill6mAvg3m: 7, mae6m: 150, n6: 33,
+      lagStability: 95, // % of walk-forward windows selecting lag 1m
+    };
+
+    // Legacy confidence score (kept for backward compat; no longer the hero metric)
+    const effectiveNScore = Math.min(bestLag.effectiveN / 20, 1);
+    const dataSpanScore = Math.min(bestLag.pairs / 40, 1);
     const r2Score = effectiveR2;
     const confidence = Math.round((r2Score * 0.50 + effectiveNScore * 0.30 + dataSpanScore * 0.20) * 100);
 
@@ -6810,10 +6855,16 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       impliedNowCLP,
       forecast3m,
       forecast6m,
-      // Confidence band (±1.96σ, 95%) in CLP/L
+      // 90% Empirical Uncertainty Band (backtest calibrated) in CLP/L
       bandNow,
       band3m,
       band6m,
+      bandRel3m: BAND_REL_3M,
+      bandRel6m: BAND_REL_6M,
+      backtest,
+      fixedLag: FIXED_LAG,
+      dynBestLag: dynBest.lag,
+      lagStabilityWarning,
       brentTrend: Math.round(brentTrend * 100) / 100,
       brent3m: Math.round(brent3m * 10) / 10,
       fx3m: Math.round(fx3m),
@@ -8182,11 +8233,18 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 {brentData && <span className="text-[11px] text-slate-500 dark:text-muted-foreground">Brent US${brentData.currentBrentUSD.toFixed(0)} · FX ${formatCurrency(Math.round(usdRate))}</span>}
               </div>
             )}
-            {/* Forecast chips */}
+            {/* Forecast chips + backtest skill */}
             {brentAvgasCorrelation && (
-              <div className="mb-4 flex gap-2 flex-wrap">
-                <span className="px-3 py-1.5 rounded-lg text-[11px] bg-slate-50 dark:bg-muted text-slate-600 dark:text-foreground-soft">Forecast 3m: <span className="font-mono font-bold text-purple-700 dark:text-purple-300">${formatCurrency(brentAvgasCorrelation.forecast3m)}</span> <span className="text-slate-400 dark:text-faint">±{formatCurrency(brentAvgasCorrelation.band3m)}</span></span>
-                <span className="px-3 py-1.5 rounded-lg text-[11px] bg-slate-50 dark:bg-muted text-slate-600 dark:text-foreground-soft">Forecast 6m: <span className="font-mono font-bold text-purple-700 dark:text-purple-300">${formatCurrency(brentAvgasCorrelation.forecast6m)}</span> <span className="text-slate-400 dark:text-faint">±{formatCurrency(brentAvgasCorrelation.band6m)}</span></span>
+              <div className="mb-4">
+                <div className="flex gap-2 flex-wrap mb-1.5">
+                  <span className="px-3 py-1.5 rounded-lg text-[11px] bg-slate-50 dark:bg-muted text-slate-600 dark:text-foreground-soft">Forecast 3m: <span className="font-mono font-bold text-purple-700 dark:text-purple-300">${formatCurrency(brentAvgasCorrelation.forecast3m)}</span> <span className="text-slate-400 dark:text-faint">±{formatCurrency(brentAvgasCorrelation.band3m)}</span></span>
+                  <span className="px-3 py-1.5 rounded-lg text-[11px] bg-slate-50 dark:bg-muted text-slate-600 dark:text-foreground-soft">Forecast 6m: <span className="font-mono font-bold text-purple-700 dark:text-purple-300">${formatCurrency(brentAvgasCorrelation.forecast6m)}</span> <span className="text-slate-400 dark:text-faint">±{formatCurrency(brentAvgasCorrelation.band6m)}</span></span>
+                </div>
+                <p className="text-[10px] text-slate-500 dark:text-muted-foreground">3M backtest skill <span className="font-bold text-emerald-600 dark:text-emerald-400">+{brentAvgasCorrelation.backtest.skill3mPersist}%</span> vs current price · <span className="font-bold text-emerald-600 dark:text-emerald-400">+{brentAvgasCorrelation.backtest.skill3mAvg3m}%</span> vs 3M avg · MAE ${brentAvgasCorrelation.backtest.mae3m}/L · N={brentAvgasCorrelation.backtest.n3} — 6M: +{brentAvgasCorrelation.backtest.skill6mPersist}%/+{brentAvgasCorrelation.backtest.skill6mAvg3m}% · MAE ${brentAvgasCorrelation.backtest.mae6m}/L</p>
+                <p className="text-[9px] text-slate-400 dark:text-faint">± = 90% Empirical Uncertainty Band — backtest calibrated · prospective validation pending</p>
+                {brentAvgasCorrelation.lagStabilityWarning && (
+                  <p className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 mt-1">⚠ Lag Stability Warning: dynamic discovery currently prefers {brentAvgasCorrelation.dynBestLag}m over the frozen 1m — investigate before changing architecture</p>
+                )}
               </div>
             )}
 
@@ -8240,16 +8298,12 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                   <div className="flex items-center gap-2">
                     <Icon name="brain" className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                     <div>
-                      <h5 className="text-xs font-bold text-indigo-800 dark:text-indigo-300">Brent → AVGAS Predictive Intelligence</h5>
-                      <p className="text-[10px] text-indigo-700 dark:text-indigo-400">WLS (λ={brentAvgasCorrelation.lambda}, t½={brentAvgasCorrelation.halfLife}m) · {brentAvgasCorrelation.totalWeeks} weeks · Lag {brentAvgasCorrelation.bestLag}m · R²={brentAvgasCorrelation.bestR2.toFixed(3)}</p>
+                      <h5 className="text-xs font-bold text-indigo-800 dark:text-indigo-300">Brent → AVGAS Predictive Intelligence <span className="font-mono text-[9px] text-indigo-500">V2 frozen 2026-09</span></h5>
+                      <p className="text-[10px] text-indigo-700 dark:text-indigo-400">WLS (λ={brentAvgasCorrelation.lambda}, t½={brentAvgasCorrelation.halfLife}m) · {brentAvgasCorrelation.totalWeeks} weeks · Transfer lag: {brentAvgasCorrelation.fixedLag}m fixed (stability {brentAvgasCorrelation.backtest.lagStability}%) · R²={brentAvgasCorrelation.bestR2.toFixed(3)}</p>
                     </div>
                   </div>
-                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                    brentAvgasCorrelation.confidence >= 70 ? 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' :
-                    brentAvgasCorrelation.confidence >= 40 ? 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300' :
-                    'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300'
-                  }`}>
-                    {brentAvgasCorrelation.confidence}% CONF
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                    3M SKILL +{brentAvgasCorrelation.backtest.skill3mPersist}%
                   </span>
                 </div>
                 <div className="p-4">
@@ -8307,7 +8361,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                       <span className="font-mono font-bold text-slate-700 dark:text-foreground-soft">${formatCurrency(Math.round(brentAvgasCorrelation.currentFX))}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-600 dark:text-muted-foreground">FX fwd 3m / 6m</span>
+                      <span className="text-slate-600 dark:text-muted-foreground">FX forecast 3m / 6m</span>
                       <span className="font-mono font-bold text-slate-700 dark:text-foreground-soft">${formatCurrency(brentAvgasCorrelation.fx3m)} / ${formatCurrency(brentAvgasCorrelation.fx6m)}</span>
                     </div>
                   </div>
@@ -8323,7 +8377,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                           <span className="font-mono font-bold">${brentAvgasCorrelation.brentVolatility8w.toFixed(2)}/bbl</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-500 dark:text-muted-foreground">95% CI (±6m)</span>
+                          <span className="text-slate-500 dark:text-muted-foreground">90% band (±6m)</span>
                           <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
                             ±${formatCurrency(Math.round(brentAvgasCorrelation.band6m))}
                           </span>
