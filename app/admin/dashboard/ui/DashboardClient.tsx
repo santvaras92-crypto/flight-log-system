@@ -6455,7 +6455,34 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       }
     }
 
-    return { monthlyArr, avg3m, avg6m, avg12m, yearlyArr, cagr, totalRecords: withPrice.length };
+    // Log-linear regression over the last 36 months of monthly avg prices.
+    // Far more robust than point-to-point CAGR: uses every month, resistant
+    // to shocks at the endpoints (e.g. Apr 2026 +30% jump).
+    let trendRegression = 0;
+    {
+      const cutoff = new Date(now); cutoff.setMonth(cutoff.getMonth() - 36);
+      const cutoffKey = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, '0')}`;
+      const pts = monthlyArr
+        .filter(m => m.month >= cutoffKey && m.ppl > 0)
+        .map(m => {
+          const [y, mo] = m.month.split('-').map(Number);
+          return { x: y * 12 + mo, y: Math.log(m.ppl) };
+        });
+      if (pts.length >= 12) {
+        const n = pts.length;
+        const sx = pts.reduce((s, p) => s + p.x, 0);
+        const sy = pts.reduce((s, p) => s + p.y, 0);
+        const sxx = pts.reduce((s, p) => s + p.x * p.x, 0);
+        const sxy = pts.reduce((s, p) => s + p.x * p.y, 0);
+        const denom = n * sxx - sx * sx;
+        if (denom !== 0) {
+          const slope = (n * sxy - sx * sy) / denom; // log per month
+          trendRegression = (Math.exp(slope * 12) - 1) * 100; // %/yr
+        }
+      }
+    }
+
+    return { monthlyArr, avg3m, avg6m, avg12m, yearlyArr, cagr, trendRegression, totalRecords: withPrice.length };
   }, [fuelLogs]);
 
   // ===== BRENT → AVGAS PREDICTIVE INTELLIGENCE ENGINE =====
@@ -6859,10 +6886,15 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   useEffect(() => {
     if (avgasSource) {
       setAvgasLiterCLP(avgasSource.price);
-      // Derive trend rate from Brent forecast or CAGR, whichever is higher
-      let bestRate = 5; // floor
-      const cagrRate = fuelPriceAnalysis!.cagr > 0 ? fuelPriceAnalysis!.cagr : 5;
-      bestRate = Math.max(bestRate, cagrRate);
+      // Derive trend rate: prefer the 36-month log-linear regression (robust to
+      // endpoint shocks); fall back to CAGR; floor at 2% (long-run CLP inflation
+      // of fuel is rarely below that), cap at 15% — extrapolating a short-term
+      // shock over 7+ years compounds absurdly.
+      let bestRate = 2; // floor
+      const regRate = fuelPriceAnalysis!.trendRegression;
+      const cagrRate = fuelPriceAnalysis!.cagr;
+      const histRate = regRate !== 0 ? regRate : cagrRate;
+      if (histRate > bestRate) bestRate = histRate;
 
       // If Brent forecast available, compute annualized rate from current→forecast6m
       if (brentAvgasCorrelation && brentAvgasCorrelation.forecast6m > 0 && avgasSource.price > 0) {
@@ -6871,7 +6903,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
         if (fwdAnnualized > bestRate) bestRate = fwdAnnualized;
       }
 
-      setFuelTrendRate(Math.round(Math.min(bestRate, 50) * 10) / 10); // cap at 50%
+      setFuelTrendRate(Math.round(Math.min(bestRate, 15) * 10) / 10); // cap at 15%
       setLiveIndicators(prev => ({ ...prev, fuel: true }));
     }
   }, [avgasSource, brentAvgasCorrelation]);
@@ -8113,7 +8145,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 </div>
                 <div>
                   <h4 className="text-xs font-semibold text-slate-700 dark:text-foreground-soft">AVGAS Price Trend Analysis</h4>
-                  <p className="text-[10px] text-slate-400 dark:text-faint">From {fuelPriceAnalysis.totalRecords} fuel records · CAGR {fuelPriceAnalysis.cagr.toFixed(1)}%/yr</p>
+                  <p className="text-[10px] text-slate-400 dark:text-faint">From {fuelPriceAnalysis.totalRecords} fuel records · trend 36m {fuelPriceAnalysis.trendRegression >= 0 ? '+' : ''}{fuelPriceAnalysis.trendRegression.toFixed(1)}%/yr · CAGR {fuelPriceAnalysis.cagr.toFixed(1)}%/yr</p>
                 </div>
               </div>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
