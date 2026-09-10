@@ -8174,16 +8174,35 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
             </div>
           </div>
           <div className="p-4 sm:p-6">
-            {/* ★ OPERATIVE PRICE — the number the model actually uses */}
+            {/* Compact operative price line */}
             {avgasSource && (
-              <div className="mb-5 flex items-center justify-between gap-3 px-4 py-3 bg-amber-50 dark:bg-amber-500/10 rounded-xl border-2 border-amber-300 dark:border-amber-500/40">
-                <div>
-                  <p className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Operative price · used in Cost Analysis</p>
-                  <p className="text-[10px] text-slate-600 dark:text-foreground-soft">MAX of {avgasSource.breakdown.length} signals → {avgasSource.label}</p>
-                </div>
-                <p className="text-3xl font-bold font-mono text-amber-700 dark:text-amber-300">${formatCurrency(avgasSource.price)}<span className="text-sm font-semibold text-amber-600 dark:text-amber-400">/L</span></p>
+              <div className="mb-4 flex items-baseline gap-3 flex-wrap">
+                <p className="text-2xl font-bold font-mono text-slate-800 dark:text-foreground">${formatCurrency(avgasSource.price)}<span className="text-sm font-semibold text-slate-500 dark:text-muted-foreground">/L</span></p>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300">● used in model · {avgasSource.label}</span>
+                {brentData && <span className="text-[11px] text-slate-500 dark:text-muted-foreground">Brent US${brentData.currentBrentUSD.toFixed(0)} · FX ${formatCurrency(Math.round(usdRate))}</span>}
               </div>
             )}
+            {/* Forecast chips */}
+            {brentAvgasCorrelation && (
+              <div className="mb-4 flex gap-2 flex-wrap">
+                <span className="px-3 py-1.5 rounded-lg text-[11px] bg-slate-50 dark:bg-muted text-slate-600 dark:text-foreground-soft">Forecast 3m: <span className="font-mono font-bold text-purple-700 dark:text-purple-300">${formatCurrency(brentAvgasCorrelation.forecast3m)}</span> <span className="text-slate-400 dark:text-faint">±{formatCurrency(brentAvgasCorrelation.band3m)}</span></span>
+                <span className="px-3 py-1.5 rounded-lg text-[11px] bg-slate-50 dark:bg-muted text-slate-600 dark:text-foreground-soft">Forecast 6m: <span className="font-mono font-bold text-purple-700 dark:text-purple-300">${formatCurrency(brentAvgasCorrelation.forecast6m)}</span> <span className="text-slate-400 dark:text-faint">±{formatCurrency(brentAvgasCorrelation.band6m)}</span></span>
+              </div>
+            )}
+
+            {/* ── Fuel Forecast Multi-Variable Chart ── */}
+            <FuelForecastChart
+              fuelPriceAnalysis={fuelPriceAnalysis}
+              brentData={brentData}
+              brentAvgasCorrelation={brentAvgasCorrelation}
+              currentFX={usdRate}
+              formatCurrency={formatCurrency}
+            />
+
+            {/* ── Collapsible model details ── */}
+            <details className="mt-4 group">
+              <summary className="cursor-pointer text-[11px] font-semibold text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft select-none">▸ Model details</summary>
+              <div className="mt-3">
             {/* Weighted Averages */}
             <div className="grid grid-cols-3 gap-3 mb-5">
               {[
@@ -8388,15 +8407,8 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 </div>
               </div>
             )}
-
-            {/* ── Fuel Forecast Multi-Variable Chart ── */}
-            <FuelForecastChart
-              fuelPriceAnalysis={fuelPriceAnalysis}
-              brentData={brentData}
-              brentAvgasCorrelation={brentAvgasCorrelation}
-              currentFX={usdRate}
-              formatCurrency={formatCurrency}
-            />
+              </div>
+            </details>
           </div>
         </div>
       )}
