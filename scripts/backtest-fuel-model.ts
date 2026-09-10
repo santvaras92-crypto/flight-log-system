@@ -13,20 +13,29 @@
 //  (3) Two naive benchmarks: persistence (P_t) and Avg3m_t.
 //  Metrics: MAE, RMSE, bias, skill vs both naives, band coverage, lag frequency.
 //
-// Usage: npx tsx scripts/backtest-fuel-model.ts
-// ─────────────────────────────────────────────────────────────────────────────
+// Usage: npx tsx scripts/backtest-fuel-model.ts               (full walk-forward, model selection — V2 frozen)
+//        npx tsx scripts/backtest-fuel-model.ts --prospective  (V2 prospective cohort: origins AFTER 2026-09 only,
+//                                                               frozen architecture Brent-spot/FX-OU.10/lag-1m)
+// ───────────────────────────────────────────────────────────────────────────────
 import { prisma } from '../lib/prisma';
 import fs from 'fs';
 import path from 'path';
+
+const PROSPECTIVE = process.argv.includes('--prospective');
+const FREEZE_MONTH = '2026-09'; // V2 frozen 2026-09-10 — prospective origins are AFTER this
 
 // ── Config (mirrors production) ──
 const LAMBDA = 0.03;              // WLS exponential decay (t½ ≈ 23 months)
 const MIN_TRAIN = 30;             // minimum training months before first forecast
 const HORIZONS = [3, 6];
-const THETAS_BRENT = [0, 0.05, 0.10, 0.20];
-const THETAS_FX = [0, 0.10];
-const LAG_MODES: (number | 'dyn')[] = ['dyn', 0, 1, 2];
+// In prospective mode only the FROZEN V2 architecture runs: Brent spot (θ=0),
+// FX OU θ=0.10, lag fixed 1m. Full grid only for the (closed) selection phase.
+const THETAS_BRENT = PROSPECTIVE ? [0] : [0, 0.05, 0.10, 0.20];
+const THETAS_FX = PROSPECTIVE ? [0.10] : [0, 0.10];
+const LAG_MODES: (number | 'dyn')[] = PROSPECTIVE ? [1] : ['dyn', 0, 1, 2];
 const BAND_K = 1.96, BAND_CAP = 0.25;
+// V2 frozen empirical bands (Q90 |rel err| from selection backtest)
+const V2_BAND: Record<number, number> = { 3: 0.172, 6: 0.260 };
 
 type MonthKey = string; // "YYYY-MM"
 const shiftMonth = (m: MonthKey, delta: number): MonthKey => {
@@ -120,8 +129,14 @@ function runWLS(pairs: { x: number; y: number; month: MonthKey }[], origin: Mont
   const lagFreq = new Map<number, number>();
   const key = (thB: number, thF: number, lagMode: number | 'dyn') => `B${thB}/F${thF}/lag:${lagMode}`;
 
-  // Forecast origins: need MIN_TRAIN months of history and actual at t+h
-  const origins = avgasMonths.filter((m, i) => i >= MIN_TRAIN);
+  // Forecast origins: need MIN_TRAIN months of history and actual at t+h.
+  // Prospective mode: only origins strictly AFTER the V2 freeze month.
+  const origins = avgasMonths.filter((m, i) => i >= MIN_TRAIN && (!PROSPECTIVE || m > FREEZE_MONTH));
+  if (PROSPECTIVE) console.log(`══ PROSPECTIVE MODE — V2 frozen cohort (origins > ${FREEZE_MONTH}) ══`);
+  if (PROSPECTIVE && origins.length === 0) {
+    console.log('No prospective origins available yet. Come back when post-freeze fuel months exist.');
+    await prisma.$disconnect(); return;
+  }
   let nOrigins: Record<number, number> = { 3: 0, 6: 0 };
 
   for (const origin of origins) {
@@ -196,8 +211,8 @@ function runWLS(pairs: { x: number; y: number; month: MonthKey }[], origin: Mont
           for (const thF of THETAS_FX) {
             const fxProj = thF === 0 ? spotFX : ou(spotFX, mean12FX, thF, h);
             const pred = Math.max(0, (fit.slope * bProj + fit.intercept) * fxProj + fxBeta * (fxProj - histMeanFX));
-            const bandRaw = BAND_K * fit.residStd * fxProj * Math.sqrt(1 + h / 3);
-            const band = Math.min(bandRaw, BAND_CAP * pred);
+            const bandRaw = PROSPECTIVE ? V2_BAND[h] * pred : BAND_K * fit.residStd * fxProj * Math.sqrt(1 + h / 3);
+            const band = PROSPECTIVE ? bandRaw : Math.min(bandRaw, BAND_CAP * pred);
             const k = key(thB, thF, lagMode);
             if (!results.has(k)) results.set(k, { 3: [], 6: [] });
             results.get(k)![h].push({ e: actual - pred, inBand: Math.abs(actual - pred) <= band });
@@ -217,6 +232,12 @@ function runWLS(pairs: { x: number; y: number; month: MonthKey }[], origin: Mont
   const fmt = (v: number) => v.toFixed(0).padStart(6);
 
   console.log(`Forecast origins: N3=${nOrigins[3]} · N6=${nOrigins[6]}\n`);
+  if (PROSPECTIVE) {
+    console.log('Operative criterion (set 2026-09-10, BEFORE observing this cohort):');
+    console.log('  after 12 realized 3m origins → skill ≥ +8% vs persistence, positive vs BOTH');
+    console.log('  naives, no material bias deterioration, no structural breakdown.');
+    console.log(`  Status: ${nOrigins[3]}/12 realized 3m origins${nOrigins[3] < 12 ? ' — cohort still accumulating, read with caution' : ' — cohort complete, evaluate formally'}\n`);
+  }
   for (const h of HORIZONS) {
     const nP = mae(naiveErr.persist[h]), nA = mae(naiveErr.avg3m[h]);
     console.log(`── Horizon ${h}m ── naive-persist MAE $${nP.toFixed(0)} (bias ${bias(naiveErr.persist[h]).toFixed(0)}) · naive-avg3m MAE $${nA.toFixed(0)} (bias ${bias(naiveErr.avg3m[h]).toFixed(0)})`);

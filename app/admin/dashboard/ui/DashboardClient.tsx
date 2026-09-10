@@ -8242,6 +8242,25 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 </div>
                 <p className="text-[10px] text-slate-500 dark:text-muted-foreground">3M backtest skill <span className="font-bold text-emerald-600 dark:text-emerald-400">+{brentAvgasCorrelation.backtest.skill3mPersist}%</span> vs current price · <span className="font-bold text-emerald-600 dark:text-emerald-400">+{brentAvgasCorrelation.backtest.skill3mAvg3m}%</span> vs 3M avg · MAE ${brentAvgasCorrelation.backtest.mae3m}/L · N={brentAvgasCorrelation.backtest.n3} — 6M: +{brentAvgasCorrelation.backtest.skill6mPersist}%/+{brentAvgasCorrelation.backtest.skill6mAvg3m}% · MAE ${brentAvgasCorrelation.backtest.mae6m}/L</p>
                 <p className="text-[9px] text-slate-400 dark:text-faint">± = 90% Empirical Uncertainty Band — backtest calibrated · prospective validation pending</p>
+                {/* Prospective cohort tracker (V2 frozen 2026-09-10) */}
+                {(() => {
+                  const FREEZE = '2026-09';
+                  const months = (fuelPriceAnalysis?.monthlyArr ?? []).map((m: any) => m.month);
+                  const set = new Set(months);
+                  const addM = (m: string, d: number) => {
+                    const [y, mo] = m.split('-').map(Number);
+                    const dt = new Date(Date.UTC(y, mo - 1 + d, 1));
+                    return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}`;
+                  };
+                  const origins = months.filter((m: string) => m > FREEZE);
+                  const realized3m = origins.filter((m: string) => set.has(addM(m, 3))).length;
+                  const TARGET = 12;
+                  return realized3m >= TARGET ? (
+                    <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-1">⚑ Prospective cohort complete ({realized3m}/{TARGET} realized 3m origins) — run scripts/backtest-fuel-model.ts --prospective</p>
+                  ) : (
+                    <p className="text-[9px] text-slate-400 dark:text-faint">Prospective 3m origins realized: {realized3m}/{TARGET} · formal evaluation ~Oct 2027 · criterion: skill ≥ +8% vs both naives, no material bias drift</p>
+                  );
+                })()}
                 {brentAvgasCorrelation.lagStabilityWarning && (
                   <p className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 mt-1">⚠ Lag Stability Warning: dynamic discovery currently prefers {brentAvgasCorrelation.dynBestLag}m over the frozen 1m — investigate before changing architecture</p>
                 )}
