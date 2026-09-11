@@ -6323,7 +6323,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
   const [extenderTboCalendario, setExtenderTboCalendario] = useState(stored?.extenderTboCalendario ?? false);
   // overhaulCycleHrs is now computed live from ENGINE component (TBO - SMOH)
   const engineComp = components?.find((c: any) => c.tipo === 'ENGINE');
-  const overhaulCycleHrs = engineComp ? Math.max(0, Number(engineComp.limite_tbo) - Number(engineComp.horas_acumuladas)) : 1379.1;
+  const overhaulCycleHrs = engineComp ? Math.max(0, Number(engineComp.limite_tbo) - Number(engineComp.horas_acumuladas)) : 1820.9; // fallback = 2600 - 779.1 (Sep 2026); live DB value normally used
   // Fixed costs (annual CLP)
   const [seguroAnual, setSeguroAnual] = useState(stored?.seguroAnual ?? 4592270);
   const [hangarAnual, setHangarAnual] = useState(stored?.hangarAnual ?? 4963032);
