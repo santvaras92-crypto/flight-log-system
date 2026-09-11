@@ -7092,6 +7092,18 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const effectiveOverhaulCLP = Math.max(ipcOverhaulCLP, marketReplacementCLP);
     const overhaulSource: 'ipc' | 'market' = marketReplacementCLP >= ipcOverhaulCLP ? 'market' : 'ipc';
 
+    // ── ENGINE USD PRICE TREND — calibrated from 4 real anchors, same P/N (O-320-D2J
+    // factory rebuilt, exchange/FOB list):
+    //   Aug 2020  Penn Yan Aero               USD 30,516
+    //   Dec 2021  Eagle Copters Nº1475-2021    USD 37,556
+    //   Mar 2026  airpowerinc.com (scrape)     USD 47,415
+    //   Sep 2026  airpowerinc.com (manual)     USD 51,168
+    // Log-linear regression → ~+7.9%/yr in USD — more than double US CPI. GA engine
+    // prices did NOT revert to CPI after the 2020-21 shock (2021→2026 tranche alone
+    // runs ~+7-8%/yr). Indicative (n=4), not statistical — but far better than
+    // assuming a Lycoming tracks Chilean IPC.
+    const ENGINE_USD_TREND = 0.079;
+
     // Years to overhaul: use annual tach rate for consistency
     // When user overrides horasAnuales, derive tachPerYear from the override
     const overhaulCycleHobbs = overhaulCycleHrs * htRatio; // for display only
@@ -7119,7 +7131,16 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const projectedFunds = currentFunds * Math.pow(1 + r, yearsToOverhaul);
     const interestEarned = projectedFunds - currentFunds;
 
-    const inflatedOverhaulCost = effectiveOverhaulCLP * Math.pow(1 + clInf, yearsToOverhaul);
+    // Overhaul cost at TBO — component-based projection:
+    //   · Engine FOB (CLP via current FX): grows at ENGINE_USD_TREND (+7.9%/yr USD)
+    //   · Everything else (COMEX, IVA, labor / or the whole IPC baseline when it
+    //     governs): grows at Chilean forward inflation as before.
+    // FX is kept at spot — projecting USD/CLP 7 years out adds noise, not signal.
+    const engineFobShareCLP = overhaulSource === 'market' ? motorFobCLP : ipcMotorFobTodayCLP;
+    const nonEngineShareCLP = Math.max(0, effectiveOverhaulCLP - engineFobShareCLP);
+    const inflatedOverhaulCost =
+      engineFobShareCLP * Math.pow(1 + ENGINE_USD_TREND, yearsToOverhaul) +
+      nonEngineShareCLP * Math.pow(1 + clInf, yearsToOverhaul);
     const inflationIncrease = inflatedOverhaulCost - effectiveOverhaulCLP;
 
     const projectedGap = inflatedOverhaulCost - projectedFunds;
@@ -8029,7 +8050,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
           <div className="border border-slate-200 dark:border-edge rounded-lg p-3">
             <p className="text-[9px] text-slate-400 dark:text-faint uppercase tracking-wider font-semibold mb-2 flex items-center gap-1.5">
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-              At TBO · {interestRate}% int · {clForwardInflation}% IPC/yr
+              At TBO · {interestRate}% int · engine +7.9%/yr USD · rest {clForwardInflation}% IPC/yr
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="text-center">
