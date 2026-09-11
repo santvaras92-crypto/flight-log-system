@@ -7213,6 +7213,45 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
     const currentAnnualFuelCost = annualFuelLitros * avgasLiterCLP;
     const projectedAnnualFuelCostAtOverhaul = annualFuelLitros * projectedAvgasPrice;
 
+    // ===== OVERHAUL FUNDING TRAJECTORY (Cost Model Detail chart) =====
+    // Monthly series from today to TBO:
+    //   cost(t)        = engine FOB share × (1+7.9%)^t + rest × (1+IPC)^t
+    //   fundsPlan(t)   = current funds compounding + PMT annuity (sinking-fund plan)
+    //   fundsNoPmt(t)  = current funds compounding only (no further contributions)
+    const trajMonths = Math.min(Math.max(1, Math.ceil(monthsToOverhaul)), 240);
+    const fundingTrajectory: { t: number; cost: number; fundsPlan: number; fundsNoPmt: number }[] = [];
+    for (let mi = 0; mi <= trajMonths; mi++) {
+      const ty = mi / 12;
+      const cost = engineFobShareCLP * Math.pow(1 + ENGINE_USD_TREND, ty) + nonEngineShareCLP * Math.pow(1 + clInf, ty);
+      const fundsNoPmt = currentFunds * Math.pow(1 + r, ty);
+      const annuity = projectedMonthlyTarget > 0
+        ? (rMonthly > 0
+          ? projectedMonthlyTarget * (Math.pow(1 + rMonthly, mi) - 1) / rMonthly
+          : projectedMonthlyTarget * mi)
+        : 0;
+      fundingTrajectory.push({ t: ty, cost, fundsPlan: fundsNoPmt + annuity, fundsNoPmt });
+    }
+    const costCagrPct = yearsToOverhaul > 0.02
+      ? (Math.pow(inflatedOverhaulCost / effectiveOverhaulCLP, 1 / yearsToOverhaul) - 1) * 100
+      : 0;
+    const tboDate = new Date(Date.now() + yearsToOverhaul * 365.25 * 86400000);
+
+    // ===== ENGINE USD PRICE CALIBRATION (anchors + log-linear fit) =====
+    const engineAnchors = [
+      { t: 2020.58, usd: 30516, label: 'Penn Yan · Aug 2020' },
+      { t: 2021.92, usd: 37556, label: 'Eagle Nº1475 · Dec 2021' },
+      { t: 2026.17, usd: 47415, label: 'Air Power · Mar 2026' },
+      { t: 2026.67, usd: 51168, label: 'Air Power · Sep 2026' },
+    ];
+    const eaX = engineAnchors.map(a => a.t);
+    const eaY = engineAnchors.map(a => Math.log(a.usd));
+    const eaXm = eaX.reduce((s, v) => s + v, 0) / eaX.length;
+    const eaYm = eaY.reduce((s, v) => s + v, 0) / eaY.length;
+    const eaSlope = eaX.reduce((s, v, i) => s + (v - eaXm) * (eaY[i] - eaYm), 0) / eaX.reduce((s, v) => s + (v - eaXm) ** 2, 0);
+    const engineFit = { slope: eaSlope, intercept: eaYm - eaSlope * eaXm }; // usd(t) = exp(intercept + slope·t)
+    const engineTboYear = tboDate.getFullYear() + tboDate.getMonth() / 12;
+    const engineUsdAtTBO = Math.exp(engineFit.intercept + engineFit.slope * engineTboYear);
+
     // Breakdowns for charts
     const fixedBreakdown = [
       { name: 'Insurance', value: seguroAnual, color: '#3b82f6' },
@@ -7249,6 +7288,8 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
       yearsToOverhaul, currentFunds, projectedFunds, interestEarned,
       inflatedOverhaulCost, inflationIncrease, projectedGap, projectedMonthlyTarget,
       fvAnnuity, monthsToOverhaul, totalAtTBO,
+      fundingTrajectory, costCagrPct, tboDate,
+      engineAnchors, engineFit, engineTboYear, engineUsdAtTBO,
       motorTodayCLP, laborTodayCLP,
       ipcMotorFobTodayCLP, ipcMotorComexTodayCLP, ipcMotorIvaTodayCLP,
       // Market replacement (live engine price + internación)
@@ -8217,6 +8258,149 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                 <div className="flex h-2 rounded-full overflow-hidden bg-slate-100 dark:bg-muted">
                   <div className="bg-amber-400" style={{ width: `${(overhaulCLP / (overhaulCLP + computed.marketReplacementCLP)) * 100}%` }} />
                   <div className="bg-blue-400" style={{ width: `${(computed.marketReplacementCLP / (overhaulCLP + computed.marketReplacementCLP)) * 100}%` }} />
+                </div>
+              </div>
+
+              {/* ── Funding Trajectory chart ── */}
+              <div className="sm:col-span-2 rounded-lg p-3 border border-slate-200 dark:border-edge bg-slate-50/50 dark:bg-muted/30">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[10px] font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
+                    Funding Trajectory · today → TBO ({computed.tboDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })})
+                  </p>
+                  <span className="text-[8px] font-mono text-slate-400 dark:text-faint">cost CAGR +{computed.costCagrPct.toFixed(1)}%/yr</span>
+                </div>
+                {(() => {
+                  const traj = computed.fundingTrajectory;
+                  if (!traj || traj.length < 2) return null;
+                  const W = 640, H = 230, PL = 52, PR = 14, PT = 14, PB = 26;
+                  const tMax = traj[traj.length - 1].t;
+                  const vMax = Math.max(...traj.map(p => Math.max(p.cost, p.fundsPlan))) * 1.06;
+                  const vMin = 0;
+                  const x = (t: number) => PL + (t / tMax) * (W - PL - PR);
+                  const y = (v: number) => PT + (1 - (v - vMin) / (vMax - vMin)) * (H - PT - PB);
+                  const path = (key: 'cost' | 'fundsPlan' | 'fundsNoPmt') => traj.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(p.t).toFixed(1)},${y(p[key]).toFixed(1)}`).join(' ');
+                  // Gap area between cost and fundsPlan
+                  const gapArea = traj.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(p.t).toFixed(1)},${y(p.cost).toFixed(1)}`).join(' ')
+                    + traj.slice().reverse().map(p => ` L${x(p.t).toFixed(1)},${y(p.fundsPlan).toFixed(1)}`).join('') + ' Z';
+                  const nowYear = new Date().getFullYear();
+                  const yearTicks: number[] = [];
+                  for (let yr = nowYear + 1; yr <= nowYear + Math.floor(tMax); yr++) yearTicks.push(yr);
+                  const yearFrac = (yr: number) => yr - (nowYear + (new Date().getMonth() + 0.5) / 12);
+                  const gridVals = [0.25, 0.5, 0.75, 1].map(f => vMin + f * (vMax - vMin));
+                  const last = traj[traj.length - 1];
+                  const fmtM = (v: number) => `$${(v / 1e6).toFixed(1)}M`;
+                  return (
+                    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Overhaul funding trajectory">
+                      {/* grid */}
+                      {gridVals.map((v, i) => (
+                        <g key={i}>
+                          <line x1={PL} x2={W - PR} y1={y(v)} y2={y(v)} className="stroke-slate-200 dark:stroke-white/10" strokeWidth={1} strokeDasharray="2 3" />
+                          <text x={PL - 4} y={y(v) + 3} textAnchor="end" className="fill-slate-400 dark:fill-slate-500" fontSize={8} fontFamily="monospace">{fmtM(v)}</text>
+                        </g>
+                      ))}
+                      {/* year ticks */}
+                      {yearTicks.map(yr => {
+                        const tf = yearFrac(yr);
+                        if (tf < 0 || tf > tMax) return null;
+                        return (
+                          <g key={yr}>
+                            <line x1={x(tf)} x2={x(tf)} y1={H - PB} y2={H - PB + 3} className="stroke-slate-300 dark:stroke-white/20" strokeWidth={1} />
+                            <text x={x(tf)} y={H - PB + 12} textAnchor="middle" className="fill-slate-400 dark:fill-slate-500" fontSize={8} fontFamily="monospace">{yr}</text>
+                          </g>
+                        );
+                      })}
+                      {/* gap area */}
+                      <path d={gapArea} className="fill-red-500/10 dark:fill-red-500/15" />
+                      {/* TBO vertical line */}
+                      <line x1={x(tMax)} x2={x(tMax)} y1={PT} y2={H - PB} className="stroke-slate-400 dark:stroke-slate-500" strokeWidth={1} strokeDasharray="4 3" />
+                      <text x={x(tMax) - 4} y={PT + 8} textAnchor="end" className="fill-slate-400 dark:fill-slate-500" fontSize={8} fontWeight={700}>TBO</text>
+                      {/* series */}
+                      <path d={path('fundsNoPmt')} fill="none" className="stroke-slate-400 dark:stroke-slate-500" strokeWidth={1.2} strokeDasharray="3 3" />
+                      <path d={path('cost')} fill="none" className="stroke-red-500" strokeWidth={2} strokeLinejoin="round" />
+                      <path d={path('fundsPlan')} fill="none" className="stroke-emerald-500" strokeWidth={2} strokeLinejoin="round" />
+                      {/* endpoint markers + labels */}
+                      <circle cx={x(0)} cy={y(traj[0].fundsPlan)} r={3} className="fill-emerald-500" />
+                      <circle cx={x(tMax)} cy={y(last.cost)} r={3} className="fill-red-500" />
+                      <circle cx={x(tMax)} cy={y(last.fundsPlan)} r={3} className="fill-emerald-500" />
+                      <text x={x(tMax) - 6} y={y(last.cost) - 6} textAnchor="end" className="fill-red-600 dark:fill-red-400" fontSize={9} fontWeight={700} fontFamily="monospace">{fmtM(last.cost)}</text>
+                      <text x={x(tMax) - 6} y={y(last.fundsNoPmt) - 5} textAnchor="end" className="fill-slate-400 dark:fill-slate-500" fontSize={8} fontFamily="monospace">{fmtM(last.fundsNoPmt)}</text>
+                      <text x={x(0) + 6} y={y(traj[0].fundsPlan) - 6} className="fill-emerald-600 dark:fill-emerald-400" fontSize={9} fontWeight={700} fontFamily="monospace">{fmtM(traj[0].fundsPlan)}</text>
+                    </svg>
+                  );
+                })()}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-[9px]">
+                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-0.5 bg-red-500 rounded" /> <span className="text-slate-500 dark:text-muted-foreground">Cost projection (engine +7.9%/yr USD · rest +{clForwardInflation}% IPC)</span></span>
+                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-0.5 bg-emerald-500 rounded" /> <span className="text-slate-500 dark:text-muted-foreground">Funds @ PMT plan (${formatCurrency(Math.round(computed.projectedMonthlyTarget))}/mo · {interestRate}% int)</span></span>
+                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-0.5 border-t border-dashed border-slate-400" /> <span className="text-slate-500 dark:text-muted-foreground">Funds w/o further contributions</span></span>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <span className="px-2 py-0.5 rounded-full text-[8px] font-bold font-mono bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-500/20">GAP W/O PMT ${formatCurrency(Math.round(Math.max(0, computed.inflatedOverhaulCost - computed.projectedFunds)))}</span>
+                  <span className="px-2 py-0.5 rounded-full text-[8px] font-bold font-mono bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20">PMT CLOSES GAP AT TBO</span>
+                  <span className="px-2 py-0.5 rounded-full text-[8px] font-bold font-mono bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-muted-foreground border border-slate-200 dark:border-edge">{Math.round(computed.monthsToOverhaul)} PAYMENTS</span>
+                </div>
+              </div>
+
+              {/* ── Engine Price Calibration chart ── */}
+              <div className="sm:col-span-2 rounded-lg p-3 border border-slate-200 dark:border-edge bg-slate-50/50 dark:bg-muted/30">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[10px] font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                    Engine Price Calibration · O-320-D2J factory rebuilt (USD)
+                  </p>
+                  <span className="text-[8px] font-mono text-slate-400 dark:text-faint">log-linear fit +{((Math.exp(computed.engineFit.slope) - 1) * 100).toFixed(1)}%/yr · n={computed.engineAnchors.length}</span>
+                </div>
+                {(() => {
+                  const anchors = computed.engineAnchors;
+                  const fit = computed.engineFit;
+                  const W = 640, H = 170, PL = 46, PR = 14, PT = 14, PB = 24;
+                  const t0 = 2020, t1 = Math.ceil(computed.engineTboYear) + 0.2;
+                  const usdAt = (t: number) => Math.exp(fit.intercept + fit.slope * t);
+                  const vMax = Math.max(computed.engineUsdAtTBO, ...anchors.map(a => a.usd)) * 1.08;
+                  const vMin = 25000;
+                  const x = (t: number) => PL + ((t - t0) / (t1 - t0)) * (W - PL - PR);
+                  const y = (v: number) => PT + (1 - (v - vMin) / (vMax - vMin)) * (H - PT - PB);
+                  const lastAnchorT = anchors[anchors.length - 1].t;
+                  const seg = (ta: number, tb: number, n: number) => Array.from({ length: n + 1 }, (_, i) => {
+                    const t = ta + (i / n) * (tb - ta);
+                    return `${i === 0 ? 'M' : 'L'}${x(t).toFixed(1)},${y(usdAt(t)).toFixed(1)}`;
+                  }).join(' ');
+                  const yearTicks = [2020, 2022, 2024, 2026, 2028, 2030, 2032, 2034].filter(yr => yr >= t0 && yr <= t1);
+                  const gridVals = [30000, 40000, 50000, 60000, 70000, 80000].filter(v => v > vMin && v < vMax);
+                  return (
+                    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Engine price calibration">
+                      {gridVals.map(v => (
+                        <g key={v}>
+                          <line x1={PL} x2={W - PR} y1={y(v)} y2={y(v)} className="stroke-slate-200 dark:stroke-white/10" strokeWidth={1} strokeDasharray="2 3" />
+                          <text x={PL - 4} y={y(v) + 3} textAnchor="end" className="fill-slate-400 dark:fill-slate-500" fontSize={8} fontFamily="monospace">${(v / 1000).toFixed(0)}k</text>
+                        </g>
+                      ))}
+                      {yearTicks.map(yr => (
+                        <g key={yr}>
+                          <line x1={x(yr)} x2={x(yr)} y1={H - PB} y2={H - PB + 3} className="stroke-slate-300 dark:stroke-white/20" strokeWidth={1} />
+                          <text x={x(yr)} y={H - PB + 12} textAnchor="middle" className="fill-slate-400 dark:fill-slate-500" fontSize={8} fontFamily="monospace">{yr}</text>
+                        </g>
+                      ))}
+                      {/* fitted line: solid across anchors, dashed extrapolation to TBO */}
+                      <path d={seg(anchors[0].t, lastAnchorT, 24)} fill="none" className="stroke-blue-500" strokeWidth={1.5} />
+                      <path d={seg(lastAnchorT, computed.engineTboYear, 24)} fill="none" className="stroke-blue-400" strokeWidth={1.5} strokeDasharray="4 3" />
+                      {/* anchors */}
+                      {anchors.map((a, i) => (
+                        <g key={i}>
+                          <circle cx={x(a.t)} cy={y(a.usd)} r={3.5} className="fill-blue-600 dark:fill-blue-400" />
+                          <title>{a.label} · ${a.usd.toLocaleString()}</title>
+                          <text x={x(a.t)} y={y(a.usd) - 7} textAnchor="middle" className="fill-slate-500 dark:fill-slate-400" fontSize={8} fontFamily="monospace">${(a.usd / 1000).toFixed(1)}k</text>
+                        </g>
+                      ))}
+                      {/* TBO projection marker */}
+                      <circle cx={x(computed.engineTboYear)} cy={y(computed.engineUsdAtTBO)} r={4} fill="none" className="stroke-blue-500" strokeWidth={1.5} strokeDasharray="2 2" />
+                      <text x={x(computed.engineTboYear) - 6} y={y(computed.engineUsdAtTBO) - 8} textAnchor="end" className="fill-blue-600 dark:fill-blue-400" fontSize={9} fontWeight={700} fontFamily="monospace">${(computed.engineUsdAtTBO / 1000).toFixed(0)}k proj</text>
+                    </svg>
+                  );
+                })()}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-[9px]">
+                  <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400" /> <span className="text-slate-500 dark:text-muted-foreground">Real anchors: Penn Yan '20 · Eagle '21 · Air Power mar/sep '26</span></span>
+                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-0.5 border-t border-dashed border-blue-400" /> <span className="text-slate-500 dark:text-muted-foreground">Extrapolation to TBO (indicative, n=4 — annual re-anchor planned)</span></span>
                 </div>
               </div>
             </div>
