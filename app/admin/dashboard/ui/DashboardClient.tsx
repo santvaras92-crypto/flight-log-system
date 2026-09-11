@@ -8365,8 +8365,9 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                     const t = ta + (i / n) * (tb - ta);
                     return `${i === 0 ? 'M' : 'L'}${x(t).toFixed(1)},${y(usdAt(t)).toFixed(1)}`;
                   }).join(' ');
-                  const yearTicks = [2020, 2022, 2024, 2026, 2028, 2030, 2032, 2034].filter(yr => yr >= t0 && yr <= t1);
-                  const gridVals = [30000, 40000, 50000, 60000, 70000, 80000].filter(v => v > vMin && v < vMax);
+                  const yearTicks: number[] = [];
+                  for (let yr = 2020; yr <= t1; yr += 2) yearTicks.push(yr);
+                  const gridVals = [30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000, 110000, 120000].filter(v => v > vMin && v < vMax);
                   return (
                     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Engine price calibration">
                       {gridVals.map(v => (
