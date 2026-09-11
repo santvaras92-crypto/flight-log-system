@@ -8262,7 +8262,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               </div>
 
               {/* ── Funding Trajectory chart ── */}
-              <div className="sm:col-span-2 rounded-lg p-3 border border-slate-200 dark:border-edge bg-slate-50/50 dark:bg-muted/30">
+              <div className="sm:col-span-2 rounded-lg p-3 border border-slate-200 dark:border-edge bg-slate-50/50 dark:bg-black/20">
                 <div className="flex items-center justify-between mb-1">
                   <p className="text-[10px] font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
@@ -8296,7 +8296,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                       {gridVals.map((v, i) => (
                         <g key={i}>
                           <line x1={PL} x2={W - PR} y1={y(v)} y2={y(v)} className="stroke-slate-200 dark:stroke-white/10" strokeWidth={1} strokeDasharray="2 3" />
-                          <text x={PL - 4} y={y(v) + 3} textAnchor="end" className="fill-slate-400 dark:fill-slate-500" fontSize={8} fontFamily="monospace">{fmtM(v)}</text>
+                          <text x={PL - 4} y={y(v) + 3} textAnchor="end" className="fill-slate-400 dark:fill-slate-400" fontSize={8} fontFamily="monospace">{fmtM(v)}</text>
                         </g>
                       ))}
                       {/* year ticks */}
@@ -8306,17 +8306,17 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                         return (
                           <g key={yr}>
                             <line x1={x(tf)} x2={x(tf)} y1={H - PB} y2={H - PB + 3} className="stroke-slate-300 dark:stroke-white/20" strokeWidth={1} />
-                            <text x={x(tf)} y={H - PB + 12} textAnchor="middle" className="fill-slate-400 dark:fill-slate-500" fontSize={8} fontFamily="monospace">{yr}</text>
+                            <text x={x(tf)} y={H - PB + 12} textAnchor="middle" className="fill-slate-400 dark:fill-slate-400" fontSize={8} fontFamily="monospace">{yr}</text>
                           </g>
                         );
                       })}
                       {/* gap area */}
                       <path d={gapArea} className="fill-red-500/10 dark:fill-red-500/15" />
                       {/* TBO vertical line */}
-                      <line x1={x(tMax)} x2={x(tMax)} y1={PT} y2={H - PB} className="stroke-slate-400 dark:stroke-slate-500" strokeWidth={1} strokeDasharray="4 3" />
-                      <text x={x(tMax) - 4} y={PT + 8} textAnchor="end" className="fill-slate-400 dark:fill-slate-500" fontSize={8} fontWeight={700}>TBO</text>
+                      <line x1={x(tMax)} x2={x(tMax)} y1={PT} y2={H - PB} className="stroke-slate-400 dark:stroke-slate-400" strokeWidth={1} strokeDasharray="4 3" />
+                      <text x={x(tMax) - 4} y={PT + 8} textAnchor="end" className="fill-slate-400 dark:fill-slate-400" fontSize={8} fontWeight={700}>TBO</text>
                       {/* series */}
-                      <path d={path('fundsNoPmt')} fill="none" className="stroke-slate-400 dark:stroke-slate-500" strokeWidth={1.2} strokeDasharray="3 3" />
+                      <path d={path('fundsNoPmt')} fill="none" className="stroke-slate-400 dark:stroke-slate-400" strokeWidth={1.2} strokeDasharray="3 3" />
                       <path d={path('cost')} fill="none" className="stroke-red-500" strokeWidth={2} strokeLinejoin="round" />
                       <path d={path('fundsPlan')} fill="none" className="stroke-emerald-500" strokeWidth={2} strokeLinejoin="round" />
                       {/* endpoint markers + labels */}
@@ -8324,7 +8324,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                       <circle cx={x(tMax)} cy={y(last.cost)} r={3} className="fill-red-500" />
                       <circle cx={x(tMax)} cy={y(last.fundsPlan)} r={3} className="fill-emerald-500" />
                       <text x={x(tMax) - 6} y={y(last.cost) - 6} textAnchor="end" className="fill-red-600 dark:fill-red-400" fontSize={9} fontWeight={700} fontFamily="monospace">{fmtM(last.cost)}</text>
-                      <text x={x(tMax) - 6} y={y(last.fundsNoPmt) - 5} textAnchor="end" className="fill-slate-400 dark:fill-slate-500" fontSize={8} fontFamily="monospace">{fmtM(last.fundsNoPmt)}</text>
+                      <text x={x(tMax) - 6} y={y(last.fundsNoPmt) - 5} textAnchor="end" className="fill-slate-400 dark:fill-slate-400" fontSize={8} fontFamily="monospace">{fmtM(last.fundsNoPmt)}</text>
                       <text x={x(0) + 6} y={y(traj[0].fundsPlan) - 6} className="fill-emerald-600 dark:fill-emerald-400" fontSize={9} fontWeight={700} fontFamily="monospace">{fmtM(traj[0].fundsPlan)}</text>
                     </svg>
                   );
@@ -8342,7 +8342,7 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
               </div>
 
               {/* ── Engine Price Calibration chart ── */}
-              <div className="sm:col-span-2 rounded-lg p-3 border border-slate-200 dark:border-edge bg-slate-50/50 dark:bg-muted/30">
+              <div className="sm:col-span-2 rounded-lg p-3 border border-slate-200 dark:border-edge bg-slate-50/50 dark:bg-black/20">
                 <div className="flex items-center justify-between mb-1">
                   <p className="text-[10px] font-semibold text-slate-500 dark:text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
@@ -8373,13 +8373,13 @@ function CostAnalysis({ flights, overviewMetrics, components, fuelLogs }: { flig
                       {gridVals.map(v => (
                         <g key={v}>
                           <line x1={PL} x2={W - PR} y1={y(v)} y2={y(v)} className="stroke-slate-200 dark:stroke-white/10" strokeWidth={1} strokeDasharray="2 3" />
-                          <text x={PL - 4} y={y(v) + 3} textAnchor="end" className="fill-slate-400 dark:fill-slate-500" fontSize={8} fontFamily="monospace">${(v / 1000).toFixed(0)}k</text>
+                          <text x={PL - 4} y={y(v) + 3} textAnchor="end" className="fill-slate-400 dark:fill-slate-400" fontSize={8} fontFamily="monospace">${(v / 1000).toFixed(0)}k</text>
                         </g>
                       ))}
                       {yearTicks.map(yr => (
                         <g key={yr}>
                           <line x1={x(yr)} x2={x(yr)} y1={H - PB} y2={H - PB + 3} className="stroke-slate-300 dark:stroke-white/20" strokeWidth={1} />
-                          <text x={x(yr)} y={H - PB + 12} textAnchor="middle" className="fill-slate-400 dark:fill-slate-500" fontSize={8} fontFamily="monospace">{yr}</text>
+                          <text x={x(yr)} y={H - PB + 12} textAnchor="middle" className="fill-slate-400 dark:fill-slate-400" fontSize={8} fontFamily="monospace">{yr}</text>
                         </g>
                       ))}
                       {/* fitted line: solid across anchors, dashed extrapolation to TBO */}
