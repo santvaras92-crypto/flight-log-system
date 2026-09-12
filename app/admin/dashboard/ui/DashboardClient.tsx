@@ -137,6 +137,12 @@ type OverviewMetrics = {
   nextInspections?: {
     oilChangeRemaining: number;
     hundredHourRemaining: number;
+    lastOilTach?: number | null;
+    lastOilDate?: string | null;
+    lastHundredTach?: number | null;
+    lastHundredDate?: string | null;
+    nextOilTach?: number | null;
+    nextHundredTach?: number | null;
     // Predictive stats
     usageStats?: {
       rate30d: number;  // hrs/day last 30 days
@@ -594,6 +600,12 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
       const stats = overviewMetrics?.nextInspections?.usageStats;
       const oilRemaining = overviewMetrics?.nextInspections?.oilChangeRemaining ?? 0;
       const hundredRemaining = overviewMetrics?.nextInspections?.hundredHourRemaining ?? 0;
+      const lastOilTach = overviewMetrics?.nextInspections?.lastOilTach ?? null;
+      const lastOilDate = overviewMetrics?.nextInspections?.lastOilDate ?? null;
+      const lastHundredTach = overviewMetrics?.nextInspections?.lastHundredTach ?? null;
+      const lastHundredDate = overviewMetrics?.nextInspections?.lastHundredDate ?? null;
+      const nextOilTach = overviewMetrics?.nextInspections?.nextOilTach ?? null;
+      const nextHundredTach = overviewMetrics?.nextInspections?.nextHundredTach ?? null;
       const weightedRate = stats?.weightedRate || 0;
       const rateAnnual = stats?.rateAnnual || 0;
       // Conservative: pick the faster consumption rate → earliest inspection date
@@ -671,8 +683,12 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           {/* Oil Change Section */}
           <div className="mb-2 sm:mb-3">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-foreground-soft inline-flex items-center gap-1"><Icon name="oil" className="w-3.5 h-3.5" /> OIL</span>
-              <span className="text-[10px] sm:text-xs font-mono text-slate-600 dark:text-foreground-soft">{oilPct.toFixed(0)}%</span>
+              <span className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-foreground-soft inline-flex items-center gap-1 min-w-0"><Icon name="oil" className="w-3.5 h-3.5 shrink-0" /> OIL
+                {nextOilTach != null && (
+                  <span className="font-mono font-semibold text-amber-600 dark:text-amber-400 text-[9px] sm:text-[10px] whitespace-nowrap truncate">· NEXT {nextOilTach.toFixed(1)}ᵀ{weightedRate > 0 && oilPred.date ? ` · ~${oilPred.days}d · ${formatDate(oilPred.date)}` : ''}</span>
+                )}
+              </span>
+              <span className="text-[10px] sm:text-xs font-mono text-slate-600 dark:text-foreground-soft shrink-0">{oilPct.toFixed(0)}%</span>
             </div>
             <div className={`w-full h-2 sm:h-2.5 rounded-full ${getProgressBg(oilRemaining, OIL_INTERVAL)} overflow-hidden`}>
               <div
@@ -684,9 +700,9 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               <div className="text-[9px] sm:text-[11px] text-slate-900 dark:text-foreground font-extrabold">
                 {oilRemaining.toFixed(1)} TACH <span className="text-slate-600 dark:text-foreground-soft font-semibold">({oilHobbsRemaining.toFixed(1)} HOBBS)</span>
               </div>
-              {weightedRate > 0 && (
-                <div className="text-[9px] sm:text-[11px] text-slate-900 dark:text-foreground font-bold flex items-center gap-1">
-                  <Icon name="timer" className="w-3 h-3" /> ~{oilPred.days}d <span className="text-slate-500 dark:text-muted-foreground font-semibold">· {formatDate(oilPred.date)}</span>
+              {lastOilTach != null && (
+                <div className="text-[9px] sm:text-[10px] text-slate-500 dark:text-muted-foreground font-semibold whitespace-nowrap">
+                  LAST <span className="font-mono">{lastOilTach.toFixed(1)}ᵀ</span>{lastOilDate ? ` · ${formatDate(new Date(lastOilDate))}` : ''}
                 </div>
               )}
             </div>
@@ -695,8 +711,12 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
           {/* 100hr Inspection Section */}
           <div className="mb-2 sm:mb-3">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-foreground-soft inline-flex items-center gap-1"><Icon name="wrench" className="w-3.5 h-3.5" /> 100 HOURS</span>
-              <span className="text-[10px] sm:text-xs font-mono text-slate-600 dark:text-foreground-soft">{hundredPct.toFixed(0)}%</span>
+              <span className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-foreground-soft inline-flex items-center gap-1 min-w-0"><Icon name="wrench" className="w-3.5 h-3.5 shrink-0" /> 100 HOURS
+                {nextHundredTach != null && (
+                  <span className="font-mono font-semibold text-red-600 dark:text-red-400 text-[9px] sm:text-[10px] whitespace-nowrap truncate">· NEXT {nextHundredTach.toFixed(1)}ᵀ{weightedRate > 0 && hundredPred.date ? ` · ~${hundredPred.days}d · ${formatDate(hundredPred.date)}` : ''}</span>
+                )}
+              </span>
+              <span className="text-[10px] sm:text-xs font-mono text-slate-600 dark:text-foreground-soft shrink-0">{hundredPct.toFixed(0)}%</span>
             </div>
             <div className={`w-full h-2 sm:h-2.5 rounded-full ${getProgressBg(hundredRemaining, HUNDRED_HR_INTERVAL)} overflow-hidden`}>
               <div
@@ -708,9 +728,9 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
               <div className="text-[9px] sm:text-[11px] text-slate-900 dark:text-foreground font-extrabold">
                 {hundredRemaining.toFixed(1)} TACH <span className="text-slate-600 dark:text-foreground-soft font-semibold">({hundredHobbsRemaining.toFixed(1)} HOBBS)</span>
               </div>
-              {weightedRate > 0 && (
-                <div className="text-[9px] sm:text-[11px] text-slate-900 dark:text-foreground font-bold flex items-center gap-1">
-                  <Icon name="timer" className="w-3 h-3" /> ~{hundredPred.days}d <span className="text-slate-500 dark:text-muted-foreground font-semibold">· {formatDate(hundredPred.date)}</span>
+              {lastHundredTach != null && (
+                <div className="text-[9px] sm:text-[10px] text-slate-500 dark:text-muted-foreground font-semibold whitespace-nowrap">
+                  LAST <span className="font-mono">{lastHundredTach.toFixed(1)}ᵀ</span>{lastHundredDate ? ` · ${formatDate(new Date(lastHundredDate))}` : ''}
                 </div>
               )}
             </div>

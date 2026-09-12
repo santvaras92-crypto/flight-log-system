@@ -532,6 +532,12 @@ export default function PilotDashboardClient({ data, viewingAsAdmin = false }: {
       const stats = data.metrics.usageStats;
       const oilRemaining = data.metrics.oilChangeRemaining;
       const hundredRemaining = data.metrics.hundredHourRemaining;
+      const lastOilTach = (data.metrics as any).lastOilTach ?? null;
+      const lastOilDate = (data.metrics as any).lastOilDate ?? null;
+      const lastHundredTach = (data.metrics as any).lastHundredTach ?? null;
+      const lastHundredDate = (data.metrics as any).lastHundredDate ?? null;
+      const nextOilTach = (data.metrics as any).nextOilTach ?? null;
+      const nextHundredTach = (data.metrics as any).nextHundredTach ?? null;
       const hobbsTachRatio = data.metrics.hobbsTachRatio || 1.25;
       const weightedRate = stats?.weightedRate || 0;
       const stdDev = stats?.stdDev || 0;
@@ -604,8 +610,12 @@ export default function PilotDashboardClient({ data, viewingAsAdmin = false }: {
           {/* Oil Change Section */}
           <div className="mb-3 sm:mb-4">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-foreground-soft inline-flex items-center gap-1"><Icon name="oil" className="w-3.5 h-3.5" /> CAMBIO ACEITE</span>
-              <span className="text-[10px] sm:text-xs font-mono text-slate-600 dark:text-foreground-soft">{oilPct.toFixed(0)}%</span>
+              <span className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-foreground-soft inline-flex items-center gap-1 min-w-0"><Icon name="oil" className="w-3.5 h-3.5 shrink-0" /> ACEITE
+                {nextOilTach != null && (
+                  <span className="font-mono font-semibold text-amber-600 dark:text-amber-400 text-[9px] sm:text-[10px] whitespace-nowrap truncate">· NEXT {Number(nextOilTach).toFixed(1)}ᵀ{weightedRate > 0 && oilPred.date ? ` · ~${oilPred.days}d · ${formatDateShort(oilPred.date)}` : ''}</span>
+                )}
+              </span>
+              <span className="text-[10px] sm:text-xs font-mono text-slate-600 dark:text-foreground-soft shrink-0">{oilPct.toFixed(0)}%</span>
             </div>
             <div className={`w-full h-2.5 sm:h-3 rounded-full ${getProgressBg(oilRemaining, OIL_INTERVAL)} overflow-hidden`}>
               <div 
@@ -617,9 +627,9 @@ export default function PilotDashboardClient({ data, viewingAsAdmin = false }: {
               <div className="text-[10px] sm:text-xs text-slate-800 dark:text-foreground font-bold">
                 {oilRemaining.toFixed(1)} TACH <span className="text-slate-500 dark:text-muted-foreground font-semibold">({oilHobbsRemaining.toFixed(1)} HOBBS)</span>
               </div>
-              {weightedRate > 0 && (
-                <div className="text-[10px] sm:text-xs text-slate-900 dark:text-foreground font-bold flex items-center gap-1">
-                  <Icon name="calendar" className="w-3 h-3" /> {formatDateShort(oilPred.date)} <span className="text-slate-600 dark:text-foreground-soft font-semibold">{oilPred.days}d</span>
+              {lastOilTach != null && (
+                <div className="text-[9px] sm:text-[10px] text-slate-500 dark:text-muted-foreground font-semibold whitespace-nowrap">
+                  LAST <span className="font-mono">{Number(lastOilTach).toFixed(1)}ᵀ</span>{lastOilDate ? ` · ${formatDateShort(new Date(lastOilDate))}` : ''}
                 </div>
               )}
             </div>
@@ -628,8 +638,12 @@ export default function PilotDashboardClient({ data, viewingAsAdmin = false }: {
           {/* 100hr Inspection Section */}
           <div className="mb-3 sm:mb-4">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-foreground-soft inline-flex items-center gap-1"><Icon name="wrench" className="w-3.5 h-3.5" /> INSPECCIÓN 100 HRS</span>
-              <span className="text-[10px] sm:text-xs font-mono text-slate-600 dark:text-foreground-soft">{hundredPct.toFixed(0)}%</span>
+              <span className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-foreground-soft inline-flex items-center gap-1 min-w-0"><Icon name="wrench" className="w-3.5 h-3.5 shrink-0" /> 100 HRS
+                {nextHundredTach != null && (
+                  <span className="font-mono font-semibold text-red-600 dark:text-red-400 text-[9px] sm:text-[10px] whitespace-nowrap truncate">· NEXT {Number(nextHundredTach).toFixed(1)}ᵀ{weightedRate > 0 && hundredPred.date ? ` · ~${hundredPred.days}d · ${formatDateShort(hundredPred.date)}` : ''}</span>
+                )}
+              </span>
+              <span className="text-[10px] sm:text-xs font-mono text-slate-600 dark:text-foreground-soft shrink-0">{hundredPct.toFixed(0)}%</span>
             </div>
             <div className={`w-full h-2.5 sm:h-3 rounded-full ${getProgressBg(hundredRemaining, HUNDRED_HR_INTERVAL)} overflow-hidden`}>
               <div 
@@ -641,9 +655,9 @@ export default function PilotDashboardClient({ data, viewingAsAdmin = false }: {
               <div className="text-[10px] sm:text-xs text-slate-800 dark:text-foreground font-bold">
                 {hundredRemaining.toFixed(1)} TACH <span className="text-slate-500 dark:text-muted-foreground font-semibold">({hundredHobbsRemaining.toFixed(1)} HOBBS)</span>
               </div>
-              {weightedRate > 0 && (
-                <div className="text-[10px] sm:text-xs text-slate-900 dark:text-foreground font-bold flex items-center gap-1">
-                  <Icon name="calendar" className="w-3 h-3" /> {formatDateShort(hundredPred.date)} <span className="text-slate-600 dark:text-foreground-soft font-semibold">{hundredPred.days}d</span>
+              {lastHundredTach != null && (
+                <div className="text-[9px] sm:text-[10px] text-slate-500 dark:text-muted-foreground font-semibold whitespace-nowrap">
+                  LAST <span className="font-mono">{Number(lastHundredTach).toFixed(1)}ᵀ</span>{lastHundredDate ? ` · ${formatDateShort(new Date(lastHundredDate))}` : ''}
                 </div>
               )}
             </div>

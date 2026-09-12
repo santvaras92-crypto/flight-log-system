@@ -292,21 +292,22 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         return ini;
       };
 
-      const getLastTachForDetalle = async (keyword: string): Promise<number | null> => {
+      const getLastTachForDetalle = async (keyword: string): Promise<{ tach: number; fecha: Date } | null> => {
         const flight = await prisma.flight.findFirst({
           where: { detalle: { contains: keyword, mode: 'insensitive' } },
           orderBy: [{ fecha: 'desc' }, { id: 'desc' }],
-          select: { tach_inicio: true, tach_fin: true, diff_tach: true }
+          select: { tach_inicio: true, tach_fin: true, diff_tach: true, fecha: true }
         });
         if (!flight) return null;
         const ini = toNumber(flight.tach_inicio);
         const fin = toNumber(flight.tach_fin);
         const diff = toNumber(flight.diff_tach);
-        return ini != null ? ini : (fin != null && diff != null ? fin - diff : null);
+        const tach = ini != null ? ini : (fin != null && diff != null ? fin - diff : null);
+        return tach != null ? { tach, fecha: flight.fecha } : null;
       };
 
       // Oil change is also done during 100hr inspections, so find the most recent of either
-      const getLastOilChangeTach = async (): Promise<number | null> => {
+      const getLastOilChangeTach = async (): Promise<{ tach: number; fecha: Date } | null> => {
         const flights = await prisma.flight.findMany({
           where: {
             OR: [
@@ -317,19 +318,22 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           },
           orderBy: [{ fecha: 'desc' }, { id: 'desc' }],
           take: 1,
-          select: { tach_inicio: true, tach_fin: true, diff_tach: true }
+          select: { tach_inicio: true, tach_fin: true, diff_tach: true, fecha: true }
         });
         if (flights.length === 0) return null;
         const flight = flights[0];
         const ini = toNumber(flight.tach_inicio);
         const fin = toNumber(flight.tach_fin);
         const diff = toNumber(flight.diff_tach);
-        return ini != null ? ini : (fin != null && diff != null ? fin - diff : null);
+        const tach = ini != null ? ini : (fin != null && diff != null ? fin - diff : null);
+        return tach != null ? { tach, fecha: flight.fecha } : null;
       };
 
       const currentTach = await getCurrentTach();
-      const oilTachBase = await getLastOilChangeTach();
-      const inspectTachBase = await getLastTachForDetalle('REVISION 100 HRS');
+      const lastOil = await getLastOilChangeTach();
+      const lastHundred = await getLastTachForDetalle('REVISION 100 HRS');
+      const oilTachBase = lastOil?.tach ?? null;
+      const inspectTachBase = lastHundred?.tach ?? null;
 
       const oilUsed = oilTachBase != null && currentTach != null ? (currentTach - oilTachBase) : (currentTach != null ? (currentTach % OIL_INTERVAL) : 0);
       const inspectUsed = inspectTachBase != null && currentTach != null ? (currentTach - inspectTachBase) : (currentTach != null ? (currentTach % INSPECT_100_INTERVAL) : 0);
@@ -473,6 +477,12 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         nextInspections: {
           oilChangeRemaining: Number(oilChangeRemaining.toFixed(1)),
           hundredHourRemaining: Number(hundredHourRemaining.toFixed(1)),
+          lastOilTach: lastOil ? Number(lastOil.tach.toFixed(1)) : null,
+          lastOilDate: lastOil ? lastOil.fecha.toISOString() : null,
+          lastHundredTach: lastHundred ? Number(lastHundred.tach.toFixed(1)) : null,
+          lastHundredDate: lastHundred ? lastHundred.fecha.toISOString() : null,
+          nextOilTach: currentTach != null ? Number((currentTach + oilChangeRemaining).toFixed(1)) : null,
+          nextHundredTach: currentTach != null ? Number((currentTach + hundredHourRemaining).toFixed(1)) : null,
           usageStats: {
             rate30d: Number(rate30d.toFixed(3)),
             rate60d: Number(rate60d.toFixed(3)),
