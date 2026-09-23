@@ -609,7 +609,8 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
   } catch { }
 
   const registeredPilotCodes = users
-    .filter(u => u.rol === 'PILOTO' && u.email && !u.email.endsWith('@piloto.local'))
+    // INACTIVO users stay visible to admin (historical flights/balances); they only lose login access
+    .filter(u => (u.rol === 'PILOTO' || u.rol === 'INACTIVO') && u.email && !u.email.endsWith('@piloto.local'))
     .map(u => (u.codigo || '').toUpperCase())
     .filter(c => c && !allowedPilotCodes.includes(c));
 
