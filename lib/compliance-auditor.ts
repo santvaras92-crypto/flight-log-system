@@ -396,6 +396,43 @@ const BROWSER_HEADERS = {
   Accept: "text/html,application/xhtml+xml",
 } as const;
 
+// All fleet serial numbers, used for deterministic matching inside SB PDFs.
+function fleetSerials(): { label: string; serial: string }[] {
+  const out: { label: string; serial: string }[] = [];
+  for (const e of AIRCRAFT_PROFILE.equipos) {
+    const serials = Array.isArray(e.serial) ? e.serial : e.serial ? [e.serial] : [];
+    for (const s of serials) out.push({ label: `${e.categoria} ${e.fabricante} ${e.modelo}`, serial: s });
+  }
+  return out;
+}
+
+// Download the SB's attached PDF (the "DOWNLOAD PUBLICATION" link) and extract
+// its text. The PDF is where Lycoming puts serial-number tables and ship-date
+// ranges that the HTML page only references — without it the assessor can't
+// resolve serial-level applicability (the SB 640/659 lesson).
+async function fetchSBPdfText(pageHtml: string): Promise<string> {
+  const m = /href="([^"]+\.pdf[^"]*)"/i.exec(pageHtml);
+  if (!m) return "";
+  const url = m[1].startsWith("http") ? m[1] : `${LYC_BASE}${m[1]}`;
+  try {
+    const res = await fetch(url, { headers: { ...BROWSER_HEADERS, Accept: "application/pdf,*/*" } });
+    if (!res.ok) return "";
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length < 500 || !buf.subarray(0, 5).toString("latin1").startsWith("%PDF")) return "";
+    // pdf-parse v2 API: new PDFParse({ data }).getText()
+    const { PDFParse } = await import("pdf-parse");
+    const parser = new PDFParse({ data: new Uint8Array(buf) });
+    try {
+      const result = await parser.getText();
+      return (result.text || "").replace(/\s+/g, " ").trim();
+    } finally {
+      await parser.destroy().catch(() => {});
+    }
+  } catch {
+    return ""; // scanned/odd PDFs: fall back to page-only assessment
+  }
+}
+
 async function auditLycomingSBs(report: AuditReport, opts: { maxPages?: number; maxAssessments?: number } = {}) {
   const maxPages = opts.maxPages ?? 2; // newest ~20 publications — SBs are infrequent
   const maxAssessments = opts.maxAssessments ?? 8;
@@ -444,10 +481,12 @@ async function auditLycomingSBs(report: AuditReport, opts: { maxPages?: number; 
 
     // 4. Fetch the SB detail page and extract the structured fields.
     let pageText = "";
+    let rawHtml = "";
     try {
       const res = await fetch(c.url, { headers: BROWSER_HEADERS });
       if (!res.ok) { report.sb.skipped++; continue; }
-      pageText = (await res.text()).replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+      rawHtml = await res.text();
+      pageText = rawHtml.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
     } catch { report.sb.skipped++; continue; }
     const grab = (label: string) => {
       const m2 = new RegExp(`${label}:?\\s*(.{10,400}?)(?=SUBJECT|MODELS AFFECTED|TIME OF COMPLIANCE|REASON FOR REVISION|DOWNLOAD PUBLICATION|DATE RELEASED|Product Support)`, "i").exec(pageText);
@@ -458,14 +497,25 @@ async function auditLycomingSBs(report: AuditReport, opts: { maxPages?: number; 
     const compliance = grab("TIME OF COMPLIANCE");
     if (!models && !subject) { report.sb.skipped++; continue; }
 
-    // 5. GPT applicability check against the fleet.
+    // 4b. Pull the attached PDF — serial tables and ship-date ranges live there.
+    const pdfText = await fetchSBPdfText(rawHtml);
+
+    // 4c. Deterministic serial match: if any fleet serial appears verbatim in
+    // the PDF (e.g. the engine S/N in SB 659's affected-engines table), the SB
+    // applies — no model judgement needed.
+    const serialHit = pdfText ? fleetSerials().find((s) => s.serial.length >= 6 && pdfText.includes(s.serial)) : undefined;
+
+    // 5. GPT applicability check against the fleet (skipped on deterministic hit).
     let a: { applicable: boolean; dominio: string; recurrente: boolean; alEvento: boolean; intervaloHoras: number | null; intervaloMeses: number | null; descripcion: string; reason: string } | null = null;
-    try {
+    if (serialHit) {
+      const domGuess = /hélice|propeller/i.test(serialHit.label) ? "PROPELLER" : /célula|airframe|aeronave/i.test(serialHit.label) ? "AIRFRAME" : "ENGINE";
+      a = { applicable: true, dominio: domGuess, recurrente: false, alEvento: true, intervaloHoras: null, intervaloMeses: null, descripcion: c.title, reason: `Serial de la flota ${serialHit.serial} (${serialHit.label}) aparece LITERALMENTE en el PDF del SB — aplicabilidad determinística.` };
+    } else try {
       const resp = await openai.chat.completions.create({
         model: MODEL, temperature: 0.1, max_tokens: 350, response_format: { type: "json_object" },
         messages: [{
           role: "user",
-          content: `Eres un inspector de aeronavegabilidad. Determina si este Service Bulletin de Lycoming aplica a ESTA aeronave específica (no a la familia de modelos en general).\n\nFLOTA (CC-AQI):\n${profileForPrompt()}\n\nHECHOS VERIFICADOS (con evidencia documental — úsalos para resolver condiciones de serial/fecha):\n${factsForPrompt()}\n\nSERVICE BULLETIN:\nNúmero: ${c.numero}\nTítulo: ${c.title}\nSUBJECT: ${subject || "(s/d)"}\nMODELS AFFECTED: ${models || "(s/d)"}\nTIME OF COMPLIANCE: ${compliance || "(s/d)"}\n\nREGLAS (en orden):\n1. Si MODELS AFFECTED no incluye el modelo exacto O-320-D2J ni la serie O-320 sin exclusiones, ni un componente instalado de la flota → applicable=false. Sufijos distintos (O-320-H2AD) NO aplican.\n2. Si nombra hardware que la flota NO tiene según los HECHOS (bomba de combustible, fuel servo/inyección, turbo, E-MAG, governor) → applicable=false.\n3. Si limita por rango de fechas de despacho/8130-3 del MOTOR: usa el ship date 14-jul-2022 de los HECHOS. Fuera del rango → applicable=false. Dentro → applicable=true.\n4. Si limita por repuestos instalados después (bielas, bujes, pasadores): según los HECHOS no se instalaron → applicable=false salvo que el rebuilt de jul-2022 caiga dentro del rango de fechas del SB.\n5. Solo si la condición depende de datos que NI la flota NI los HECHOS resuelven (ej. lista de seriales en el PDF adjunto) → applicable=true con reason \"verificar serial/ship date\".\nResponde SOLO JSON: {\"applicable\":bool,\"dominio\":\"AIRFRAME|ENGINE|PROPELLER\",\"recurrente\":bool,\"alEvento\":bool,\"intervaloHoras\":nºm|null,\"intervaloMeses\":nºm|null,\"descripcion\":\"1 frase en español\",\"reason\":\"1-2 frases citando la regla y el hecho usado\"}`,
+          content: `Eres un inspector de aeronavegabilidad. Determina si este Service Bulletin de Lycoming aplica a ESTA aeronave específica (no a la familia de modelos en general).\n\nFLOTA (CC-AQI):\n${profileForPrompt()}\n\nHECHOS VERIFICADOS (con evidencia documental — úsalos para resolver condiciones de serial/fecha):\n${factsForPrompt()}\n\nSERVICE BULLETIN:\nNúmero: ${c.numero}\nTítulo: ${c.title}\nSUBJECT: ${subject || "(s/d)"}\nMODELS AFFECTED: ${models || "(s/d)"}\nTIME OF COMPLIANCE: ${compliance || "(s/d)"}\n${pdfText ? `\nTEXTO DEL PDF OFICIAL DEL SB (extracto — aquí están los rangos de seriales/fechas; los seriales de la flota YA fueron buscados literalmente sin coincidencia):\n${pdfText.slice(0, 9000)}\n` : "\n(PDF no disponible — evalúa solo con la página.)\n"}\nREGLAS (en orden):\n1. Si MODELS AFFECTED no incluye el modelo exacto O-320-D2J ni la serie O-320 sin exclusiones, ni un componente instalado de la flota → applicable=false. Sufijos distintos (O-320-H2AD) NO aplican.\n2. Si nombra hardware que la flota NO tiene según los HECHOS (bomba de combustible, fuel servo/inyección, turbo, E-MAG, governor) → applicable=false.\n3. Si el PDF o la página dan RANGOS de seriales o fechas: compáralos contra los seriales y fechas de la flota/HECHOS (motor ship date 14-jul-2022; magnetos Slick S/N 22020846 y 22030883, lote 2022; serial motor RL-7662-39E). Fuera del rango → applicable=false. Dentro → applicable=true.\n4. Si limita por repuestos instalados después (bielas, bujes, pasadores): según los HECHOS no se instalaron → applicable=false salvo que el rebuilt de jul-2022 caiga dentro del rango de fechas del SB.\n5. applicable=true con reason \"verificar manualmente\" SOLO si ni el PDF ni los HECHOS permiten decidir (ej. PDF escaneado sin texto).\nResponde SOLO JSON: {\"applicable\":bool,\"dominio\":\"AIRFRAME|ENGINE|PROPELLER\",\"recurrente\":bool,\"alEvento\":bool,\"intervaloHoras\":nºm|null,\"intervaloMeses\":nºm|null,\"descripcion\":\"1 frase en español\",\"reason\":\"1-2 frases citando la regla y el dato del PDF/HECHO usado\"}`,
         }],
       });
       a = JSON.parse(resp.choices[0]?.message?.content || "null");
