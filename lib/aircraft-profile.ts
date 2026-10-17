@@ -35,6 +35,25 @@ export function profileForPrompt(): string {
     .join("\n");
 }
 
+/**
+ * Verified, document-backed facts about THIS airframe/engine that let the
+ * applicability assessor resolve serial-number / ship-date / configuration
+ * conditions instead of flagging everything "verificar". Each fact cites its
+ * evidence so the GPT reasoning stays auditable.
+ */
+export const KNOWN_FACTS: string[] = [
+  "Motor: REBUILT de fábrica Lycoming, SHIP DATE 14-jul-2022 (registro oficial lycoming.com/rl-7662-39e; factura Eagle Copters N°6941 del 28-sep-2022). Todo SB/AD cuyo rango de despacho de motor termine antes del 14-jul-2022 NO aplica por grupo de motor; los que empiecen en/antes de jul-2022 y terminen después SÍ pueden aplicar.",
+  "Sistema de combustible: Cessna 172N de ala alta ALIMENTADO POR GRAVEDAD — NO tiene bomba de combustible mecánica accionada por el motor ni bomba eléctrica auxiliar de inyección. SBs de fuel pumps/diaphragms NO aplican.",
+  "Inducción: carburador AVSTAR AV10-5217 (flotador). NO tiene inyección de combustible (sin fuel servo), NO tiene turbo, NO tiene E-MAG ni encendido electrónico.",
+  "Magnetos: Slick 4371 (con acople de impulso), S/N 22020846 y 22030883 — fabricados ~2022 (prefijo de serial 2202/2203 = año-mes). Para SBs de magnetos Slick con rango de seriales/fechas, usar esa fecha de fabricación.",
+  "Desde la instalación del motor (2022) NO se han reemplazado bielas, bujes de biela ni pasadores de pistón; no se han instalado repuestos internos del motor fuera de los originales del rebuilt.",
+  "Hélice: McCauley 1C160/DTM7557 de paso fijo, sin governor.",
+];
+
+export function factsForPrompt(): string {
+  return KNOWN_FACTS.map((f) => `- ${f}`).join("\n");
+}
+
 /** Search terms fed to the FAA Federal Register API to find candidate ADs. */
 export const FAA_SEARCH_TERMS = [
   "Cessna 172",

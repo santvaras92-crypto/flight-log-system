@@ -22,7 +22,7 @@
  */
 import OpenAI from "openai";
 import { prisma } from "@/lib/prisma";
-import { AIRCRAFT_PROFILE, FAA_SEARCH_TERMS, FLEET_KEYWORDS, profileForPrompt } from "@/lib/aircraft-profile";
+import { AIRCRAFT_PROFILE, FAA_SEARCH_TERMS, FLEET_KEYWORDS, profileForPrompt, factsForPrompt } from "@/lib/aircraft-profile";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
@@ -146,6 +146,9 @@ async function assessApplicability(doc: FRDoc): Promise<Assessment | null> {
 AERONAVE Y COMPONENTES (CC-AQI):
 ${profileForPrompt()}
 Categoría de aeronavegabilidad: ${AIRCRAFT_PROFILE.categoria}
+
+HECHOS VERIFICADOS (con evidencia documental — úsalos para resolver condiciones de serial/fecha/configuración):
+${factsForPrompt()}
 
 DIRECTIVA (Federal Register):
 Título: ${doc.title}
@@ -462,7 +465,7 @@ async function auditLycomingSBs(report: AuditReport, opts: { maxPages?: number; 
         model: MODEL, temperature: 0.1, max_tokens: 350, response_format: { type: "json_object" },
         messages: [{
           role: "user",
-          content: `Eres un inspector de aeronavegabilidad. Determina si este Service Bulletin de Lycoming aplica a la flota.\n\nFLOTA (CC-AQI):\n${profileForPrompt()}\n\nSERVICE BULLETIN:\nNúmero: ${c.numero}\nTítulo: ${c.title}\nSUBJECT: ${subject || "(s/d)"}\nMODELS AFFECTED: ${models || "(s/d)"}\nTIME OF COMPLIANCE: ${compliance || "(s/d)"}\n\nREGLAS:\n- applicable=true SOLO si MODELS AFFECTED incluye el modelo exacto de la flota (O-320-D2J o la serie O-320 sin exclusiones) o componentes instalados (magnetos Slick 4371, carburador AVSTAR). Sufijos distintos (ej. O-320-H2AD) NO aplican.\n- Si MODELS AFFECTED nombra accesorios que la flota NO tiene (fuel servo inyectado, E-MAG, turbo, HET), applicable=false.\n- Si la aplicabilidad depende de rango de seriales/fechas de despacho que no puedes verificar, applicable=true con reason indicando \"verificar serial/ship date\" (criterio conservador).\nResponde SOLO JSON: {\"applicable\":bool,\"dominio\":\"AIRFRAME|ENGINE|PROPELLER\",\"recurrente\":bool,\"alEvento\":bool,\"intervaloHoras\":nºm|null,\"intervaloMeses\":nºm|null,\"descripcion\":\"1 frase en español\",\"reason\":\"1 frase\"}`,
+          content: `Eres un inspector de aeronavegabilidad. Determina si este Service Bulletin de Lycoming aplica a ESTA aeronave específica (no a la familia de modelos en general).\n\nFLOTA (CC-AQI):\n${profileForPrompt()}\n\nHECHOS VERIFICADOS (con evidencia documental — úsalos para resolver condiciones de serial/fecha):\n${factsForPrompt()}\n\nSERVICE BULLETIN:\nNúmero: ${c.numero}\nTítulo: ${c.title}\nSUBJECT: ${subject || "(s/d)"}\nMODELS AFFECTED: ${models || "(s/d)"}\nTIME OF COMPLIANCE: ${compliance || "(s/d)"}\n\nREGLAS (en orden):\n1. Si MODELS AFFECTED no incluye el modelo exacto O-320-D2J ni la serie O-320 sin exclusiones, ni un componente instalado de la flota → applicable=false. Sufijos distintos (O-320-H2AD) NO aplican.\n2. Si nombra hardware que la flota NO tiene según los HECHOS (bomba de combustible, fuel servo/inyección, turbo, E-MAG, governor) → applicable=false.\n3. Si limita por rango de fechas de despacho/8130-3 del MOTOR: usa el ship date 14-jul-2022 de los HECHOS. Fuera del rango → applicable=false. Dentro → applicable=true.\n4. Si limita por repuestos instalados después (bielas, bujes, pasadores): según los HECHOS no se instalaron → applicable=false salvo que el rebuilt de jul-2022 caiga dentro del rango de fechas del SB.\n5. Solo si la condición depende de datos que NI la flota NI los HECHOS resuelven (ej. lista de seriales en el PDF adjunto) → applicable=true con reason \"verificar serial/ship date\".\nResponde SOLO JSON: {\"applicable\":bool,\"dominio\":\"AIRFRAME|ENGINE|PROPELLER\",\"recurrente\":bool,\"alEvento\":bool,\"intervaloHoras\":nºm|null,\"intervaloMeses\":nºm|null,\"descripcion\":\"1 frase en español\",\"reason\":\"1-2 frases citando la regla y el hecho usado\"}`,
         }],
       });
       a = JSON.parse(resp.choices[0]?.message?.content || "null");
