@@ -22,7 +22,7 @@
  */
 import OpenAI from "openai";
 import { prisma } from "@/lib/prisma";
-import { AIRCRAFT_PROFILE, FAA_SEARCH_TERMS, profileForPrompt } from "@/lib/aircraft-profile";
+import { AIRCRAFT_PROFILE, FAA_SEARCH_TERMS, FLEET_KEYWORDS, profileForPrompt } from "@/lib/aircraft-profile";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
@@ -91,6 +91,50 @@ async function fetchFAACandidates(sinceISO: string, perTerm: number): Promise<FR
       // network hiccup for one term shouldn't abort the whole audit
     }
   }
+
+  // ── Part 39 sweep (AD Biweekly equivalent) ──
+  // Every final AD is a rule amending 14 CFR Part 39 and MUST be published in
+  // the Federal Register, so filtering by CFR title 14 / part 39 yields the
+  // complete AD stream — the same content as the FAA DRS "AD Biweekly" report
+  // (which sits behind Akamai and can't be fetched server-side). This closes
+  // the gap where an applicable AD doesn't match any FAA_SEARCH_TERMS term.
+  // Candidates are pre-filtered by fleet keywords so the GPT budget isn't
+  // burned on Boeing/Airbus ADs.
+  const kw = FLEET_KEYWORDS.map((k) => k.toLowerCase());
+  const matchesFleet = (doc: FRDoc) => {
+    const hay = `${doc.title} ${doc.abstract || ""}`.toLowerCase();
+    return kw.some((k) => hay.includes(k));
+  };
+  let page = 1;
+  const MAX_PAGES = 10; // 100/page → up to 1000 ADs per run, plenty for 24 months
+  while (page <= MAX_PAGES) {
+    const params = new URLSearchParams();
+    params.append("conditions[cfr][title]", "14");
+    params.append("conditions[cfr][part]", "39");
+    params.append("conditions[type][]", "RULE");
+    params.append("conditions[publication_date][gte]", sinceISO);
+    params.append("order", "newest");
+    params.append("per_page", "100");
+    params.append("page", String(page));
+    for (const f of ["title", "abstract", "html_url", "document_number", "publication_date", "effective_on", "docket_ids"]) {
+      params.append("fields[]", f);
+    }
+    try {
+      const res = await fetch(`${FR_API}?${params.toString()}`, { headers: { Accept: "application/json" } });
+      if (!res.ok) break;
+      const json = (await res.json()) as { results?: FRDoc[]; total_pages?: number };
+      for (const doc of json.results || []) {
+        if (seen.has(doc.document_number)) continue;
+        seen.add(doc.document_number);
+        if (matchesFleet(doc)) out.push(doc);
+      }
+      if (!json.results?.length || page >= (json.total_pages ?? 1)) break;
+      page++;
+    } catch {
+      break; // the keyword search above already provides baseline coverage
+    }
+  }
+
   return out;
 }
 
@@ -281,15 +325,29 @@ async function auditDGAC(report: AuditReport) {
       response_format: { type: "json_object" },
       messages: [{
         role: "user",
-        content: `Eres un inspector de aeronavegabilidad. Del siguiente listado oficial de Directivas de Aeronavegabilidad (DA) NACIONALES vigentes de la DGAC de Chile, extrae SOLO las que apliquen a esta aeronave/flota específica según su columna "Aplicación".\n\nFLOTA (CC-AQI):\n${profileForPrompt()}\n\nREGLAS:\n- Incluye una DA solo si su "Aplicación" nombra un fabricante/modelo de la flota (Cessna 172, Lycoming O-320, McCauley, magnetos Slick) o dice "TODA AERONAVE".\n- EXCLUYE explícitamente DAs de otros productos (helicópteros, Piper, Boeing, Beechcraft, planeadores, Czech Sport, etc.).\n- Conserva el número EXACTO con su prefijo, ej. "DA 78-02".\n- "descripcion": la tabla solo trae el fabricante; redacta una frase corta tipo "DA nacional DGAC aplicable a motores Lycoming" (el detalle real está en el PDF).\n- Responde SOLO JSON (sin markdown): {"items":[{"numero","descripcion","dominio":"AIRFRAME|ENGINE|PROPELLER","aplica":true|false,"vigencia":"texto de fecha/norma tal cual","recurrente":true|false,"intervaloHoras":número|null,"intervaloMeses":número|null,"razon":"1 frase: por qué aplica a la flota"}]}\n\nLISTADO:\n${text}`,
+        content: `Eres un inspector de aeronavegabilidad. Del siguiente listado oficial de Directivas de Aeronavegabilidad (DA) NACIONALES vigentes de la DGAC de Chile, extrae SOLO las que apliquen a esta aeronave/flota específica según su columna "Aplicación".\n\nFLOTA (CC-AQI):\n${profileForPrompt()}\n\nREGLAS:\n- Incluye una DA solo si su "Aplicación" nombra un fabricante/modelo de la flota (Cessna 172, Lycoming O-320, McCauley, magnetos Slick) o dice "TODA AERONAVE".\n- EXCLUYE explícitamente DAs de otros productos (helicópteros, Piper, Boeing, Beechcraft, planeadores, Czech Sport, etc.).\n- Conserva el número EXACTO con su prefijo, ej. "DA 78-02".\n- PROHIBIDO inventar o deducir números: solo puedes devolver números que aparezcan LITERALMENTE en el LISTADO. Si no hay DAs aplicables, responde {"items":[]}.\n- "descripcion": la tabla solo trae el fabricante; redacta una frase corta tipo "DA nacional DGAC aplicable a motores Lycoming" (el detalle real está en el PDF).\n- Responde SOLO JSON (sin markdown): {"items":[{"numero","descripcion","dominio":"AIRFRAME|ENGINE|PROPELLER","aplica":true|false,"vigencia":"texto de fecha/norma tal cual","recurrente":true|false,"intervaloHoras":número|null,"intervaloMeses":número|null,"razon":"1 frase: por qué aplica a la flota"}]}\n\nLISTADO:\n${text}`,
       }],
     });
     const parsed = JSON.parse(resp.choices[0]?.message?.content || "{}") as { items?: any[] };
     const items = parsed.items || [];
+    // Anti-hallucination guard: the LLM must only return DA numbers that exist
+    // verbatim in the scraped source text. Compare on a normalized form
+    // (strip "DA" prefix, whitespace and punctuation) so formatting noise in
+    // the HTML doesn't cause false negatives.
+    const sourceNorm = text.replace(/[\s.\-–—]/g, "").toUpperCase();
+    const numeroEnFuente = (numero: string) => {
+      const core = numero.replace(/^DA\s*/i, "").replace(/[\s.\-–—]/g, "").toUpperCase();
+      return core.length >= 4 && sourceNorm.includes(core);
+    };
     const existing = await prisma.complianceDirective.findMany({ where: { aircraftId: MATRICULA, tipo: "DA" }, select: { numero: true } });
     const known = new Set(existing.map((e) => normNum(e.numero)));
     for (const it of items) {
       if (!it?.numero || it.aplica === false) { report.dgac.skipped++; continue; }
+      if (!numeroEnFuente(String(it.numero))) {
+        report.dgac.skipped++;
+        report.notes.push(`DGAC: "${String(it.numero).trim()}" descartada — el número no existe en el listado oficial (posible alucinación del modelo).`);
+        continue;
+      }
       if (known.has(normNum(String(it.numero)))) { report.dgac.skipped++; continue; }
       known.add(normNum(String(it.numero)));
       report.dgac.applicable++;

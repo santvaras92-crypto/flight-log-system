@@ -4705,7 +4705,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
   const router = useRouter();
   const rate = (usageStats?.rateAnnual && usageStats.rateAnnual > 0 ? usageStats.rateAnnual : usageStats?.weightedRate) || 0;
 
-  const [tipoFilter, setTipoFilter] = useState<'ALL' | 'AD' | 'DA'>('ALL');
+  const [tipoFilter, setTipoFilter] = useState<'ALL' | 'AD' | 'DA' | 'SB'>('ALL');
   const [soloAplican, setSoloAplican] = useState(true);
   const [modal, setModal] = useState<{ open: boolean; dir: any | null }>({ open: false, dir: null });
   const [form, setForm] = useState({ fecha: '', horas: '', ot: '', notas: '' });
@@ -4794,7 +4794,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
         return (a.orden ?? 0) - (b.orden ?? 0);
       });
     }
-    return ['AD', 'DA'].filter((t) => byTipo[t]?.length).map((t) => ({ tipo: t, items: byTipo[t] }));
+    return ['AD', 'DA', 'SB'].filter((t) => byTipo[t]?.length).map((t) => ({ tipo: t, items: byTipo[t] }));
   }, [directives, tipoFilter, soloAplican]);
 
   const openModal = (dir: any) => {
@@ -4944,6 +4944,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
                   className="w-full border border-slate-200 dark:border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-edge-strong">
                   <option value="AD">AD (FAA)</option>
                   <option value="DA">DA (DGAC)</option>
+                  <option value="SB">SB (Fabricante)</option>
                 </select>
               </div>
               <div>
@@ -5105,10 +5106,10 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex gap-1 bg-slate-100/80 dark:bg-muted p-1 rounded-lg">
-          {(['ALL', 'AD', 'DA'] as const).map((t) => (
+          {(['ALL', 'AD', 'DA', 'SB'] as const).map((t) => (
             <button key={t} onClick={() => setTipoFilter(t)}
               className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${tipoFilter === t ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge' : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft'}`}>
-              {t === 'ALL' ? 'Todas' : t === 'AD' ? 'AD (FAA)' : 'DA (DGAC)'}
+              {t === 'ALL' ? 'Todas' : t === 'AD' ? 'AD (FAA)' : t === 'DA' ? 'DA (DGAC)' : 'SB (Fabricante)'}
             </button>
           ))}
         </div>
@@ -5184,8 +5185,8 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
       {grouped.map(({ tipo, items }) => (
         <div key={tipo} className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl shadow-sm overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 dark:bg-muted border-b border-slate-200 dark:border-edge">
-            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${tipo === 'AD' ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/30' : 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border-red-200 dark:border-red-500/30'}`}>{tipo === 'AD' ? 'FAA' : 'DGAC'}</span>
-            <span className="font-semibold text-slate-700 dark:text-foreground-soft text-sm">{tipo === 'AD' ? 'Airworthiness Directives (FAA)' : 'Airworthiness Directives (DGAC)'}</span>
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${tipo === 'AD' ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/30' : tipo === 'DA' ? 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border-red-200 dark:border-red-500/30' : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30'}`}>{tipo === 'AD' ? 'FAA' : tipo === 'DA' ? 'DGAC' : 'OEM'}</span>
+            <span className="font-semibold text-slate-700 dark:text-foreground-soft text-sm">{tipo === 'AD' ? 'Airworthiness Directives (FAA)' : tipo === 'DA' ? 'Airworthiness Directives (DGAC)' : 'Service Bulletins (Fabricante)'}</span>
             <span className="text-xs text-slate-400 dark:text-faint">({items.length})</span>
           </div>
           <div className="overflow-x-auto">

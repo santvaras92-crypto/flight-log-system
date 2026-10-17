@@ -42,3 +42,20 @@ export const FAA_SEARCH_TERMS = [
   "McCauley propeller",
   "Slick magneto",
 ];
+
+/**
+ * Keywords used to pre-filter the full 14 CFR Part 39 sweep (the Federal
+ * Register equivalent of the FAA AD Biweekly). An AD whose title/abstract
+ * mentions none of these cannot apply to the fleet, so it is skipped without
+ * spending a GPT assessment. Case-insensitive substring match.
+ */
+export const FLEET_KEYWORDS = [
+  "cessna",
+  "textron aviation", // Cessna's type-certificate holder ("Bell Textron" = helicopters, excluded)
+  "lycoming",
+  "mccauley",
+  "slick",
+  "champion aerospace", // current manufacturer of Slick magnetos
+  "avstar",
+  "carburetor",
+];

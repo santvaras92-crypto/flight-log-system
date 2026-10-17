@@ -59,7 +59,7 @@ export async function guardarDirectiva(input: DirectivaInput) {
   try {
     if (!input.numero || !input.numero.trim()) return { success: false, error: 'El número es requerido' };
     if (!input.descripcion || !input.descripcion.trim()) return { success: false, error: 'La descripción es requerida' };
-    if (!['AD', 'DA'].includes(input.tipo)) return { success: false, error: 'Tipo inválido (AD/DA)' };
+    if (!['AD', 'DA', 'SB'].includes(input.tipo)) return { success: false, error: 'Tipo inválido (AD/DA/SB)' };
     if (!['AIRFRAME', 'ENGINE', 'PROPELLER'].includes(input.dominio)) return { success: false, error: 'Dominio inválido' };
     const aplicabilidad = input.aplicabilidad === 'APLICA' ? 'APLICA' : 'NO_APLICA';
 
