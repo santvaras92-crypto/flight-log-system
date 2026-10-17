@@ -4741,7 +4741,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
       const res = await runAuditNow();
       if (res.success && res.report) {
         setAuditReport(res.report);
-        if ((res.report.faa.added + res.report.dgac.added) > 0) {
+        if ((res.report.faa.added + res.report.dgac.added + (res.report.sb?.added ?? 0)) > 0) {
           setTimeout(() => router.refresh(), 1600);
         }
       } else {
@@ -5143,10 +5143,20 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
                 <h4 className="font-semibold text-slate-800 dark:text-foreground text-sm">Audit result</h4>
                 <button onClick={() => setAuditReport(null)} className="text-slate-400 dark:text-faint hover:text-slate-600 dark:hover:text-foreground-soft text-lg leading-none">×</button>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm mb-3">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-sm mb-3">
                 <div><div className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-faint font-semibold">FAA reviewed</div><div className="text-lg font-bold text-slate-700 dark:text-foreground-soft">{auditReport.faa?.scanned ?? 0}</div></div>
                 <div><div className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-faint font-semibold">FAA applicable</div><div className="text-lg font-bold text-slate-700 dark:text-foreground-soft">{auditReport.faa?.applicable ?? 0}</div></div>
-                <div><div className="text-[11px] uppercase tracking-wide text-emerald-500 font-semibold">Newly added</div><div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{(auditReport.faa?.added ?? 0) + (auditReport.dgac?.added ?? 0)}</div></div>
+                <div><div className="text-[11px] uppercase tracking-wide text-emerald-500 font-semibold">Newly added</div><div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{(auditReport.faa?.added ?? 0) + (auditReport.dgac?.added ?? 0) + (auditReport.sb?.added ?? 0)}</div></div>
+                <div>
+                  <div className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-faint font-semibold">Lycoming SB</div>
+                  <div className="text-lg font-bold text-slate-700 dark:text-foreground-soft" title="Service Bulletins del fabricante del motor revisados contra la flota">
+                    {(auditReport.sb?.added ?? 0) > 0
+                      ? auditReport.sb.added
+                      : (auditReport.sb?.scanned ?? 0) > 0
+                        ? <span className="text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1" title={`${auditReport.sb.scanned} boletines revisados, sin nuevos aplicables`}><Icon name="check" className="w-4 h-4" /> {auditReport.sb.scanned} rev.</span>
+                        : '—'}
+                  </div>
+                </div>
                 <div>
                   <div className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-faint font-semibold">DGAC (Chile)</div>
                   <div className="text-lg font-bold text-slate-700 dark:text-foreground-soft" title="U.S. design aircraft: DGAC airworthiness is met by adopting the state-of-design (FAA) ADs, already reviewed. ICAO Annex 8 principle.">

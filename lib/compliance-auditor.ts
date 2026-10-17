@@ -36,6 +36,7 @@ export interface AuditReport {
   finishedAt: string;
   faa: { scanned: number; applicable: number; added: number; skipped: number; errors: number };
   dgac: { scanned: number; applicable: number; added: number; skipped: number; enabled: boolean };
+  sb: { scanned: number; applicable: number; added: number; skipped: number };
   added: { tipo: string; numero: string; descripcion: string; esEmergencia: boolean; url?: string }[];
   notes: string[];
 }
@@ -194,7 +195,7 @@ CRITERIOS:
 // "DA 75-07", "DA75-07" and "75 07" collapse to the same key.
 function normNum(s: string): string {
   return s
-    .replace(/^\s*(AD|DAN|DA)\b/i, "")
+    .replace(/^\s*(AD|DAN|DA|MSB|SB)\b/i, "")
     .replace(/[\s-]+/g, "")
     .toUpperCase();
 }
@@ -377,6 +378,119 @@ async function auditDGAC(report: AuditReport) {
   }
 }
 
+// ── Lycoming Service Bulletin audit ──
+// Lycoming publishes its Service Bulletins as structured pages (SUBJECT /
+// MODELS AFFECTED / TIME OF COMPLIANCE) under /contact/knowledge-base/
+// publications. We scrape the newest listing pages, skip SBs already logged,
+// pull each new SB's detail page and let GPT decide applicability against the
+// fleet profile — with the same anti-hallucination rule: the SB number must
+// exist literally in the scraped listing. Other OEMs (McCauley, Champion/
+// Slick, AVStar) have no scrapeable public listings, so they stay manual.
+const LYC_BASE = "https://www.lycoming.com";
+const LYC_LIST = `${LYC_BASE}/contact/knowledge-base/publications?f%5B0%5D=publication_category%3A31`;
+const BROWSER_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131 Safari/537.36",
+  Accept: "text/html,application/xhtml+xml",
+} as const;
+
+async function auditLycomingSBs(report: AuditReport, opts: { maxPages?: number; maxAssessments?: number } = {}) {
+  const maxPages = opts.maxPages ?? 2; // newest ~20 publications — SBs are infrequent
+  const maxAssessments = opts.maxAssessments ?? 8;
+
+  // 1—2. Collect SB links from the listing pages.
+  const candidates: { numero: string; title: string; url: string }[] = [];
+  const seen = new Set<string>();
+  for (let page = 0; page < maxPages; page++) {
+    const url = page === 0 ? LYC_LIST : `${LYC_LIST}&page=${page}`;
+    const res = await fetch(url, { headers: BROWSER_HEADERS });
+    if (!res.ok) {
+      report.notes.push(`Lycoming SB: el listado respondió ${res.status}. Omitido.`);
+      return;
+    }
+    const html = await res.text();
+    // Listing rows look like:
+    //   <a href="/publications/service-bulletin-no-639" rel="bookmark">
+    //     <h5 class="title"><span …>Service Bulletin No. 639 A</span></h5>
+    //     <p><strong>Inspection of Rocker Arm…</strong></p></a>
+    const re = /<a[^>]+href="([^"]*(?:service-bulletin|special-service)[^"]*)"[^>]*>[\s\S]{0,400}?Service Bulletin No\.?\s*([0-9]+\s?[A-Z]?)\b[\s\S]{0,200}?(?:<strong>([^<]+)<\/strong>)?[\s\S]{0,100}?<\/a>/gi;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(html))) {
+      const numero = `SB ${m[2].trim().replace(/\s+/g, "")}`;
+      if (seen.has(normNum(numero))) continue;
+      seen.add(normNum(numero));
+      const href = m[1].startsWith("http") ? m[1] : `${LYC_BASE}${m[1]}`;
+      const subject = (m[3] || "").replace(/\s+/g, " ").trim();
+      candidates.push({ numero, title: subject ? `Service Bulletin No. ${m[2].trim()} — ${subject}` : `Service Bulletin No. ${m[2].trim()}`, url: href });
+    }
+  }
+  report.sb.scanned = candidates.length;
+  if (!candidates.length) {
+    report.notes.push("Lycoming SB: no se pudieron extraer boletines del listado (formato de página cambiado?).");
+    return;
+  }
+
+  // 3. Drop SBs already in the DB (any tipo — an SB logged as part of an AD obs is fine to re-add as SB, so compare tipo SB only).
+  const existing = await prisma.complianceDirective.findMany({ where: { aircraftId: MATRICULA, tipo: "SB" }, select: { numero: true } });
+  const known = new Set(existing.map((e) => normNum(e.numero)));
+
+  let assessed = 0;
+  for (const c of candidates) {
+    if (known.has(normNum(c.numero))) { report.sb.skipped++; continue; }
+    if (assessed >= maxAssessments) { report.sb.skipped++; continue; }
+    assessed++;
+
+    // 4. Fetch the SB detail page and extract the structured fields.
+    let pageText = "";
+    try {
+      const res = await fetch(c.url, { headers: BROWSER_HEADERS });
+      if (!res.ok) { report.sb.skipped++; continue; }
+      pageText = (await res.text()).replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+    } catch { report.sb.skipped++; continue; }
+    const grab = (label: string) => {
+      const m2 = new RegExp(`${label}:?\\s*(.{10,400}?)(?=SUBJECT|MODELS AFFECTED|TIME OF COMPLIANCE|REASON FOR REVISION|DOWNLOAD PUBLICATION|DATE RELEASED|Product Support)`, "i").exec(pageText);
+      return m2 ? m2[1].trim() : "";
+    };
+    const subject = grab("SUBJECT");
+    const models = grab("MODELS AFFECTED");
+    const compliance = grab("TIME OF COMPLIANCE");
+    if (!models && !subject) { report.sb.skipped++; continue; }
+
+    // 5. GPT applicability check against the fleet.
+    let a: { applicable: boolean; dominio: string; recurrente: boolean; alEvento: boolean; intervaloHoras: number | null; intervaloMeses: number | null; descripcion: string; reason: string } | null = null;
+    try {
+      const resp = await openai.chat.completions.create({
+        model: MODEL, temperature: 0.1, max_tokens: 350, response_format: { type: "json_object" },
+        messages: [{
+          role: "user",
+          content: `Eres un inspector de aeronavegabilidad. Determina si este Service Bulletin de Lycoming aplica a la flota.\n\nFLOTA (CC-AQI):\n${profileForPrompt()}\n\nSERVICE BULLETIN:\nNúmero: ${c.numero}\nTítulo: ${c.title}\nSUBJECT: ${subject || "(s/d)"}\nMODELS AFFECTED: ${models || "(s/d)"}\nTIME OF COMPLIANCE: ${compliance || "(s/d)"}\n\nREGLAS:\n- applicable=true SOLO si MODELS AFFECTED incluye el modelo exacto de la flota (O-320-D2J o la serie O-320 sin exclusiones) o componentes instalados (magnetos Slick 4371, carburador AVSTAR). Sufijos distintos (ej. O-320-H2AD) NO aplican.\n- Si MODELS AFFECTED nombra accesorios que la flota NO tiene (fuel servo inyectado, E-MAG, turbo, HET), applicable=false.\n- Si la aplicabilidad depende de rango de seriales/fechas de despacho que no puedes verificar, applicable=true con reason indicando \"verificar serial/ship date\" (criterio conservador).\nResponde SOLO JSON: {\"applicable\":bool,\"dominio\":\"AIRFRAME|ENGINE|PROPELLER\",\"recurrente\":bool,\"alEvento\":bool,\"intervaloHoras\":nºm|null,\"intervaloMeses\":nºm|null,\"descripcion\":\"1 frase en español\",\"reason\":\"1 frase\"}`,
+        }],
+      });
+      a = JSON.parse(resp.choices[0]?.message?.content || "null");
+    } catch { /* fall through */ }
+    if (!a) { report.sb.skipped++; continue; }
+    if (!a.applicable) { report.sb.skipped++; continue; }
+
+    report.sb.applicable++;
+    const dominio = ["AIRFRAME", "ENGINE", "PROPELLER"].includes(a.dominio) ? a.dominio : "ENGINE";
+    const maxOrden = await prisma.complianceDirective.aggregate({ where: { aircraftId: MATRICULA, tipo: "SB", dominio }, _max: { orden: true } });
+    await prisma.complianceDirective.create({
+      data: {
+        aircraftId: MATRICULA, dominio, tipo: "SB", numero: c.numero,
+        descripcion: a.descripcion || c.title, aplicabilidad: "APLICA",
+        periodicidadRaw: compliance || null,
+        recurrente: !!a.recurrente, alEvento: !!a.alEvento,
+        intervaloMeses: a.intervaloMeses ?? null, intervaloHoras: a.intervaloHoras ?? null,
+        fuente: "LYCOMING_WEB", urlReferencia: c.url,
+        observacion: `[Auditor Lycoming SB] ${a.reason}${models ? ` · Models affected: ${models.slice(0, 200)}` : ""}`,
+        orden: (maxOrden._max.orden ?? 0) + 1,
+      },
+    });
+    known.add(normNum(c.numero));
+    report.sb.added++;
+    report.added.push({ tipo: "SB", numero: c.numero, descripcion: a.descripcion || c.title, esEmergencia: false, url: c.url });
+  }
+}
+
 /**
  * Run the full compliance audit. Safe to run on a cron or on-demand.
  * @param opts.monthsBack how far back to scan the Federal Register (default 24)
@@ -390,6 +504,7 @@ export async function runComplianceAudit(opts?: { monthsBack?: number; maxCandid
     finishedAt: "",
     faa: { scanned: 0, applicable: 0, added: 0, skipped: 0, errors: 0 },
     dgac: { scanned: 0, applicable: 0, added: 0, skipped: 0, enabled: false },
+    sb: { scanned: 0, applicable: 0, added: 0, skipped: 0 },
     added: [],
     notes: [],
   };
@@ -415,6 +530,11 @@ export async function runComplianceAudit(opts?: { monthsBack?: number; maxCandid
     await auditDGAC(report);
   } catch (e: any) {
     report.notes.push(`DGAC: error ${e?.message || e}`);
+  }
+  try {
+    await auditLycomingSBs(report);
+  } catch (e: any) {
+    report.notes.push(`Lycoming SB: error ${e?.message || e}`);
   }
 
   report.finishedAt = new Date().toISOString();
