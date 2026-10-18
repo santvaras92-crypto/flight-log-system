@@ -5108,7 +5108,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
         <div className="flex gap-1 bg-slate-100/80 dark:bg-muted p-1 rounded-lg">
           {(['ALL', 'AD', 'DA', 'SB'] as const).map((t) => (
             <button key={t} onClick={() => setTipoFilter(t)}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${tipoFilter === t ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border border-slate-200 dark:border-edge' : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft'}`}>
+              className={`px-3 py-1 rounded-md text-xs font-medium border transition-[color] duration-100 ${tipoFilter === t ? 'bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm border-slate-200 dark:border-edge' : 'border-transparent text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft'}`}>
               {t === 'ALL' ? 'Todas' : t === 'AD' ? 'AD (FAA)' : t === 'DA' ? 'DA (DGAC)' : 'SB (Fabricante)'}
             </button>
           ))}
