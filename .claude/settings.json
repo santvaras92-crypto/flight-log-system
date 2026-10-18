@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc --noEmit)",
+      "Bash(npm run lint*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)"
+    ],
+    "ask": [
+      "Bash(npx tsx scripts/*)",
+      "Bash(npx prisma*)",
+      "Bash(npm run db:*)",
+      "Bash(npm run deploy:*)",
+      "Bash(git push*)",
+      "Bash(psql*)",
+      "Bash(railway*)"
+    ],
+    "deny": [
+      "Bash(npx prisma migrate reset*)",
+      "Bash(npx prisma db push --accept-data-loss*)",
+      "Read(.env)",
+      "Read(.env.local)"
+    ]
+  }
+}
