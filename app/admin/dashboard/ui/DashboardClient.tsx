@@ -1398,7 +1398,7 @@ export default function DashboardClient({ initialData, overviewMetrics, paginati
                 : 'text-slate-500 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground-soft hover:bg-white/50 dark:hover:bg-white/5'
                 }`}
             >
-              AD/DA
+              Compliance
             </button>
             <button
               onClick={() => setMxSubTab("engine")}
@@ -4899,7 +4899,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
 
   const handleDelete = async () => {
     if (!editModal.id) return;
-    if (!confirm('Delete this AD/DA directive? This action cannot be undone.')) return;
+    if (!confirm('Delete this directive? This action cannot be undone.')) return;
     setDeleting(true);
     setEditResult(null);
     try {
@@ -4916,7 +4916,7 @@ function ComplianceTable({ directives, usageStats }: { directives: any[]; usageS
     return (
       <div className="bg-white dark:bg-card border border-slate-200 dark:border-edge rounded-xl p-8 text-center text-slate-500 dark:text-muted-foreground shadow-sm">
         <div className="flex justify-center mb-3"><Icon name="compliance" className="w-8 h-8 text-slate-300" /></div>
-        <p className="font-medium text-slate-700 dark:text-foreground-soft">No AD/DA directives loaded</p>
+        <p className="font-medium text-slate-700 dark:text-foreground-soft">No compliance items loaded</p>
         <p className="text-sm mt-1 mb-4">No airworthiness directives registered for this aircraft.</p>
         <button onClick={() => openEditModal(null)} className="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 dark:bg-slate-700 text-white hover:bg-slate-700 dark:hover:bg-slate-600">
           + Add directive
