@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { anchorNoonUTC } from "@/lib/date-utils";
+import { detalleEsRevision, autoRegisterFilterChanges } from "@/lib/auto-filter-events";
 
 export async function POST(req: NextRequest) {
   try {
@@ -120,6 +121,29 @@ export async function POST(req: NextRequest) {
       }
 
       await prisma.flight.update({ where: { id }, data });
+
+      // Auto-registro de filtros: si el detalle (nuevo o existente) describe una
+      // revisión (100 hrs o cambio de aceite), registrar automáticamente el
+      // cambio de filtro de aire y filtro de aceite en el Plan de Reemplazo.
+      const detalleFinal = up.detalle !== undefined ? String(up.detalle) : flight.detalle;
+      if (up.detalle !== undefined && detalleEsRevision(detalleFinal)) {
+        const updated = await prisma.flight.findUnique({
+          where: { id },
+          select: { fecha: true, airframe_hours: true, aircraftId: true },
+        });
+        if (updated) {
+          const registered = await autoRegisterFilterChanges({
+            aircraftId: updated.aircraftId,
+            fecha: updated.fecha,
+            detalle: detalleFinal!,
+            flightId: id,
+            airframeHours: updated.airframe_hours != null ? Number(updated.airframe_hours) : null,
+          });
+          if (registered.length > 0) {
+            console.log(`[flights/update] Revisión detectada en vuelo #${id} — cambio automático registrado: ${registered.join(', ')}`);
+          }
+        }
+      }
     }
 
     // Sync aircraft counters with the latest flight so the register form

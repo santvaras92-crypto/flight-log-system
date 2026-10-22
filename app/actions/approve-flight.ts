@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from '@/lib/auth-guard';
 import { Prisma } from "@prisma/client";
+import { detalleEsRevision, autoRegisterFilterChanges } from "@/lib/auto-filter-events";
 
 /**
  * Aprueba un FlightSubmission pendiente y actualiza el vuelo existente.
@@ -19,7 +20,7 @@ export async function approveFlightSubmission(
 ): Promise<{ success: boolean; error?: string; flightId?: number }> {
   await requireAdmin();
   try {
-    return await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       // 1. Obtener el submission con todos sus datos y el Flight asociado
       const submission = await tx.flightSubmission.findUnique({
         where: { id: submissionId },
@@ -94,6 +95,31 @@ export async function approveFlightSubmission(
 
       return { success: true, flightId: flight.id };
     });
+
+    // Auto-registro de filtros: si el detalle del vuelo aprobado describe una
+    // revisión (100 hrs o cambio de aceite), registrar automáticamente el cambio
+    // de filtro de aire y filtro de aceite en el Plan de Reemplazo. Corre fuera
+    // de la transacción: un fallo aquí jamás debe revertir la aprobación.
+    if (result.success && result.flightId) {
+      const f = await prisma.flight.findUnique({
+        where: { id: result.flightId },
+        select: { detalle: true, fecha: true, aircraftId: true, airframe_hours: true },
+      });
+      if (f && detalleEsRevision(f.detalle)) {
+        const registered = await autoRegisterFilterChanges({
+          aircraftId: f.aircraftId,
+          fecha: f.fecha,
+          detalle: f.detalle!,
+          flightId: result.flightId,
+          airframeHours: f.airframe_hours != null ? Number(f.airframe_hours) : null,
+        });
+        if (registered.length > 0) {
+          console.log(`[approve-flight] Revisión detectada en vuelo #${result.flightId} — cambio automático registrado: ${registered.join(', ')}`);
+        }
+      }
+    }
+
+    return result;
   } catch (error) {
     console.error("Error al aprobar submission:", error);
     return {
