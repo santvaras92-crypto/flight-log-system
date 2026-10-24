@@ -460,7 +460,9 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       const fuelCharges = Number(fuelChargesNonStratus._sum.monto || 0);
 
       // Fixed adjustment for pending balance (historical correction)
-      const FIXED_ADJUSTMENT = 20599908;
+      // Calibrated 24-oct-2026 so the global balance equals -$1.342.266
+      // (crédito combinado de Rodrigo y Daniel a esa fecha)
+      const FIXED_ADJUSTMENT = 21277797.644;
 
       return {
         totalHours: totalHoursAllTime,
