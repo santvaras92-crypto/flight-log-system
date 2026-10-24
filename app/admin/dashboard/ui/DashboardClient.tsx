@@ -35,10 +35,10 @@ function useChartTheme() {
     ink: isDark ? '#E6EDF3' : '#0f172a',
     accent: isDark ? '#3B82F6' : '#2563eb',
     accent2: isDark ? '#34D399' : '#059669',
-    tooltipBg: isDark ? '#1B222B' : '#0f172a',
+    tooltipBg: isDark ? 'rgba(27,34,43,0.72)' : 'rgba(15,23,42,0.72)',
     tooltipTitle: isDark ? '#E6EDF3' : '#ffffff',
-    tooltipBody: isDark ? '#9BA8B7' : '#e2e8f0',
-    tooltipBorder: isDark ? '#2E3946' : '#334155',
+    tooltipBody: isDark ? '#C3CDD9' : '#e2e8f0',
+    tooltipBorder: isDark ? 'rgba(46,57,70,0.8)' : 'rgba(51,65,85,0.8)',
     donutBorder: isDark ? '#141A22' : '#ffffff',
   };
 }
