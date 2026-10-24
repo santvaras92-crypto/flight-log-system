@@ -1,0 +1,22 @@
+name: Fuel Model Prospective Evaluation (monthly)
+
+on:
+  schedule:
+    # Day 5 of every month at 07:00 UTC (04:00 Chile)
+    - cron: '0 7 5 * *'
+  workflow_dispatch: {}  # allows manual trigger from the Actions tab
+
+jobs:
+  run-eval:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call fuel-model-eval endpoint
+        run: |
+          HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" -X POST \
+            "https://flight-log-system-production.up.railway.app/api/cron/fuel-model-eval" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --max-time 120)
+          echo "HTTP $HTTP_CODE"
+          cat response.json
+          [ "$HTTP_CODE" = "200" ] || exit 1
