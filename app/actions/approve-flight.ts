@@ -103,7 +103,7 @@ export async function approveFlightSubmission(
     if (result.success && result.flightId) {
       const f = await prisma.flight.findUnique({
         where: { id: result.flightId },
-        select: { detalle: true, fecha: true, aircraftId: true, airframe_hours: true },
+        select: { detalle: true, fecha: true, aircraftId: true, tach_inicio: true },
       });
       if (f && detalleEsRevision(f.detalle)) {
         const registered = await autoRegisterFilterChanges({
@@ -111,7 +111,7 @@ export async function approveFlightSubmission(
           fecha: f.fecha,
           detalle: f.detalle!,
           flightId: result.flightId,
-          airframeHours: f.airframe_hours != null ? Number(f.airframe_hours) : null,
+          tachInicio: f.tach_inicio != null ? Number(f.tach_inicio) : null,
         });
         if (registered.length > 0) {
           console.log(`[approve-flight] Revisión detectada en vuelo #${result.flightId} — cambio automático registrado: ${registered.join(', ')}`);

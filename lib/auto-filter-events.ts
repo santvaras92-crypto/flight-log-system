@@ -33,7 +33,10 @@ interface AutoFilterInput {
   fecha: Date;            // fecha de la revisión (del vuelo)
   detalle: string;        // texto del detalle que gatilló la detección
   flightId?: number;      // vuelo de origen (para trazabilidad en notas)
-  airframeHours?: number | null; // airframe_hours del vuelo, si está disponible
+  // Horas de instalación de los filtros: el TACH INICIAL del vuelo de la
+  // revisión — la revisión se hace antes de volar, con el motor en el tach
+  // de partida (el dominio ENGINE corre sobre el tach).
+  tachInicio?: number | null;
 }
 
 /**
@@ -45,21 +48,15 @@ interface AutoFilterInput {
 export async function autoRegisterFilterChanges(input: AutoFilterInput): Promise<string[]> {
   const registered: string[] = [];
   try {
-    const { aircraftId, fecha, detalle, flightId, airframeHours } = input;
+    const { aircraftId, fecha, detalle, flightId, tachInicio } = input;
 
-    // Horas del dominio ENGINE (TSMOH) al momento de la revisión: se calcula
-    // igual que el dashboard — airframe del vuelo menos la base de overhaul
-    // del motor registrada en Component. Si falta cualquiera, el evento se
-    // registra sin horas (el remanente usa el calendario; ReplacementEvent.horas es opcional).
-    let horasEngine: number | null = null;
-    if (airframeHours != null && !isNaN(Number(airframeHours))) {
-      const engineComp = await prisma.component.findFirst({
-        where: { aircraftId, tipo: 'ENGINE' },
-        select: { last_overhaul_airframe: true },
-      });
-      const base = engineComp?.last_overhaul_airframe != null ? Number(engineComp.last_overhaul_airframe) : null;
-      if (base != null) horasEngine = Number((Number(airframeHours) - base).toFixed(1));
-    }
+    // Horas de instalación: tach inicial del vuelo de la revisión. Si falta,
+    // el evento se registra sin horas (el remanente usa el calendario;
+    // ReplacementEvent.horas es opcional).
+    const horasEngine =
+      tachInicio != null && !isNaN(Number(tachInicio))
+        ? Number(Number(tachInicio).toFixed(1))
+        : null;
 
     const parts = await prisma.replacementPart.findMany({
       where: { aircraftId, descripcion: { in: FILTER_DESCRIPTIONS } },
