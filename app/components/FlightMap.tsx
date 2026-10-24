@@ -14,6 +14,7 @@ interface GpsPoint {
 
 interface FlightMapProps {
   points: GpsPoint[];
+  kmlTrack?: GpsPoint[] | null;          // full KML track (complete path, independent of JPI readings)
   className?: string;
   gpsSource?: "jpi" | "kml" | "none";  // source of GPS data
   calibration?: {                        // learned correction parameters
@@ -24,7 +25,10 @@ interface FlightMapProps {
   } | null;
 }
 
-export default function FlightMap({ points, className, gpsSource, calibration }: FlightMapProps) {
+export default function FlightMap({ points: readingPoints, kmlTrack, className, gpsSource, calibration }: FlightMapProps) {
+  // When GPS comes from a KML upload, prefer the FULL KML track so the map
+  // shows the complete flight path (readings only cover the JPI recording window).
+  const points = gpsSource === "kml" && kmlTrack && kmlTrack.length > 1 ? kmlTrack : readingPoints;
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
   const [expanded, setExpanded] = useState(false);

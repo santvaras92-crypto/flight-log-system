@@ -359,6 +359,7 @@ model EngineMonitorFlight {
   sourceFile     String?
   isGroundRun    Boolean                @default(false)
   gpsSource      String                 @default("jpi") // "jpi" | "kml" | "none"
+  kmlTrack       Json?                  // full KML GPS track [{lat,lng,alt(ft),spd(kt),elapsed(s)}] — complete track independent of JPI readings
   createdAt      DateTime               @default(now())
   linkedFlightId Int?
   readings       EngineMonitorReading[]

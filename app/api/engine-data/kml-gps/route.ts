@@ -140,10 +140,23 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Mark GPS source as KML
+    // Mark GPS source as KML and store the FULL track (independent of JPI
+    // reading matching, so the map shows the complete flight path even if the
+    // JPI recording window is shorter than the GPS track).
+    const trackStartMs = track.startTime ? track.startTime.getTime() : null;
+    const kmlTrackJson = track.points.map(p => ({
+      lat: p.latitude,
+      lng: p.longitude,
+      alt: p.altitude !== null ? Math.round(metersToFeet(p.altitude)) : null,
+      spd: p.groundSpeed !== null ? Math.round(p.groundSpeed * 10) / 10 : null,
+      elapsed: trackStartMs !== null && p.timestamp
+        ? Math.round((p.timestamp.getTime() - trackStartMs) / 1000)
+        : null,
+    }));
+
     await prisma.engineMonitorFlight.update({
       where: { id: parseInt(engineFlightId) },
-      data: { gpsSource: "kml" },
+      data: { gpsSource: "kml", kmlTrack: kmlTrackJson },
     });
 
     // Update readings with GPS data using raw SQL bulk UPDATE for speed

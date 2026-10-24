@@ -64,6 +64,7 @@ interface FlightDetail {
   engineModel: string;
   engineSerial: string;
   gpsSource?: string;
+  kmlTrack?: { lat: number; lng: number; alt: number | null; spd: number | null; elapsed: number | null }[] | null;
   maxEGT: number | null;
   maxCHT: number | null;
   maxOilTemp: number | null;
@@ -602,7 +603,7 @@ export default function PilotEngineDetail({
               </div>
 
               {/* GPS Flight Track Map */}
-              {flight.readings.some(r => r.latitude != null && r.longitude != null) && (
+              {(flight.readings.some(r => r.latitude != null && r.longitude != null) || (flight.kmlTrack?.length ?? 0) > 1) && (
                 <div>
                   <FlightMap
                     points={flight.readings
@@ -614,6 +615,7 @@ export default function PilotEngineDetail({
                         spd: r.groundSpd ?? undefined,
                         elapsed: r.elapsedSec,
                       }))}
+                    kmlTrack={flight.kmlTrack?.map(p => ({ lat: p.lat, lng: p.lng, alt: p.alt ?? undefined, spd: p.spd ?? undefined, elapsed: p.elapsed ?? undefined }))}
                     gpsSource={(flight.gpsSource as "jpi" | "kml" | "none") || "jpi"}
                     calibration={gpsCalibration || undefined}
                   />

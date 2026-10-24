@@ -71,6 +71,7 @@ interface FlightDetail {
   engineModel: string;
   engineSerial: string;
   gpsSource?: string;
+  kmlTrack?: { lat: number; lng: number; alt: number | null; spd: number | null; elapsed: number | null }[] | null;
   isGroundRun?: boolean;
   readings: Reading[];
   linkedFlight?: {
@@ -1208,7 +1209,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
 
               {/* GPS Flight Track Map + KML Upload */}
               {selectedFlight && (() => {
-                const hasGps = selectedFlight.readings.some(r => r.latitude != null && r.longitude != null);
+                const hasGps = selectedFlight.readings.some(r => r.latitude != null && r.longitude != null) || (selectedFlight.kmlTrack?.length ?? 0) > 1;
                 const gpsCount = selectedFlight.readings.filter(r => r.latitude != null && r.longitude != null).length;
                 return (
                   <div className="mt-3">
@@ -1223,6 +1224,7 @@ export default function EngineAnalysis({ initialFlightIds, onFlightOpened }: { i
                             spd: r.groundSpd ?? undefined,
                             elapsed: r.elapsedSec,
                           }))}
+                        kmlTrack={selectedFlight.kmlTrack?.map(p => ({ lat: p.lat, lng: p.lng, alt: p.alt ?? undefined, spd: p.spd ?? undefined, elapsed: p.elapsed ?? undefined }))}
                         gpsSource={(selectedFlight.gpsSource as "jpi" | "kml" | "none") || "jpi"}
                         calibration={gpsCalibration || undefined}
                       />
