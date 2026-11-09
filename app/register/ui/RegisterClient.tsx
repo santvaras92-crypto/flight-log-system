@@ -439,14 +439,25 @@ export default function RegisterClient({
             console.warn('Error leyendo archivo combustible, se omitirá:', e);
           }
         }
-        const result: { ok: boolean; id?: number; error?: string } = await createFuel({
+        const fuelInput = {
           pilotoId: resolvedPilotId,
           fecha: fecha,
           litros: Number(formData.get('litros') || 0),
           monto: Number(formData.get('monto') || 0),
           detalle: String(formData.get('detalle') || '') || undefined,
           file: uploadPayload,
-        });
+        };
+        let result: { ok: boolean; id?: number; error?: string; duplicate?: boolean } = await createFuel(fuelInput);
+        if (!result.ok && result.duplicate) {
+          const confirmed = window.confirm(
+            '⚠️ Ya registraste una carga con la misma fecha, litros y monto.\n\n¿Es una carga distinta y quieres registrarla de todos modos?'
+          );
+          if (!confirmed) {
+            setFormError('Registro cancelado: carga duplicada.');
+            return;
+          }
+          result = await createFuel({ ...fuelInput, confirmDuplicate: true });
+        }
         if (!result.ok) {
           setFormError(result.error || 'Error creando registro de combustible');
           return;

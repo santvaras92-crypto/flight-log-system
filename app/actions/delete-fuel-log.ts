@@ -79,7 +79,8 @@ export async function deleteFuelLog(formData: FormData) {
 
   // Delete potential associated FUEL transaction (match by userId, tipo, monto, and date window)
   const windowMs = 24 * 60 * 60 * 1000; // +/- 1 day
-  await prisma.transaction.deleteMany({
+  // Delete only ONE matching transaction (identical same-day refuels have identical transactions)
+  const tx = await prisma.transaction.findFirst({
     where: {
       userId: fuelLog.userId,
       tipo: 'FUEL',
@@ -89,7 +90,12 @@ export async function deleteFuelLog(formData: FormData) {
         lte: new Date(fuelLog.fecha.getTime() + windowMs),
       },
     },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true },
   });
+  if (tx) {
+    await prisma.transaction.delete({ where: { id: tx.id } });
+  }
 
   await prisma.fuelLog.delete({ where: { id } });
 }

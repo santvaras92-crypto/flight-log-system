@@ -148,9 +148,10 @@ type Input = {
   monto: number;
   detalle?: string;
   file: PlainUpload | null; // ahora obligatorio
+  confirmDuplicate?: boolean; // true si el usuario aceptó cargar una boleta idéntica
 };
 
-export async function createFuel(input: Input): Promise<{ ok: boolean; id?: number; error?: string }> {
+export async function createFuel(input: Input): Promise<{ ok: boolean; id?: number; error?: string; duplicate?: boolean }> {
   await requireSession();
   // Validaciones básicas
   if (!input.pilotoId || isNaN(input.pilotoId)) {
@@ -180,6 +181,27 @@ export async function createFuel(input: Input): Promise<{ ok: boolean; id?: numb
   }
 
   try {
+    if (!input.confirmDuplicate) {
+      const dayStart = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate(), 0, 0, 0);
+      const dayEnd = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate() + 1, 0, 0, 0);
+      const dup = await prisma.fuelLog.findFirst({
+        where: {
+          userId: input.pilotoId,
+          fecha: { gte: dayStart, lt: dayEnd },
+          litros: input.litros,
+          monto: input.monto,
+        },
+        select: { id: true },
+      });
+      if (dup) {
+        return {
+          ok: false,
+          duplicate: true,
+          error: 'Ya existe una carga con la misma fecha, litros y monto.',
+        };
+      }
+    }
+
     const imageUrl = await saveUpload(input.file, 'fuel');
     
     // Obtener info del piloto para el email (incluye email)

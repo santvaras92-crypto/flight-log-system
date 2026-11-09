@@ -1033,9 +1033,8 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         if (!seen[code]) seen[code] = new Set();
         if (monto > 0) {
           const key = makeKey(fecha, monto);
-          // Only add if not already seen (avoid duplicates)
+          // Skip only if present in CSV (DB-vs-DB repeats are legit)
           if (!seen[code].has(key)) {
-            seen[code].add(key);
             map[code].push({ fecha, litros, monto });
           }
         }
@@ -1200,9 +1199,8 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         const monto = Number(l.monto) || 0;
 
         const key = makeKey(fechaStr, code, monto);
-        // Skip if already in CSV (duplicate)
+        // Skip only if already in CSV (DB-vs-DB repeats are legit: same-day equal refuels)
         if (seen.has(key)) continue;
-        seen.add(key);
 
         allRecords.push({
           id: l.id,
