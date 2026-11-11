@@ -22,6 +22,7 @@ const ADMIN_API_PREFIXES = [
   "/api/upload-movimiento-attachment",
   "/api/pilots/delete",
   "/api/pilots/update",
+  "/api/pilots/license", // consulta de licencia en SIPA (DGAC)
   "/api/export/",
   "/api/debug-r2",
   "/api/gps-calibration",

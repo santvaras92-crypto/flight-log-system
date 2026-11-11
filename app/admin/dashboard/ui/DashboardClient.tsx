@@ -3647,7 +3647,22 @@ function PilotDirectory({ directory }: { directory?: { initial: { id: number | n
                         defaultValue={r.numeroLicencia}
                         onChange={e => handleChange(r.id!, 'licencia', e.target.value)}
                       />
-                    ) : (r.numeroLicencia || '-')}
+                    ) : r.numeroLicencia ? (
+                      <a
+                        href={`/api/pilots/license?${new URLSearchParams({
+                          licencia: r.numeroLicencia,
+                          documento: r.documento || '',
+                          tipoDocumento: r.tipoDocumento || '',
+                          nombre: r.name,
+                        }).toString()}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Ver licencia en SIPA (DGAC)"
+                        className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                      >
+                        {r.numeroLicencia}
+                      </a>
+                    ) : '-'}
                   </td>
                   <td className="px-3 sm:px-4 py-2.5 whitespace-nowrap text-xs sm:text-sm text-slate-600 dark:text-foreground-soft">
                     {canEdit ? (
