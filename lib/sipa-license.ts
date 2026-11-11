@@ -8,10 +8,58 @@
  *
  * Solo corre en el servidor (el navegador no puede por CORS).
  */
+import https from 'https';
+import tls from 'tls';
 import { normalizeText } from './pilot-matching';
 
 const SIPA = 'https://sipa.dgac.gob.cl';
 const TIMEOUT_MS = 15000;
+
+/**
+ * SIPA NO envía el certificado intermedio en su handshake TLS (solo el propio, firmado por
+ * "GlobalSign RSA OV SSL CA 2018"). Los navegadores lo descargan solos (AIA), Node no:
+ * da "unable to verify the first certificate". Se agrega ese intermedio público a las CA raíz
+ * de Node: la verificación TLS sigue ACTIVA (no se usa rejectUnauthorized:false).
+ * Fuente: http://secure.globalsign.com/cacert/gsrsaovsslca2018.crt (vence 21-11-2028).
+ */
+const GLOBALSIGN_RSA_OV_SSL_CA_2018 = `-----BEGIN CERTIFICATE-----
+MIIETjCCAzagAwIBAgINAe5fIh38YjvUMzqFVzANBgkqhkiG9w0BAQsFADBMMSAw
+HgYDVQQLExdHbG9iYWxTaWduIFJvb3QgQ0EgLSBSMzETMBEGA1UEChMKR2xvYmFs
+U2lnbjETMBEGA1UEAxMKR2xvYmFsU2lnbjAeFw0xODExMjEwMDAwMDBaFw0yODEx
+MjEwMDAwMDBaMFAxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWduIG52
+LXNhMSYwJAYDVQQDEx1HbG9iYWxTaWduIFJTQSBPViBTU0wgQ0EgMjAxODCCASIw
+DQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKdaydUMGCEAI9WXD+uu3Vxoa2uP
+UGATeoHLl+6OimGUSyZ59gSnKvuk2la77qCk8HuKf1UfR5NhDW5xUTolJAgvjOH3
+idaSz6+zpz8w7bXfIa7+9UQX/dhj2S/TgVprX9NHsKzyqzskeU8fxy7quRU6fBhM
+abO1IFkJXinDY+YuRluqlJBJDrnw9UqhCS98NE3QvADFBlV5Bs6i0BDxSEPouVq1
+lVW9MdIbPYa+oewNEtssmSStR8JvA+Z6cLVwzM0nLKWMjsIYPJLJLnNvBhBWk0Cq
+o8VS++XFBdZpaFwGue5RieGKDkFNm5KQConpFmvv73W+eka440eKHRwup08CAwEA
+AaOCASkwggElMA4GA1UdDwEB/wQEAwIBhjASBgNVHRMBAf8ECDAGAQH/AgEAMB0G
+A1UdDgQWBBT473/yzXhnqN5vjySNiPGHAwKz6zAfBgNVHSMEGDAWgBSP8Et/qC5F
+JK5NUPpjmove4t0bvDA+BggrBgEFBQcBAQQyMDAwLgYIKwYBBQUHMAGGImh0dHA6
+Ly9vY3NwMi5nbG9iYWxzaWduLmNvbS9yb290cjMwNgYDVR0fBC8wLTAroCmgJ4Yl
+aHR0cDovL2NybC5nbG9iYWxzaWduLmNvbS9yb290LXIzLmNybDBHBgNVHSAEQDA+
+MDwGBFUdIAAwNDAyBggrBgEFBQcCARYmaHR0cHM6Ly93d3cuZ2xvYmFsc2lnbi5j
+b20vcmVwb3NpdG9yeS8wDQYJKoZIhvcNAQELBQADggEBAJmQyC1fQorUC2bbmANz
+EdSIhlIoU4r7rd/9c446ZwTbw1MUcBQJfMPg+NccmBqixD7b6QDjynCy8SIwIVbb
+0615XoFYC20UgDX1b10d65pHBf9ZjQCxQNqQmJYaumxtf4z1s4DfjGRzNpZ5eWl0
+6r/4ngGPoJVpjemEuunl1Ig423g7mNA2eymw0lIYkN5SQwCuaifIFJ6GlazhgDEw
+fpolu4usBCOmmQDo8dIm7A9+O4orkjgTHY+GzYZSR+Y0fFukAj6KYXwidlNalFMz
+hriSqHKvoflShx8xpfywgVcvzfTO3PYkz6fiNJBonf6q8amaEsybwMbDqKWwIX7e
+SPY=
+-----END CERTIFICATE-----
+`;
+
+let cachedAgent: https.Agent | null = null;
+function sipaAgent(): https.Agent {
+  if (!cachedAgent) {
+    cachedAgent = new https.Agent({
+      ca: [...tls.rootCertificates, GLOBALSIGN_RSA_OV_SSL_CA_2018],
+      keepAlive: false,
+    });
+  }
+  return cachedAgent;
+}
 
 export const SIPA_VERIFY_PAGE = `${SIPA}/`;
 export const sipaPdfUrl = (id: string) => `${SIPA}/usuarioLicencia/showPdf/${encodeURIComponent(id)}/es`;
@@ -50,31 +98,46 @@ export function normalizeDocument(documento?: string | null, tipo?: string | nul
 
 /* ───────────── HTTP ───────────── */
 
-async function timedFetch(url: string, init: RequestInit = {}, retries = 1): Promise<Response> {
-  for (let attempt = 0; ; attempt++) {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
-    try {
-      return await fetch(url, { ...init, signal: ctrl.signal, cache: 'no-store' });
-    } catch (e) {
-      // Un reintento ante fallos de red puntuales (conexión reseteada, timeout)
-      if (attempt >= retries) throw e;
-    } finally {
-      clearTimeout(timer);
-    }
-  }
+type SipaResponse = { status: number; ok: boolean; body: string; cookies: string };
+
+function requestOnce(
+  url: string,
+  opts: { method?: 'GET' | 'POST'; headers?: Record<string, string>; body?: string } = {}
+): Promise<SipaResponse> {
+  return new Promise((resolve, reject) => {
+    const headers: Record<string, string> = { 'User-Agent': 'Mozilla/5.0 (compatible; CC-AQI-FlightLog)', ...opts.headers };
+    if (opts.body !== undefined) headers['Content-Length'] = String(Buffer.byteLength(opts.body));
+    const req = https.request(url, { method: opts.method || 'GET', headers, agent: sipaAgent() }, res => {
+      const chunks: Buffer[] = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => {
+        const status = res.statusCode || 0;
+        const setCookie = res.headers['set-cookie'] || [];
+        resolve({
+          status,
+          ok: status >= 200 && status < 300,
+          body: Buffer.concat(chunks).toString('utf-8'),
+          cookies: setCookie.map(c => c.split(';')[0].trim()).filter(Boolean).join('; '),
+        });
+      });
+    });
+    req.setTimeout(TIMEOUT_MS, () => req.destroy(Object.assign(new Error('SIPA no respondió a tiempo'), { name: 'AbortError' })));
+    req.on('error', reject);
+    if (opts.body !== undefined) req.write(opts.body);
+    req.end();
+  });
 }
 
-/** Arma el header Cookie a partir de los Set-Cookie de la respuesta. */
-function cookieHeaderFrom(res: Response): string {
-  const h = res.headers as Headers & { getSetCookie?: () => string[] };
-  const list = typeof h.getSetCookie === 'function'
-    ? h.getSetCookie()
-    : (res.headers.get('set-cookie') || '').split(/,(?=\s*[^;,\s]+=)/);
-  return list
-    .map(c => c.split(';')[0].trim())
-    .filter(Boolean)
-    .join('; ');
+/** Con un reintento ante fallos de red puntuales (conexión reseteada, timeout). */
+async function sipaRequest(
+  url: string,
+  opts: { method?: 'GET' | 'POST'; headers?: Record<string, string>; body?: string } = {}
+): Promise<SipaResponse> {
+  try {
+    return await requestOnce(url, opts);
+  } catch (e) {
+    return await requestOnce(url, opts);
+  }
 }
 
 function decodeEntities(s: string): string {
@@ -121,10 +184,9 @@ export async function searchSipa(params: {
   apellidoPaterno?: string;
   numeroLicencia?: string;
 }): Promise<SipaRow[]> {
-  const form = await timedFetch(`${SIPA}/home/verificarLicencia/es`);
+  const form = await sipaRequest(`${SIPA}/home/verificarLicencia/es`);
   if (!form.ok) throw new Error(`SIPA respondió ${form.status} al abrir el formulario`);
-  const formHtml = await form.text();
-  const token = formHtml.match(/name="_token"\s+value="([^"]+)"/)?.[1];
+  const token = form.body.match(/name="_token"\s+value="([^"]+)"/)?.[1];
   if (!token) throw new Error('SIPA: no se encontró el token del formulario');
 
   const body = new URLSearchParams({
@@ -134,19 +196,19 @@ export async function searchSipa(params: {
     apellidoMaterno: '',
     numeroLicencia: params.numeroLicencia || '',
     _token: token,
-  });
+  }).toString();
 
-  const res = await timedFetch(`${SIPA}/usuarioLicencia/busqueda/es`, {
+  const res = await sipaRequest(`${SIPA}/usuarioLicencia/busqueda/es`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       'X-Requested-With': 'XMLHttpRequest',
-      Cookie: cookieHeaderFrom(form),
+      Cookie: form.cookies,
     },
     body,
   });
   if (!res.ok) throw new Error(`SIPA respondió ${res.status} en la búsqueda`);
-  return parseSipaResults(await res.text());
+  return parseSipaResults(res.body);
 }
 
 /* ───────────── Cruce de nombres ───────────── */

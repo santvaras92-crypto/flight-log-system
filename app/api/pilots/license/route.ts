@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
     return page(
       'SIPA no disponible',
       `<h1>No se pudo consultar SIPA</h1>
-       <p>${esc(e?.name === 'AbortError' ? 'SIPA no respondió a tiempo.' : e?.message || 'Error desconocido')}</p>${fallbackLink}`,
+       <p>${esc(e?.name === 'AbortError' ? 'SIPA no respondió a tiempo.' : [e?.message, e?.cause?.message].filter(Boolean).join(' — ') || 'Error desconocido')}</p>${fallbackLink}`,
       502
     );
   }
