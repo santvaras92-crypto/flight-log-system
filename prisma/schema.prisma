@@ -311,6 +311,24 @@ model FuelLog {
   User      User     @relation(fields: [userId], references: [id])
 }
 
+// Solicitudes de inscripción de pilotos (formulario público /pilots/new).
+// El admin las resuelve en /admin/validacion: crear piloto nuevo o actualizar uno existente.
+model PilotRegistration {
+  id              Int       @id @default(autoincrement())
+  nombre          String
+  apellido        String    @default("")
+  email           String
+  telefono        String?
+  licencia        String?
+  fechaNacimiento DateTime?
+  tipoDocumento   String?
+  documento       String?
+  estado          String    @default("PENDIENTE") // PENDIENTE | APROBADO | RECHAZADO
+  createdAt       DateTime  @default(now())
+  resolvedUserId  Int?
+  resolvedAt      DateTime?
+}
+
 model DeviceToken {
   id         Int      @id @default(autoincrement())
   userId     Int

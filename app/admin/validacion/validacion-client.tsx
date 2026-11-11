@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { approveFuel, rejectFuel } from '../../actions/validate-fuel';
 import { approveDeposit, rejectDeposit } from '../../actions/validate-deposit';
 import { approveFlightSubmission } from '../../actions/approve-flight';
+import { approvePilotRegistration, rejectPilotRegistration } from '../../actions/pilot-actions';
 import { cancelFlightSubmission } from '../../actions/cancel-submission';
 import ImagePreviewModal from '../../components/ImagePreviewModal';
 import { formatFecha } from '../../../lib/date-utils';
@@ -85,16 +86,51 @@ interface FlightItem {
   }[];
 }
 
-type Tab = 'flights' | 'deposits' | 'fuel';
+type Tab = 'flights' | 'deposits' | 'fuel' | 'pilots';
+
+interface PilotRegItem {
+  id: number;
+  nombre: string;
+  apellido: string;
+  email: string;
+  telefono: string | null;
+  licencia: string | null;
+  tipoDocumento: string | null;
+  documento: string | null;
+  fechaNacimiento: string | null;
+  createdAt: string;
+  matches: {
+    reasons: string[];
+    pilot: {
+      id: number;
+      nombre: string;
+      codigo: string | null;
+      email: string | null;
+      documento: string | null;
+      telefono: string | null;
+      licencia: string | null;
+    };
+  }[];
+}
+
+const REASON_LABELS: Record<string, string> = {
+  documento: 'Mismo documento',
+  email: 'Mismo correo',
+  licencia: 'Misma licencia',
+  telefono: 'Mismo teléfono',
+  nombre: 'Nombre similar',
+};
 
 export default function ValidacionClient({
   fuelData,
   depositData,
   flightsData,
+  pilotRegData,
 }: {
   fuelData: FuelItem[];
   depositData: DepositItem[];
   flightsData: FlightItem[];
+  pilotRegData: PilotRegItem[];
 }) {
   const [activeTab, setActiveTab] = useState<Tab>('flights');
   const [isPending, startTransition] = useTransition();
@@ -145,7 +181,17 @@ export default function ValidacionClient({
     { id: 'flights' as Tab, label: 'Vuelos', icon: 'airframe' as IconName, count: flightsData.length, color: 'blue' },
     { id: 'deposits' as Tab, label: 'Depósitos', icon: 'money' as IconName, count: depositData.length, color: 'emerald' },
     { id: 'fuel' as Tab, label: 'Combustible', icon: 'fuel' as IconName, count: fuelData.length, color: 'amber' },
+    { id: 'pilots' as Tab, label: 'Pilotos', icon: 'pilot' as IconName, count: pilotRegData.length, color: 'violet' },
   ];
+
+  const handlePilotAction = (action: () => Promise<{ success: boolean; message: string }>, confirmText?: string) => {
+    if (confirmText && !confirm(confirmText)) return;
+    startTransition(async () => {
+      const result = await action();
+      setMessage(result.success ? `✓ ${result.message}` : `Error: ${result.message}`);
+      if (result.success) setTimeout(() => window.location.reload(), 1200);
+    });
+  };
 
   const handleApproveFlightSubmission = async (flight: FlightItem) => {
     const submissionId = flight.id;
@@ -201,7 +247,7 @@ export default function ValidacionClient({
                 : 'bg-slate-100 dark:bg-muted text-slate-600 dark:text-foreground-soft hover:bg-slate-200 dark:hover:bg-white/10'
             }`}
             style={activeTab === tab.id ? {
-              backgroundColor: tab.color === 'blue' ? '#2563eb' : tab.color === 'emerald' ? '#059669' : '#d97706'
+              backgroundColor: tab.color === 'blue' ? '#2563eb' : tab.color === 'emerald' ? '#059669' : tab.color === 'violet' ? '#7c3aed' : '#d97706'
             } : {}}
           >
             <Icon name={tab.icon} className="w-4 h-4" />
@@ -611,6 +657,106 @@ export default function ValidacionClient({
                         </form>
                       </div>
                     </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Pilots Tab */}
+        {activeTab === 'pilots' && (
+          <div className="space-y-6">
+            {pilotRegData.length === 0 ? (
+              <div className="text-center py-12 bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-edge text-slate-500 dark:text-muted-foreground">
+                No hay solicitudes de inscripción pendientes
+              </div>
+            ) : (
+              pilotRegData.map((reg) => (
+                <div key={reg.id} className="bg-white dark:bg-card border-2 border-violet-200 dark:border-violet-500/30 rounded-xl shadow-lg p-6 space-y-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-foreground">
+                      {reg.nombre} {reg.apellido}
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-muted-foreground">
+                      Solicitud #{reg.id} • {new Date(reg.createdAt).toLocaleString('es-CL')}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                    <div><p className="text-slate-500 text-xs">Correo</p><p className="font-medium break-all">{reg.email}</p></div>
+                    <div><p className="text-slate-500 text-xs">{reg.tipoDocumento === 'pasaporte' ? 'Pasaporte' : 'RUT'}</p><p className="font-medium">{reg.documento || '-'}</p></div>
+                    <div><p className="text-slate-500 text-xs">Teléfono</p><p className="font-medium">{reg.telefono || '-'}</p></div>
+                    <div><p className="text-slate-500 text-xs">Licencia</p><p className="font-medium">{reg.licencia || '-'}</p></div>
+                    <div><p className="text-slate-500 text-xs">Nacimiento</p><p className="font-medium">{reg.fechaNacimiento || '-'}</p></div>
+                  </div>
+
+                  {reg.matches.length > 0 ? (
+                    <div className="rounded-lg border border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10 p-4 space-y-3">
+                      <p className="text-sm font-semibold flex items-center gap-2">
+                        <Icon name="warning" className="w-4 h-4" />
+                        Posibles pilotos ya inscritos ({reg.matches.length})
+                      </p>
+                      {reg.matches.map(({ pilot, reasons }) => (
+                        <div key={pilot.id} className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-card rounded-lg p-3 border border-amber-200 dark:border-amber-500/30">
+                          <div className="text-sm">
+                            <p className="font-semibold">
+                              {pilot.nombre} <span className="font-mono text-xs text-slate-500">({pilot.codigo || 'sin código'})</span>
+                            </p>
+                            <p className="text-xs text-slate-500 dark:text-muted-foreground">
+                              {pilot.email && !pilot.email.toLowerCase().endsWith('@piloto.local') ? pilot.email : 'Sin correo'}
+                              {pilot.documento ? ` • ${pilot.documento}` : ''}
+                            </p>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {reasons.map(r => (
+                                <span key={r} className="text-[10px] px-2 py-0.5 rounded bg-amber-200 dark:bg-amber-500/20 text-amber-900 dark:text-amber-200">
+                                  {REASON_LABELS[r] || r}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            disabled={isPending}
+                            onClick={() => handlePilotAction(
+                              () => approvePilotRegistration(reg.id, pilot.id),
+                              `¿Actualizar los datos de ${pilot.nombre} (${pilot.codigo || 'sin código'}) con esta solicitud?`
+                            )}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm whitespace-nowrap"
+                          >
+                            Actualizar este piloto
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                      ✓ No se encontró ningún piloto similar: es una inscripción nueva.
+                    </p>
+                  )}
+
+                  <div className="flex gap-3 pt-4 border-t">
+                    <button
+                      type="button"
+                      disabled={isPending}
+                      onClick={() => handlePilotAction(
+                        () => approvePilotRegistration(reg.id),
+                        reg.matches.length > 0
+                          ? 'Hay pilotos similares ya inscritos. ¿Crear un piloto NUEVO de todos modos?'
+                          : undefined
+                      )}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                    >
+                      Crear piloto nuevo
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isPending}
+                      onClick={() => handlePilotAction(() => rejectPilotRegistration(reg.id), '¿Rechazar esta solicitud?')}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                    >
+                      Rechazar
+                    </button>
                   </div>
                 </div>
               ))

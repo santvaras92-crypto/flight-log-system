@@ -1,259 +1,188 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { requireAdmin } from '@/lib/auth-guard';
+import { generateUniquePilotCode } from '@/lib/codegen';
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';
+import { revalidatePath } from 'next/cache';
 
-/**
- * Agrega un piloto al CSV de pilotos (Base de dato pilotos.csv)
- */
-function appendPilotToCSV(codigo: string, nombre: string): void {
-  try {
-    const csvPath = path.join(process.cwd(), 'Base de dato pilotos', 'Base de dato pilotos.csv');
-    const newLine = `\n${codigo};${nombre}`;
-    fs.appendFileSync(csvPath, newLine, 'utf-8');
-    console.log(`Piloto agregado al CSV: ${codigo};${nombre}`);
-  } catch (error) {
-    console.error('Error al agregar piloto al CSV:', error);
-    // No lanzamos error para no bloquear la creación del piloto
-  }
-}
-
-/**
- * Normaliza texto removiendo acentos y convirtiendo a minúsculas
- */
-function normalizeText(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remueve acentos
-    .trim();
-}
-
-/**
- * Busca pilotos existentes en dos pasos:
- * 1) Por documento (match exacto)
- * 2) Por nombre similar (para sugerencias) - con normalización de acentos
- */
-export async function searchExistingPilots(
-  nombre: string,
-  apellido: string,
-  documento?: string
-) {
-  // PASO 1: Buscar por documento (match exacto - misma persona)
-  if (documento && documento.trim()) {
-    const byDocument = await prisma.user.findFirst({
-      where: {
-        documento: documento.trim(),
-      },
-      select: {
-        id: true,
-        nombre: true,
-        codigo: true,
-        email: true,
-        documento: true,
-        telefono: true,
-        licencia: true,
-        fechaNacimiento: true,
-      }
-    });
-
-    if (byDocument) {
-      return {
-        exactMatch: true,
-        matchType: 'document' as const,
-        pilot: byDocument,
-        suggestions: []
-      };
-    }
-  }
-
-  // PASO 2: Buscar por nombre similar (para sugerencias)
-  const nombreNormalized = normalizeText(nombre);
-  const apellidoNormalized = normalizeText(apellido);
-
-  if (!nombreNormalized) {
-    return { exactMatch: false, matchType: undefined, pilot: null, suggestions: [] };
-  }
-
-  // Obtener todos los pilotos y filtrar en memoria para manejar acentos correctamente
-  const allPilots = await prisma.user.findMany({
-    where: { rol: 'PILOTO' },
-    select: {
-      id: true,
-      nombre: true,
-      codigo: true,
-      email: true,
-      documento: true,
-      telefono: true,
-      licencia: true,
-      fechaNacimiento: true,
-    }
-  });
-
-  // Filtrar pilotos cuyo nombre normalizado contenga la búsqueda
-  const suggestions = allPilots.filter(pilot => {
-    const pilotNameNormalized = normalizeText(pilot.nombre);
-    
-    // Si hay apellido, AMBOS (nombre Y apellido) deben aparecer
-    if (apellidoNormalized && nombreNormalized) {
-      return pilotNameNormalized.includes(nombreNormalized) && 
-             pilotNameNormalized.includes(apellidoNormalized);
-    }
-    
-    // Si solo hay apellido, buscar apellido
-    if (apellidoNormalized) {
-      return pilotNameNormalized.includes(apellidoNormalized);
-    }
-    
-    // Si solo hay nombre, buscar nombre
-    if (nombreNormalized) {
-      return pilotNameNormalized.includes(nombreNormalized);
-    }
-    
-    return false;
-  }).slice(0, 10); // Máximo 10 sugerencias
-
-  return {
-    exactMatch: false,
-    matchType: 'name' as const,
-    pilot: null,
-    suggestions: suggestions
-  };
-}
-
-/**
- * Crea o actualiza piloto
- * Si se proporciona pilotId, actualiza ese piloto específico
- */
-export async function createOrUpdatePilot(data: {
+type RegistrationInput = {
   nombre: string;
-  apellido: string;
-  documento: string;
+  apellido?: string;
+  documento?: string;
   tipoDocumento?: string;
   email: string;
   telefono?: string;
   licencia?: string;
   fechaNacimiento?: string;
-  pilotId?: number; // ID del piloto a actualizar (si el usuario seleccionó uno de las sugerencias)
-}) {
-  const fullName = `${data.nombre.trim()} ${data.apellido.trim()}`.trim();
-  
-  // Si se seleccionó un piloto existente (de las sugerencias), actualizar ese
-  if (data.pilotId) {
-    const updated = await prisma.user.update({
-      where: { id: data.pilotId },
-      data: {
-        nombre: fullName,
-        documento: data.documento,
-        tipoDocumento: data.tipoDocumento || null,
-        email: data.email,
-        telefono: data.telefono || null,
-        licencia: data.licencia || null,
-        fechaNacimiento: data.fechaNacimiento ? new Date(data.fechaNacimiento) : null,
-        // Mantiene el código original
-      }
-    });
+};
 
-    return {
-      success: true,
-      isUpdate: true,
-      pilot: updated,
-      message: `Piloto actualizado: ${updated.nombre} (Código: ${updated.codigo})`
-    };
+/** Agrega un piloto al CSV de pilotos (lista desplegable del formulario de vuelos). */
+function appendPilotToCSV(codigo: string, nombre: string): void {
+  try {
+    const csvPath = path.join(process.cwd(), 'Base de dato pilotos', 'Base de dato pilotos.csv');
+    fs.appendFileSync(csvPath, `\n${codigo};${nombre}`, 'utf-8');
+  } catch (error) {
+    // No bloquea la creación del piloto
+    console.error('Error al agregar piloto al CSV:', error);
+  }
+}
+
+function clean(v?: string | null): string | null {
+  const t = (v ?? '').trim();
+  return t ? t : null;
+}
+
+function parseBirth(v?: string | null): Date | null {
+  if (!v) return null;
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * PÚBLICO (sin sesión): el formulario /pilots/new solo crea una solicitud pendiente.
+ * No consulta ni modifica pilotos existentes; eso lo decide el admin en /admin/validacion.
+ */
+export async function submitPilotRegistration(
+  data: RegistrationInput
+): Promise<{ success: boolean; message: string }> {
+  const nombre = (data.nombre || '').trim();
+  const email = (data.email || '').trim().toLowerCase();
+  if (!nombre) return { success: false, message: 'El nombre es obligatorio' };
+  if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+    return { success: false, message: 'Correo inválido' };
+  }
+  if (nombre.length > 100 || email.length > 150) {
+    return { success: false, message: 'Datos demasiado largos' };
   }
 
-  // Buscar si existe por documento
-  const existing = await prisma.user.findFirst({
-    where: { documento: data.documento }
+  // Evita solicitudes repetidas mientras la anterior sigue pendiente
+  const dup = await prisma.pilotRegistration.findFirst({
+    where: { estado: 'PENDIENTE', email },
+    select: { id: true },
   });
-
-  if (existing) {
-    // Actualizar piloto existente (mismo documento = misma persona)
-    const updated = await prisma.user.update({
-      where: { id: existing.id },
-      data: {
-        nombre: fullName,
-        tipoDocumento: data.tipoDocumento || null,
-        email: data.email,
-        telefono: data.telefono || null,
-        licencia: data.licencia || null,
-        fechaNacimiento: data.fechaNacimiento ? new Date(data.fechaNacimiento) : null,
-      }
-    });
-
+  if (dup) {
     return {
       success: true,
-      isUpdate: true,
-      pilot: updated,
-      message: `Piloto actualizado: ${updated.nombre} (Código: ${updated.codigo})`
+      message: 'Ya tenemos una solicitud pendiente con este correo. Un administrador la revisará pronto.',
     };
   }
 
-  // Crear nuevo piloto
-  const newCode = await generateUniquePilotCode(data.nombre, data.apellido);
-  const hashedPassword = await bcrypt.hash('aqi', 10);
-  
-  const newPilot = await prisma.user.create({
+  await prisma.pilotRegistration.create({
     data: {
-      nombre: fullName,
-      documento: data.documento,
-      tipoDocumento: data.tipoDocumento || null,
-      email: data.email,
-      telefono: data.telefono || null,
-      licencia: data.licencia || null,
-      fechaNacimiento: data.fechaNacimiento ? new Date(data.fechaNacimiento) : null,
-      codigo: newCode,
-      rol: 'PILOTO',
-      tarifa_hora: 0,
-      password: hashedPassword, // Default password: aqi
-    }
+      nombre,
+      apellido: (data.apellido || '').trim(),
+      email,
+      telefono: clean(data.telefono),
+      licencia: clean(data.licencia),
+      fechaNacimiento: parseBirth(data.fechaNacimiento),
+      tipoDocumento: clean(data.tipoDocumento),
+      documento: clean(data.documento),
+    },
   });
-
-  // Agregar al CSV para que aparezca en la lista desplegable
-  appendPilotToCSV(newCode, fullName);
 
   return {
     success: true,
-    isUpdate: false,
-    pilot: newPilot,
-    message: `Nuevo piloto creado: ${newPilot.nombre} (Código: ${newPilot.codigo})`
+    message: 'Solicitud enviada. Un administrador la revisará y te avisará cuando tu perfil esté listo.',
   };
 }
 
-async function generateUniquePilotCode(nombre: string, apellido: string): Promise<string> {
-  const firstInitial = nombre.trim()[0]?.toUpperCase() || 'X';
-  const secondInitial = apellido.trim()[0]?.toUpperCase() || 'X';
-  const initials = firstInitial + secondInitial;
-  
-  const existingCodes = await prisma.user.findMany({
-    where: {
-      codigo: { startsWith: initials }
-    },
-    select: { codigo: true }
-  });
+/**
+ * ADMIN: resuelve una solicitud.
+ *  - pilotId presente  → actualiza ese piloto con los datos de la solicitud (solo campos no vacíos)
+ *  - pilotId ausente   → crea un piloto nuevo (código único, contraseña inicial "aqi")
+ */
+export async function approvePilotRegistration(
+  registrationId: number,
+  pilotId?: number
+): Promise<{ success: boolean; message: string }> {
+  await requireAdmin();
 
-  if (existingCodes.length === 0) {
-    return initials;
-  }
+  const reg = await prisma.pilotRegistration.findUnique({ where: { id: registrationId } });
+  if (!reg) return { success: false, message: 'Solicitud no encontrada' };
+  if (reg.estado !== 'PENDIENTE') return { success: false, message: 'La solicitud ya fue resuelta' };
 
-  const codesSet = new Set(existingCodes.map(c => c.codigo));
-  
-  // Sufijos alfabéticos
-  const suffixes = ['CO', 'CA', 'CH', 'CE', 'CI', 'CL', 'CR', 'CU', 'DA', 'DI', 'DO'];
-  for (const suffix of suffixes) {
-    const candidate = initials + suffix;
-    if (!codesSet.has(candidate)) {
-      return candidate;
+  const fullName = `${reg.nombre} ${reg.apellido}`.trim();
+  const email = reg.email.trim().toLowerCase();
+
+  try {
+    let userId: number;
+    let message: string;
+
+    if (pilotId) {
+      const existing = await prisma.user.findUnique({ where: { id: pilotId } });
+      if (!existing) return { success: false, message: 'El piloto seleccionado no existe' };
+
+      const updated = await prisma.user.update({
+        where: { id: pilotId },
+        data: {
+          nombre: fullName || existing.nombre,
+          email,
+          ...(reg.documento ? { documento: reg.documento } : {}),
+          ...(reg.tipoDocumento ? { tipoDocumento: reg.tipoDocumento } : {}),
+          ...(reg.telefono ? { telefono: reg.telefono } : {}),
+          ...(reg.licencia ? { licencia: reg.licencia } : {}),
+          ...(reg.fechaNacimiento ? { fechaNacimiento: reg.fechaNacimiento } : {}),
+        },
+      });
+      userId = updated.id;
+      message = `Piloto actualizado: ${updated.nombre} (${updated.codigo})`;
+    } else {
+      const codigo = await generateUniquePilotCode(reg.nombre, reg.apellido);
+      const created = await prisma.user.create({
+        data: {
+          nombre: fullName,
+          codigo,
+          email,
+          documento: reg.documento,
+          tipoDocumento: reg.tipoDocumento,
+          telefono: reg.telefono,
+          licencia: reg.licencia,
+          fechaNacimiento: reg.fechaNacimiento,
+          rol: 'PILOTO',
+          tarifa_hora: 0,
+          password: await bcrypt.hash('aqi', 10),
+        },
+      });
+      userId = created.id;
+      appendPilotToCSV(codigo, fullName);
+      message = `Piloto creado: ${created.nombre} (${created.codigo})`;
     }
-  }
 
-  // Sufijos numéricos
-  let counter = 1;
-  while (codesSet.has(`${initials}${counter}`)) {
-    counter++;
+    await prisma.pilotRegistration.update({
+      where: { id: registrationId },
+      data: { estado: 'APROBADO', resolvedUserId: userId, resolvedAt: new Date() },
+    });
+
+    revalidatePath('/admin/validacion');
+    revalidatePath('/admin/dashboard');
+    return { success: true, message };
+  } catch (e: any) {
+    // P2002 = violación de unicidad (email o código ya usados por otro piloto)
+    if (e?.code === 'P2002') {
+      return {
+        success: false,
+        message: 'Ese correo ya pertenece a otro piloto. Elige "Actualizar" sobre ese piloto.',
+      };
+    }
+    console.error('[approvePilotRegistration]', e);
+    return { success: false, message: e?.message || 'Error al procesar la solicitud' };
   }
-  
-  return `${initials}${counter}`;
+}
+
+/** ADMIN: descarta una solicitud sin crear ni modificar pilotos. */
+export async function rejectPilotRegistration(
+  registrationId: number
+): Promise<{ success: boolean; message: string }> {
+  await requireAdmin();
+  const reg = await prisma.pilotRegistration.findUnique({ where: { id: registrationId } });
+  if (!reg) return { success: false, message: 'Solicitud no encontrada' };
+  await prisma.pilotRegistration.update({
+    where: { id: registrationId },
+    data: { estado: 'RECHAZADO', resolvedAt: new Date() },
+  });
+  revalidatePath('/admin/validacion');
+  return { success: true, message: 'Solicitud rechazada' };
 }

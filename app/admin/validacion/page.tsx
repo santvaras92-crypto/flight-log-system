@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import ValidacionClient from './validacion-client';
 import { getUFValueForDate, calculateUFRate } from '@/lib/uf-service';
+import { findSimilarPilots } from '@/lib/pilot-matching';
 
 export const dynamic = 'force-dynamic';
 
@@ -150,6 +151,34 @@ export default async function ValidacionPage() {
     };
   }));
 
+  // Pending pilot registrations + similar existing pilots (computed server-side)
+  const [pendingPilotRegs, allPilots] = await Promise.all([
+    prisma.pilotRegistration.findMany({
+      where: { estado: 'PENDIENTE' },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.user.findMany({
+      where: { rol: 'PILOTO' },
+      select: { id: true, nombre: true, codigo: true, email: true, documento: true, telefono: true, licencia: true },
+    }),
+  ]);
+  const pilotRegData = pendingPilotRegs.map(reg => ({
+    id: reg.id,
+    nombre: reg.nombre,
+    apellido: reg.apellido,
+    email: reg.email,
+    telefono: reg.telefono,
+    licencia: reg.licencia,
+    tipoDocumento: reg.tipoDocumento,
+    documento: reg.documento,
+    fechaNacimiento: reg.fechaNacimiento ? reg.fechaNacimiento.toISOString().slice(0, 10) : null,
+    createdAt: reg.createdAt.toISOString(),
+    matches: findSimilarPilots(reg, allPilots).map(m => ({
+      reasons: m.reasons,
+      pilot: m.pilot,
+    })),
+  }));
+
   // Serialize data for client
   const fuelData = pendingFuel.map(log => ({
     id: log.id,
@@ -174,7 +203,7 @@ export default async function ValidacionPage() {
     pilotCode: dep.User?.codigo || 'N/A',
   }));
 
-  const totalPending = fuelData.length + depositData.length + flightsDto.length;
+  const totalPending = fuelData.length + depositData.length + flightsDto.length + pilotRegData.length;
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -199,6 +228,7 @@ export default async function ValidacionPage() {
         fuelData={fuelData}
         depositData={depositData}
         flightsData={flightsDto}
+        pilotRegData={pilotRegData}
       />
     </div>
   );
