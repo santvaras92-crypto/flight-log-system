@@ -41,6 +41,67 @@ function parseBirth(v?: string | null): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
+/** Escapa HTML: los datos vienen de un formulario público. */
+function esc(v?: string | null): string {
+  return (v ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/** Avisa al admin de una nueva solicitud (Resend). Nunca lanza: no debe bloquear el registro. */
+async function sendPilotRegistrationEmail(reg: {
+  nombre: string;
+  apellido: string;
+  email: string;
+  telefono: string | null;
+  licencia: string | null;
+  tipoDocumento: string | null;
+  documento: string | null;
+}) {
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  if (!RESEND_API_KEY) {
+    console.log('RESEND_API_KEY no configurada, omitiendo correo de nueva inscripción');
+    return;
+  }
+
+  const fullName = `${reg.nombre} ${reg.apellido}`.trim();
+  const baseUrl = process.env.NEXTAUTH_URL || 'https://flight-log-system-production.up.railway.app';
+  const html = `
+    <h2>Nueva Solicitud de Inscripción de Piloto - CC-AQI</h2>
+    <p><strong>Nombre:</strong> ${esc(fullName)}</p>
+    <p><strong>Correo:</strong> ${esc(reg.email)}</p>
+    <p><strong>${reg.tipoDocumento === 'pasaporte' ? 'Pasaporte' : 'RUT'}:</strong> ${esc(reg.documento) || '-'}</p>
+    <p><strong>Teléfono:</strong> ${esc(reg.telefono) || '-'}</p>
+    <p><strong>Licencia:</strong> ${esc(reg.licencia) || '-'}</p>
+    <hr/>
+    <p>Revísala en el Centro de Validación (pestaña Pilotos): el sistema te indicará si se parece a algún piloto ya inscrito y podrás actualizarlo o crear uno nuevo.</p>
+    <p><a href="${baseUrl}/admin/validacion">Ver Validaciones Pendientes</a></p>
+  `;
+
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'CC-AQI Flight Log <onboarding@resend.dev>',
+        to: ['santvaras92@gmail.com'],
+        subject: `Nueva inscripción de piloto - ${fullName}`,
+        html,
+      }),
+    });
+    if (!response.ok) {
+      console.error('Error enviando correo de inscripción:', await response.text());
+    }
+  } catch (error) {
+    console.error('Error enviando correo de inscripción:', error);
+  }
+}
+
 /**
  * PÚBLICO (sin sesión): el formulario /pilots/new solo crea una solicitud pendiente.
  * No consulta ni modifica pilotos existentes; eso lo decide el admin en /admin/validacion.
@@ -70,7 +131,7 @@ export async function submitPilotRegistration(
     };
   }
 
-  await prisma.pilotRegistration.create({
+  const created = await prisma.pilotRegistration.create({
     data: {
       nombre,
       apellido: (data.apellido || '').trim(),
@@ -82,6 +143,8 @@ export async function submitPilotRegistration(
       documento: clean(data.documento),
     },
   });
+
+  await sendPilotRegistrationEmail(created);
 
   return {
     success: true,
